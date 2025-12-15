@@ -16,6 +16,10 @@ import {
 type Props = {
   issue: Issue | null;
   onClose: () => void;
+  onOpenAIAudit?: (issue: Issue) => void;
+  onOpenEfficiencyTips?: (issue: Issue) => void;
+  onFixBleed?: () => void;
+  isFixing?: boolean;
 };
 
 /* =========================================================
@@ -184,7 +188,7 @@ Instructions:
    Componente
    ======================================================= */
 
-export const FixDrawer: React.FC<Props> = ({ issue, onClose }) => {
+export const FixDrawer: React.FC<Props> = ({ issue, onClose, onOpenAIAudit, onOpenEfficiencyTips, onFixBleed, isFixing }) => {
   const [isLoadingExplain, setIsLoadingExplain] = useState(false);
   const [isLoadingEff, setIsLoadingEff] = useState(false);
   const [explainText, setExplainText] = useState<string | null>(null);
@@ -218,28 +222,28 @@ export const FixDrawer: React.FC<Props> = ({ issue, onClose }) => {
   const Icon = isError
     ? ExclamationCircleIcon
     : isWarning
-    ? ExclamationTriangleIcon
-    : InformationCircleIcon;
+      ? ExclamationTriangleIcon
+      : InformationCircleIcon;
 
   const severityLabel =
     (issue as any).severity === 'error'
       ? t('severityError')
       : (issue as any).severity === 'warning'
-      ? t('severityWarning')
-      : t('severityInfo');
+        ? t('severityWarning')
+        : t('severityInfo');
 
   const severityClass =
     (issue as any).severity === 'error'
       ? 'text-red-600 bg-red-50 border-red-100'
       : (issue as any).severity === 'warning'
-      ? 'text-amber-600 bg-amber-50 border-amber-100'
-      : 'text-sky-600 bg-sky-50 border-sky-100';
+        ? 'text-amber-600 bg-amber-50 border-amber-100'
+        : 'text-sky-600 bg-sky-50 border-sky-100';
 
   const categoryLabel =
     issue.category
       ? ISSUE_CATEGORY_LABELS[
-          issue.category as keyof typeof ISSUE_CATEGORY_LABELS
-        ] || issue.category
+      issue.category as keyof typeof ISSUE_CATEGORY_LABELS
+      ] || issue.category
       : null;
 
   const cacheKey = issue.id || `${issue.category}-${issue.page}-${issue.title}`;
@@ -294,8 +298,8 @@ export const FixDrawer: React.FC<Props> = ({ issue, onClose }) => {
     } catch (e: any) {
       setErrorText(
         e?.message ||
-          t('aiError') ||
-          'AI efficiency tips failed. Please try again.'
+        t('aiError') ||
+        'AI efficiency tips failed. Please try again.'
       );
     } finally {
       setIsLoadingEff(false);
@@ -393,6 +397,18 @@ export const FixDrawer: React.FC<Props> = ({ issue, onClose }) => {
           </h3>
 
           <div className="space-y-2">
+            {/* Fix Button for specific issues */}
+            {onFixBleed && (['missing-bleed-info', 'insufficient-bleed'].includes(issue.id)) && (
+              <button
+                type="button"
+                onClick={onFixBleed}
+                disabled={isFixing}
+                className="w-full inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60"
+              >
+                {isFixing ? 'Fixing...' : 'Fix: Add 3mm Bleed'}
+              </button>
+            )}
+
             {/* Rojo – Explain & Suggest Fix */}
             <button
               type="button"
