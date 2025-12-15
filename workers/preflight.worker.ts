@@ -150,7 +150,12 @@ async function convertPdfToGrayscale(
   fileMeta: FileMeta
 ): Promise<{ buffer: ArrayBuffer; fileMeta: FileMeta }> {
   const uint8 = new Uint8Array(buffer);
-  const loadingTask = (pdfjsLib as any).getDocument({ data: uint8, disableWorker: true });
+  const loadingTask = (pdfjsLib as any).getDocument({
+    data: uint8,
+    disableWorker: true,
+    cMapUrl: 'https://unpkg.com/pdfjs-dist@4.6.82/cmaps/',
+    cMapPacked: true,
+  });
   const pdf = await loadingTask.promise;
   const pageCount = pdf.numPages;
 
@@ -203,7 +208,12 @@ async function upscalePdf(
   minDpi = 150
 ): Promise<{ buffer: ArrayBuffer; fileMeta: FileMeta }> {
   const uint8 = new Uint8Array(buffer);
-  const loadingTask = (pdfjsLib as any).getDocument({ data: uint8, disableWorker: true });
+  const loadingTask = (pdfjsLib as any).getDocument({
+    data: uint8,
+    disableWorker: true,
+    cMapUrl: 'https://unpkg.com/pdfjs-dist@4.6.82/cmaps/',
+    cMapPacked: true,
+  });
   const pdf = await loadingTask.promise;
   const pageCount = pdf.numPages;
 
@@ -350,7 +360,12 @@ async function analyzePdf(
   const issues: Issue[] = [];
 
   const uint8 = new Uint8Array(buffer);
-  const loadingTask = (pdfjsLib as any).getDocument({ data: uint8, disableWorker: true });
+  const loadingTask = (pdfjsLib as any).getDocument({
+    data: uint8,
+    disableWorker: true,
+    cMapUrl: 'https://unpkg.com/pdfjs-dist@4.6.82/cmaps/',
+    cMapPacked: true,
+  });
   const pdf = await loadingTask.promise;
   const pageCount = pdf.numPages;
 
