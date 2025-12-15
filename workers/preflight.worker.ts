@@ -301,11 +301,17 @@ async function addBleed(
     post({
       type: 'analysisProgress',
       progress: ((i + 1) / pages.length) * 100,
-      note: `Adding bleed to page ${i + 1}/${pages.length}`,
+      note: `Adding bleed to page ${i + 1}/${pages.length} (Method: Box Expansion)`,
     });
   }
 
-  const outBytes = await doc.save();
+  let outBytes: Uint8Array;
+  try {
+    outBytes = await doc.save();
+  } catch (e: any) {
+    throw new Error(`Failed to save PDF with bleed: ${e.message}`);
+  }
+
   const sliced = outBytes.buffer.slice(
     outBytes.byteOffset,
     outBytes.byteOffset + outBytes.byteLength
