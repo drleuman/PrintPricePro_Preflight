@@ -323,7 +323,7 @@ async function addBleed(
     size: outBytes.byteLength,
   };
 
-  return { buffer: sliced, fileMeta: newMeta };
+  return { buffer: sliced as ArrayBuffer, fileMeta: newMeta };
 }
 
 /* =========================
