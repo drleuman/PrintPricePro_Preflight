@@ -58,7 +58,13 @@ type UpscaleLowResImagesCmd = {
   minDpi?: number;
 };
 
-type Inbound = AnalyzeCmd | ConvertToGrayscaleCmd | UpscaleLowResImagesCmd;
+type FixBleedCmd = {
+  type: 'fixBleed';
+  fileMeta: FileMeta;
+  buffer: ArrayBuffer;
+};
+
+type Inbound = AnalyzeCmd | ConvertToGrayscaleCmd | UpscaleLowResImagesCmd | FixBleedCmd;
 
 type Outbound =
   | { type: 'analysisProgress'; progress: number; note?: string }
@@ -66,13 +72,13 @@ type Outbound =
   | { type: 'analysisError'; message: string }
   | {
     type: 'transformResult';
-    operation: 'grayscale' | 'upscaleImages';
+    operation: 'grayscale' | 'upscaleImages' | 'fixBleed';
     buffer: ArrayBuffer;
     fileMeta: FileMeta;
   }
   | {
     type: 'transformError';
-    operation: 'grayscale' | 'upscaleImages';
+    operation: 'grayscale' | 'upscaleImages' | 'fixBleed';
     message: string;
   };
 
@@ -254,6 +260,54 @@ async function upscalePdf(
     name:
       fileMeta.name.replace(/\.pdf$/i, '') +
       `_upscaled_${Math.round(minDpi)}dpi.pdf`,
+    size: outBytes.byteLength,
+  };
+
+  return { buffer: sliced, fileMeta: newMeta };
+}
+
+// 3) Añadir sangrado (bleed) a un PDF
+async function addBleed(
+  buffer: ArrayBuffer,
+  fileMeta: FileMeta,
+  bleedMm: number = 3
+): Promise<{ buffer: ArrayBuffer; fileMeta: FileMeta }> {
+  const originalPdfDoc = await PDFDocument.load(buffer);
+  const outDoc = await PDFDocument.create();
+
+  const pageCount = originalPdfDoc.getPageCount();
+  const bleedPt = (bleedMm * 72) / 25.4; // Convert mm to points
+
+  for (let i = 0; i < pageCount; i++) {
+    const [originalPage] = await outDoc.copyPages(originalPdfDoc, [i]);
+    const { width, height } = originalPage.getSize();
+
+    const newWidth = width + 2 * bleedPt;
+    const newHeight = height + 2 * bleedPt;
+
+    const newPage = outDoc.addPage([newWidth, newHeight]);
+    newPage.drawPage(originalPage, {
+      x: bleedPt,
+      y: bleedPt,
+      width: width,
+      height: height,
+    });
+
+    post({
+      type: 'analysisProgress',
+      progress: ((i + 1) / pageCount) * 100,
+      note: `Adding bleed to page ${i + 1}/${pageCount}`,
+    });
+  }
+
+  const outBytes = await outDoc.save();
+  const sliced = outBytes.buffer.slice(
+    outBytes.byteOffset,
+    outBytes.byteOffset + outBytes.byteLength
+  );
+  const newMeta: FileMeta = {
+    ...fileMeta,
+    name: fileMeta.name.replace(/\.pdf$/i, '') + `_bleed_${bleedMm}mm.pdf`,
     size: outBytes.byteLength,
   };
 
@@ -1279,6 +1333,18 @@ self.addEventListener('message', async (event: MessageEvent) => {
       });
       return;
     }
+
+    if (msg.type === 'fixBleed') {
+      const out = await addBleed(msg.buffer, msg.fileMeta);
+      post({
+        type: 'transformResult',
+        operation: 'fixBleed',
+        buffer: out.buffer,
+        fileMeta: out.fileMeta,
+      });
+      return;
+    }
+
   } catch (err: any) {
     console.error('Preflight worker fatal error', err);
 
@@ -1291,7 +1357,8 @@ self.addEventListener('message', async (event: MessageEvent) => {
       post({
         type: 'transformError',
         operation:
-          msg.type === 'convertToGrayscale' ? 'grayscale' : 'upscaleImages',
+          msg.type === 'convertToGrayscale' ? 'grayscale' :
+            msg.type === 'upscaleLowResImages' ? 'upscaleImages' : 'fixBleed',
         message: err?.message || String(err),
       });
     }
