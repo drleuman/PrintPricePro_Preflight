@@ -103,7 +103,8 @@ export default function App() {
     isWorkerRunning,
     runAnalysis,
     runClientGrayscale,
-    runClientUpscale
+    runClientUpscale,
+    runFixBleed,
   } = usePreflightWorker({
     onAnalysisResult,
     onTransformResult,
@@ -216,6 +217,16 @@ export default function App() {
       window.alert('RGB → CMYK conversion requires server connection. Please try again later.');
     }
   }, [file, convertRgbToCmykServer, downloadAndRemember, updateFileState]);
+
+  const handleFixBleed = useCallback(async () => {
+    if (!file || !fileMeta) return;
+    try {
+      await runFixBleed(file, fileMeta);
+    } catch (e) {
+      console.error('Fix bleed failed', e);
+      window.alert('Fix bleed failed: ' + (e as Error).message);
+    }
+  }, [file, fileMeta, runFixBleed]);
 
 
   const onPageChange = useCallback((p: number) => setCurrentPage(p), []);
@@ -354,6 +365,8 @@ export default function App() {
         onClose={() => setSelectedIssue(null)}
         onOpenAIAudit={handleOpenAIAudit}
         onOpenEfficiencyTips={handleOpenEfficiencyTips}
+        onFixBleed={handleFixBleed}
+        isFixing={isRunning}
       />
       <AIAuditModal
         isOpen={aiAuditOpen}
