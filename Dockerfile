@@ -28,6 +28,8 @@ WORKDIR /app
 
 # Copy server entry
 COPY --from=builder /app/server/server.js ./server.js
+COPY --from=builder /app/server/routes ./routes
+COPY --from=builder /app/server/services ./services
 
 # Copy server dependencies from builder to guarantee runtime modules exist (fixes "Cannot find module 'multer'")
 COPY --from=builder /app/server/node_modules ./node_modules
