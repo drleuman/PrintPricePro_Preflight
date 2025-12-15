@@ -136,5 +136,4 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
         runClientUpscale,
         runFixBleed,
     };
-};
 }
