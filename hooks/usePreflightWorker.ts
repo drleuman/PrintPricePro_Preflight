@@ -111,11 +111,30 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
         }
     }, []);
 
+    const runFixBleed = useCallback(async (file: File, fileMeta: FileMeta) => {
+        if (!workerRef.current) return;
+        try {
+            setIsWorkerRunning(true);
+            const buffer = await file.arrayBuffer();
+            const cmd: PreflightWorkerCommand = {
+                type: 'fixBleed',
+                fileMeta,
+                buffer,
+            };
+            workerRef.current.postMessage(cmd, [buffer]);
+        } catch (e) {
+            setIsWorkerRunning(false);
+            callbacks.onError?.((e as Error).message);
+        }
+    }, []);
+
     return {
         isWorkerReady,
         isWorkerRunning,
         runAnalysis,
         runClientGrayscale,
         runClientUpscale,
+        runFixBleed,
     };
+};
 }
