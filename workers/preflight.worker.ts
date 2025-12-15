@@ -19,6 +19,24 @@ const ISSUE_CATEGORYValues: ISSUE_CATEGORY[] =
   Object.values(ISSUE_CATEGORY) as ISSUE_CATEGORY[];
 
 // Usamos el mismo worker de pdfjs que el visor
+// Polfill for PDF.js requiring document.createElement for canvas
+if (typeof self !== 'undefined' && !self.document) {
+  (self as any).document = {
+    createElement: (tagName: string) => {
+      if (tagName === 'canvas') {
+        return new OffscreenCanvas(1, 1);
+      }
+      return {};
+    },
+    createElementNS: (_ns: string, tagName: string) => {
+      if (tagName === 'canvas') {
+        return new OffscreenCanvas(1, 1);
+      }
+      return {};
+    },
+  };
+}
+
 (pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfWorker;
 
 type AnalyzeCmd = {
@@ -47,16 +65,16 @@ type Outbound =
   | { type: 'analysisResult'; result: PreflightResult }
   | { type: 'analysisError'; message: string }
   | {
-      type: 'transformResult';
-      operation: 'grayscale' | 'upscaleImages';
-      buffer: ArrayBuffer;
-      fileMeta: FileMeta;
-    }
+    type: 'transformResult';
+    operation: 'grayscale' | 'upscaleImages';
+    buffer: ArrayBuffer;
+    fileMeta: FileMeta;
+  }
   | {
-      type: 'transformError';
-      operation: 'grayscale' | 'upscaleImages';
-      message: string;
-    };
+    type: 'transformError';
+    operation: 'grayscale' | 'upscaleImages';
+    message: string;
+  };
 
 function post(msg: Outbound) {
   (self as unknown as Worker).postMessage(msg as PreflightWorkerMessage);
@@ -411,7 +429,7 @@ async function analyzePdf(
   let minFontPage: number | null = null;
 
   // --------- PACK TODOS: color avanzado + trazos ----------
-  
+
   // Color spaces
   let hasRGB = false;
   let hasCMYK = false;
@@ -949,8 +967,8 @@ async function analyzePdf(
         'This is a summary of the font families detected on sampled pages. ' +
         (subsetFonts.length
           ? `Some fonts appear as subsetted: ${subsetFonts.join(
-              ', '
-            )}. Subsetting is normal for print PDFs but makes later editing harder.`
+            ', '
+          )}. Subsetting is normal for print PDFs but makes later editing harder.`
           : 'No subset prefixes (ABCDEF+FontName) were detected, so these fonts are probably embedded as full fonts.'),
       bbox: { x: 0, y: 0, width: 1, height: 1 },
     });
@@ -969,9 +987,8 @@ async function analyzePdf(
       details:
         `The preflight detected ${tinyTextChunks} text runs with a size below 6 pt on sampled pages. ` +
         (minRounded
-          ? `The smallest estimated text size is around ${minRounded} pt (page ${
-              firstTinyTextPage ?? minFontPage
-            }). `
+          ? `The smallest estimated text size is around ${minRounded} pt (page ${firstTinyTextPage ?? minFontPage
+          }). `
           : '') +
         'Text below 6 pt is usually too small for comfortable reading in offset printing; ' +
         'consider increasing font size for body text and critical information.',
@@ -989,9 +1006,8 @@ async function analyzePdf(
       details:
         `The preflight detected ${smallTextChunks} text runs between approximately 6 and 8 pt. ` +
         (minRounded
-          ? `The smallest estimated text size is around ${minRounded} pt (page ${
-              firstSmallTextPage ?? minFontPage
-            }). `
+          ? `The smallest estimated text size is around ${minRounded} pt (page ${firstSmallTextPage ?? minFontPage
+          }). `
           : '') +
         'This size can work for footnotes or legal text, but may be too small for long reading or low-contrast combinations.',
       bbox: { x: 0, y: 0, width: 1, height: 1 },
@@ -1267,4 +1283,4 @@ self.addEventListener('message', async (event: MessageEvent) => {
   }
 });
 
-export {};
+export { };
