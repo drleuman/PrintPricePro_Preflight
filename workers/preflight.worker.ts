@@ -272,39 +272,45 @@ async function addBleed(
   fileMeta: FileMeta,
   bleedMm: number = 3
 ): Promise<{ buffer: ArrayBuffer; fileMeta: FileMeta }> {
-  const originalPdfDoc = await PDFDocument.load(buffer);
-  const outDoc = await PDFDocument.create();
+  // Cargar el documento original (modificamos in-place)
+  const doc = await PDFDocument.load(buffer);
+  const pages = doc.getPages();
 
-  const pageCount = originalPdfDoc.getPageCount();
-  const bleedPt = (bleedMm * 72) / 25.4; // Convert mm to points
+  const bleedPt = (bleedMm * 72) / 25.4; // 3mm ~ 8.5 pt
 
-  for (let i = 0; i < pageCount; i++) {
-    const [originalPage] = await outDoc.copyPages(originalPdfDoc, [i]);
-    const { width, height } = originalPage.getSize();
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+    const { width, height } = page.getSize(); // Dimensiones actuales (MediaBox implícito)
 
-    const newWidth = width + 2 * bleedPt;
-    const newHeight = height + 2 * bleedPt;
+    // Obtenemos el MediaBox actual para respetar offset si existiera, 
+    // pero page.getSize() normaliza. 
+    // Vamos a definir un nuevo MediaBox expandido hacia "fuera" (coordenadas negativas)
+    // para que el contenido (0,0) se quede en el centro visual.
+    // Nuevo origen: (-bleed, -bleed)
+    // Nuevo ancho: width + 2*bleed
+    // Nuevo alto: height + 2*bleed
 
-    const newPage = outDoc.addPage([newWidth, newHeight]);
-    newPage.drawPage(originalPage, {
-      x: bleedPt,
-      y: bleedPt,
-      width: width,
-      height: height,
-    });
+    page.setMediaBox(-bleedPt, -bleedPt, width + 2 * bleedPt, height + 2 * bleedPt);
+
+    // TrimBox: El tamaño final de corte debe ser el original (0, 0, width, height)
+    page.setTrimBox(0, 0, width, height);
+
+    // BleedBox: Igual al nuevo MediaBox
+    page.setBleedBox(-bleedPt, -bleedPt, width + 2 * bleedPt, height + 2 * bleedPt);
 
     post({
       type: 'analysisProgress',
-      progress: ((i + 1) / pageCount) * 100,
-      note: `Adding bleed to page ${i + 1}/${pageCount}`,
+      progress: ((i + 1) / pages.length) * 100,
+      note: `Adding bleed to page ${i + 1}/${pages.length}`,
     });
   }
 
-  const outBytes = await outDoc.save();
+  const outBytes = await doc.save();
   const sliced = outBytes.buffer.slice(
     outBytes.byteOffset,
     outBytes.byteOffset + outBytes.byteLength
   );
+
   const newMeta: FileMeta = {
     ...fileMeta,
     name: fileMeta.name.replace(/\.pdf$/i, '') + `_bleed_${bleedMm}mm.pdf`,
