@@ -433,7 +433,16 @@ async function analyzePdf(
     cMapPacked: true,
   });
   const pdf = await loadingTask.promise;
+
   const pageCount = pdf.numPages;
+
+  // Carga paralela con pdf-lib para metadatos fiables (Cajas)
+  let pdfLibDoc: PDFDocument | null = null;
+  try {
+    pdfLibDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
+  } catch (e) {
+    console.warn('pdf-lib load failed in analyze', e);
+  }
 
   // ---------- Documento vacío ----------
   if (!pageCount || pageCount <= 0) {
@@ -559,73 +568,63 @@ async function analyzePdf(
       hasMixedSizes = true;
     }
 
-    // --- Cajas PDF: MediaBox / TrimBox / BleedBox (best-effort) ---
-    try {
-      const raw = page as any;
-      const info = raw.pageInfo || raw._pageInfo;
-      const mediaBox = info?.mediaBox || info?.view;
-      const trimBox = info?.trimBox;
-      const bleedBox = info?.bleedBox;
+    // --- Cajas PDF: MediaBox / TrimBox / BleedBox ---
+    const libPage = pdfLibDoc ? pdfLibDoc.getPage(pageIndex - 1) : null;
 
-      if (!trimBox || !bleedBox) {
-        // Sin info explícita de trim/bleed
-        missingBleedInfo = true;
-        if (missingBleedPage === null) missingBleedPage = pageIndex;
-      } else if (
-        Array.isArray(trimBox) &&
-        Array.isArray(bleedBox) &&
-        trimBox.length === 4 &&
-        bleedBox.length === 4
-      ) {
-        const [tx0, ty0, tx1, ty1] = trimBox;
-        const [bx0, by0, bx1, by1] = bleedBox;
+    if (libPage) {
+      // --- Checks con PDF-LIB (Robusto) ---
+      try {
+        const mediaBox = libPage.getMediaBox();
+        const trimBox = libPage.getTrimBox();
+        const bleedBox = libPage.getBleedBox();
 
-        // Bleed en mm (alrededor del TrimBox)
-        const bleedLeftMm = mmFromPt(tx0 - bx0);
-        const bleedBottomMm = mmFromPt(ty0 - by0);
-        const bleedRightMm = mmFromPt(bx1 - tx1);
-        const bleedTopMm = mmFromPt(by1 - ty1); // 🔧 corregido
+        // Lógica: Si la diferencia entre BleedBox y TrimBox es ~0, falta bleed definido.
+        const bleedLeft = trimBox.x - bleedBox.x;
+        const bleedBottom = trimBox.y - bleedBox.y;
+        const bleedRight = (bleedBox.x + bleedBox.width) - (trimBox.x + trimBox.width);
+        const bleedTop = (bleedBox.y + bleedBox.height) - (trimBox.y + trimBox.height);
 
-        const minBleedMm = Math.min(
-          bleedLeftMm,
-          bleedBottomMm,
-          bleedRightMm,
-          bleedTopMm
-        );
+        const isZero = (n: number) => Math.abs(n) < 0.1;
+        const noBleedDefined = isZero(bleedLeft) && isZero(bleedBottom) && isZero(bleedRight) && isZero(bleedTop);
 
-        if (isFinite(minBleedMm) && minBleedMm < 2.9) {
-          insufficientBleed = true;
-          if (insufficientBleedPage === null) {
-            insufficientBleedPage = pageIndex;
+        if (noBleedDefined) {
+          missingBleedInfo = true;
+          if (missingBleedPage === null) missingBleedPage = pageIndex;
+        } else {
+          // Check if bleed is insufficient (< 3mm)
+          // Nota: TrimBox y BleedBox en pdf-lib ya están normalizados en puntos? Si.
+          const minBleedMm = Math.min(
+            mmFromPt(bleedLeft),
+            mmFromPt(bleedBottom),
+            mmFromPt(bleedRight),
+            mmFromPt(bleedTop)
+          );
+          if (minBleedMm < 2.9) {
+            insufficientBleed = true;
+            if (insufficientBleedPage === null) insufficientBleedPage = pageIndex;
           }
         }
-
-        // TrimBox fuera de MediaBox (si tenemos MediaBox)
-        if (Array.isArray(mediaBox) && mediaBox.length === 4) {
-          const [mx0, my0, mx1, my1] = mediaBox;
-          if (
-            tx0 < mx0 - 0.1 ||
-            ty0 < my0 - 0.1 ||
-            tx1 > mx1 + 0.1 ||
-            ty1 > my1 + 0.1
-          ) {
-            issues.push({
-              id: 'trim-outside-mediabox',
-              page: pageIndex,
-              category: ISSUE_CATEGORY.BLEED_MARGINS,
-              severity: Severity.WARNING,
-              message: 'Trim box lies partially outside the media box.',
-              details:
-                'The TrimBox coordinates extend beyond the MediaBox. ' +
-                'This can cause unexpected cropping or misregistration in imposition.',
-              bbox: { x: 0, y: 0, width: 1, height: 1 },
-            });
-          }
-        }
+      } catch (e) {
+        console.warn('pdf-lib box check error', e);
       }
-    } catch {
-      // No rompemos si la introspección interna falla
+
+    } else {
+      // --- Checks con PDF.JS (Fallback legacy) ---
+      try {
+        const raw = page as any;
+        const info = raw.pageInfo || raw._pageInfo;
+        // pdfjs usually doesn't expose clean trimBox/bleedBox here
+        const trimBox = info?.trimBox;
+        const bleedBox = info?.bleedBox;
+
+        if (!trimBox || !bleedBox) {
+          missingBleedInfo = true;
+          if (missingBleedPage === null) missingBleedPage = pageIndex;
+        }
+      } catch { }
     }
+    // No rompemos si la introspección interna falla
+
 
     // --- Anotaciones (PACK B: forms, multimedia, comentarios) ---
     try {
