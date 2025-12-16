@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
+const { PDFDocument } = require('pdf-lib');
 const { runGs, sendPdfAndCleanup, safeUnlink, safeRmDir } = require('../services/ghostscript');
 
 const router = express.Router();
@@ -22,9 +23,7 @@ const upload = multer({
     limits: { fileSize: 60 * 1024 * 1024 },
 });
 
-// Helper for sending uploadDir to the cleanup service if needed,
-// but for now we export it or lets just rely on cleanup service knowing the path.
-// Actually, better to export it so server.js can instantiate cleanup on it.
+// Export for cleanup service if needed
 router.uploadDir = uploadDir;
 
 // -------- Routes --------
@@ -66,36 +65,28 @@ router.post('/convert-color', upload.single('file'), async (req, res) => {
     const inputPath = req.file && req.file.path;
     if (!inputPath) return res.status(400).json({ error: 'Missing file' });
 
-    // profile: 'cmyk' (generic), 'fogra39', 'gracol', etc.
     const profile = (req.body.profile || 'cmyk').toLowerCase();
 
     const baseName = path.basename(req.file.originalname || 'document.pdf').replace(/\.pdf$/i, '');
     const outName = `${baseName}_${profile}.pdf`;
     const outPath = path.join(uploadDir, `${Date.now()}_out_${profile}.pdf`);
 
-    // Basic args
     let args = [
         '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
         '-sDEVICE=pdfwrite',
         '-dCompatibilityLevel=1.4',
         '-dPDFSETTINGS=/prepress',
-        // Preserve transparency if possible or flatten if needed (pdfwrite usually preserves)
         '-dOverrideICC',
         `-sOutputFile=${outPath}`,
     ];
 
-    // Determine color options
     if (profile === 'cmyk') {
-        // Generic CMYK
         args.push(
             '-sColorConversionStrategy=CMYK',
             '-dProcessColorModel=/DeviceCMYK'
         );
     } else {
-        // ICC Profile based
-        // Check if profile exists
         const profilesDir = path.join(__dirname, '../icc-profiles');
-        // Map common names to files
         const map = {
             'fogra39': 'CoatedFOGRA39.icc',
             'gracol': 'GRACoL2006_Coated1v2.icc',
@@ -105,12 +96,11 @@ router.post('/convert-color', upload.single('file'), async (req, res) => {
         const profilePath = path.join(profilesDir, fileName);
 
         if (fs.existsSync(profilePath)) {
-            // Use profile
             args.push(
-                '-sColorConversionStrategy=CMYK', // Target is usually CMYK for these
+                '-sColorConversionStrategy=CMYK',
                 '-dProcessColorModel=/DeviceCMYK',
                 `-sOutputICCProfile=${profilePath}`,
-                '-dRenderIntent=1' // Relative Colorimetric is standard for print
+                '-dRenderIntent=1'
             );
         } else {
             console.warn(`Profile ${profile} not found at ${profilePath}, falling back to generic CMYK`);
@@ -152,7 +142,7 @@ router.post('/rebuild-150dpi', upload.single('file'), async (req, res) => {
     const imgPattern = path.join(tmpDir, 'page-%03d.png');
 
     try {
-        // 1) rasterize
+        // 1) Rasterize PDF -> PNG (Ghostscript sí puede hacer esto)
         await runGs([
             '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
             '-sDEVICE=png16m',
@@ -161,10 +151,9 @@ router.post('/rebuild-150dpi', upload.single('file'), async (req, res) => {
             inputPath,
         ]);
 
-        // 2) rebuild PDF from images
         const imgs = fs
             .readdirSync(tmpDir)
-            .filter((f) => /page-\d+\.png$/i.test(f))
+            .filter((f) => /^page-\d+\.png$/i.test(f))
             .sort()
             .map((f) => path.join(tmpDir, f));
 
@@ -172,15 +161,26 @@ router.post('/rebuild-150dpi', upload.single('file'), async (req, res) => {
             throw new Error('No images were produced during rebuild');
         }
 
-        await runGs([
-            '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
-            '-sDEVICE=pdfwrite',
-            '-dCompatibilityLevel=1.4',
-            `-sOutputFile=${outPath}`,
-            ...imgs,
-        ]);
-        // NOTE: Fixed interpolation missing backtick above, wait, I put backtick but I need to make sure to use it in CodeContent correctly.
-        // The above line `-sOutputFile=${outPath}` inside the string needs to be template literal in the file content.
+        // 2) Rebuild PDF from PNGs using pdf-lib (NO Ghostscript here)
+        const pdfDoc = await PDFDocument.create();
+
+        // Convert pixel dimensions -> PDF points preserving physical size:
+        // points = px * 72 / dpi
+        const pxToPt = (px) => (px * 72) / dpi;
+
+        for (const imgPath of imgs) {
+            const pngBytes = fs.readFileSync(imgPath);
+            const png = await pdfDoc.embedPng(pngBytes);
+
+            const wPt = pxToPt(png.width);
+            const hPt = pxToPt(png.height);
+
+            const page = pdfDoc.addPage([wPt, hPt]);
+            page.drawImage(png, { x: 0, y: 0, width: wPt, height: hPt });
+        }
+
+        const pdfBytes = await pdfDoc.save();
+        fs.writeFileSync(outPath, pdfBytes);
 
         sendPdfAndCleanup(res, outPath, outName, () => {
             safeUnlink(inputPath);
