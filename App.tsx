@@ -229,7 +229,12 @@ export default function App() {
       // Fallback
       if (window.confirm(
         'Server method unavailable. Do you want to use the local fallback?\n\n' +
-        'WARNING: This will rasterize text (convert to image) and rebuild the PDF from images.'
+        '⚠️ WARNING: This will rasterize the entire PDF (convert to images).\n' +
+        '• Text will NOT be selectable\n' +
+        '• Fonts may appear as boxes/symbols\n' +
+        '• File size will increase significantly\n\n' +
+        'For best results, use the server method (ensure backend is running).\n\n' +
+        'Continue with client-side processing?'
       )) {
         runClientUpscale(file, fileMeta);
       }
