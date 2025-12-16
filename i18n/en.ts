@@ -48,7 +48,7 @@ export const en = {
   selectAnIssue: 'Select an issue to view its details and potential fixes.',
   selectedIssueDetails: 'Selected Issue Details',
   currentIssue: 'Current Issue',
-categoryPageSetup: 'Page setup',
+  categoryPageSetup: 'Page setup',
   categoryAnnotations: 'Annotations',
   categoryFormFields: 'Form fields',
   categoryMultimedia: 'Multimedia',
@@ -80,6 +80,8 @@ categoryPageSetup: 'Page setup',
   // Drawer / issue details
   pageLabel: 'Page {{page}}',
   suggestedFix: 'Suggested fix',
+  issueSummary: 'Issue Summary', // Singluar
+  engineHint: 'Engine Hint',
   drawerActions: 'Actions',
   actions: 'Actions', // alias para evitar MISSING_TRANSLATION:actions
   severityError: 'Error',
@@ -104,6 +106,8 @@ export const es = {
   close: 'Cerrar',
   details: 'Detalles',
   suggestedFix: 'Sugerencia de corrección',
+  issueSummary: 'Resumen de la incidencia',
+  engineHint: 'Pista del motor',
   drawerActions: 'Acciones',
   actions: 'Acciones', // alias
   severityError: 'Error',
