@@ -171,15 +171,15 @@ export const PageViewer: React.FC<PageViewerProps> = ({
 
     // Draw the grid
     if (heatmapData) {
-      const { values, gridWidth, gridHeight, maxTac } = heatmapData;
+      const { values, width, height, maxTac } = heatmapData;
 
       ctx.clearRect(0, 0, cvs.width, cvs.height);
-      const cellW = cvs.width / gridWidth;
-      const cellH = cvs.height / gridHeight;
+      const cellW = cvs.width / width;
+      const cellH = cvs.height / height;
 
-      for (let y = 0; y < gridHeight; y++) {
-        for (let x = 0; x < gridWidth; x++) {
-          const val = values[y * gridWidth + x]; // 0-255 mapped from 0-400%
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const val = values[y * width + x]; // 0-255 mapped from 0-400%
           const tacPercent = (val * 400) / 255;
 
           if (tacPercent < 280) continue; // Transparency for safe areas? 
