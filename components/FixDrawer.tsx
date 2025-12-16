@@ -340,7 +340,7 @@ export const FixDrawer: React.FC<Props> = ({ issue, onClose, onOpenAIAudit, onOp
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
         {/* Severity + categoría */}
         <div
           className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${severityClass}`}
@@ -355,14 +355,14 @@ export const FixDrawer: React.FC<Props> = ({ issue, onClose, onOpenAIAudit, onOp
           )}
         </div>
 
-        {/* Hint del helper (si quieres extra) */}
+        {/* Hint del helper (Suggested Fix real o Summary) */}
         {hint && (
-          <div className="bg-gray-50 border border-dashed border-gray-200 rounded-lg px-3 py-2">
+          <div className="bg-gray-50 border border-dashed border-gray-200 rounded-lg px-4 py-3">
             <p className="text-xs font-medium text-gray-500 mb-1">
-              {t('suggestedFix') || 'Suggested focus'}
+              {hint.suggestedFix ? (t('suggestedFix') || 'Suggested fix') : (t('issueSummary') || 'Issue Summary')}
             </p>
             <p className="text-sm text-gray-700 whitespace-pre-line">
-              {hint.userFriendlySummary}
+              {hint.suggestedFix || hint.userFriendlySummary}
             </p>
           </div>
         )}
