@@ -217,8 +217,8 @@ export default function App() {
 
     try {
       // Try Server
-      const blob = await rebuildPdfServer(file, 150);
-      const newName = file.name.replace(/\.pdf$/i, '') + '_rebuild_150dpi.pdf';
+      const blob = await rebuildPdfServer(file, 300);
+      const newName = file.name.replace(/\.pdf$/i, '') + '_rebuild_300dpi.pdf';
       const newFile = new File([blob], newName, { type: 'application/pdf' });
 
       downloadAndRemember(blob, newName);
@@ -380,12 +380,12 @@ export default function App() {
                   className="ppp-action ppp-action--rebuild"
                   onClick={upscaleLowResImages}
                   disabled={!file || isRunning}
-                  title="Rebuild PDF to ensure images are at least 150 DPI"
+                  title="Rebuild PDF to ensure better quality (300 DPI)"
                 >
                   <span className="ppp-action__icon" aria-hidden>🛠️</span>
                   <span className="ppp-action__label">
-                    Rebuild ≥150 dpi
-                    <span className="ppp-action__subtitle">Rebuild/export with safer DPI</span>
+                    Rebuild High-Res
+                    <span className="ppp-action__subtitle">Optimize & Fix Quality (300 dpi)</span>
                   </span>
                 </button>
 
