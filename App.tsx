@@ -348,9 +348,9 @@ export default function App() {
                 </button>
 
                 <div className="ppp-action-group">
-                  <div className="flex gap-2 items-stretch">
+                  <div className="flex flex-col gap-2">
                     <select
-                      className="flex-1 p-3 rounded-lg border border-gray-200 text-sm bg-gray-50 font-medium"
+                      className="w-full p-3 rounded-lg border border-gray-200 text-sm bg-gray-50 font-medium"
                       defaultValue="cmyk"
                       onChange={(e) => {
                         setSelectedProfile(e.target.value);
