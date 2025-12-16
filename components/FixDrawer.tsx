@@ -309,7 +309,7 @@ export const FixDrawer: React.FC<Props> = ({ issue, onClose, onOpenAIAudit, onOp
   return (
     <aside className="ppp-drawer">
       {/* Header */}
-      <div className="pl-4 pr-3 py-4 border-b border-gray-200 flex items-start justify-between gap-3">
+      <div className="pl-6 pr-4 py-4 border-b border-gray-200 flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
             {t('selectedIssueDetails') || 'Selected Issue Details'}
@@ -332,7 +332,7 @@ export const FixDrawer: React.FC<Props> = ({ issue, onClose, onOpenAIAudit, onOp
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex items-center justify-center rounded-full p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 -mr-1"
+          className="inline-flex items-center justify-center rounded-full p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100"
           aria-label={t('close')}
         >
           <XMarkIcon className="h-6 w-6" aria-hidden="true" />
@@ -403,7 +403,7 @@ export const FixDrawer: React.FC<Props> = ({ issue, onClose, onOpenAIAudit, onOp
                 type="button"
                 onClick={onFixBleed}
                 disabled={isFixing}
-                className="w-full inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60"
+                className="w-full inline-flex items-center justify-center rounded-md border border-transparent bg-gray-900 px-3 py-3 text-sm font-bold text-white shadow-sm hover:bg-black disabled:opacity-60"
               >
                 {isFixing ? 'Fixing...' : 'Fix: Add 3mm Bleed'}
               </button>
