@@ -127,21 +127,32 @@ export interface FileMeta {
  */
 export type PreflightWorkerCommand =
   | {
-      type: 'analyze';
-      fileMeta: FileMeta;
-      buffer: ArrayBuffer;
-    }
+    type: 'analyze';
+    fileMeta: FileMeta;
+    buffer: ArrayBuffer;
+  }
   | {
-      type: 'convertToGrayscale';
-      fileMeta: FileMeta;
-      buffer: ArrayBuffer;
-    }
+    type: 'convertToGrayscale';
+    fileMeta: FileMeta;
+    buffer: ArrayBuffer;
+  }
   | {
-      type: 'upscaleLowResImages';
-      fileMeta: FileMeta;
-      buffer: ArrayBuffer;
-      minDpi?: number;
-    };
+    type: 'upscaleLowResImages';
+    fileMeta: FileMeta;
+    buffer: ArrayBuffer;
+    minDpi?: number;
+  }
+  | {
+    type: 'fixBleed';
+    fileMeta: FileMeta;
+    buffer: ArrayBuffer;
+  }
+  | {
+    type: 'tacHeatmap';
+    fileMeta: FileMeta;
+    buffer: ArrayBuffer;
+    pageIndex?: number;
+  };
 
 /**
  * Messages sent from the worker to the main thread.
@@ -151,16 +162,25 @@ export type PreflightWorkerMessage =
   | { type: 'analysisError'; message: string }
   | { type: 'analysisProgress'; progress: number; note?: string }
   | {
-      type: 'transformResult';
-      operation: 'grayscale' | 'upscaleImages';
-      buffer: ArrayBuffer;
-      fileMeta: FileMeta;
-    }
+    type: 'transformResult';
+    operation: 'grayscale' | 'upscaleImages' | 'fixBleed';
+    buffer: ArrayBuffer;
+    fileMeta: FileMeta;
+  }
   | {
-      type: 'transformError';
-      operation: 'grayscale' | 'upscaleImages';
-      message: string;
-    };
+    type: 'transformError';
+    operation: 'grayscale' | 'upscaleImages' | 'fixBleed';
+    message: string;
+  }
+  | {
+    type: 'tacHeatmapResult';
+    pageIndex: number;
+    gridWidth: number;
+    gridHeight: number;
+    values: Uint8Array;
+    maxTac: number;
+  }
+  | { type: 'tacHeatmapError'; message: string };
 
 /**
  * Props for a modal component.
@@ -168,4 +188,10 @@ export type PreflightWorkerMessage =
 export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+export interface HeatmapData {
+  values: Uint8Array;
+  width: number; // Grid width
+  height: number; // Grid height
+  maxTac: number;
 }
