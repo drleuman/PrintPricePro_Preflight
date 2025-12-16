@@ -287,10 +287,10 @@ export const PageViewer: React.FC<PageViewerProps> = ({
       <div className="pdf-viewer-container relative">
         <canvas ref={canvasRef} className="shadow-lg border border-gray-300 max-w-full h-auto block"></canvas>
         {showHeatmap && (
-          <div className="absolute top-0 left-0 w-full h-full pointer-events-none flex items-center justify-center">
-            {isHeatmapLoading && <div className="bg-black/50 text-white px-3 py-1 rounded">Analyzing Ink...</div>}
+          <div className="absolute top-0 left-0 w-full h-full pointer-events-none flex items-center justify-center" style={{ zIndex: 10 }}>
+            {isHeatmapLoading && <div className="bg-black/50 text-white px-3 py-1 rounded" style={{ pointerEvents: 'auto' }}>Analyzing Ink...</div>}
             {/* Heatmap Overlay Canvas would go here */}
-            <canvas ref={heatmapLayerRef} className="absolute top-0 left-0 w-full h-full opacity-60 mix-blend-multiply" />
+            <canvas ref={heatmapLayerRef} className="absolute top-0 left-0 w-full h-full opacity-60 mix-blend-multiply" style={{ zIndex: 5 }} />
           </div>
         )}
       </div>
