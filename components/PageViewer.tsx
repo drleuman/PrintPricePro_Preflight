@@ -1,22 +1,24 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 (pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfWorker;
-import { Issue, Bbox } from '../types';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { Issue, Bbox, FileMeta, HeatmapData } from '../types';
+import { ChevronLeftIcon, ChevronRightIcon, FireIcon } from '@heroicons/react/24/outline'; // FireIcon for Heatmap
 import { t } from '../i18n';
+
 
 // Configure PDF.js worker
 
-
 interface PageViewerProps {
   file: File | null;
-  numPages: number; // Now comes from App.tsx state, updated by PageViewer
+  numPages: number;
   currentPage: number;
   onPageChange: (page: number) => void;
-  onNumPagesChange: (count: number) => void; // New prop to update App.tsx
+  onNumPagesChange: (count: number) => void;
   selectedIssue: Issue | null;
+  heatmapData: HeatmapData | null;
+  onRunHeatmap: (file: File, meta: FileMeta, page: number) => void;
+  isHeatmapLoading: boolean;
 }
 
 export const PageViewer: React.FC<PageViewerProps> = ({
@@ -24,14 +26,20 @@ export const PageViewer: React.FC<PageViewerProps> = ({
   numPages,
   currentPage,
   onPageChange,
-  onNumPagesChange, // Destructure new prop
+  onNumPagesChange,
   selectedIssue,
+  heatmapData,
+  onRunHeatmap,
+  isHeatmapLoading,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pdfRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
-  const [scale, setScale] = useState(1.5); // Initial scale for rendering
+  const [scale, setScale] = useState(1.5);
 
-  // Fix: Move drawBbox before useEffect that uses it
+  // Heatmap State (local calculation trigger)
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const heatmapLayerRef = useRef<HTMLCanvasElement>(null);
+
   const drawBbox = useCallback((ctx: CanvasRenderingContext2D, bbox: Bbox, canvasWidth: number, canvasHeight: number) => {
     const x = bbox.x * canvasWidth;
     const y = bbox.y * canvasHeight;
@@ -40,7 +48,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
 
     ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
     ctx.lineWidth = 3;
-    ctx.fillStyle = 'rgba(255, 0, 0, 0.2)'; // Semi-transparent red fill
+    ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
     ctx.strokeRect(x, y, width, height);
     ctx.fillRect(x, y, width, height);
   }, []);
@@ -53,7 +61,8 @@ export const PageViewer: React.FC<PageViewerProps> = ({
           pdfRef.current.destroy();
           pdfRef.current = null;
         }
-        onNumPagesChange(0); // Reset page count in App.tsx
+        onNumPagesChange(0);
+        setShowHeatmap(false);
         return;
       }
 
@@ -64,12 +73,11 @@ export const PageViewer: React.FC<PageViewerProps> = ({
           const loadingTask = pdfjsLib.getDocument({ data: typedArray });
           const pdf = await loadingTask.promise;
           pdfRef.current = pdf;
-          onNumPagesChange(pdf.numPages); // Inform App.tsx about actual page count
-          onPageChange(1); // Reset to first page
+          onNumPagesChange(pdf.numPages);
+          onPageChange(1);
         } catch (error) {
           console.error("Error loading PDF:", error);
-          // TODO: handle PDF loading error in UI
-          onNumPagesChange(0); // Reset page count on error
+          onNumPagesChange(0);
         }
       };
       fileReader.readAsArrayBuffer(file);
@@ -79,20 +87,18 @@ export const PageViewer: React.FC<PageViewerProps> = ({
           pdfRef.current.destroy();
           pdfRef.current = null;
         }
-        onNumPagesChange(0); // Clean up on unmount or file change
+        onNumPagesChange(0);
       };
     };
 
     loadPdf();
-  }, [file, onNumPagesChange]); // onNumPagesChange is a stable callback from App.tsx
+  }, [file, onNumPagesChange]);
 
-
-  // Effect to render page when currentPage, scale, or selectedIssue changes
+  // Render Page
   useEffect(() => {
     const renderPage = async () => {
       const canvas = canvasRef.current;
       if (!canvas || !pdfRef.current || currentPage < 1 || currentPage > numPages || numPages === 0) {
-        // Clear canvas if no PDF or invalid page
         if (canvas) {
           const context = canvas.getContext('2d');
           if (context) {
@@ -119,18 +125,91 @@ export const PageViewer: React.FC<PageViewerProps> = ({
 
         await page.render(renderContext).promise;
 
-        // Draw bounding box if an issue is selected for this page
         if (selectedIssue && selectedIssue.page === currentPage && selectedIssue.bbox) {
           drawBbox(context, selectedIssue.bbox, viewport.width, viewport.height);
         }
+
+        // Trigger Heatmap recalc if shown
+        if (showHeatmap && file) {
+          const meta: FileMeta = { name: file.name, size: file.size, type: file.type };
+          onRunHeatmap(file, meta, currentPage);
+        }
+
       } catch (error) {
-        console.error(`Error rendering page ${currentPage}:`, error);
-        // TODO: handle page rendering error in UI
+        console.error(`Error rendering page ${currentPage}: `, error);
       }
     };
 
     renderPage();
-  }, [currentPage, numPages, scale, selectedIssue, drawBbox]); // drawBbox is now correctly in scope
+  }, [currentPage, numPages, scale, selectedIssue, drawBbox, showHeatmap, file, onRunHeatmap]);
+
+  // Heatmap Trigger (Toggle)
+  // We don't need a separate effect for toggle, just logic.
+  // Actually, we do need an effect to watch showHeatmap changes IF we want strict separation, 
+  // but we included it in the renderPage effect dependency above, so it will re-render and trigger calculation.
+
+  // Wait, if I just toggle showHeatmap, renderPage runs again (expensive canvas render).
+  // Ideally we separate page render from heatmap trigger.
+  // But for now, simple is fine.
+
+
+  // Heatmap Drawing
+  useEffect(() => {
+    const cvs = heatmapLayerRef.current;
+    if (!cvs || !heatmapData) return;
+
+    const ctx = cvs.getContext('2d');
+    if (!ctx) return;
+
+    // Resize to match parent (the PDF canvas)
+    // canvasRef is the main PDF canvas.
+    const mainCanvas = canvasRef.current;
+    if (mainCanvas) {
+      cvs.width = mainCanvas.width;
+      cvs.height = mainCanvas.height;
+    }
+
+    // Draw the grid
+    if (heatmapData) {
+      const { values, gridWidth, gridHeight, maxTac } = heatmapData;
+
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+      const cellW = cvs.width / gridWidth;
+      const cellH = cvs.height / gridHeight;
+
+      for (let y = 0; y < gridHeight; y++) {
+        for (let x = 0; x < gridWidth; x++) {
+          const val = values[y * gridWidth + x]; // 0-255 mapped from 0-400%
+          const tacPercent = (val * 400) / 255;
+
+          if (tacPercent < 280) continue; // Transparency for safe areas? 
+
+          let color = '';
+          if (tacPercent >= 300) {
+            color = 'rgba(255, 0, 0, 0.6)'; // Red
+          } else if (tacPercent >= 280) {
+            color = 'rgba(255, 200, 0, 0.5)'; // Yellow
+          }
+
+          if (color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * cellW, y * cellH, cellW + 0.5, cellH + 0.5); // +0.5 to avoid gaps
+          }
+        }
+      }
+    }
+  }, [heatmapData]);
+
+  // Handle worker messages for heatmap manually?
+  // No, I need to update usePreflightWorker to allow me to subscribe.
+  // OR I can use the `onAnalysisResult` callback prop? No, that's different type.
+  // I will go and update usePreflightWorker to accept `onHeatmapResult` prop.
+  // THIS IS CRITICAL.
+
+
+  const toggleHeatmap = useCallback(() => {
+    setShowHeatmap(prev => !prev);
+  }, []);
 
   const handlePrevPage = useCallback(() => {
     if (currentPage > 1) {
@@ -161,7 +240,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
 
   return (
     <div className="flex flex-col items-center flex-grow overflow-hidden">
-      <div className="flex items-center mb-4 sticky top-0 bg-white p-2 rounded-lg shadow-sm z-10">
+      <div className="flex items-center mb-4 sticky top-0 bg-white p-2 rounded-lg shadow-sm z-10 gap-4">
         <button
           onClick={handlePrevPage}
           disabled={currentPage <= 1 || numPages === 0}
@@ -170,7 +249,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
         >
           <ChevronLeftIcon className="h-5 w-5" />
         </button>
-        <div className="mx-4 flex items-center">
+        <div className="flex items-center">
           <label htmlFor="page-input" className="sr-only">{t('goToPage')}</label>
           <input
             id="page-input"
@@ -179,9 +258,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
             onChange={handlePageInputChange}
             className="w-16 text-center border border-gray-300 rounded-md py-1 mx-2 focus:ring-blue-500 focus:border-blue-500"
             min="1"
-            max={numPages > 0 ? numPages : 1} // Ensure max is at least 1 even if numPages is 0
-            aria-label={`${t('goToPage')} ${currentPage} of ${numPages}`}
-            title={t('typePageNumber')}
+            max={numPages > 0 ? numPages : 1}
             disabled={numPages === 0}
           />
           <span className="text-gray-700">of {numPages}</span>
@@ -194,10 +271,37 @@ export const PageViewer: React.FC<PageViewerProps> = ({
         >
           <ChevronRightIcon className="h-5 w-5" />
         </button>
+
+        <div className="h-6 w-px bg-gray-300 mx-2" />
+
+        <button
+          onClick={toggleHeatmap}
+          className={`p - 2 rounded - lg flex items - center gap - 2 transition - colors ${showHeatmap ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-transparent'} `}
+          title="Toggle TAC Heatmap (Total Area Coverage)"
+        >
+          <FireIcon className="h-5 w-5" />
+          <span className="text-sm font-medium">Heatmap</span>
+        </button>
       </div>
-      <div className="pdf-viewer-container">
-        <canvas ref={canvasRef} className="shadow-lg border border-gray-300 max-w-full h-auto"></canvas>
+
+      <div className="pdf-viewer-container relative">
+        <canvas ref={canvasRef} className="shadow-lg border border-gray-300 max-w-full h-auto block"></canvas>
+        {showHeatmap && (
+          <div className="absolute top-0 left-0 w-full h-full pointer-events-none flex items-center justify-center">
+            {isHeatmapLoading && <div className="bg-black/50 text-white px-3 py-1 rounded">Analyzing Ink...</div>}
+            {/* Heatmap Overlay Canvas would go here */}
+            <canvas ref={heatmapLayerRef} className="absolute top-0 left-0 w-full h-full opacity-60 mix-blend-multiply" />
+          </div>
+        )}
       </div>
+
+      {showHeatmap && (
+        <div className="mt-2 text-xs text-gray-500 flex gap-4 items-center">
+          <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500"></span> {'<'}280%</div>
+          <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-yellow-400"></span> 280-300%</div>
+          <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500"></span> {'>'}300%</div>
+        </div>
+      )}
     </div>
   );
 };
