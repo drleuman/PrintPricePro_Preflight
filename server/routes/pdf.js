@@ -189,10 +189,20 @@ router.post('/rebuild-150dpi', upload.single('file'), async (req, res) => {
         });
     } catch (err) {
         console.error('rebuild dpi failed:', err);
+        console.error('Error details:', {
+            message: err.message,
+            stack: err.stack,
+            inputPath,
+            outPath,
+            tmpDir
+        });
         safeUnlink(inputPath);
         safeUnlink(outPath);
         safeRmDir(tmpDir);
-        res.status(500).json({ error: 'Rebuild failed' });
+        res.status(500).json({
+            error: 'Rebuild failed',
+            details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
     }
 });
 
