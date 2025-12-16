@@ -86,7 +86,10 @@ export default function App() {
 
   const onTransformResult = useCallback((blob: Blob, meta: FileMeta, operation: string) => {
     // Determine info based on operation
-    const opLabel = operation === 'grayscale' ? 'B&W / Grayscale' : 'Rebuild ≥150 dpi';
+    let opLabel = 'Processed';
+    if (operation === 'grayscale') opLabel = 'B&W / Grayscale';
+    else if (operation === 'upscaleImages') opLabel = 'Rebuild ≥150 dpi';
+    else if (operation === 'fixBleed') opLabel = 'Bleed Fixed';
 
     updateFileState(new File([blob], meta.name, { type: 'application/pdf' }), meta);
     downloadAndRemember(blob, meta.name);
