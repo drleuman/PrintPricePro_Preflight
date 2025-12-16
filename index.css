@@ -1529,24 +1529,50 @@ div[role="button"]:focus-visible,
   opacity: 0.9;
 }
 
-/* Colores (los tuyos, se mantienen) */
+/* Colores neutrales para todos los botones */
 .ppp-action--run {
-  background: #dc2626;
+  background: #374151;
   color: #fff;
+}
+
+.ppp-action--run:hover:not(:disabled) {
+  background: #1f2937;
 }
 
 .ppp-action--bw {
-  background: #111827;
+  background: #4b5563;
   color: #fff;
+}
+
+.ppp-action--bw:hover:not(:disabled) {
+  background: #374151;
 }
 
 .ppp-action--cmyk {
-  background: #b45309;
+  background: #6b7280;
   color: #fff;
 }
 
+.ppp-action--cmyk:hover:not(:disabled) {
+  background: #4b5563;
+}
+
 .ppp-action--rebuild {
-  background: #059669;
+  background: #9ca3af;
+  color: #fff;
+}
+
+.ppp-action--rebuild:hover:not(:disabled) {
+  background: #6b7280;
+}
+
+.ppp-action--booklet {
+  background: #d1d5db;
+  color: #1f2937;
+}
+
+.ppp-action--booklet:hover:not(:disabled) {
+  background: #9ca3af;
   color: #fff;
 }
 
