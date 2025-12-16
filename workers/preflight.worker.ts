@@ -64,7 +64,14 @@ type FixBleedCmd = {
   buffer: ArrayBuffer;
 };
 
-type Inbound = AnalyzeCmd | ConvertToGrayscaleCmd | UpscaleLowResImagesCmd | FixBleedCmd;
+type TacHeatmapCmd = {
+  type: 'tacHeatmap';
+  fileMeta: FileMeta;
+  buffer: ArrayBuffer;
+  pageIndex?: number; // Optional, usually we analyze one page for the heatmap in the viewer
+};
+
+type Inbound = AnalyzeCmd | ConvertToGrayscaleCmd | UpscaleLowResImagesCmd | FixBleedCmd | TacHeatmapCmd;
 
 type Outbound =
   | { type: 'analysisProgress'; progress: number; note?: string }
@@ -80,11 +87,140 @@ type Outbound =
     type: 'transformError';
     operation: 'grayscale' | 'upscaleImages' | 'fixBleed';
     message: string;
-  };
+  }
+  // Simplified Heatmap result.
+  // We return a list of "hot" blocks.
+  // Or just a low-res grid of TAC values.
+  | {
+    type: 'tacHeatmapResult';
+    pageIndex: number;
+    // Map of (x,y) -> tacValue (0-400), normalized to some grid size
+    // Or just a raw flat array of bytes for a 50x50 or 100x100 grid?
+    // Let's use a flat array of Uint8 for a grid of simpler size.
+    // e.g. 1% of width
+    gridWidth: number;
+    gridHeight: number;
+    values: Uint8Array; // TAC values (0-255 scaled? No, TAC goes to 400. Uint16? or just clamp > 255 to 255?)
+    // Actually standard TAC is 300%+ is bad. 0-400.
+    // Let's use Uint8 and store TAC/2 (0-200 => 0-400%) or just clamp to 100%? No we need specific values.
+    // Let's return Uint16Array.
+    maxTac: number;
+  }
+  | { type: 'tacHeatmapError'; message: string };
 
 function post(msg: Outbound) {
   (self as unknown as Worker).postMessage(msg as PreflightWorkerMessage);
 }
+
+// ... Utils ...
+
+// 4) TAC Heatmap Analysis
+async function generateTacHeatmap(
+  buffer: ArrayBuffer,
+  pageIndex: number = 1 // 1-based
+): Promise<void> {
+  const uint8 = new Uint8Array(buffer);
+  const loadingTask = (pdfjsLib as any).getDocument({
+    data: uint8,
+    disableWorker: true,
+    cMapUrl: 'https://unpkg.com/pdfjs-dist@4.6.82/cmaps/',
+    cMapPacked: true,
+  });
+  const pdf = await loadingTask.promise;
+
+  if (pageIndex < 1 || pageIndex > pdf.numPages) {
+    throw new Error(`Page ${pageIndex} out of range (1-${pdf.numPages})`);
+  }
+
+  const page = await pdf.getPage(pageIndex);
+  // Render to a small-ish canvas for heatmap analysis
+  // We don't need full print resolution. 72 DPI is enough for a UI heatmap.
+  // Actually, maybe lower? 36 DPI?
+  // Let's target a grid of approx 100-200 px wide.
+  const viewportRaw = page.getViewport({ scale: 1.0 });
+  // Scale to make width ~ 150px
+  const scale = 150 / viewportRaw.width;
+  const { canvas, viewport } = await renderPageToCanvas(page, scale);
+
+  const ctx = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
+  const { width, height } = canvas;
+  const imgData = ctx.getImageData(0, 0, width, height);
+  const data = imgData.data; // R,G,B,A, R,G,B,A...
+
+  // Analyze TAC.
+  // Note: We only have RGB from canvas. Precise TAC requires CMYK source access.
+  // Converting RGB -> CMYK is an approximation.
+  // Standard naive conversion:
+  // K = 1 - max(R,G,B)
+  // C = (1-R-K)/(1-K) ...
+  // This is "GCR" (Gray Component Replacement) dependent.
+  // Simple naive formula:
+  // C = 1 - R, M = 1 - G, Y = 1 - B. 
+  // Wait, that's just inverted RGB.
+  // Naive CMYK:
+  // R' = R/255, etc.
+  // K = 1 - max(R', G', B')
+  // C = (1 - R' - K) / (1 - K)
+  // M = (1 - G' - K) / (1 - K)
+  // Y = (1 - B' - K) / (1 - K)
+  // TAC = (C+M+Y+K) * 100.
+
+  // However, in standard RGB-to-CMYK profiles (e.g. SWOP), rich black can be high.
+  // This approximation is ONLY for the "Heatmap" visual aid, explicitly stating it's estimated from RGB render.
+  // It detects "dark" areas primarily.
+
+  const heatmapValues = new Uint8Array(width * height);
+  let maxTacFound = 0;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i] / 255;
+    const g = data[i + 1] / 255;
+    const b = data[i + 2] / 255;
+    // alpha ignored for ink coverage usually (paper is white), assuming composition against white?
+    // If alpha is 0, it's white paper -> 0% ink.
+    const a = data[i + 3] / 255;
+
+    // Composit against white
+    // r_final = r*a + 1*(1-a) ...
+    const r_vis = r * a + (1 - a);
+    const g_vis = g * a + (1 - a);
+    const b_vis = b * a + (1 - a);
+
+    const k = 1 - Math.max(r_vis, g_vis, b_vis);
+    let c = 0, m = 0, y = 0;
+
+    if (k < 1) {
+      c = (1 - r_vis - k) / (1 - k);
+      m = (1 - g_vis - k) / (1 - k);
+      y = (1 - b_vis - k) / (1 - k);
+    }
+
+    const totalInk = (c + m + y + k) * 400; // 0-4.0 -> 0-400%
+    // We'll store it as Uint8, so divide by 2 to fit 0-200 (representing 0-400%)?
+    // Or just count "badness"?
+    // Let's store actual % value if < 255, but normally we care about > 280.
+    // Let's store (Value - 200)? No.
+    // Let's map 0-400 to 0-255?  val * 255/400. 
+    // Or better: Just store percent integer. 300% = 255 (clamped)? No.
+    // Let's store TAC.
+    const tac = Math.round(totalInk);
+    maxTacFound = Math.max(maxTacFound, tac);
+
+    // We output a packed array.
+    // Since we likely care most about > 280, let's clamp.
+    heatmapValues[i / 4] = Math.min(255, tac * 255 / 400); // 400% -> 255. 300% -> 191.
+  }
+
+  post({
+    type: 'tacHeatmapResult',
+    pageIndex,
+    gridWidth: width,
+    gridHeight: height,
+    values: heatmapValues,
+    maxTac: maxTacFound
+  });
+}
+
 
 /* =========================
    Utils de tamaño / severidad
@@ -365,7 +501,7 @@ function buildResult(
   >();
 
   for (const it of issues) {
-    const cat = it.category ?? ISSUE_CATEGORYValues.metadata;
+    const cat = it.category ?? ISSUE_CATEGORY.METADATA;
     const sev = getSeverity(it);
     let entry = catMap.get(cat);
     if (!entry) {
