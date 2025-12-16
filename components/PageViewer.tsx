@@ -155,8 +155,12 @@ export const PageViewer: React.FC<PageViewerProps> = ({
 
   // Heatmap Drawing
   useEffect(() => {
+    console.log('[Heatmap] Effect triggered', { hasCanvas: !!heatmapLayerRef.current, hasData: !!heatmapData });
     const cvs = heatmapLayerRef.current;
-    if (!cvs || !heatmapData) return;
+    if (!cvs || !heatmapData) {
+      console.log('[Heatmap] Skipping - missing canvas or data');
+      return;
+    }
 
     const ctx = cvs.getContext('2d');
     if (!ctx) return;
@@ -172,10 +176,12 @@ export const PageViewer: React.FC<PageViewerProps> = ({
     // Draw the grid
     if (heatmapData) {
       const { values, width, height, maxTac } = heatmapData;
+      console.log('[Heatmap] Drawing', { canvasSize: `${cvs.width}x${cvs.height}`, gridSize: `${width}x${height}`, dataLen: values.length });
 
       ctx.clearRect(0, 0, cvs.width, cvs.height);
       const cellW = cvs.width / width;
       const cellH = cvs.height / height;
+      let cellsDrawn = 0;
 
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
@@ -193,7 +199,8 @@ export const PageViewer: React.FC<PageViewerProps> = ({
 
           if (color) {
             ctx.fillStyle = color;
-            ctx.fillRect(x * cellW, y * cellH, cellW + 0.5, cellH + 0.5); // +0.5 to avoid gaps
+            ctx.fillRect(x * cellW, y * cellH, cellW + 0.5, cellH + 0.5);
+            cellsDrawn++;
           }
         }
       }
