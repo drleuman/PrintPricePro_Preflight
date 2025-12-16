@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { createBooklet } from '../utils/imposition';
+import { createBooklet } from '../utils/imposition.ts';
 
 export function usePdfTools() {
     const [isServerRunning, setIsServerRunning] = useState(false);
