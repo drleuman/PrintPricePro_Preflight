@@ -361,7 +361,6 @@ export default function App() {
                       onClick={convertColors}
                       disabled={!file || isRunning}
                       title="Convert colors using selected profile"
-                      style={{ flex: '0 0 auto', minWidth: '200px' }}
                     >
                       <span className="ppp-action__icon" aria-hidden>🎨</span>
                       <span className="ppp-action__label">
