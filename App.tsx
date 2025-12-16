@@ -343,7 +343,7 @@ export default function App() {
                 </button>
 
                 <div className="ppp-action-group">
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-stretch">
                     <select
                       className="flex-1 p-3 rounded-lg border border-gray-200 text-sm bg-gray-50 font-medium"
                       defaultValue="cmyk"
@@ -356,19 +356,20 @@ export default function App() {
                       <option value="gracol">GRACoL 2006 (Coated)</option>
                       <option value="swop">SWOP Web Coated</option>
                     </select>
+                    <button
+                      className="ppp-action ppp-action--cmyk"
+                      onClick={convertColors}
+                      disabled={!file || isRunning}
+                      title="Convert colors using selected profile"
+                      style={{ flex: '0 0 auto', minWidth: '200px' }}
+                    >
+                      <span className="ppp-action__icon" aria-hidden>🎨</span>
+                      <span className="ppp-action__label">
+                        Convert Colors
+                        <span className="ppp-action__subtitle">To {selectedProfile === 'cmyk' ? 'CMYK' : selectedProfile.toUpperCase()}</span>
+                      </span>
+                    </button>
                   </div>
-                  <button
-                    className="ppp-action ppp-action--cmyk mt-2"
-                    onClick={convertColors}
-                    disabled={!file || isRunning}
-                    title="Convert colors using selected profile"
-                  >
-                    <span className="ppp-action__icon" aria-hidden>🎨</span>
-                    <span className="ppp-action__label">
-                      Convert Colors
-                      <span className="ppp-action__subtitle">To {selectedProfile === 'cmyk' ? 'CMYK' : selectedProfile.toUpperCase()}</span>
-                    </span>
-                  </button>
                 </div>
 
                 <button
