@@ -35,6 +35,9 @@ COPY --from=builder /app/server/services ./services
 COPY --from=builder /app/server/node_modules ./node_modules
 COPY --from=builder /app/server/package.json ./package.json
 
+# Copy ICC profiles for color conversion
+COPY --from=builder /app/server/icc-profiles ./icc-profiles
+
 # Copy server public assets (if any)
 COPY --from=builder /app/server/public ./public
 
