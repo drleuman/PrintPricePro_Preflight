@@ -1479,7 +1479,7 @@ div[role="button"]:focus-visible,
   padding: 14px 14px;
   border-radius: var(--border-radius-lg);
   border: 1px solid rgba(0, 0, 0, 0.08);
-  font-weight: 800;
+  font-weight: 400;
   font-size: 1rem;
   line-height: 1.1;
   text-align: left;
@@ -1525,7 +1525,7 @@ div[role="button"]:focus-visible,
 
 .ppp-action__subtitle {
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 400;
   opacity: 0.9;
 }
 
