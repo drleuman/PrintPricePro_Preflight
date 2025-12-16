@@ -35,7 +35,7 @@ COPY --from=builder /app/server/services ./services
 COPY --from=builder /app/server/node_modules ./node_modules
 COPY --from=builder /app/server/package.json ./package.json
 
-# Create ICC profiles directory (profiles can be added later if needed)
+RUN npm install --production
 RUN mkdir -p ./icc-profiles
 
 # Copy server public assets (if any)
