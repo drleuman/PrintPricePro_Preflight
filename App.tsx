@@ -13,6 +13,7 @@ import {
   FileMeta,
   Issue,
   PreflightResult,
+  HeatmapData,
 } from './types';
 import { usePreflightWorker } from './hooks/usePreflightWorker';
 import { usePdfTools } from './hooks/usePdfTools';
@@ -31,11 +32,17 @@ export default function App() {
   const [efficiencyOpen, setEfficiencyOpen] = useState(false);
   const [issueForAudit, setIssueForAudit] = useState<Issue | null>(null);
 
+  // Heatmap State (lifted from PageViewer)
+  const [heatmapData, setHeatmapData] = useState<HeatmapData | null>(null);
+  const [heatmapLoading, setHeatmapLoading] = useState(false);
+
   // UI flags
   // Combined running state is derived later, but we keep track for UI
   const [lastPdfUrl, setLastPdfUrl] = useState<string | null>(null);
   const [lastPdfName, setLastPdfName] = useState<string | null>(null);
   const lastPdfUrlRef = useRef<string | null>(null);
+  // State for profile selection
+  const [selectedProfile, setSelectedProfile] = useState<string>('cmyk');
 
   // ---------- Helpers ----------
 
@@ -99,29 +106,56 @@ export default function App() {
 
   const onWorkerError = useCallback((msg: string) => {
     console.error('Worker error:', msg);
+    setHeatmapLoading(false); // Ensure loading stops if it was heatmap
     window.alert('Operation failed: ' + msg);
   }, []);
 
+  const onHeatmapResult = useCallback((data: { values: Uint8Array; width: number; height: number; maxTac: number }) => {
+    setHeatmapData(data);
+    setHeatmapLoading(false);
+  }, []);
+
+  /* ... (Previous code was broken, rebuilding structure) ... */
   const {
     isWorkerRunning,
     runAnalysis,
     runClientGrayscale,
     runClientUpscale,
     runFixBleed,
+    runTacHeatmap, // exposed from hook
   } = usePreflightWorker({
     onAnalysisResult,
     onTransformResult,
-    onError: onWorkerError
+    onError: onWorkerError,
+    onHeatmapResult,
   });
-
+  /* ... (Previous code was broken, rebuilding structure) ... */
   const {
     isServerRunning,
     convertToGrayscaleServer,
-    convertRgbToCmykServer,
-    rebuildPdfServer
+    convertColorServer,
+    rebuildPdfServer,
+    createBookletClient,
   } = usePdfTools();
 
   const isRunning = isWorkerRunning || isServerRunning;
+
+  // Clear heatmap when file changes (handled in updateFileState mostly, but specific state here)
+  useEffect(() => {
+    if (!file) setHeatmapData(null);
+  }, [file]);
+
+  // Wrapper for runTacHeatmap to manage loading state in App
+  const handleRunHeatmap = useCallback((f: File, meta: FileMeta, page: number) => {
+    setHeatmapLoading(true);
+    setHeatmapData(null); // Clear previous
+    runTacHeatmap(f, meta, page);
+  }, [runTacHeatmap]);
+
+  // Also clear heatmap when page changes? 
+  // PageViewer usually handles triggering re-calculation if needed.
+  // Actually PageViewer logic was: if showHeatmap=true, trigger calc on page change.
+  // So PageViewer needs to call handleRunHeatmap.
 
   // ---------- Handlers ----------
 
@@ -144,6 +178,7 @@ export default function App() {
     if (!file || !fileMeta) return;
     setResult(null);
     setSelectedIssue(null);
+    setHeatmapData(null); // Clear heatmap on new analysis? Maybe not strictly required but cleaner
     runAnalysis(file, fileMeta);
   }, [file, fileMeta, runAnalysis]);
 
@@ -201,25 +236,43 @@ export default function App() {
     }
   }, [file, fileMeta, rebuildPdfServer, downloadAndRemember, updateFileState, runClientUpscale]);
 
-  // RGB → CMYK (Server Only)
-  const convertRgbToCmyk = useCallback(async () => {
+  // Convert Colors (Generic CMYK or Profile)
+  const convertColors = useCallback(async () => {
     if (!file) return;
     setResult(null);
     setSelectedIssue(null);
 
     try {
-      const blob = await convertRgbToCmykServer(file);
-      const newName = file.name.replace(/\.pdf$/i, '') + '_cmyk.pdf';
+      const blob = await convertColorServer(file, selectedProfile);
+      const newName = file.name.replace(/\.pdf$/i, '') + `_${selectedProfile}.pdf`;
       const newFile = new File([blob], newName, { type: 'application/pdf' });
 
       downloadAndRemember(blob, newName);
       updateFileState(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
 
     } catch (e) {
-      console.error('convertRgbToCmyk failed', e);
-      window.alert('RGB → CMYK conversion requires server connection. Please try again later.');
+      console.error('convertColors failed', e);
+      window.alert('Color conversion requires server connection. Please try again later.');
     }
-  }, [file, convertRgbToCmykServer, downloadAndRemember, updateFileState]);
+  }, [file, selectedProfile, convertColorServer, downloadAndRemember, updateFileState]);
+
+  // Make Booklet
+  const makeBooklet = useCallback(async () => {
+    if (!file) return;
+    try {
+      // Simulating loading state if we had one for client tools
+      const blob = await createBookletClient(file);
+      const newName = file.name.replace(/\.pdf$/i, '') + '_booklet.pdf';
+      const newFile = new File([blob], newName, { type: 'application/pdf' });
+
+      downloadAndRemember(blob, newName);
+      updateFileState(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
+      window.alert('Booklet created successfully (2-up saddle stitch implementation).');
+    } catch (e) {
+      console.error('Booklet creation failed', e);
+      window.alert('Booklet creation failed: ' + (e as Error).message);
+    }
+  }, [file, createBookletClient, downloadAndRemember, updateFileState]);
 
   const handleFixBleed = useCallback(async () => {
     if (!file || !fileMeta) return;
@@ -289,18 +342,34 @@ export default function App() {
                   </span>
                 </button>
 
-                <button
-                  className="ppp-action ppp-action--cmyk"
-                  onClick={convertRgbToCmyk}
-                  disabled={!file || isRunning}
-                  title="Convert RGB content to CMYK"
-                >
-                  <span className="ppp-action__icon" aria-hidden>🎨</span>
-                  <span className="ppp-action__label">
-                    RGB → CMYK
-                    <span className="ppp-action__subtitle">Convert colors for print</span>
-                  </span>
-                </button>
+                <div className="ppp-action-group">
+                  <div className="flex gap-2">
+                    <select
+                      className="flex-1 p-3 rounded-lg border border-gray-200 text-sm bg-gray-50 font-medium"
+                      defaultValue="cmyk"
+                      onChange={(e) => {
+                        setSelectedProfile(e.target.value);
+                      }}
+                    >
+                      <option value="cmyk">Generic CMYK</option>
+                      <option value="fogra39">Coated FOGRA39 (ISO 12647)</option>
+                      <option value="gracol">GRACoL 2006 (Coated)</option>
+                      <option value="swop">SWOP Web Coated</option>
+                    </select>
+                  </div>
+                  <button
+                    className="ppp-action ppp-action--cmyk mt-2"
+                    onClick={convertColors}
+                    disabled={!file || isRunning}
+                    title="Convert colors using selected profile"
+                  >
+                    <span className="ppp-action__icon" aria-hidden>🎨</span>
+                    <span className="ppp-action__label">
+                      Convert Colors
+                      <span className="ppp-action__subtitle">To {selectedProfile === 'cmyk' ? 'CMYK' : selectedProfile.toUpperCase()}</span>
+                    </span>
+                  </button>
+                </div>
 
                 <button
                   className="ppp-action ppp-action--rebuild"
@@ -312,6 +381,19 @@ export default function App() {
                   <span className="ppp-action__label">
                     Rebuild ≥150 dpi
                     <span className="ppp-action__subtitle">Rebuild/export with safer DPI</span>
+                  </span>
+                </button>
+
+                <button
+                  className="ppp-action ppp-action--booklet"
+                  onClick={makeBooklet}
+                  disabled={!file || isRunning}
+                  title="Create a 2-up saddle stitch booklet"
+                >
+                  <span className="ppp-action__icon" aria-hidden>📖</span>
+                  <span className="ppp-action__label">
+                    Make Booklet
+                    <span className="ppp-action__subtitle">2-up Saddle Stitch</span>
                   </span>
                 </button>
               </div>
@@ -357,6 +439,9 @@ export default function App() {
                 onPageChange={onPageChange}
                 onNumPagesChange={setNumPages}
                 selectedIssue={selectedIssue}
+                heatmapData={heatmapData}
+                onRunHeatmap={handleRunHeatmap}
+                isHeatmapLoading={heatmapLoading}
               />
             </div>
           </div>
