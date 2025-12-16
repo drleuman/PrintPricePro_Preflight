@@ -62,36 +62,77 @@ router.post('/grayscale', upload.single('file'), async (req, res) => {
     }
 });
 
-router.post('/rgb-to-cmyk', upload.single('file'), async (req, res) => {
+router.post('/convert-color', upload.single('file'), async (req, res) => {
     const inputPath = req.file && req.file.path;
     if (!inputPath) return res.status(400).json({ error: 'Missing file' });
 
+    // profile: 'cmyk' (generic), 'fogra39', 'gracol', etc.
+    const profile = (req.body.profile || 'cmyk').toLowerCase();
+
     const baseName = path.basename(req.file.originalname || 'document.pdf').replace(/\.pdf$/i, '');
-    const outName = `${baseName}_cmyk.pdf`;
-    const outPath = path.join(uploadDir, `${Date.now()}_out_cmyk.pdf`);
+    const outName = `${baseName}_${profile}.pdf`;
+    const outPath = path.join(uploadDir, `${Date.now()}_out_${profile}.pdf`);
+
+    // Basic args
+    let args = [
+        '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
+        '-sDEVICE=pdfwrite',
+        '-dCompatibilityLevel=1.4',
+        '-dPDFSETTINGS=/prepress',
+        // Preserve transparency if possible or flatten if needed (pdfwrite usually preserves)
+        '-dOverrideICC',
+        `-sOutputFile=${outPath}`,
+    ];
+
+    // Determine color options
+    if (profile === 'cmyk') {
+        // Generic CMYK
+        args.push(
+            '-sColorConversionStrategy=CMYK',
+            '-dProcessColorModel=/DeviceCMYK'
+        );
+    } else {
+        // ICC Profile based
+        // Check if profile exists
+        const profilesDir = path.join(__dirname, '../icc-profiles');
+        // Map common names to files
+        const map = {
+            'fogra39': 'CoatedFOGRA39.icc',
+            'gracol': 'GRACoL2006_Coated1v2.icc',
+            'swop': 'USWebCoatedSWOP.icc'
+        };
+        const fileName = map[profile] || `${profile}.icc`;
+        const profilePath = path.join(profilesDir, fileName);
+
+        if (fs.existsSync(profilePath)) {
+            // Use profile
+            args.push(
+                '-sColorConversionStrategy=CMYK', // Target is usually CMYK for these
+                '-dProcessColorModel=/DeviceCMYK',
+                `-sOutputICCProfile=${profilePath}`,
+                '-dRenderIntent=1' // Relative Colorimetric is standard for print
+            );
+        } else {
+            console.warn(`Profile ${profile} not found at ${profilePath}, falling back to generic CMYK`);
+            args.push(
+                '-sColorConversionStrategy=CMYK',
+                '-dProcessColorModel=/DeviceCMYK'
+            );
+        }
+    }
 
     try {
-        await runGs([
-            '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
-            '-sDEVICE=pdfwrite',
-            '-dCompatibilityLevel=1.4',
-            '-dPDFSETTINGS=/prepress',
-            '-sColorConversionStrategy=CMYK',
-            '-dProcessColorModel=/DeviceCMYK',
-            '-dOverrideICC',
-            `-sOutputFile=${outPath}`,
-            inputPath,
-        ]);
+        await runGs([...args, inputPath]);
 
         sendPdfAndCleanup(res, outPath, outName, () => {
             safeUnlink(inputPath);
             safeUnlink(outPath);
         });
     } catch (err) {
-        console.error('RGB->CMYK conversion failed:', err);
+        console.error('Color conversion failed:', err);
         safeUnlink(inputPath);
         safeUnlink(outPath);
-        res.status(500).json({ error: 'RGB to CMYK conversion failed' });
+        res.status(500).json({ error: 'Color conversion failed' });
     }
 });
 

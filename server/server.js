@@ -53,6 +53,30 @@ app.use(
 // Healthcheck
 app.get('/healthz', (_req, res) => res.status(200).send('ok'));
 
+// Debug endpoint to list all routes
+app.get('/debug/routes', (_req, res) => {
+  const routes = [];
+  app._router.stack.forEach((middleware) => {
+    if (middleware.route) {
+      routes.push({
+        path: middleware.route.path,
+        methods: Object.keys(middleware.route.methods)
+      });
+    } else if (middleware.name === 'router') {
+      middleware.handle.stack.forEach((handler) => {
+        if (handler.route) {
+          const path = middleware.regexp.source.replace('\\/?', '').replace('(?=\\/|$)', '');
+          routes.push({
+            path: path + handler.route.path,
+            methods: Object.keys(handler.route.methods)
+          });
+        }
+      });
+    }
+  });
+  res.json({ routes });
+});
+
 // SPA fallback
 app.get(/^\/(?!api-proxy\/|api\/).*/, (req, res) => {
   res.sendFile(path.join(staticPath, 'index.html'));
