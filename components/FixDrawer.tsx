@@ -309,7 +309,7 @@ export const FixDrawer: React.FC<Props> = ({ issue, onClose, onOpenAIAudit, onOp
   return (
     <aside className="ppp-drawer">
       {/* Header */}
-      <div className="px-4 py-4 border-b border-gray-200 flex items-start justify-between gap-3">
+      <div className="pl-4 pr-3 py-4 border-b border-gray-200 flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
             {t('selectedIssueDetails') || 'Selected Issue Details'}
@@ -332,10 +332,10 @@ export const FixDrawer: React.FC<Props> = ({ issue, onClose, onOpenAIAudit, onOp
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex items-center justify-center rounded-full p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+          className="inline-flex items-center justify-center rounded-full p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 -mr-1"
           aria-label={t('close')}
         >
-          <XMarkIcon className="h-5 w-5" aria-hidden="true" />
+          <XMarkIcon className="h-6 w-6" aria-hidden="true" />
         </button>
       </div>
 
@@ -431,6 +431,15 @@ export const FixDrawer: React.FC<Props> = ({ issue, onClose, onOpenAIAudit, onOp
               {isLoadingEff
                 ? t('fetchingAIResponse') || 'Fetching AI response...'
                 : t('getEfficiencyTips')}
+            </button>
+
+            {/* Mobile-friendly Close Button (at bottom) */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-4 w-full inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:hidden"
+            >
+              {t('close') || 'Close'}
             </button>
 
             <p className="mt-1 text-[11px] text-gray-400">
