@@ -10,6 +10,7 @@ type WorkerCallbacks = {
     onAnalysisResult?: (result: PreflightResult) => void;
     onTransformResult?: (blob: Blob, meta: FileMeta, operation: string) => void;
     onError?: (error: string) => void;
+    onHeatmapResult?: (data: { values: Uint8Array; width: number; height: number; maxTac: number }) => void;
 };
 
 export function usePreflightWorker(callbacks: WorkerCallbacks) {
@@ -45,6 +46,17 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
                 } else if (data.type === 'transformError') {
                     setIsWorkerRunning(false);
                     callbacks.onError?.(`${data.operation} failed: ${data.message}`);
+                } else if (data.type === 'tacHeatmapResult') {
+                    setIsWorkerRunning(false);
+                    callbacks.onHeatmapResult?.({
+                        values: data.values,
+                        width: data.gridWidth,
+                        height: data.gridHeight,
+                        maxTac: data.maxTac
+                    });
+                } else if (data.type === 'tacHeatmapError') {
+                    setIsWorkerRunning(false);
+                    callbacks.onError?.(`Heatmap failed: ${data.message}`);
                 }
             };
         } catch (e) {
@@ -128,6 +140,26 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
         }
     }, []);
 
+    const runTacHeatmap = useCallback(async (file: File, fileMeta: FileMeta, pageIndex: number) => {
+        if (!workerRef.current) return;
+        try {
+            // Note: Generating a heatmap is fast enough we might not want to block full UI,
+            // but for now let's set running.
+            setIsWorkerRunning(true);
+            const buffer = await file.arrayBuffer();
+            const cmd: PreflightWorkerCommand = {
+                type: 'tacHeatmap',
+                fileMeta,
+                buffer,
+                pageIndex
+            };
+            workerRef.current.postMessage(cmd, [buffer]);
+        } catch (e) {
+            setIsWorkerRunning(false);
+            callbacks.onError?.((e as Error).message);
+        }
+    }, []);
+
     return {
         isWorkerReady,
         isWorkerRunning,
@@ -135,5 +167,6 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
         runClientGrayscale,
         runClientUpscale,
         runFixBleed,
+        runTacHeatmap,
     };
 }
