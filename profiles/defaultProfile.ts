@@ -7,6 +7,8 @@ export type IssueHint = {
   shortTitle: string;
   /** Explicación humana corta, pensada para el usuario final */
   userFriendlySummary: string;
+  /** Sugerencia de arreglo concreta (acción) */
+  suggestedFix?: string;
   /**
    * Guía para la IA: qué debe priorizar al explicar/solucionar
    * este tipo de issue (se inyecta en los prompts).
@@ -78,6 +80,8 @@ const ISSUE_HINTS_BY_ID: Record<string, IssueHint> = {
     shortTitle: 'Transparency detected',
     userFriendlySummary:
       'Transparency or alpha blending is used. On some RIPs this may cause unexpected flattening or artifacts.',
+    suggestedFix:
+      'Flatten transparency in your layout software (e.g. InDesign) during export, or use Acrobat Pro (Print Production > Flattener Preview) to flatten the content.',
     aiPrompt:
       'Explain what transparency means in PDFs (drop shadows, opacity, blending modes) and how older RIPs can mis-handle it. Provide steps to flatten transparencies safely (InDesign export settings, Acrobat Preflight/Flattener, PitStop) and suggest checking results with overprint preview and separations.',
   },
@@ -87,6 +91,7 @@ const ISSUE_HINTS_BY_ID: Record<string, IssueHint> = {
     shortTitle: 'Missing bleed boxes',
     userFriendlySummary:
       'The PDF does not define explicit TrimBox/BleedBox on all sampled pages. Bleed may be missing or undefined.',
+    suggestedFix: 'Use the "Fix Bleed" button below to automatically add a 3mm bleed box, or re-export your PDF with "Use Document Bleed Settings" enabled (min 3mm).',
     aiPrompt:
       'Explain bleed in very practical terms (extra image beyond trim to avoid white edges) and why 3 mm is typical for books. Show how to set bleed correctly in InDesign export and how to verify TrimBox/BleedBox in Acrobat (Preflight, Set Page Boxes). Emphasize resupplying the PDF with proper bleed settings.',
   },
@@ -335,6 +340,7 @@ export function getIssueHint(issue: Issue): IssueHint {
     shortTitle: 'Preflight issue',
     userFriendlySummary:
       'There is an issue flagged by the preflight engine. It should be reviewed and fixed before the file goes to press.',
+    suggestedFix: 'Review the issue details and consult your layout software documentation to resolve it.',
     aiPrompt:
       'Provide generic but practical guidance on investigating and fixing a PDF preflight issue for book printing: check page size, bleed, resolution, colors (CMYK vs RGB), and fonts. Keep the advice tool-agnostic but mention Acrobat and InDesign when useful.',
   };
