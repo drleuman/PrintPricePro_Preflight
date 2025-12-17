@@ -182,6 +182,24 @@ div[role="button"]:focus:not(:focus-visible),
   border-top-color: var(--color-error);
 }
 
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-fadeIn {
+  animation: fade-in var(--transition-normal) ease-out forwards;
+}
+
 /* ===================== */
 /* Markdown (.markdown-body) */
 /* ===================== */
