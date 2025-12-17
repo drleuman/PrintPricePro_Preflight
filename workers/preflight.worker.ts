@@ -1492,6 +1492,18 @@ self.addEventListener('message', async (event: MessageEvent) => {
       return;
     }
 
+    if (msg.type === 'tacHeatmap') {
+      try {
+        await generateTacHeatmap(msg.buffer, msg.pageIndex);
+      } catch (e: any) {
+        post({
+          type: 'tacHeatmapError',
+          message: e?.message || String(e),
+        });
+      }
+      return;
+    }
+
   } catch (err: any) {
     console.error('Preflight worker fatal error', err);
 
@@ -1500,12 +1512,27 @@ self.addEventListener('message', async (event: MessageEvent) => {
         type: 'analysisError',
         message: err?.message || String(err),
       });
-    } else {
+    } else if (msg.type === 'tacHeatmap') {
+      post({
+        type: 'tacHeatmapError',
+        message: err?.message || String(err),
+      });
+    } else if (msg.type === 'convertToGrayscale') {
       post({
         type: 'transformError',
-        operation:
-          msg.type === 'convertToGrayscale' ? 'grayscale' :
-            msg.type === 'upscaleLowResImages' ? 'upscaleImages' : 'fixBleed',
+        operation: 'grayscale',
+        message: err?.message || String(err),
+      });
+    } else if (msg.type === 'upscaleLowResImages') {
+      post({
+        type: 'transformError',
+        operation: 'upscaleImages',
+        message: err?.message || String(err),
+      });
+    } else if (msg.type === 'fixBleed') {
+      post({
+        type: 'transformError',
+        operation: 'fixBleed',
         message: err?.message || String(err),
       });
     }
