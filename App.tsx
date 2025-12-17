@@ -382,19 +382,7 @@ export default function App() {
 
               {/* ACTIONS */}
               <div className="ppp-actions">
-                <button
-                  className="ppp-action ppp-action--ai-visual"
-                  onClick={handleRunVisualAudit}
-                  disabled={!file || isRunning}
-                  title="Analyze current page aesthetics with AI Vision"
-                  style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', color: 'white' }}
-                >
-                  <span className="ppp-action__icon" aria-hidden>👁️</span>
-                  <span className="ppp-action__label">
-                    AI Visual Check
-                    <span className="ppp-action__subtitle" style={{ color: 'rgba(255,255,255,0.9)' }}>Analyze Page {currentPage}</span>
-                  </span>
-                </button>
+                
 
                 <button
                   className="ppp-action ppp-action--run"
@@ -406,6 +394,20 @@ export default function App() {
                   <span className="ppp-action__label">
                     Run Preflight
                     <span className="ppp-action__subtitle">Analyze & detect issues</span>
+                  </span>
+                </button>
+
+                <button
+                  className="ppp-action ppp-action--ai-visual"
+                  onClick={handleRunVisualAudit}
+                  disabled={!file || isRunning}
+                  title="Analyze current page aesthetics with AI Vision"
+                  style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', color: 'white' }}
+                >
+                  <span className="ppp-action__icon" aria-hidden>👁️</span>
+                  <span className="ppp-action__label">
+                    AI Visual Check
+                    <span className="ppp-action__subtitle" style={{ color: 'rgba(255,255,255,0.9)' }}>Analyze Page {currentPage}</span>
                   </span>
                 </button>
 
