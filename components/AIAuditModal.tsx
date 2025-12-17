@@ -51,6 +51,7 @@ type Props = ModalProps & {
   issue: Issue | null;
   fileMeta?: FileMeta | null;
   result?: PreflightResult | null;
+  visualImage?: string | null; // Base64 jpeg
 };
 
 export const AIAuditModal: React.FC<Props> = ({
@@ -59,25 +60,42 @@ export const AIAuditModal: React.FC<Props> = ({
   issue,
   fileMeta,
   result,
+  visualImage,
 }) => {
   const [loading, setLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const buildPrompt = () => {
+    // If visual analysis
+    if (visualImage) {
+      return `
+You are a senior print production expert performing a VISUAL QUALITY ASSURANCE check on a PDF page.
+I am providing an image of the page.
+
+Analyze the visual aesthetics and technical safety for print:
+1.  **Layout & Margins**: Is text too close to the edge (risk of cutting)? Are margins balanced?
+2.  **Contrast & Readability**: Is text legible against the background?
+3.  **Image Quality**: Does anything look pixelated or low-quality in this preview?
+4.  **Overall Professionalism**: Does the design look consistent and professional?
+
+Provide a concise report with a "Visual Score" (0-10) and bullet points for improvements.
+      `.trim();
+    }
+
     const fileName = fileMeta?.name || '(unknown file name)';
     const fileSizeStr = fileMeta?.size
       ? `${fileMeta.size} bytes (~${(fileMeta.size / (1024 * 1024)).toFixed(
-          1
-        )} MB)`
+        1
+      )} MB)`
       : 'unknown size';
 
     const summary =
       typeof (result as any)?.summary === 'string'
         ? (result as any).summary
         : typeof (result as any)?.summary?.text === 'string'
-        ? (result as any).summary.text
-        : '';
+          ? (result as any).summary.text
+          : '';
 
     // Prompt específico por issue
     if (issue) {
@@ -131,9 +149,8 @@ Now respond with clear sections, using concise paragraphs and bullet points wher
     return `
 You are a senior prepress technician. Perform a concise, actionable AI audit for a PDF intended for book printing.
 
-${nameLine ? nameLine + '\n' : ''}${sizeLine ? sizeLine + '\n' : ''}${
-      summary ? `Known notes/summary from engine: ${summary}\n` : ''
-    }
+${nameLine ? nameLine + '\n' : ''}${sizeLine ? sizeLine + '\n' : ''}${summary ? `Known notes/summary from engine: ${summary}\n` : ''
+      }
 
 Focus on:
 - Fonts (embedding, small sizes, Type 3).
@@ -166,6 +183,19 @@ Deliver your answer in sections:
       }
 
       const prompt = buildPrompt();
+
+      const parts: any[] = [{ text: prompt }];
+      if (visualImage) {
+        // Strip prefix if present (data:image/jpeg;base64,)
+        const rawBase64 = visualImage.replace(/^data:image\/[a-z]+;base64,/, '');
+        parts.push({
+          inline_data: {
+            mime_type: 'image/jpeg',
+            data: rawBase64
+          }
+        });
+      }
+
       const res = await fetch(
         `/api-proxy/${API_VER}/models/${encodeURIComponent(
           model
@@ -174,7 +204,7 @@ Deliver your answer in sections:
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            contents: [{ role: 'user', parts: parts }],
           }),
         }
       );
