@@ -215,7 +215,10 @@ Deliver your answer in sections:
         );
       }
       const json = await res.json();
-      setAiResponse(extractTextFromGenResponse(json));
+      console.log('Gemini Raw Response:', JSON.stringify(json, null, 2)); // DEBUG
+      const extractedText = extractTextFromGenResponse(json);
+      console.log('Extracted Text:', extractedText); // DEBUG
+      setAiResponse(extractedText);
     } catch (e: any) {
       setError(e?.message || t('aiError'));
       setAiResponse(null);
