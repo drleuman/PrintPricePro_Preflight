@@ -1,11 +1,32 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 type Props = {
     isOpen: boolean;
     message?: string;
 };
 
+const LOADING_TIPS = [
+    "Please wait, this may take a moment...",
+    "Optimizing your document structure...",
+    "Applying industry-standard fixes...",
+    "Ensuring print-ready quality...",
+    "Almost there, finalizing output..."
+];
+
 export const LoaderOverlay: React.FC<Props> = ({ isOpen, message = 'Processing...' }) => {
+    const [tipIndex, setTipIndex] = useState(0);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setTipIndex(0);
+            return;
+        }
+        const interval = setInterval(() => {
+            setTipIndex((prev) => (prev + 1) % LOADING_TIPS.length);
+        }, 3000);
+        return () => clearInterval(interval);
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     return (
@@ -25,8 +46,8 @@ export const LoaderOverlay: React.FC<Props> = ({ isOpen, message = 'Processing..
                     <p className="text-sm text-gray-500 font-medium">
                         {message}
                     </p>
-                    <p className="text-xs text-gray-400 mt-2">
-                        Please wait, this may take a moment...
+                    <p className="text-xs text-gray-400 mt-2 h-4 transition-opacity duration-300">
+                        {LOADING_TIPS[tipIndex]}
                     </p>
                 </div>
             </div>
