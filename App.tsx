@@ -34,6 +34,7 @@ export default function App() {
   const [issueForAudit, setIssueForAudit] = useState<Issue | null>(null);
 
   // Visual QA State
+  const [visualPageImage, setVisualPageImage] = useState<string | null>(null);
   // Visual Audit Persistence
   const [visualReports, setVisualReports] = useState<Record<number, string>>({}); // page -> report text
 
