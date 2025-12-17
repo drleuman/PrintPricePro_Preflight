@@ -34,7 +34,9 @@ export default function App() {
   const [issueForAudit, setIssueForAudit] = useState<Issue | null>(null);
 
   // Visual QA State
-  const [visualPageImage, setVisualPageImage] = useState<string | null>(null);
+  // Visual Audit Persistence
+  const [visualReports, setVisualReports] = useState<Record<number, string>>({}); // page -> report text
+
   const [isVisualAudit, setIsVisualAudit] = useState(false);
 
   // Heatmap State (lifted from PageViewer)
@@ -211,16 +213,20 @@ export default function App() {
       return;
     }
 
-    // window.alert(`Debug: Starting visual audit for page ${currentPage}`);
-
-    // Clear previous specific issue audit
     setIssueForAudit(null);
-    setVisualPageImage(null);
     setIsVisualAudit(true);
 
+    // Check cache first
+    if (visualReports[currentPage]) {
+      setVisualPageImage(null); // No need for new image
+      setAiAuditOpen(true);
+      return;
+    }
+
+    setVisualPageImage(null);
     setProcessMessage('Analyzing page visuals (AI Vision)...');
     runRenderPageAsImage(file, fileMeta, currentPage);
-  }, [file, fileMeta, currentPage, runRenderPageAsImage]);
+  }, [file, fileMeta, currentPage, runRenderPageAsImage, visualReports]);
 
   // B&W / Grayscale
   const convertToGrayscale = useCallback(async () => {
@@ -382,21 +388,6 @@ export default function App() {
 
               {/* ACTIONS */}
               <div className="ppp-actions">
-                
-
-                <button
-                  className="ppp-action ppp-action--run"
-                  onClick={runPreflight}
-                  disabled={!file || isRunning}
-                  title="Analyze the PDF and list issues"
-                >
-                  <span className="ppp-action__icon" aria-hidden>🔎</span>
-                  <span className="ppp-action__label">
-                    Run Preflight
-                    <span className="ppp-action__subtitle">Analyze & detect issues</span>
-                  </span>
-                </button>
-
                 <button
                   className="ppp-action ppp-action--ai-visual"
                   onClick={handleRunVisualAudit}
@@ -408,6 +399,19 @@ export default function App() {
                   <span className="ppp-action__label">
                     AI Visual Check
                     <span className="ppp-action__subtitle" style={{ color: 'rgba(255,255,255,0.9)' }}>Analyze Page {currentPage}</span>
+                  </span>
+                </button>
+
+                <button
+                  className="ppp-action ppp-action--run"
+                  onClick={runPreflight}
+                  disabled={!file || isRunning}
+                  title="Analyze the PDF and list issues"
+                >
+                  <span className="ppp-action__icon" aria-hidden>🔎</span>
+                  <span className="ppp-action__label">
+                    Run Preflight
+                    <span className="ppp-action__subtitle">Analyze & detect issues</span>
                   </span>
                 </button>
 
@@ -549,6 +553,14 @@ export default function App() {
         fileMeta={fileMeta}
         result={result}
         visualImage={visualPageImage}
+        // Persistence props
+        isVisualMode={isVisualAudit}
+        cachedResponse={isVisualAudit ? visualReports[currentPage] : null}
+        onSaveResponse={(text) => {
+          if (isVisualAudit) {
+            setVisualReports(prev => ({ ...prev, [currentPage]: text }));
+          }
+        }}
       />
       <EfficiencyAuditModal
         isOpen={efficiencyOpen}
