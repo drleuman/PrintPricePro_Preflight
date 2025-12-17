@@ -560,6 +560,8 @@ async function analyzePdf(
 ): Promise<PreflightResult> {
   const issues: Issue[] = [];
 
+  // Clone buffer to avoid "detached ArrayBuffer" if pdfjs consumes it
+  const bufferCopy = buffer.slice(0);
   const uint8 = new Uint8Array(buffer);
   const loadingTask = (pdfjsLib as any).getDocument({
     data: uint8,
@@ -574,7 +576,8 @@ async function analyzePdf(
   // Carga paralela con pdf-lib para metadatos fiables (Cajas)
   let pdfLibDoc: PDFDocument | null = null;
   try {
-    pdfLibDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
+    // Use the copy here
+    pdfLibDoc = await PDFDocument.load(bufferCopy, { ignoreEncryption: true });
   } catch (e) {
     console.warn('pdf-lib load failed in analyze', e);
   }
