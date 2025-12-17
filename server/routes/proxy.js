@@ -62,7 +62,7 @@ router.use('/', async (req, res, next) => {
         const outgoingHeaders = {};
         for (const h in req.headers) {
             const low = h.toLowerCase();
-            if (!['host', 'connection', 'content-length', 'transfer-encoding', 'upgrade', 'sec-websocket-key', 'sec-websocket-version', 'sec-websocket-extensions'].includes(low)) {
+            if (!['host', 'connection', 'content-length', 'transfer-encoding', 'upgrade', 'sec-websocket-key', 'sec-websocket-version', 'sec-websocket-extensions', 'referer', 'origin'].includes(low)) {
                 outgoingHeaders[h] = req.headers[h];
             }
         }
