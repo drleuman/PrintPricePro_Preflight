@@ -7,6 +7,7 @@ import { PageViewer } from './components/PageViewer';
 import { FixDrawer } from './components/FixDrawer';
 import { AIAuditModal } from './components/AIAuditModal';
 import { EfficiencyAuditModal } from './components/EfficiencyAuditModal';
+import { LoaderOverlay } from './components/LoaderOverlay';
 
 import { t } from './i18n';
 import {
@@ -35,6 +36,9 @@ export default function App() {
   // Heatmap State (lifted from PageViewer)
   const [heatmapData, setHeatmapData] = useState<HeatmapData | null>(null);
   const [heatmapLoading, setHeatmapLoading] = useState(false);
+
+  // UI / Loader
+  const [processMessage, setProcessMessage] = useState<string | null>(null);
 
   // UI flags
   // Combined running state is derived later, but we keep track for UI
@@ -89,9 +93,12 @@ export default function App() {
   // Worker callbacks
   const onAnalysisResult = useCallback((res: PreflightResult) => {
     setResult(res || null);
+    setProcessMessage(null);
   }, []);
 
   const onTransformResult = useCallback((blob: Blob, meta: FileMeta, operation: string) => {
+    setProcessMessage(null);
+
     // Determine info based on operation
     let opLabel = 'Processed';
     if (operation === 'grayscale') opLabel = 'B&W / Grayscale';
@@ -107,12 +114,14 @@ export default function App() {
   const onWorkerError = useCallback((msg: string) => {
     console.error('Worker error:', msg);
     setHeatmapLoading(false); // Ensure loading stops if it was heatmap
+    setProcessMessage(null);
     window.alert('Operation failed: ' + msg);
   }, []);
 
   const onHeatmapResult = useCallback((data: { values: Uint8Array; width: number; height: number; maxTac: number }) => {
     setHeatmapData(data);
     setHeatmapLoading(false);
+    setProcessMessage(null);
   }, []);
 
   /* ... (Previous code was broken, rebuilding structure) ... */
@@ -149,6 +158,7 @@ export default function App() {
   const handleRunHeatmap = useCallback((f: File, meta: FileMeta, page: number) => {
     setHeatmapLoading(true);
     setHeatmapData(null); // Clear previous
+    setProcessMessage('Generating Ink Coverage Heatmap...');
     runTacHeatmap(f, meta, page);
   }, [runTacHeatmap]);
 
@@ -179,6 +189,8 @@ export default function App() {
     setResult(null);
     setSelectedIssue(null);
     setHeatmapData(null); // Clear heatmap on new analysis? Maybe not strictly required but cleaner
+
+    setProcessMessage('Analyzing PDF Structure & Content...');
     runAnalysis(file, fileMeta);
   }, [file, fileMeta, runAnalysis]);
 
@@ -188,6 +200,7 @@ export default function App() {
     setResult(null);
     setSelectedIssue(null);
 
+    setProcessMessage('Converting to Grayscale (Server)...');
     try {
       // Try Server
       const blob = await convertToGrayscaleServer(file);
@@ -196,15 +209,19 @@ export default function App() {
 
       downloadAndRemember(blob, newName);
       updateFileState(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
-
+      setProcessMessage(null);
     } catch (e) {
       console.warn('Server grayscale failed:', e);
+      setProcessMessage(null); // Clear server message before asking fallback
+
       // Fallback
       if (window.confirm(
         'Server method unavailable. Do you want to use the local fallback?\n\n' +
         'WARNING: This will rasterize text (convert to image), making it unselectable and potentially lower quality.'
       )) {
+        setProcessMessage('Converting to Grayscale (Local Fallback)...');
         runClientGrayscale(file, fileMeta);
+        // Note: processMessage cleared in onTransformResult/onError
       }
     }
   }, [file, fileMeta, convertToGrayscaleServer, downloadAndRemember, updateFileState, runClientGrayscale]);
@@ -215,6 +232,7 @@ export default function App() {
     setResult(null);
     setSelectedIssue(null);
 
+    setProcessMessage('Rebuilding PDF (300 DPI High-Res)...');
     try {
       // Try Server
       const blob = await rebuildPdfServer(file, 300);
@@ -223,9 +241,11 @@ export default function App() {
 
       downloadAndRemember(blob, newName);
       updateFileState(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
-
+      setProcessMessage(null);
     } catch (e) {
       console.warn('Server rebuild failed:', e);
+      setProcessMessage(null);
+
       // Fallback
       if (window.confirm(
         'Server method unavailable. Do you want to use the local fallback?\n\n' +
@@ -236,6 +256,7 @@ export default function App() {
         'For best results, use the server method (ensure backend is running).\n\n' +
         'Continue with client-side processing?'
       )) {
+        setProcessMessage('Rebuilding PDF (Local Fallback)...');
         runClientUpscale(file, fileMeta);
       }
     }
@@ -247,6 +268,7 @@ export default function App() {
     setResult(null);
     setSelectedIssue(null);
 
+    setProcessMessage(`Converting colors to ${selectedProfile.toUpperCase()}...`);
     try {
       const blob = await convertColorServer(file, selectedProfile);
       const newName = file.name.replace(/\.pdf$/i, '') + `_${selectedProfile}.pdf`;
@@ -258,12 +280,15 @@ export default function App() {
     } catch (e) {
       console.error('convertColors failed', e);
       window.alert('Color conversion requires server connection. Please try again later.');
+    } finally {
+      setProcessMessage(null);
     }
   }, [file, selectedProfile, convertColorServer, downloadAndRemember, updateFileState]);
 
   // Make Booklet
   const makeBooklet = useCallback(async () => {
     if (!file) return;
+    setProcessMessage('Creating 2-up Booklet...');
     try {
       // Simulating loading state if we had one for client tools
       const blob = await createBookletClient(file);
@@ -276,16 +301,21 @@ export default function App() {
     } catch (e) {
       console.error('Booklet creation failed', e);
       window.alert('Booklet creation failed: ' + (e as Error).message);
+    } finally {
+      setProcessMessage(null);
     }
   }, [file, createBookletClient, downloadAndRemember, updateFileState]);
 
   const handleFixBleed = useCallback(async () => {
     if (!file || !fileMeta) return;
+    setProcessMessage('Applying Bleed Fix...');
     try {
       await runFixBleed(file, fileMeta);
+      // Note: cleared in onTransformResult
     } catch (e) {
       console.error('Fix bleed failed', e);
       window.alert('Fix bleed failed: ' + (e as Error).message);
+      setProcessMessage(null);
     }
   }, [file, fileMeta, runFixBleed]);
 
@@ -312,6 +342,8 @@ export default function App() {
   // ---------- Render ----------
   return (
     <div className="min-h-screen bg-gray-100">
+      <LoaderOverlay isOpen={!!processMessage} message={processMessage || ''} />
+
       <main className="container mx-auto px-4 py-6">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200/70 px-4 sm:px-6 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
