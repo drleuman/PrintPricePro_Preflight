@@ -274,7 +274,8 @@ Deliver your answer in sections:
 
         {!loading && !error && aiResponse && (
           <div className="prose max-w-none">
-            <SafeHtmlMarkdown markdown={aiResponse} />
+            {/* Fallback to text to debug SafeHtmlMarkdown issues */}
+            <pre className="whitespace-pre-wrap font-sans text-sm">{aiResponse}</pre>
           </div>
         )}
 
