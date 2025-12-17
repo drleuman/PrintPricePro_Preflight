@@ -152,6 +152,12 @@ export type PreflightWorkerCommand =
     fileMeta: FileMeta;
     buffer: ArrayBuffer;
     pageIndex?: number;
+  }
+  | {
+    type: 'renderPageAsImage';
+    fileMeta: FileMeta;
+    buffer: ArrayBuffer;
+    pageIndex: number;
   };
 
 /**
@@ -172,11 +178,13 @@ export type PreflightWorkerMessage =
     operation: 'grayscale' | 'upscaleImages' | 'fixBleed';
     message: string;
   }
+  | { type: 'renderPageResult'; base64: string }
+  | { type: 'renderError'; message: string }
   | {
     type: 'tacHeatmapResult';
     pageIndex: number;
-    gridWidth: number;
-    gridHeight: number;
+    width: number;
+    height: number;
     values: Uint8Array;
     maxTac: number;
   }
