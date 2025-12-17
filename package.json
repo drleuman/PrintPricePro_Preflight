@@ -9,15 +9,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.16.0",
+    "@heroicons/react": "^2.2.0",
+    "dompurify": "^3.3.0",
+    "marked": "^16.4.1",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^4.6.82",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "@heroicons/react": "^2.2.0",
-    "pdfjs-dist": "^4.6.82",
-    "marked": "^16.4.1",
-    "dompurify": "^3.3.0",
-    "webworker": "^0.8.4",
-    "@google/generative-ai": "^0.16.0",
-    "pdf-lib": "^1.17.1"
+    "webworker": "^0.8.4"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
