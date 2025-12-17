@@ -68,7 +68,6 @@ export const AIAuditModal: React.FC<Props> = ({
   const [error, setError] = useState<string | null>(null);
 
   const buildPrompt = () => {
-    // If visual analysis
     if (visualImage) {
       return `
 You are a senior print production expert performing a VISUAL QUALITY ASSURANCE check on a PDF page.
@@ -98,10 +97,8 @@ Provide a concise report with a "Visual Score" (0-10) and bullet points for impr
           ? (result as any).summary.text
           : '';
 
-    // Prompt específico por issue
     if (issue) {
       const hint = getIssueHint(issue);
-
       const issueMessage =
         (issue as any).message ||
         issue.title ||
@@ -143,7 +140,6 @@ Now respond with clear sections, using concise paragraphs and bullet points wher
 `.trim();
     }
 
-    // Sin issue: auditoría general basada en contexto del PDF
     const nameLine = fileMeta?.name ? `File: ${fileMeta.name}` : '';
     const sizeLine = fileMeta?.size ? `Size: ${fileMeta.size} bytes` : '';
 
@@ -187,7 +183,6 @@ Deliver your answer in sections:
 
       const parts: any[] = [{ text: prompt }];
       if (visualImage) {
-        // Strip prefix if present (data:image/jpeg;base64,)
         const rawBase64 = visualImage.replace(/^data:image\/[a-z]+;base64,/, '');
         parts.push({
           inline_data: {
@@ -216,10 +211,7 @@ Deliver your answer in sections:
         );
       }
       const json = await res.json();
-      console.log('Gemini Raw Response:', JSON.stringify(json, null, 2)); // DEBUG
-      const extractedText = extractTextFromGenResponse(json);
-      console.log('Extracted Text:', extractedText); // DEBUG
-      setAiResponse(extractedText);
+      setAiResponse(extractTextFromGenResponse(json));
     } catch (e: any) {
       setError(e?.message || t('aiError'));
       setAiResponse(null);
@@ -238,71 +230,95 @@ Deliver your answer in sections:
     }
   }, [isOpen, fetchAI]);
 
-  // If closed, return null before any portal logic
   if (!isOpen) return null;
 
-  // DEBUG LOG
-  console.log('AIAuditModal Render:', { isOpen, loading, hasError: !!error, responseLen: aiResponse?.length || 0 });
+  // Brute-force centering styles to guarantee visibility
+  const overlayStyle: React.CSSProperties = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '100vw',
+    height: '100vh',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 2147483647, // Max integer value
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backdropFilter: 'blur(4px)',
+  };
+
+  const modalStyle: React.CSSProperties = {
+    position: 'relative',
+    backgroundColor: 'white',
+    width: '90%',
+    maxWidth: '700px',
+    maxHeight: '85vh',
+    borderRadius: '12px',
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden', // Contain children
+  };
 
   const modalContent = (
-    <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-4 max-h-[90vh] flex flex-col">
+    <div style={overlayStyle}>
+      <div style={modalStyle}>
 
-        {/* DEBUG MARKER */}
-        <div className="bg-red-500 text-white p-2 font-bold mb-2 shrink-0">
-          DEBUG: Ld={String(loading)} Err={String(!!error)} Len={aiResponse?.length || 0}
-        </div>
-
-        <div className="flex items-center justify-between mb-2 shrink-0">
+        {/* Header - Always visible */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white shrink-0">
           <div>
-            <h2 className="text-lg font-semibold">{t('aiAuditTitle')}</h2>
-            {issue && hint && (
-              <p className="mt-1 text-xs text-gray-600">
-                {hint.shortTitle} — {hint.userFriendlySummary}
-              </p>
-            )}
-            {visualImage && !issue && (
-              <p className="mt-1 text-xs text-purple-600 font-medium">✨ Visual Analysis Mode</p>
-            )}
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              {t('aiAuditTitle')}
+              {visualImage && (
+                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">
+                  Vision Analysis
+                </span>
+              )}
+            </h2>
           </div>
           <button
-            className="p-2 rounded hover:bg-gray-100"
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
             onClick={onClose}
             aria-label={t('close')}
           >
-            <XMarkIcon className="h-5 w-5" />
+            <XMarkIcon className="h-6 w-6 text-gray-400 hover:text-gray-600" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto p-4 min-h-0">
           {loading && (
-            <div className="flex flex-col items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-2"></div>
-              <p className="text-sm text-gray-500">{t('fetchingAIResponse')}</p>
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
+              <p className="text-gray-500 animate-pulse font-medium">{t('fetchingAIResponse')}</p>
             </div>
           )}
 
           {error && (
-            <p className="text-sm text-red-600 whitespace-pre-wrap break-words">
-              {error}
-            </p>
+            <div className="bg-red-50 border border-red-100 text-red-700 p-4 rounded-lg">
+              <p className="font-bold">Error</p>
+              <p className="text-sm mt-1">{error}</p>
+            </div>
           )}
 
           {!loading && !error && aiResponse && (
-            <div className="prose max-w-none">
-              {/* Fallback to text to debug SafeHtmlMarkdown issues */}
-              <pre className="whitespace-pre-wrap font-sans text-sm">{aiResponse}</pre>
+            <div className="prose prose-sm max-w-none prose-headings:font-bold prose-p:text-gray-700">
+              {/* Attempt to use SafeHtmlMarkdown, fallback to pre if simpler */}
+              <SafeHtmlMarkdown markdown={aiResponse} />
             </div>
           )}
 
           {!loading && !error && !aiResponse && (
-            <p className="text-sm text-gray-500">{t('noIssuesToDisplay')}</p>
+            <div className="text-center py-12 text-gray-400 italic">
+              {t('noIssuesToDisplay')}
+            </div>
           )}
         </div>
 
-        <div className="mt-4 text-right shrink-0">
+        {/* Footer - Always visible */}
+        <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end shrink-0">
           <button
-            className="px-3 py-2 rounded bg-gray-100 hover:bg-gray-200"
+            className="px-5 py-2.5 rounded-lg bg-gray-900 text-white hover:bg-black font-medium transition-colors shadow-sm"
             onClick={onClose}
           >
             {t('close')}
@@ -312,6 +328,7 @@ Deliver your answer in sections:
     </div>
   );
 
+  // Use Portal if available
   if (typeof document !== 'undefined') {
     return ReactDOM.createPortal(modalContent, document.body);
   }
