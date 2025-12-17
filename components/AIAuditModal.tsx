@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { Issue, ModalProps, PreflightResult, FileMeta } from '../types';
 import { SafeHtmlMarkdown } from './SafeHtmlMarkdown';
 import { XMarkIcon } from '@heroicons/react/24/outline';
@@ -237,29 +238,31 @@ Deliver your answer in sections:
     }
   }, [isOpen, fetchAI]);
 
+  // If closed, return null before any portal logic
   if (!isOpen) return null;
-
-  const hint = issue ? getIssueHint(issue) : null;
 
   // DEBUG LOG
   console.log('AIAuditModal Render:', { isOpen, loading, hasError: !!error, responseLen: aiResponse?.length || 0 });
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-4">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-4 max-h-[90vh] flex flex-col">
 
         {/* DEBUG MARKER */}
-        <div className="bg-red-500 text-white p-2 font-bold mb-2">
+        <div className="bg-red-500 text-white p-2 font-bold mb-2 shrink-0">
           DEBUG: Ld={String(loading)} Err={String(!!error)} Len={aiResponse?.length || 0}
         </div>
 
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2 shrink-0">
           <div>
             <h2 className="text-lg font-semibold">{t('aiAuditTitle')}</h2>
             {issue && hint && (
               <p className="mt-1 text-xs text-gray-600">
                 {hint.shortTitle} — {hint.userFriendlySummary}
               </p>
+            )}
+            {visualImage && !issue && (
+              <p className="mt-1 text-xs text-purple-600 font-medium">✨ Visual Analysis Mode</p>
             )}
           </div>
           <button
@@ -271,28 +274,33 @@ Deliver your answer in sections:
           </button>
         </div>
 
-        {loading && (
-          <p className="text-sm text-gray-500">{t('fetchingAIResponse')}</p>
-        )}
+        <div className="flex-1 overflow-y-auto">
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-2"></div>
+              <p className="text-sm text-gray-500">{t('fetchingAIResponse')}</p>
+            </div>
+          )}
 
-        {error && (
-          <p className="text-sm text-red-600 whitespace-pre-wrap break-words">
-            {error}
-          </p>
-        )}
+          {error && (
+            <p className="text-sm text-red-600 whitespace-pre-wrap break-words">
+              {error}
+            </p>
+          )}
 
-        {!loading && !error && aiResponse && (
-          <div className="prose max-w-none">
-            {/* Fallback to text to debug SafeHtmlMarkdown issues */}
-            <pre className="whitespace-pre-wrap font-sans text-sm">{aiResponse}</pre>
-          </div>
-        )}
+          {!loading && !error && aiResponse && (
+            <div className="prose max-w-none">
+              {/* Fallback to text to debug SafeHtmlMarkdown issues */}
+              <pre className="whitespace-pre-wrap font-sans text-sm">{aiResponse}</pre>
+            </div>
+          )}
 
-        {!loading && !error && !aiResponse && (
-          <p className="text-sm text-gray-500">{t('noIssuesToDisplay')}</p>
-        )}
+          {!loading && !error && !aiResponse && (
+            <p className="text-sm text-gray-500">{t('noIssuesToDisplay')}</p>
+          )}
+        </div>
 
-        <div className="mt-4 text-right">
+        <div className="mt-4 text-right shrink-0">
           <button
             className="px-3 py-2 rounded bg-gray-100 hover:bg-gray-200"
             onClick={onClose}
@@ -303,4 +311,9 @@ Deliver your answer in sections:
       </div>
     </div>
   );
+
+  if (typeof document !== 'undefined') {
+    return ReactDOM.createPortal(modalContent, document.body);
+  }
+  return modalContent;
 };
