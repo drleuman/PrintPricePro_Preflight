@@ -102,7 +102,7 @@ export default function App() {
   }, []);
 
   const onRenderPageResult = useCallback((base64: string) => {
-    window.alert('Debug: Render result received! Opening modal...');
+    // window.alert('Debug: Render result received! Opening modal...');
     setVisualPageImage(base64);
     setAiAuditOpen(true);
     setProcessMessage(null);
@@ -211,7 +211,7 @@ export default function App() {
       return;
     }
 
-    window.alert(`Debug: Starting visual audit for page ${currentPage}`);
+    // window.alert(`Debug: Starting visual audit for page ${currentPage}`);
 
     // Clear previous specific issue audit
     setIssueForAudit(null);
