@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import ReactDOM from 'react-dom';
+import { createPortal } from 'react-dom';
 import { Issue, ModalProps, PreflightResult, FileMeta } from '../types';
 import { SafeHtmlMarkdown } from './SafeHtmlMarkdown';
 import { XMarkIcon } from '@heroicons/react/24/outline';
@@ -352,7 +352,7 @@ Deliver your answer in sections:
 
   // Use Portal if available
   if (typeof document !== 'undefined') {
-    return ReactDOM.createPortal(modalContent, document.body);
+    return createPortal(modalContent, document.body);
   }
   return modalContent;
 };
