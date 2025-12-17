@@ -213,8 +213,8 @@ async function generateTacHeatmap(
   post({
     type: 'tacHeatmapResult',
     pageIndex,
-    gridWidth: width,
-    gridHeight: height,
+    width,
+    height,
     values: heatmapValues,
     maxTac: maxTacFound
   });
@@ -1531,12 +1531,20 @@ self.addEventListener('message', async (event: MessageEvent) => {
 });
 
 async function renderPageAsImage(buffer: ArrayBuffer, pageIndex: number): Promise<string> {
-  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
+  const loadingTask = (pdfjsLib as any).getDocument({
+    data: new Uint8Array(buffer),
+    disableWorker: true,
+    cMapUrl: 'https://unpkg.com/pdfjs-dist@4.6.82/cmaps/',
+    cMapPacked: true,
+  });
   const pdf = await loadingTask.promise;
   const page = await pdf.getPage(pageIndex);
 
   const viewport = page.getViewport({ scale: 1.5 }); // Good quality for Vision API
   // Use OffscreenCanvas if available, otherwise assume we are in an env where canvas works
+  if (typeof OffscreenCanvas === 'undefined') {
+    throw new Error('OffscreenCanvas is not available in this environment');
+  }
   const canvas = new OffscreenCanvas(viewport.width, viewport.height);
   const ctx = canvas.getContext('2d');
 
