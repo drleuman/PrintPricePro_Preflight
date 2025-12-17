@@ -42,9 +42,9 @@ function extractTextFromGenResponse(json: any): string {
     if (typeof json?.output_text === 'string' && json.output_text.trim()) {
       return json.output_text.trim();
     }
-    return '```\n' + JSON.stringify(json, null, 2) + '\n```';
+    return '';
   } catch {
-    return '```\n' + JSON.stringify(json, null, 2) + '\n```';
+    return '';
   }
 }
 
@@ -303,7 +303,6 @@ Deliver your answer in sections:
 
           {!loading && !error && aiResponse && (
             <div className="prose prose-sm max-w-none prose-headings:font-bold prose-p:text-gray-700">
-              {/* Attempt to use SafeHtmlMarkdown, fallback to pre if simpler */}
               <SafeHtmlMarkdown markdown={aiResponse} />
             </div>
           )}
