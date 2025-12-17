@@ -11,6 +11,7 @@ type WorkerCallbacks = {
     onTransformResult?: (blob: Blob, meta: FileMeta, operation: string) => void;
     onError?: (error: string) => void;
     onHeatmapResult?: (data: { values: Uint8Array; width: number; height: number; maxTac: number }) => void;
+    onRenderPageResult?: (base64: string) => void;
 };
 
 export function usePreflightWorker(callbacks: WorkerCallbacks) {
@@ -50,13 +51,19 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
                     setIsWorkerRunning(false);
                     callbacks.onHeatmapResult?.({
                         values: data.values,
-                        width: data.gridWidth,
-                        height: data.gridHeight,
+                        width: data.width,
+                        height: data.height,
                         maxTac: data.maxTac
                     });
                 } else if (data.type === 'tacHeatmapError') {
                     setIsWorkerRunning(false);
                     callbacks.onError?.(`Heatmap failed: ${data.message}`);
+                } else if (data.type === 'renderPageResult') {
+                    setIsWorkerRunning(false);
+                    callbacks.onRenderPageResult?.(data.base64);
+                } else if (data.type === 'renderError') {
+                    setIsWorkerRunning(false);
+                    callbacks.onError?.(`Render failed: ${data.message}`);
                 }
             };
         } catch (e) {
@@ -160,6 +167,24 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
         }
     }, []);
 
+    const runRenderPageAsImage = useCallback(async (file: File, fileMeta: FileMeta, pageIndex: number) => {
+        if (!workerRef.current) return;
+        try {
+            setIsWorkerRunning(true);
+            const buffer = await file.arrayBuffer();
+            const cmd: PreflightWorkerCommand = {
+                type: 'renderPageAsImage',
+                fileMeta,
+                buffer,
+                pageIndex
+            };
+            workerRef.current.postMessage(cmd, [buffer]);
+        } catch (e) {
+            setIsWorkerRunning(false);
+            callbacks.onError?.((e as Error).message);
+        }
+    }, []);
+
     return {
         isWorkerReady,
         isWorkerRunning,
@@ -168,5 +193,6 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
         runClientUpscale,
         runFixBleed,
         runTacHeatmap,
+        runRenderPageAsImage,
     };
 }
