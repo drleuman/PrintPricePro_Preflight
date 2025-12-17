@@ -241,9 +241,18 @@ Deliver your answer in sections:
 
   const hint = issue ? getIssueHint(issue) : null;
 
+  // DEBUG LOG
+  console.log('AIAuditModal Render:', { isOpen, loading, hasError: !!error, responseLen: aiResponse?.length || 0 });
+
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
       <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-4">
+
+        {/* DEBUG MARKER */}
+        <div className="bg-red-500 text-white p-2 font-bold mb-2">
+          DEBUG: Ld={String(loading)} Err={String(!!error)} Len={aiResponse?.length || 0}
+        </div>
+
         <div className="flex items-center justify-between mb-2">
           <div>
             <h2 className="text-lg font-semibold">{t('aiAuditTitle')}</h2>
