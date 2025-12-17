@@ -33,6 +33,10 @@ export default function App() {
   const [efficiencyOpen, setEfficiencyOpen] = useState(false);
   const [issueForAudit, setIssueForAudit] = useState<Issue | null>(null);
 
+  // Visual QA State
+  const [visualPageImage, setVisualPageImage] = useState<string | null>(null);
+  const [isVisualAudit, setIsVisualAudit] = useState(false);
+
   // Heatmap State (lifted from PageViewer)
   const [heatmapData, setHeatmapData] = useState<HeatmapData | null>(null);
   const [heatmapLoading, setHeatmapLoading] = useState(false);
@@ -86,6 +90,7 @@ export default function App() {
     setSelectedIssue(null);
     setNumPages(0);
     setCurrentPage(1);
+    setVisualPageImage(null);
   }, []);
 
   // ---------- Hooks ----------
@@ -93,6 +98,12 @@ export default function App() {
   // Worker callbacks
   const onAnalysisResult = useCallback((res: PreflightResult) => {
     setResult(res || null);
+    setProcessMessage(null);
+  }, []);
+
+  const onRenderPageResult = useCallback((base64: string) => {
+    setVisualPageImage(base64);
+    setAiAuditOpen(true);
     setProcessMessage(null);
   }, []);
 
@@ -124,21 +135,22 @@ export default function App() {
     setProcessMessage(null);
   }, []);
 
-  /* ... (Previous code was broken, rebuilding structure) ... */
   const {
     isWorkerRunning,
     runAnalysis,
     runClientGrayscale,
     runClientUpscale,
     runFixBleed,
-    runTacHeatmap, // exposed from hook
+    runTacHeatmap,
+    runRenderPageAsImage,
   } = usePreflightWorker({
     onAnalysisResult,
     onTransformResult,
     onError: onWorkerError,
     onHeatmapResult,
+    onRenderPageResult,
   });
-  /* ... (Previous code was broken, rebuilding structure) ... */
+
   const {
     isServerRunning,
     convertToGrayscaleServer,
@@ -162,10 +174,6 @@ export default function App() {
     runTacHeatmap(f, meta, page);
   }, [runTacHeatmap]);
 
-  // Also clear heatmap when page changes? 
-  // PageViewer usually handles triggering re-calculation if needed.
-  // Actually PageViewer logic was: if showHeatmap=true, trigger calc on page change.
-  // So PageViewer needs to call handleRunHeatmap.
 
   // ---------- Handlers ----------
 
@@ -175,6 +183,7 @@ export default function App() {
     setSelectedIssue(null);
     setNumPages(0);
     setCurrentPage(1);
+    setVisualPageImage(null);
 
     if (f) {
       setFileMeta({ name: f.name, size: f.size, type: f.type });
@@ -188,11 +197,23 @@ export default function App() {
     if (!file || !fileMeta) return;
     setResult(null);
     setSelectedIssue(null);
-    setHeatmapData(null); // Clear heatmap on new analysis? Maybe not strictly required but cleaner
+    setHeatmapData(null);
 
     setProcessMessage('Analyzing PDF Structure & Content...');
     runAnalysis(file, fileMeta);
   }, [file, fileMeta, runAnalysis]);
+
+  // Handle Visual Audit
+  const handleRunVisualAudit = useCallback(() => {
+    if (!file || !fileMeta) return;
+    // Clear previous specific issue audit
+    setIssueForAudit(null);
+    setVisualPageImage(null);
+    setIsVisualAudit(true);
+
+    setProcessMessage('Analyzing page visuals (AI Vision)...');
+    runRenderPageAsImage(file, fileMeta, currentPage);
+  }, [file, fileMeta, currentPage, runRenderPageAsImage]);
 
   // B&W / Grayscale
   const convertToGrayscale = useCallback(async () => {
@@ -212,7 +233,7 @@ export default function App() {
       setProcessMessage(null);
     } catch (e) {
       console.warn('Server grayscale failed:', e);
-      setProcessMessage(null); // Clear server message before asking fallback
+      setProcessMessage(null);
 
       // Fallback
       if (window.confirm(
@@ -221,7 +242,6 @@ export default function App() {
       )) {
         setProcessMessage('Converting to Grayscale (Local Fallback)...');
         runClientGrayscale(file, fileMeta);
-        // Note: processMessage cleared in onTransformResult/onError
       }
     }
   }, [file, fileMeta, convertToGrayscaleServer, downloadAndRemember, updateFileState, runClientGrayscale]);
@@ -331,6 +351,8 @@ export default function App() {
 
   const handleOpenAIAudit = useCallback((issue: Issue) => {
     setIssueForAudit(issue);
+    setVisualPageImage(null);
+    setIsVisualAudit(false);
     setAiAuditOpen(true);
   }, []);
 
@@ -353,6 +375,20 @@ export default function App() {
 
               {/* ACTIONS */}
               <div className="ppp-actions">
+                <button
+                  className="ppp-action ppp-action--ai-visual"
+                  onClick={handleRunVisualAudit}
+                  disabled={!file || isRunning}
+                  title="Analyze current page aesthetics with AI Vision"
+                  style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', color: 'white' }}
+                >
+                  <span className="ppp-action__icon" aria-hidden>👁️</span>
+                  <span className="ppp-action__label">
+                    AI Visual Check
+                    <span className="ppp-action__subtitle" style={{ color: 'rgba(255,255,255,0.9)' }}>Analyze Page {currentPage}</span>
+                  </span>
+                </button>
+
                 <button
                   className="ppp-action ppp-action--run"
                   onClick={runPreflight}
@@ -495,10 +531,15 @@ export default function App() {
       />
       <AIAuditModal
         isOpen={aiAuditOpen}
-        onClose={() => setAiAuditOpen(false)}
+        onClose={() => {
+          setAiAuditOpen(false);
+          setVisualPageImage(null);
+          setIsVisualAudit(false);
+        }}
         issue={issueForAudit}
         fileMeta={fileMeta}
         result={result}
+        visualImage={visualPageImage}
       />
       <EfficiencyAuditModal
         isOpen={efficiencyOpen}
