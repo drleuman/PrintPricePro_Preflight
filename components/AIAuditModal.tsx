@@ -53,6 +53,9 @@ type Props = ModalProps & {
   fileMeta?: FileMeta | null;
   result?: PreflightResult | null;
   visualImage?: string | null; // Base64 jpeg
+  cachedResponse?: string | null;
+  onSaveResponse?: (response: string) => void;
+  isVisualMode?: boolean;
 };
 
 export const AIAuditModal: React.FC<Props> = ({
@@ -62,6 +65,9 @@ export const AIAuditModal: React.FC<Props> = ({
   fileMeta,
   result,
   visualImage,
+  cachedResponse,
+  onSaveResponse,
+  isVisualMode = false,
 }) => {
   const [loading, setLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
@@ -167,6 +173,13 @@ Deliver your answer in sections:
   };
 
   const fetchAI = useCallback(async () => {
+    // If we have a cached response, use it immediately
+    if (cachedResponse) {
+      setAiResponse(cachedResponse);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setAiResponse(null);
@@ -211,19 +224,27 @@ Deliver your answer in sections:
         );
       }
       const json = await res.json();
-      setAiResponse(extractTextFromGenResponse(json));
+      const text = extractTextFromGenResponse(json);
+      setAiResponse(text);
+
+      // Save for persistence
+      if (onSaveResponse && text) {
+        onSaveResponse(text);
+      }
     } catch (e: any) {
       setError(e?.message || t('aiError'));
       setAiResponse(null);
     } finally {
       setLoading(false);
     }
-  }, [issue, fileMeta, result, visualImage]);
+  }, [issue, fileMeta, result, visualImage, cachedResponse, onSaveResponse]);
 
   useEffect(() => {
     if (isOpen) {
       fetchAI();
     } else {
+      // Only clear response if we are NOT persisting (or logic handled by parent)
+      // Actually, clearing here is fine because Parent will pass cachedResponse back in
       setAiResponse(null);
       setError(null);
       setLoading(false);
@@ -260,6 +281,8 @@ Deliver your answer in sections:
     overflow: 'hidden', // Contain children
   };
 
+  const showVisualBadge = visualImage || isVisualMode;
+
   const modalContent = (
     <div style={overlayStyle}>
       <div style={modalStyle}>
@@ -269,7 +292,7 @@ Deliver your answer in sections:
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
               {t('aiAuditTitle')}
-              {visualImage && (
+              {showVisualBadge && (
                 <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">
                   Vision Analysis
                 </span>
