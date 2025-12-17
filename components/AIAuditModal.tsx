@@ -222,7 +222,7 @@ Deliver your answer in sections:
     } finally {
       setLoading(false);
     }
-  }, [issue, fileMeta, result]);
+  }, [issue, fileMeta, result, visualImage]);
 
   useEffect(() => {
     if (isOpen) {
