@@ -68,10 +68,17 @@ type TacHeatmapCmd = {
   type: 'tacHeatmap';
   fileMeta: FileMeta;
   buffer: ArrayBuffer;
-  pageIndex?: number; // Optional, usually we analyze one page for the heatmap in the viewer
+  pageIndex?: number;
 };
 
-type Inbound = AnalyzeCmd | ConvertToGrayscaleCmd | UpscaleLowResImagesCmd | FixBleedCmd | TacHeatmapCmd;
+type RenderPageAsImageCmd = {
+  type: 'renderPageAsImage';
+  fileMeta: FileMeta;
+  buffer: ArrayBuffer;
+  pageIndex: number;
+};
+
+type Inbound = AnalyzeCmd | ConvertToGrayscaleCmd | UpscaleLowResImagesCmd | FixBleedCmd | TacHeatmapCmd | RenderPageAsImageCmd;
 
 type Outbound =
   | { type: 'analysisProgress'; progress: number; note?: string }
@@ -88,22 +95,14 @@ type Outbound =
     operation: 'grayscale' | 'upscaleImages' | 'fixBleed';
     message: string;
   }
-  // Simplified Heatmap result.
-  // We return a list of "hot" blocks.
-  // Or just a low-res grid of TAC values.
+  | { type: 'renderPageResult'; base64: string }
+  | { type: 'renderError'; message: string }
   | {
     type: 'tacHeatmapResult';
     pageIndex: number;
-    // Map of (x,y) -> tacValue (0-400), normalized to some grid size
-    // Or just a raw flat array of bytes for a 50x50 or 100x100 grid?
-    // Let's use a flat array of Uint8 for a grid of simpler size.
-    // e.g. 1% of width
-    gridWidth: number;
-    gridHeight: number;
-    values: Uint8Array; // TAC values (0-255 scaled? No, TAC goes to 400. Uint16? or just clamp > 255 to 255?)
-    // Actually standard TAC is 300%+ is bad. 0-400.
-    // Let's use Uint8 and store TAC/2 (0-200 => 0-400%) or just clamp to 100%? No we need specific values.
-    // Let's return Uint16Array.
+    width: number;
+    height: number;
+    values: Uint8Array;
     maxTac: number;
   }
   | { type: 'tacHeatmapError'; message: string };
@@ -1502,41 +1501,56 @@ self.addEventListener('message', async (event: MessageEvent) => {
         });
       }
       return;
+    } else if (msg.type === 'renderPageAsImage') {
+      try {
+        const base64 = await renderPageAsImage(msg.buffer, msg.pageIndex);
+        post({ type: 'renderPageResult', base64 });
+      } catch (e: any) {
+        post({ type: 'renderError', message: e?.message || String(e) });
+      }
+      return;
     }
 
   } catch (err: any) {
     console.error('Preflight worker fatal error', err);
 
     if (msg.type === 'analyze') {
-      post({
-        type: 'analysisError',
-        message: err?.message || String(err),
-      });
+      post({ type: 'analysisError', message: err?.message || String(err) });
     } else if (msg.type === 'tacHeatmap') {
-      post({
-        type: 'tacHeatmapError',
-        message: err?.message || String(err),
-      });
+      post({ type: 'tacHeatmapError', message: err?.message || String(err) });
+    } else if (msg.type === 'renderPageAsImage') {
+      post({ type: 'renderError', message: err?.message || String(err) });
     } else if (msg.type === 'convertToGrayscale') {
-      post({
-        type: 'transformError',
-        operation: 'grayscale',
-        message: err?.message || String(err),
-      });
+      post({ type: 'transformError', operation: 'grayscale', message: err?.message || String(err) });
     } else if (msg.type === 'upscaleLowResImages') {
-      post({
-        type: 'transformError',
-        operation: 'upscaleImages',
-        message: err?.message || String(err),
-      });
+      post({ type: 'transformError', operation: 'upscaleImages', message: err?.message || String(err) });
     } else if (msg.type === 'fixBleed') {
-      post({
-        type: 'transformError',
-        operation: 'fixBleed',
-        message: err?.message || String(err),
-      });
+      post({ type: 'transformError', operation: 'fixBleed', message: err?.message || String(err) });
     }
   }
 });
+
+async function renderPageAsImage(buffer: ArrayBuffer, pageIndex: number): Promise<string> {
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
+  const pdf = await loadingTask.promise;
+  const page = await pdf.getPage(pageIndex);
+
+  const viewport = page.getViewport({ scale: 1.5 }); // Good quality for Vision API
+  // Use OffscreenCanvas if available, otherwise assume we are in an env where canvas works
+  const canvas = new OffscreenCanvas(viewport.width, viewport.height);
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) throw new Error('Could not get 2D context');
+
+  await page.render({ canvasContext: ctx as any, viewport }).promise;
+
+  const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.8 });
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
 
 export { };
