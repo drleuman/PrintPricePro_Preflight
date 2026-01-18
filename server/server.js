@@ -66,12 +66,15 @@ if (!fs.existsSync(staticPath)) {
   console.log(`[INIT] Static path confirmed. Contents: ${fs.readdirSync(staticPath).join(', ')}`);
 }
 
-// Serve /dist with correct MIME for .mjs
+// Serve /dist with correct MIME types
 app.use(
   express.static(staticPath, {
     setHeaders(res, filePath) {
-      if (filePath.endsWith('.mjs')) {
+      const ext = path.extname(filePath).toLowerCase();
+      if (ext === '.js' || ext === '.mjs') {
         res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      } else if (ext === '.css') {
+        res.setHeader('Content-Type', 'text/css; charset=utf-8');
       }
     },
   })
