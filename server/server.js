@@ -50,7 +50,22 @@ app.use('/api/*', (req, res) => {
 
 
 // -------- Static Files (Vite Build) --------
-const staticPath = path.join(__dirname, '..', 'dist');
+const staticPath = path.resolve(__dirname, '..', 'dist');
+console.log(`[INIT] Directory: ${__dirname}`);
+console.log(`[INIT] Attempting to serve static files from: ${staticPath}`);
+
+if (!fs.existsSync(staticPath)) {
+  console.error(`[ERROR] Static path NOT FOUND: ${staticPath}`);
+  // Fallback check: maybe dist is in the same folder?
+  const fallbackPath = path.resolve(__dirname, 'dist');
+  if (fs.existsSync(fallbackPath)) {
+    console.log(`[INIT] Found fallback static path: ${fallbackPath}`);
+    app.use(express.static(fallbackPath));
+  }
+} else {
+  console.log(`[INIT] Static path confirmed. Contents: ${fs.readdirSync(staticPath).join(', ')}`);
+}
+
 // Serve /dist with correct MIME for .mjs
 app.use(
   express.static(staticPath, {
@@ -91,7 +106,23 @@ app.get('/debug/routes', (_req, res) => {
 
 // SPA fallback
 app.get(/^\/(?!api-proxy\/|api\/).*/, (req, res) => {
-  res.sendFile(path.join(staticPath, 'index.html'));
+  const indexPath = path.join(staticPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    // Check fallback
+    const fallbackIndex = path.resolve(__dirname, 'dist', 'index.html');
+    if (fs.existsSync(fallbackIndex)) {
+      res.sendFile(fallbackIndex);
+    } else {
+      res.status(404).send(`
+        <h1>App Configuration Error</h1>
+        <p>Could not find index.html at ${indexPath}</p>
+        <p>Current server dir: ${__dirname}</p>
+        <p>Please ensure 'npm run build' has been executed.</p>
+      `);
+    }
+  }
 });
 
 // -------- Server & WebSocket --------
