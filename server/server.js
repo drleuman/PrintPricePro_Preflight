@@ -28,6 +28,12 @@ app.set('trust proxy', 1);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Request Logger
+app.use((req, _res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 // -------- Routes --------
 
 // API Proxy (HTTP)
@@ -35,6 +41,12 @@ app.use('/api-proxy', proxyRouter);
 
 // PDF Tools
 app.use('/api/convert', pdfRouter);
+
+// Catch-all for /api that didn't match
+app.use('/api/*', (req, res) => {
+  console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ error: `Route not found: ${req.originalUrl}` });
+});
 
 
 // -------- Static Files (Vite Build) --------
