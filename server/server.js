@@ -50,21 +50,22 @@ app.use('/api/*', (req, res) => {
 
 
 // -------- Static Files (Vite Build) --------
-const staticPath = path.resolve(__dirname, '..', 'dist');
-console.log(`[INIT] Directory: ${__dirname}`);
-console.log(`[INIT] Attempting to serve static files from: ${staticPath}`);
+// Try absolute paths first to be safe in Plesk environment
+const possiblePaths = [
+  path.resolve(__dirname, '..', 'dist'),
+  path.resolve(__dirname, 'dist'),
+  path.join(process.cwd(), 'dist')
+];
 
-if (!fs.existsSync(staticPath)) {
-  console.error(`[ERROR] Static path NOT FOUND: ${staticPath}`);
-  // Fallback check: maybe dist is in the same folder?
-  const fallbackPath = path.resolve(__dirname, 'dist');
-  if (fs.existsSync(fallbackPath)) {
-    console.log(`[INIT] Found fallback static path: ${fallbackPath}`);
-    app.use(express.static(fallbackPath));
+let staticPath = possiblePaths[0];
+for (const p of possiblePaths) {
+  if (fs.existsSync(p) && fs.existsSync(path.join(p, 'index.html'))) {
+    staticPath = p;
+    break;
   }
-} else {
-  console.log(`[INIT] Static path confirmed. Contents: ${fs.readdirSync(staticPath).join(', ')}`);
 }
+
+console.log(`[INIT] Serving static files from final path: ${staticPath}`);
 
 // Serve /dist with correct MIME types
 app.use(
