@@ -21,6 +21,11 @@ export default defineConfig(({ mode }) => {
       }
     },
     plugins: [react()],
+    build: {
+      rollupOptions: {
+        input: path.resolve(__dirname, 'index_dev.html'),
+      },
+    },
     optimizeDeps: { exclude: ["pdfjs-dist"] },
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
