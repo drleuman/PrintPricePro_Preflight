@@ -9,9 +9,21 @@ const express = require('express');
 const path = require('path');
 const WebSocket = require('ws');
 
-const { router: proxyRouter, handleWsUpgrade } = require('./routes/proxy');
-const pdfRouter = require('./routes/pdf');
-const { startCleanupTask } = require('./services/cleanup');
+const { router: proxyRouter, handleWsUpgrade } = require('./server/routes/proxy');
+const pdfRouter = require('./server/routes/pdf');
+const { startCleanupTask } = require('./server/services/cleanup');
+
+// File-based logger for Plesk debugging
+const fs = require('fs');
+const debugLog = (msg) => {
+  const entry = `[${new Date().toISOString()}] ${msg}\n`;
+  try {
+    fs.appendFileSync(path.resolve(__dirname, 'server_debug.log'), entry);
+  } catch (e) { }
+  console.log(msg);
+};
+
+debugLog('Server starting...');
 
 const app = express();
 // Cloud Run (and most PaaS) inject PORT=8080. Default to 8080 for local runs.
@@ -50,22 +62,9 @@ app.use('/api/*', (req, res) => {
 
 
 // -------- Static Files (Vite Build) --------
-// Try absolute paths first to be safe in Plesk environment
-const possiblePaths = [
-  path.resolve(__dirname, '..', 'dist'),
-  path.resolve(__dirname, 'dist'),
-  path.join(process.cwd(), 'dist')
-];
-
-let staticPath = possiblePaths[0];
-for (const p of possiblePaths) {
-  if (fs.existsSync(p) && fs.existsSync(path.join(p, 'index.html'))) {
-    staticPath = p;
-    break;
-  }
-}
-
-console.log(`[INIT] Serving static files from final path: ${staticPath}`);
+// Simple and direct for root server
+const staticPath = path.resolve(__dirname, 'dist');
+debugLog(`Serving static files from: ${staticPath}`);
 
 // Serve /dist with correct MIME types
 app.use(
@@ -110,23 +109,15 @@ app.get('/debug/routes', (_req, res) => {
 
 // SPA fallback
 app.get(/^\/(?!api-proxy\/|api\/).*/, (req, res) => {
-  const indexFile = 'index.html';
-  const indexPath = path.join(staticPath, indexFile);
+  const indexPath = path.join(staticPath, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    // Check fallback
-    const fallbackIndex = path.resolve(__dirname, 'dist', indexFile);
-    if (fs.existsSync(fallbackIndex)) {
-      res.sendFile(fallbackIndex);
-    } else {
-      res.status(404).send(`
-        <h1>App Configuration Error</h1>
-        <p>Could not find index.html at ${indexPath}</p>
-        <p>Current server dir: ${__dirname}</p>
-        <p>Please ensure 'npm run build' has been executed.</p>
-      `);
-    }
+    res.status(404).send(`
+      <h1>App Configuration Error</h1>
+      <p>Could not find index.html at ${indexPath}</p>
+      <p>Please ensure 'npm run build' has been executed.</p>
+    `);
   }
 });
 
