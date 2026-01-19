@@ -110,12 +110,13 @@ app.get('/debug/routes', (_req, res) => {
 
 // SPA fallback
 app.get(/^\/(?!api-proxy\/|api\/).*/, (req, res) => {
-  const indexPath = path.join(staticPath, 'index.html');
+  const indexFile = 'index_dev.html'; // El nombre que genera Vite ahora
+  const indexPath = path.join(staticPath, indexFile);
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
     // Check fallback
-    const fallbackIndex = path.resolve(__dirname, 'dist', 'index.html');
+    const fallbackIndex = path.resolve(__dirname, 'dist', indexFile);
     if (fs.existsSync(fallbackIndex)) {
       res.sendFile(fallbackIndex);
     } else {
