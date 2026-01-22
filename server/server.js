@@ -7,6 +7,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const fs = require('fs');   // ✅ ADD THIS
 const WebSocket = require('ws');
 
 const { router: proxyRouter, handleWsUpgrade } = require('./routes/proxy');
