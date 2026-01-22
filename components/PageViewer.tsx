@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-(pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfWorker;
+// Use fixed worker path to avoid cache issues after deployments
+(pdfjsLib as any).GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 import { Issue, Bbox, FileMeta, HeatmapData } from '../types';
 import { ChevronLeftIcon, ChevronRightIcon, FireIcon } from '@heroicons/react/24/outline'; // FireIcon for Heatmap
 import { t } from '../i18n';

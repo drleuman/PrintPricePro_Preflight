@@ -6,6 +6,17 @@ import App from './App';
 import './index.css';
 import './workflow.css';
 
+// Auto-recovery for PDF.js worker cache issues
+window.addEventListener('error', (e: any) => {
+  const msg = String(e?.message || '');
+  if (msg.includes('Failed to fetch dynamically imported module') ||
+      msg.includes('Loading chunk') ||
+      msg.includes('pdf.worker')) {
+    console.warn('Cache issue detected, reloading page...');
+    window.location.reload();
+  }
+});
+
 const rootElement = document.getElementById('root');
 
 if (rootElement) {
