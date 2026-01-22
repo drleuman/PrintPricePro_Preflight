@@ -4,7 +4,6 @@ import { Step1Upload } from './components/steps/Step1Upload';
 import { Step2Analysis } from './components/steps/Step2Analysis';
 import { Step3Fix } from './components/steps/Step3Fix';
 import { Step4Review } from './components/steps/Step4Review';
-import { Step5Quote } from './components/steps/Step5Quote';
 import { LoaderOverlay } from './components/LoaderOverlay';
 import { AIAuditModal } from './components/AIAuditModal';
 
@@ -24,7 +23,6 @@ const WORKFLOW_STEPS = [
   { number: 2, title: 'Analysis', icon: '🔍' },
   { number: 3, title: 'Fix Issues', icon: '🛠️' },
   { number: 4, title: 'Review', icon: '✅' },
-  { number: 5, title: 'Get Quote', icon: '💰' },
 ];
 
 export default function App() {
@@ -39,6 +37,14 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [result, setResult] = useState<PreflightResult | null>(null);
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
+
+  // ---------- AutoFix Pro Session ----------
+  const [autoFixBefore, setAutoFixBefore] = useState<PreflightResult | null>(null);
+  const [autoFixAfter, setAutoFixAfter] = useState<PreflightResult | null>(null);
+  const [autoFixReport, setAutoFixReport] = useState<any | null>(null);
+  const [autoFixRunId, setAutoFixRunId] = useState<number | null>(null);
+  const [compareEnabled, setCompareEnabled] = useState(false);
+  const autoFixPendingAfterRef = useRef(false);
 
   // Visual QA State
   const [visualPageImage, setVisualPageImage] = useState<string | null>(null);
@@ -98,12 +104,19 @@ export default function App() {
     setNumPages(0);
     setCurrentPage(1);
     setVisualPageImage(null);
+    setAutoFixBefore(null);
+    setAutoFixAfter(null);
+    setCompareEnabled(false);
   }, []);
 
   // ---------- Hooks ----------
 
   const onAnalysisResult = useCallback((res: PreflightResult) => {
     setResult(res || null);
+    if (autoFixPendingAfterRef.current) {
+      setAutoFixAfter(res || null);
+      autoFixPendingAfterRef.current = false;
+    }
     setProcessMessage(null);
   }, []);
 
@@ -160,6 +173,7 @@ export default function App() {
     convertToGrayscaleServer,
     convertColorServer,
     rebuildPdfServer,
+    autoFixServer,
     createBookletClient,
   } = usePdfTools();
 
@@ -285,6 +299,55 @@ export default function App() {
       }
     }
   }, [file, fileMeta, rebuildPdfServer, downloadAndRemember, updateFileState, runClientUpscale, runAnalysis]);
+  const autoFixPdf = useCallback(async (options?: any) => {
+    if (!file || !fileMeta) return;
+
+    // Snapshot BEFORE state for Pro reporting
+    const before = result;
+    setAutoFixBefore(before || null);
+    setAutoFixAfter(null);
+    setAutoFixReport(null);
+    setAutoFixRunId(Date.now());
+    autoFixPendingAfterRef.current = true;
+
+    setResult(null);
+    setSelectedIssue(null);
+
+    setProcessMessage('AutoFix Agent (PRO): Orchestrating PDF transformations...');
+    try {
+      const { blob, report } = await autoFixServer(file, {
+        target: options?.forceCmyk ? 'cmyk' : 'none',
+        profile: 'iso_coated_v2',
+        bleedMm: options?.forceBleed ? (options?.bleedMm || 3) : 0,
+        dpiPreferred: 300,
+        dpiMin: 150,
+        issues: before || undefined,
+        ...options
+      });
+
+      const suffix = '_autofix_isoCoatedv2_bleed3mm.pdf';
+      const newName = file.name.replace(/\.pdf$/i, '') + suffix;
+      const newFile = new File([blob], newName, { type: 'application/pdf' });
+
+      setAutoFixReport(report || null);
+      if (report) console.info('AutoFix report:', report);
+
+      downloadAndRemember(blob, newName);
+      updateFileState(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
+
+      setTimeout(() => {
+        setProcessMessage('Re-analyzing AutoFixed PDF...');
+        runAnalysis(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
+      }, 500);
+
+      setProcessMessage(null);
+    } catch (e) {
+      console.warn('AutoFix failed:', e);
+      setProcessMessage(null);
+      alert(`AutoFix failed: ${(e as any)?.message || e}`);
+    }
+  }, [file, fileMeta, result, autoFixServer, downloadAndRemember, updateFileState, runAnalysis]);
+
 
   const convertColors = useCallback(async () => {
     if (!file) return;
@@ -454,6 +517,10 @@ export default function App() {
                 file={file}
                 fileMeta={fileMeta}
                 result={result}
+                autoFixBefore={autoFixBefore}
+                autoFixAfter={autoFixAfter}
+                autoFixReport={autoFixReport}
+                autoFixRunId={autoFixRunId}
                 isRunning={isRunning}
                 onRunAnalysis={runPreflight}
                 onNext={() => setCurrentStep(3)}
@@ -467,6 +534,11 @@ export default function App() {
                 file={file}
                 fileMeta={fileMeta}
                 result={result}
+                autoFixBefore={autoFixBefore}
+                autoFixAfter={autoFixAfter}
+                autoFixReport={autoFixReport}
+                autoFixRunId={autoFixRunId}
+                compareEnabled={compareEnabled}
                 numPages={numPages}
                 currentPage={currentPage}
                 selectedIssue={selectedIssue}
@@ -484,6 +556,8 @@ export default function App() {
                 onConvertGrayscale={convertToGrayscale}
                 onConvertCMYK={convertColors}
                 onRebuildPdf={upscaleLowResImages}
+                onAutoFix={autoFixPdf}
+                onToggleCompare={setCompareEnabled}
                 onProfileChange={setSelectedProfile}
                 onOpenAIAudit={handleOpenAIAudit}
                 onOpenEfficiency={handleOpenEfficiencyTips}
@@ -510,17 +584,7 @@ export default function App() {
                 onMakeBooklet={makeBooklet}
                 onStartOver={handleStartOver}
                 onBack={() => setCurrentStep(3)}
-                onNext={() => setCurrentStep(5)}
                 appMode={appMode}
-              />
-            )}
-
-            {currentStep === 5 && (
-              <Step5Quote
-                fileMeta={fileMeta}
-                numPages={numPages}
-                onBack={() => setCurrentStep(4)}
-                onStartOver={handleStartOver}
               />
             )}
           </div>

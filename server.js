@@ -55,7 +55,7 @@ app.use('/api-proxy', proxyRouter);
 app.use('/api/convert', pdfRouter);
 
 // Catch-all for /api that didn't match
-app.use('/api/*', (req, res) => {
+app.use('/api/*path', (req, res) => {
   console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({ error: `Route not found: ${req.originalUrl}` });
 });

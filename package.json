@@ -12,13 +12,19 @@
   "dependencies": {
     "@google/generative-ai": "^0.16.0",
     "@heroicons/react": "^2.2.0",
+    "axios": "^1.13.2",
     "dompurify": "^3.3.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
     "marked": "^16.4.1",
+    "multer": "^2.0.2",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^4.6.82",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "webworker": "^0.8.4"
+    "webworker": "^0.8.4",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
