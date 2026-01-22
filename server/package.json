@@ -1,11 +1,15 @@
 {
-  "name": "appletserver",
-  "private": true,
+  "name": "preflight-api",
   "version": "1.0.0",
+  "private": true,
   "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "audit:fix": "npm audit fix"
   },
   "dependencies": {
     "axios": "^0.27.2",
@@ -17,7 +21,6 @@
     "ws": "^8.17.0"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.1.11"
   }
 }
