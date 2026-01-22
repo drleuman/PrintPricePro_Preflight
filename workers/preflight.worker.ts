@@ -618,11 +618,11 @@ async function analyzePdf(
 
   const type3Fonts = new Set<string>();
 
-  // Mapa de fuentes usadas (nombre base -> info)
   const fontsUsed = new Map<
     string,
-    { subset: boolean; type3: boolean }
+    { subset: boolean; type3: boolean; embedded: boolean }
   >();
+  let missingEmbeds = 0;
 
   let imageCount = 0;
   let firstImagePage: number | null = null;
@@ -886,14 +886,19 @@ async function analyzePdf(
             type3Fonts.add(baseName);
           }
 
+          const isEmbedded = !!(data?.fileHeader || (font as any).isEmbedded);
+          if (!isEmbedded) missingEmbeds++;
+
           // Guardamos info agregada por fuente
           const existing = fontsUsed.get(baseName) || {
             subset: false,
             type3: false,
+            embedded: true,
           };
           fontsUsed.set(baseName, {
             subset: existing.subset || subset,
             type3: existing.type3 || !!isType3,
+            embedded: existing.embedded && isEmbedded,
           });
         }
       }
@@ -1174,6 +1179,9 @@ async function analyzePdf(
     const subsetFonts = fontNames.filter(
       (name) => fontsUsed.get(name)?.subset
     );
+    const nonEmbedded = fontNames.filter(
+      (name) => !fontsUsed.get(name)?.embedded
+    );
 
     issues.push({
       id: 'fonts-used-summary',
@@ -1184,12 +1192,25 @@ async function analyzePdf(
       details:
         'This is a summary of the font families detected on sampled pages. ' +
         (subsetFonts.length
-          ? `Some fonts appear as subsetted: ${subsetFonts.join(
-            ', '
-          )}. Subsetting is normal for print PDFs but makes later editing harder.`
-          : 'No subset prefixes (ABCDEF+FontName) were detected, so these fonts are probably embedded as full fonts.'),
+          ? `Some fonts appear as subsetted: ${subsetFonts.join(', ')}. `
+          : '') +
+        (nonEmbedded.length
+          ? `WARNING: These fonts are NOT embedded: ${nonEmbedded.join(', ')}. This can lead to substitution errors during print.`
+          : 'All fonts appear to be embedded (either full or subset).'),
       bbox: { x: 0, y: 0, width: 1, height: 1 },
     });
+
+    if (nonEmbedded.length > 0) {
+      issues.push({
+        id: 'fonts-not-embedded',
+        page: 1,
+        category: ISSUE_CATEGORY.FONTS,
+        severity: Severity.ERROR,
+        message: 'Non-embedded fonts detected.',
+        details: `The following fonts are not embedded in the PDF: ${nonEmbedded.join(', ')}. For professional printing, all fonts MUST be embedded to ensure visual consistency.`,
+        tags: ['critical', 'error', 'font-embedding']
+      });
+    }
   }
 
   // Texto demasiado pequeño (legibilidad)
