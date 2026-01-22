@@ -5,11 +5,17 @@ import { PageViewer } from '../PageViewer';
 import { FixDrawer } from '../FixDrawer';
 import { AIAuditModal } from '../AIAuditModal';
 import { EfficiencyAuditModal } from '../EfficiencyAuditModal';
+import { AutoFixProPanel } from '../AutoFixProPanel';
 
 interface Step3FixProps {
     file: File | null;
     fileMeta: FileMeta | null;
     result: PreflightResult | null;
+    autoFixBefore?: PreflightResult | null;
+    autoFixAfter?: PreflightResult | null;
+    autoFixReport?: any | null;
+    autoFixRunId?: number | null;
+    compareEnabled?: boolean;
     numPages: number;
     currentPage: number;
     selectedIssue: Issue | null;
@@ -27,6 +33,8 @@ interface Step3FixProps {
     onConvertGrayscale: () => void;
     onConvertCMYK: () => void;
     onRebuildPdf: () => void;
+    onAutoFix: (options: any) => void;
+    onToggleCompare?: (enabled: boolean) => void;
     onProfileChange: (profile: string) => void;
     onOpenAIAudit: (issue: Issue) => void;
     onOpenEfficiency: (issue: Issue) => void;
@@ -38,6 +46,11 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
     file,
     fileMeta,
     result,
+    autoFixBefore,
+    autoFixAfter,
+    autoFixReport,
+    autoFixRunId,
+    compareEnabled,
     numPages,
     currentPage,
     selectedIssue,
@@ -55,6 +68,8 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
     onConvertGrayscale,
     onConvertCMYK,
     onRebuildPdf,
+    onAutoFix,
+    onToggleCompare,
     onProfileChange,
     onOpenAIAudit,
     onOpenEfficiency,
@@ -64,6 +79,20 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
     const [aiAuditOpen, setAiAuditOpen] = useState(false);
     const [efficiencyOpen, setEfficiencyOpen] = useState(false);
     const [issueForAudit, setIssueForAudit] = useState<Issue | null>(null);
+
+    // AutoFix PRO Options state
+    const [autoFixOptions, setAutoFixOptions] = useState({
+        safeOnly: true,
+        aggressive: false,
+        forceRebuild: false,
+        forceBleed: true,
+        forceCmyk: true,
+        flatten: false
+    });
+
+    const toggleOption = (key: keyof typeof autoFixOptions) => {
+        setAutoFixOptions(prev => ({ ...prev, [key]: !prev[key] }));
+    };
 
     const handleOpenAIAudit = (issue: Issue) => {
         setIssueForAudit(issue);
@@ -79,6 +108,18 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
 
     return (
         <div className="step step--fix">
+            <AutoFixProPanel
+                before={autoFixBefore || null}
+                after={autoFixAfter || null}
+                report={autoFixReport || null}
+                runId={autoFixRunId}
+                options={autoFixOptions}
+                onToggleOption={toggleOption}
+                onRun={() => onAutoFix(autoFixOptions)}
+                isRunning={isRunning}
+                compareEnabled={compareEnabled}
+                onToggleCompare={onToggleCompare}
+            />
             <div className="step__header">
                 <h2 className="step__title">Fix Issues</h2>
                 <p className="step__description">
@@ -94,6 +135,9 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
                         emptyHint="No issues found"
                         onRunPreflight={onRunAnalysis}
                         isRunning={isRunning}
+                        compareEnabled={compareEnabled}
+                        autoFixBefore={autoFixBefore}
+                        autoFixAfter={autoFixAfter}
                     />
 
                     <button
@@ -122,6 +166,13 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
             </div>
 
             <div className="step__actions">
+                <button
+                    className="btn btn--primary"
+                    onClick={() => onAutoFix(autoFixOptions)}
+                    disabled={!file || isRunning}
+                >
+                    {isRunning ? '⚙️ Running AutoFix...' : '⚙️ Run AutoFix Agent (PRO)'}
+                </button>
                 <button className="btn btn--secondary" onClick={onBack}>
                     ← Back to Analysis
                 </button>

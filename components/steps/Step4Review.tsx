@@ -19,7 +19,6 @@ interface Step4ReviewProps {
     onMakeBooklet: () => void;
     onStartOver: () => void;
     onBack: () => void;
-    onNext: () => void;
     appMode?: 'manual' | 'ai' | null;
 }
 
@@ -40,7 +39,6 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
     onMakeBooklet,
     onStartOver,
     onBack,
-    onNext,
     appMode,
 }) => {
     const issuesCount = result?.issues?.length || 0;
@@ -165,9 +163,19 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                 <button className="btn btn--outline" onClick={onStartOver}>
                     🔄 Start Over
                 </button>
-                <button className="btn btn--primary" onClick={onNext}>
-                    Next: Get Quote →
-                </button>
+                {lastPdfUrl ? (
+                    <a
+                        href={lastPdfUrl}
+                        download={lastPdfName || 'output.pdf'}
+                        className="btn btn--primary"
+                    >
+                        ⬇️ Download PDF
+                    </a>
+                ) : (
+                    <button className="btn btn--primary" disabled>
+                        ⬇️ Download PDF
+                    </button>
+                )}
             </div>
         </div>
     );

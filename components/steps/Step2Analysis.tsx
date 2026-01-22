@@ -11,6 +11,10 @@ interface Step2AnalysisProps {
     onNext: () => void;
     onSkipToReview: () => void;
     onBack: () => void;
+    autoFixBefore?: PreflightResult | null;
+    autoFixAfter?: PreflightResult | null;
+    autoFixReport?: any | null;
+    autoFixRunId?: number | null;
 }
 
 export const Step2Analysis: React.FC<Step2AnalysisProps> = ({
@@ -22,6 +26,10 @@ export const Step2Analysis: React.FC<Step2AnalysisProps> = ({
     onNext,
     onSkipToReview,
     onBack,
+    autoFixBefore,
+    autoFixAfter,
+    autoFixReport,
+    autoFixRunId,
 }) => {
     // Auto-run analysis when entering this step
     useEffect(() => {

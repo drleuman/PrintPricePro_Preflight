@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import type { PreflightResult, Issue } from '../types';
 import { t } from '../i18n';
 import { ISSUE_CATEGORY_LABELS } from '../constants';
+import { diffPreflight } from '../utils/diffPreflight';
 
 import {
   PhotoIcon,
@@ -22,6 +23,9 @@ type Props = {
   emptyHint?: string;
   onRunPreflight?: () => void;
   isRunning?: boolean;
+  compareEnabled?: boolean;
+  autoFixBefore?: PreflightResult | null;
+  autoFixAfter?: PreflightResult | null;
 };
 
 /* =========================================================
@@ -67,6 +71,9 @@ export const IssuesPanel: React.FC<Props> = ({
   emptyHint,
   onRunPreflight,
   isRunning,
+  compareEnabled,
+  autoFixBefore,
+  autoFixAfter,
 }) => {
   const [tab, setTab] = useState<'all' | 'error' | 'warning' | 'info'>('all');
 
@@ -107,6 +114,179 @@ export const IssuesPanel: React.FC<Props> = ({
     ? t('analyzingPDF') || 'Analyzing PDF...'
     : t('runPreflight') || 'Run Preflight';
 
+  // Compare view
+  const diff = useMemo(() => {
+    if (compareEnabled && autoFixBefore && autoFixAfter) {
+      return diffPreflight(autoFixBefore, autoFixAfter);
+    }
+    return null;
+  }, [compareEnabled, autoFixBefore, autoFixAfter]);
+
+  if (diff) {
+    // Compare view
+    return (
+      <section className="ppp-issues-panel">
+        <div className="ppp-issues-panel__header">
+          <h3 className="ppp-issues-panel__title">Compare Before/After</h3>
+        </div>
+
+        {/* Delta summary */}
+        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div>
+              <div className="text-sm text-gray-500">Score</div>
+              <div className="text-lg font-bold">
+                {autoFixBefore?.score} → {autoFixAfter?.score}
+                {diff.scoreDelta !== 0 && (
+                  <span className={`ml-1 ${diff.scoreDelta > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ({diff.scoreDelta > 0 ? '+' : ''}{diff.scoreDelta}%)
+                  </span>
+                )}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500">Errors</div>
+              <div className="text-lg font-bold">
+                {diff.severityCounts.before.error} → {diff.severityCounts.after.error}
+                {diff.severityCounts.delta.error !== 0 && (
+                  <span className={`ml-1 ${diff.severityCounts.delta.error < 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ({diff.severityCounts.delta.error > 0 ? '+' : ''}{diff.severityCounts.delta.error})
+                  </span>
+                )}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500">Warnings</div>
+              <div className="text-lg font-bold">
+                {diff.severityCounts.before.warning} → {diff.severityCounts.after.warning}
+                {diff.severityCounts.delta.warning !== 0 && (
+                  <span className={`ml-1 ${diff.severityCounts.delta.warning < 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ({diff.severityCounts.delta.warning > 0 ? '+' : ''}{diff.severityCounts.delta.warning})
+                  </span>
+                )}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500">Info</div>
+              <div className="text-lg font-bold">
+                {diff.severityCounts.before.info} → {diff.severityCounts.after.info}
+                {diff.severityCounts.delta.info !== 0 && (
+                  <span className={`ml-1 ${diff.severityCounts.delta.info < 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ({diff.severityCounts.delta.info > 0 ? '+' : ''}{diff.severityCounts.delta.info})
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          {diff.issueChanges.newIssues.length > 0 && (
+            <div className="mt-2 text-center">
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                ⚠️ New issues detected: +{diff.issueChanges.newIssues.length}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Before/After cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {/* Before card */}
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+            <h4 className="font-bold text-red-800 mb-2">BEFORE</h4>
+            <div className="space-y-2">
+              <div><strong>Score:</strong> {autoFixBefore.score}%</div>
+              <div><strong>Summary:</strong> {autoFixBefore.summary}</div>
+              <div><strong>Issues:</strong> {diff.severityCounts.before.error} errors, {diff.severityCounts.before.warning} warnings, {diff.severityCounts.before.info} info</div>
+              <div>
+                <strong>Top categories:</strong>
+                <ul className="ml-4 mt-1">
+                  {(autoFixBefore.categorySummaries || []).slice(0, 5).map(cat => (
+                    <li key={cat.category} className="text-sm">
+                      {ISSUE_CATEGORY_LABELS[cat.category] || cat.category}: {(cat.errors || 0) + (cat.warnings || 0) + (cat.info || 0)} issues
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* After card */}
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <h4 className="font-bold text-green-800 mb-2">AFTER</h4>
+            <div className="space-y-2">
+              <div><strong>Score:</strong> {autoFixAfter.score}%</div>
+              <div><strong>Summary:</strong> {autoFixAfter.summary}</div>
+              <div><strong>Issues:</strong> {diff.severityCounts.after.error} errors, {diff.severityCounts.after.warning} warnings, {diff.severityCounts.after.info} info</div>
+              <div>
+                <strong>Top categories:</strong>
+                <ul className="ml-4 mt-1">
+                  {(autoFixAfter.categorySummaries || []).slice(0, 5).map(cat => (
+                    <li key={cat.category} className="text-sm">
+                      {ISSUE_CATEGORY_LABELS[cat.category] || cat.category}: {(cat.errors || 0) + (cat.warnings || 0) + (cat.info || 0)} issues
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* What changed */}
+        <div className="space-y-4">
+          <h4 className="font-bold text-lg">What Changed</h4>
+
+          {diff.issueChanges.fixedIssues.length > 0 && (
+            <div>
+              <h5 className="font-semibold text-green-700 mb-2">✅ Fixed Issues ({diff.issueChanges.fixedIssues.length})</h5>
+              <ul className="space-y-1 max-h-40 overflow-y-auto">
+                {diff.issueChanges.fixedIssues.slice(0, 10).map((issue, i) => (
+                  <li key={i} className="text-sm text-gray-700">
+                    p.{issue.page} • {ISSUE_CATEGORY_LABELS[issue.category] || issue.category} • {issue.severity} — {issue.message}
+                  </li>
+                ))}
+                {diff.issueChanges.fixedIssues.length > 10 && (
+                  <li className="text-sm text-gray-500">... and {diff.issueChanges.fixedIssues.length - 10} more</li>
+                )}
+              </ul>
+            </div>
+          )}
+
+          {diff.issueChanges.remainingIssues.length > 0 && (
+            <div>
+              <h5 className="font-semibold text-blue-700 mb-2">🔄 Remaining Issues ({diff.issueChanges.remainingIssues.length})</h5>
+              <ul className="space-y-1 max-h-40 overflow-y-auto">
+                {diff.issueChanges.remainingIssues.slice(0, 10).map((issue, i) => (
+                  <li key={i} className="text-sm text-gray-700">
+                    p.{issue.page} • {ISSUE_CATEGORY_LABELS[issue.category] || issue.category} • {issue.severity} — {issue.message}
+                  </li>
+                ))}
+                {diff.issueChanges.remainingIssues.length > 10 && (
+                  <li className="text-sm text-gray-500">... and {diff.issueChanges.remainingIssues.length - 10} more</li>
+                )}
+              </ul>
+            </div>
+          )}
+
+          {diff.issueChanges.newIssues.length > 0 && (
+            <div>
+              <h5 className="font-semibold text-red-700 mb-2">⚠️ New Issues ({diff.issueChanges.newIssues.length})</h5>
+              <ul className="space-y-1 max-h-40 overflow-y-auto">
+                {diff.issueChanges.newIssues.slice(0, 10).map((issue, i) => (
+                  <li key={i} className="text-sm text-gray-700">
+                    p.{issue.page} • {ISSUE_CATEGORY_LABELS[issue.category] || issue.category} • {issue.severity} — {issue.message}
+                  </li>
+                ))}
+                {diff.issueChanges.newIssues.length > 10 && (
+                  <li className="text-sm text-gray-500">... and {diff.issueChanges.newIssues.length - 10} more</li>
+                )}
+              </ul>
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  // Normal view
   return (
   <section className="ppp-issues-panel">
 {/* Header */}

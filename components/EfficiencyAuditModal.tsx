@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ModalProps } from '../types';
+import { PreflightResult, FileMeta, Issue, ModalProps } from '../types';
 import { SafeHtmlMarkdown } from './SafeHtmlMarkdown';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { t } from '../i18n';
@@ -23,9 +23,9 @@ function extractText(json: any): string {
     const parts = cand?.content?.parts;
     if (Array.isArray(parts)) {
       const all = parts.map((p: any) => (typeof p?.text === 'string' ? p.text : ''))
-                      .filter(Boolean)
-                      .join('\n\n')
-                      .trim();
+        .filter(Boolean)
+        .join('\n\n')
+        .trim();
       if (all) return all;
     }
     if (typeof json?.output_text === 'string' && json.output_text.trim()) return json.output_text.trim();
@@ -35,7 +35,19 @@ function extractText(json: any): string {
   }
 }
 
-export const EfficiencyAuditModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
+interface EfficiencyAuditModalProps extends ModalProps {
+  issue: Issue | null;
+  fileMeta: FileMeta | null;
+  result: PreflightResult | null;
+}
+
+export const EfficiencyAuditModal: React.FC<EfficiencyAuditModalProps> = ({
+  isOpen,
+  onClose,
+  issue,
+  fileMeta,
+  result
+}) => {
   const [loading, setLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,10 +58,15 @@ export const EfficiencyAuditModal: React.FC<ModalProps> = ({ isOpen, onClose }) 
     setAiResponse(null);
 
     const prompt = `Provide a concise, actionable checklist to efficiently preflight PDFs for print.
+Context:
+- Issue category: ${issue?.category || 'General'}
+- Issue message: ${issue?.message || 'N/A'}
+- PDF Page count: ${result?.meta?.pageCount || 'Unknown'}
+
 Cover:
-- quick checks order
-- recommended tools/workflows
-- common pitfalls to avoid
+- quick checks order for this category
+- recommended tools/workflows to fix this specific issue
+- common pitfalls to avoid for print production
 Keep it brief, use bullet points.`;
 
     try {
@@ -71,7 +88,7 @@ Keep it brief, use bullet points.`;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [issue, result]);
 
   useEffect(() => {
     if (isOpen) fetchAI();
@@ -81,8 +98,8 @@ Keep it brief, use bullet points.`;
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-4">
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center border-none">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-4 relative border-none">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-lg font-semibold">{t('efficiencyAuditTitle')}</h2>
           <button className="p-2 rounded hover:bg-gray-100" onClick={onClose} aria-label={t('close')}>
