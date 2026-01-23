@@ -88,6 +88,11 @@ export const LoaderOverlay: React.FC<Props> = ({
 
   // Better progress calculation
   const progress = useMemo(() => {
+    // If no stageKey, show minimal progress
+    if (!stageKey) {
+      return 0.05;
+    }
+
     const total = pipeline.length;
     const done = pipeline.filter((s) => statuses[s.key] === 'done').length;
     const activeIdx = pipeline.findIndex((s) => statuses[s.key] === 'active');
@@ -101,7 +106,7 @@ export const LoaderOverlay: React.FC<Props> = ({
     const activeContribution = (activeProgress / 100) / total;
 
     return clamp(base + activeContribution, 0, 1);
-  }, [pipeline, statuses, stepProgress]);
+  }, [pipeline, statuses, stepProgress, stageKey]);
 
   // More aggressive progress animation
   useEffect(() => {
@@ -333,21 +338,32 @@ export const LoaderOverlay: React.FC<Props> = ({
                           {s.description}
                         </p>
 
-                        {/* Progress bar - MORE VISIBLE */}
+                        {/* Progress bar - MUCH MORE VISIBLE */}
                         {(isActive || isDone) && (
-                          <div className="h-2 sm:h-2.5 w-full rounded-full bg-gray-200/80 overflow-hidden shadow-inner">
-                            <div
-                              className={[
-                                'h-full rounded-full transition-all duration-300 ease-out',
-                                isDone
-                                  ? 'bg-gradient-to-r from-emerald-400 to-emerald-500'
-                                  : 'bg-gradient-to-r from-emerald-500 to-blue-500'
-                              ].join(' ')}
-                              style={{
-                                width: `${Math.round(stepProg)}%`,
-                                boxShadow: isActive ? '0 0 10px rgba(16, 185, 129, 0.4)' : 'none',
-                              }}
-                            />
+                          <div className="relative">
+                            <div className="h-3 sm:h-3.5 w-full rounded-full bg-gray-200 overflow-hidden shadow-inner border border-gray-300">
+                              <div
+                                className={[
+                                  'h-full rounded-full transition-all duration-300 ease-out relative',
+                                  isDone
+                                    ? 'bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600'
+                                    : 'bg-gradient-to-r from-emerald-500 via-emerald-600 to-blue-500'
+                                ].join(' ')}
+                                style={{
+                                  width: `${Math.round(stepProg)}%`,
+                                  boxShadow: isActive ? '0 0 15px rgba(16, 185, 129, 0.6), inset 0 1px 2px rgba(255,255,255,0.3)' : 'inset 0 1px 2px rgba(255,255,255,0.3)',
+                                }}
+                              >
+                                {/* Shine effect */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20" />
+                              </div>
+                            </div>
+                            {/* Progress percentage */}
+                            {isActive && stepProg > 5 && (
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-white drop-shadow-md">
+                                {Math.round(stepProg)}%
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
