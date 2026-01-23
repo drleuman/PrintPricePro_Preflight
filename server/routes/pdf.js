@@ -5,6 +5,135 @@ const os = require('os');
 const fs = require('fs');
 const { PDFDocument } = require('pdf-lib');
 const { runGs, sendPdfAndCleanup, safeUnlink, safeRmDir } = require('../services/ghostscript');
+const { spawn } = require('child_process');
+
+function execCmd(cmd, args, opts = {}) {
+    const timeoutMs = opts.timeoutMs ?? 20000;
+
+    return new Promise((resolve) => {
+        const p = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+        let out = '';
+        let err = '';
+        let killed = false;
+
+        const t = setTimeout(() => {
+            killed = true;
+            try { p.kill('SIGKILL'); } catch (e) { }
+        }, timeoutMs);
+
+        p.stdout.on('data', (d) => (out += d.toString('utf8')));
+        p.stderr.on('data', (d) => (err += d.toString('utf8')));
+
+        p.on('close', (code) => {
+            clearTimeout(t);
+            resolve({ ok: code === 0 && !killed, code, stdout: out, stderr: err, killed });
+        });
+    });
+}
+
+function parsePdffonts(stdout) {
+    // pdffonts output: header lines then table rows
+    const lines = stdout.split('\n').map(l => l.trim()).filter(Boolean);
+    // Find the separator row with dashes
+    const sepIdx = lines.findIndex(l => /^-+$/.test(l.replace(/\s+/g, '')));
+    // Some versions have "-----" row; if not found, fallback:
+    const dataLines = sepIdx >= 0 ? lines.slice(sepIdx + 1) : lines.slice(2);
+
+    // Each row starts with a font name typically; ignore totals if any
+    const rows = dataLines.filter(l => l && !l.toLowerCase().startsWith('name'));
+    // Heuristic: valid rows contain at least 5 columns separated by spaces
+    const fontRows = rows.filter(l => l.split(/\s+/).length >= 5);
+    return { fontsCount: fontRows.length, fontRows };
+}
+
+function parsePdfimagesList(stdout) {
+    // pdfimages -list output:
+    // page num type width height color comp bpc enc interp object ID x-ppi y-ppi size ratio
+    const lines = stdout.split('\n').map(l => l.trim()).filter(Boolean);
+    // Find header line starting with "page"
+    const headerIdx = lines.findIndex(l => l.toLowerCase().startsWith('page '));
+    if (headerIdx < 0) return { images: [], perPage: {}, largePerPage: {}, total: 0 };
+
+    const data = lines.slice(headerIdx + 1).filter(l => /^\d+/.test(l));
+    const images = [];
+    for (const line of data) {
+        const cols = line.split(/\s+/);
+        // page is first col, width col index varies but usually:
+        // [page, num, type, width, height, color, ...]
+        const page = parseInt(cols[0], 10);
+        const width = parseInt(cols[3], 10);
+        const height = parseInt(cols[4], 10);
+        if (!Number.isFinite(page) || !Number.isFinite(width) || !Number.isFinite(height)) continue;
+        images.push({ page, width, height, area: width * height });
+    }
+
+    const perPage = {};
+    const largePerPage = {};
+    for (const img of images) {
+        perPage[img.page] = (perPage[img.page] || 0) + 1;
+
+        // "large image" heuristic: roughly full-page-ish bitmap
+        const isLarge = (img.width >= 1200 && img.height >= 1200) || img.area >= 1_800_000;
+        if (isLarge) largePerPage[img.page] = (largePerPage[img.page] || 0) + 1;
+    }
+
+    return { images, perPage, largePerPage, total: images.length };
+}
+
+async function detectRasterization(pdfPath) {
+    // Returns a robust signal to decide "this PDF is basically images per page"
+    const result = {
+        ok: true,
+        tools: { pdffonts: null, pdfimages: null },
+        fonts_count: 0,
+        images_total: 0,
+        pages_with_large_images: 0,
+        large_images_per_page: {}, // {page: count}
+        images_per_page: {},       // {page: count}
+        is_rasterized: false,
+        reasons: [],
+    };
+
+    // 1) pdffonts
+    const fontsRes = await execCmd('pdffonts', [pdfPath]);
+    result.tools.pdffonts = { ok: fontsRes.ok, code: fontsRes.code, killed: fontsRes.killed };
+    if (fontsRes.ok) {
+        const { fontsCount } = parsePdffonts(fontsRes.stdout);
+        result.fonts_count = fontsCount;
+    } else {
+        result.ok = false;
+        result.reasons.push('pdffonts_failed_or_missing');
+    }
+
+    // 2) pdfimages -list
+    const imgRes = await execCmd('pdfimages', ['-list', pdfPath]);
+    result.tools.pdfimages = { ok: imgRes.ok, code: imgRes.code, killed: imgRes.killed };
+    if (imgRes.ok) {
+        const parsed = parsePdfimagesList(imgRes.stdout);
+        result.images_total = parsed.total;
+        result.images_per_page = parsed.perPage;
+        result.large_images_per_page = parsed.largePerPage;
+        result.pages_with_large_images = Object.keys(parsed.largePerPage).length;
+    } else {
+        result.ok = false;
+        result.reasons.push('pdfimages_failed_or_missing');
+    }
+
+    // 3) Decision heuristic
+    const pagesWithLarge = result.pages_with_large_images;
+
+    if (result.fonts_count === 0 && pagesWithLarge >= 6) {
+        result.is_rasterized = true;
+        result.reasons.push('no_fonts_and_large_images_on_many_pages');
+    } else if (result.fonts_count <= 1 && pagesWithLarge >= 8) {
+        result.is_rasterized = true;
+        result.reasons.push('almost_no_fonts_and_large_images_on_most_pages');
+    } else {
+        result.is_rasterized = false;
+    }
+
+    return result;
+}
 
 const router = express.Router();
 
@@ -464,7 +593,10 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
         forceRebuild: String(req.body.forceRebuild || '0') === '1',
         forceBleed: String(req.body.forceBleed || '1') === '1',
         forceCmyk: String(req.body.forceCmyk || '1') === '1',
-        flatten: String(req.body.flatten || '0') === '1'
+        flatten: String(req.body.flatten || '0') === '1',
+        strictVector: String(req.body.strictVector || '1') === '1',
+        allowRasterRebuild: String(req.body.allowRasterRebuild || '0') === '1',
+        allowRasterOutput: String(req.body.allowRasterOutput || '0') === '1',
     };
 
     const payload = req.body.issues ? safeJsonParse(req.body.issues) : null;
@@ -477,14 +609,37 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
             min_dpi: options.dpiMin,
             preferred_dpi: options.dpiPreferred
         },
+        quality_checks: {},
         fix_plan: [],
         applied: [],
         warnings: [],
         startedAt: new Date().toISOString()
     };
 
+    // --- Raster Guard: Pre-check ---
+    try {
+        const strictVector = options.strictVector !== false;
+        const inputQC = await detectRasterization(inputPath);
+        report.quality_checks.input = inputQC;
+
+        if (strictVector && inputQC.is_rasterized) {
+            report.warnings.push('Input PDF appears rasterized (no fonts + large images). Vector text cannot be recovered.');
+        }
+    } catch (e) {
+        console.warn('RasterGuard pre-check failed:', e);
+    }
+
     // 1) Build Plan
-    const needsRebuild = options.forceRebuild === true || issues.some(i => String(i.id || '').toLowerCase() === 'low-res-images');
+    let needsRebuild = options.forceRebuild === true || issues.some(i => String(i.id || '').toLowerCase() === 'low-res-images');
+
+    // --- Raster Guard: Block Rebuild ---
+    const strictVector = options.strictVector !== false;
+    const allowRasterRebuild = options.allowRasterRebuild === true;
+    if (strictVector && needsRebuild && !allowRasterRebuild) {
+        report.warnings.push('Rebuild/raster step was disabled by Raster Guard (strictVector). Use allowRasterRebuild:true to override.');
+        needsRebuild = false;
+    }
+
     const needsFlatten = options.flatten || (options.aggressive && shouldFlattenFromIssues(issues));
 
     // Define potential steps
@@ -569,6 +724,25 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
         res.setHeader('X-PPP-Autofix-Report', json);
 
         const baseName = path.basename(req.file.originalname || 'document.pdf').replace(/\.pdf$/i, '');
+
+        // --- Raster Guard: Post-check ---
+        try {
+            const outputQC = await detectRasterization(currentPath);
+            report.quality_checks.output = outputQC;
+
+            const allowRasterOutput = options.allowRasterOutput === true;
+            if (options.strictVector !== false && outputQC.is_rasterized && !allowRasterOutput) {
+                return res.status(422).json({
+                    ok: false,
+                    error: 'OUTPUT_RASTERIZED_BLOCKED',
+                    message: 'Output PDF appears rasterized. Blocked by Raster Guard (strictVector).',
+                    report,
+                });
+            }
+        } catch (e) {
+            console.warn('RasterGuard post-check failed:', e);
+        }
+
         return sendPdfAndCleanup(res, currentPath, `${baseName}_fixed.pdf`);
     } catch (err) {
         console.error('autofix orchestrator failed:', err);
