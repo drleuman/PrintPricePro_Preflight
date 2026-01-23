@@ -11,6 +11,7 @@ import { t } from '../i18n';
 
 interface PageViewerProps {
   file: File | null;
+  pdfUrl?: string | null; // Optional URL to load PDF from (takes precedence over file)
   numPages: number;
   currentPage: number;
   onPageChange: (page: number) => void;
@@ -24,6 +25,7 @@ interface PageViewerProps {
 
 export const PageViewer: React.FC<PageViewerProps> = ({
   file,
+  pdfUrl,
   numPages,
   currentPage,
   onPageChange,

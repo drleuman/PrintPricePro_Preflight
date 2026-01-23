@@ -496,7 +496,7 @@ export const FixDrawer: React.FC<Props> = ({
                 disabled={isFixing}
                 className="btn btn--rebuild btn--block"
               >
-                {isFixing ? 'Rebuilding...' : '🛠️ Rebuild High-Res (300 DPI)'}
+                {isFixing ? 'Rebuilding...' : '🛠️ Rebuild High-Res (150 DPI min / 300 best)'}
               </button>
             )}
           </div>

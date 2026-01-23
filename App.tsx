@@ -58,6 +58,7 @@ export default function App() {
 
   // UI / Loader
   const [processMessage, setProcessMessage] = useState<string | null>(null);
+  const [processStage, setProcessStage] = useState<string | undefined>(undefined);
 
   // UI flags
   const [lastPdfUrl, setLastPdfUrl] = useState<string | null>(null);
@@ -118,6 +119,7 @@ export default function App() {
       autoFixPendingAfterRef.current = false;
     }
     setProcessMessage(null);
+    setProcessStage(undefined);
   }, []);
 
   const onRenderPageResult = useCallback((base64: string) => {
@@ -222,6 +224,7 @@ export default function App() {
     setHeatmapData(null);
 
     setProcessMessage('Analyzing PDF Structure & Content...');
+    setProcessStage('analyze');
     runAnalysis(file, fileMeta);
   }, [file, fileMeta, runAnalysis]);
 
@@ -231,6 +234,7 @@ export default function App() {
     setSelectedIssue(null);
 
     setProcessMessage('Converting to Grayscale (Server)...');
+    setProcessStage('fix');
     try {
       const blob = await convertToGrayscaleServer(file);
       const newName = file.name.replace(/\.pdf$/i, '') + '_bw.pdf';
@@ -246,9 +250,11 @@ export default function App() {
       }, 500);
 
       setProcessMessage(null);
+      setProcessStage(undefined);
     } catch (e) {
       console.warn('Server grayscale failed:', e);
       setProcessMessage(null);
+      setProcessStage(undefined);
 
       if (window.confirm(
         'Server method unavailable. Do you want to use the local fallback?\n\n' +
@@ -314,6 +320,7 @@ export default function App() {
     setSelectedIssue(null);
 
     setProcessMessage('AutoFix Agent (PRO): Orchestrating PDF transformations...');
+    setProcessStage('preflight');
     try {
       const { blob, report } = await autoFixServer(file, {
         target: options?.forceCmyk ? 'cmyk' : 'none',
@@ -337,6 +344,7 @@ export default function App() {
 
       setTimeout(() => {
         setProcessMessage('Re-analyzing AutoFixed PDF...');
+        setProcessStage('verify');
         runAnalysis(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
       }, 500);
 
@@ -344,6 +352,7 @@ export default function App() {
     } catch (e) {
       console.warn('AutoFix failed:', e);
       setProcessMessage(null);
+      setProcessStage(undefined);
       alert(`AutoFix failed: ${(e as any)?.message || e}`);
     }
   }, [file, fileMeta, result, autoFixServer, downloadAndRemember, updateFileState, runAnalysis]);
@@ -425,7 +434,7 @@ export default function App() {
       const cmykBlob = await convertColorServer(currentFile, 'cmyk');
       currentFile = new File([cmykBlob], `${originalName}_CMYK.pdf`, { type: 'application/pdf' });
 
-      // 2. Rebuild High-Res (Server) - Fixes low-res issues and weird structure
+      // 2. Rebuild High-Res (Server) - Fixes low-res issues and weird structure (150 DPI min / 300 best)
       setProcessMessage('AI Wizard: Enhancing image resolution and rebuilding PDF structure...');
       const rebuildBlob = await rebuildPdfServer(currentFile, 300);
       currentFile = new File([rebuildBlob], `${originalName}_Magic_Fix.pdf`, { type: 'application/pdf' });
@@ -489,7 +498,7 @@ export default function App() {
   // ---------- Render ----------
   return (
     <div className="min-h-screen bg-gray-100">
-      <LoaderOverlay isOpen={!!processMessage || isWorkerRunning} message={processMessage || 'Processing...'} />
+      <LoaderOverlay isOpen={!!processMessage || isWorkerRunning} message={processMessage || 'Processing...'} stageKey={processStage} />
 
       <main className="container mx-auto px-4 py-6">
         <div className="workflow-container">
