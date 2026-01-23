@@ -32,6 +32,7 @@ export default function App() {
 
   // ---------- Main state ----------
   const [file, setFile] = useState<File | null>(null);
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
   const [fileMeta, setFileMeta] = useState<FileMeta | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -203,6 +204,7 @@ export default function App() {
 
   const onFileSelect = useCallback((f: File | null) => {
     setFile(f);
+    setOriginalFile(f); // Store original for Before/After comparison
     setResult(null);
     setSelectedIssue(null);
     setNumPages(0);
@@ -420,6 +422,8 @@ export default function App() {
   const runMagicAiFix = useCallback(async () => {
     if (!file || !fileMeta) return;
 
+    // Store original file for Before/After comparison
+    setOriginalFile(file);
     setAppMode('ai');
     setProcessMessage('AI Wizard: Analyzing document components...');
 
@@ -594,6 +598,10 @@ export default function App() {
                 onStartOver={handleStartOver}
                 onBack={() => setCurrentStep(3)}
                 appMode={appMode}
+                heatmapData={heatmapData}
+                isHeatmapLoading={heatmapLoading}
+                onRunHeatmap={() => file && fileMeta && handleRunHeatmap(file, fileMeta, currentPage)}
+                originalFile={originalFile}
               />
             )}
           </div>

@@ -20,6 +20,10 @@ interface Step4ReviewProps {
     onStartOver: () => void;
     onBack: () => void;
     appMode?: 'manual' | 'ai' | null;
+    heatmapData?: any;
+    isHeatmapLoading?: boolean;
+    onRunHeatmap?: () => void;
+    originalFile?: File | null;
 }
 
 export const Step4Review: React.FC<Step4ReviewProps> = ({
@@ -40,11 +44,18 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
     onStartOver,
     onBack,
     appMode,
+    heatmapData,
+    isHeatmapLoading = false,
+    onRunHeatmap,
+    originalFile,
 }) => {
     const [showBeforeAfter, setShowBeforeAfter] = useState<'before' | 'after'>('after');
     const issuesCount = result?.issues?.length || 0;
     const hasIssues = issuesCount > 0;
     const hasBeenProcessed = !!lastPdfUrl;
+
+    // Determine which file to show based on Before/After toggle
+    const displayFile = showBeforeAfter === 'before' && originalFile ? originalFile : file;
 
     // Determine status
     const isReadyForPrint = !hasIssues || hasBeenProcessed;
@@ -113,21 +124,19 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                 <div className="flex bg-white rounded-lg border border-gray-200 p-1">
                                     <button
                                         onClick={() => setShowBeforeAfter('before')}
-                                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                                            showBeforeAfter === 'before'
+                                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${showBeforeAfter === 'before'
                                                 ? 'bg-red-100 text-red-700 border border-red-200'
                                                 : 'text-gray-500 hover:text-gray-700'
-                                        }`}
+                                            }`}
                                     >
                                         📄 Before
                                     </button>
                                     <button
                                         onClick={() => setShowBeforeAfter('after')}
-                                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                                            showBeforeAfter === 'after'
+                                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${showBeforeAfter === 'after'
                                                 ? 'bg-green-100 text-green-700 border border-green-200'
                                                 : 'text-gray-500 hover:text-gray-700'
-                                        }`}
+                                            }`}
                                     >
                                         ✨ After
                                     </button>
@@ -178,15 +187,15 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
 
                 <div className="step__main">
                     <PageViewer
-                        file={file}
+                        file={displayFile}
                         numPages={numPages}
                         currentPage={currentPage}
                         onPageChange={onPageChange}
                         onNumPagesChange={onNumPagesChange}
                         selectedIssue={null}
-                        heatmapData={null}
-                        onRunHeatmap={() => { }}
-                        isHeatmapLoading={false}
+                        heatmapData={heatmapData || null}
+                        onRunHeatmap={onRunHeatmap || (() => { })}
+                        isHeatmapLoading={isHeatmapLoading}
                     />
                 </div>
             </div>
