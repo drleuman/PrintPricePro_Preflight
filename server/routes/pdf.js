@@ -281,8 +281,24 @@ async function addBleedCanvasPdf(inputPath, outPath, bleedMm) {
         const p = pages[i];
         const { width, height } = p.getSize();
         const [embedded] = await dst.embedPages([p]);
-        const newPage = dst.addPage([width + (bleedPt * 2), height + (bleedPt * 2)]);
-        newPage.drawPage(embedded, { x: bleedPt, y: bleedPt });
+
+        const newW = width + (bleedPt * 2);
+        const newH = height + (bleedPt * 2);
+
+        // Calculate scale to cover the new area
+        const sx = newW / width;
+        const sy = newH / height;
+        const s = Math.max(sx, sy);
+
+        const drawW = width * s;
+        const drawH = height * s;
+
+        // Center the scaled content
+        const x = (newW - drawW) / 2;
+        const y = (newH - drawH) / 2;
+
+        const newPage = dst.addPage([newW, newH]);
+        newPage.drawPage(embedded, { x, y, xScale: s, yScale: s });
     }
     const outBytes = await dst.save();
     fs.writeFileSync(outPath, outBytes);
@@ -314,6 +330,9 @@ async function gsConvertColor(inputPath, outPath, profile) {
         '-dDownsampleMonoImages=false',
         '-dDownsampleGrayImages=false',
         '-dDownsampleColorImages=false',
+        '-dPreserveOverprintSettings=true',
+        '-dBlackText=true',
+        '-dBlackVector=true',
         '-sColorConversionStrategy=CMYK',
         '-sProcessColorModel=DeviceCMYK',
         '-dOverrideICC=true',
@@ -410,11 +429,20 @@ async function rebuildAtDpi(inputPath, outPath, dpi) {
     }
 
     const doc = await PDFDocument.create();
+
+    // Convert pixel dimensions -> PDF points preserving physical size:
+    // pt = px * 72 / dpi
+    const pxToPt = (px) => (px * 72) / dpi;
+
     for (const imgPath of imgs) {
         const pngBytes = fs.readFileSync(imgPath);
         const png = await doc.embedPng(pngBytes);
-        const page = doc.addPage([png.width, png.height]);
-        page.drawImage(png, { x: 0, y: 0, width: png.width, height: png.height });
+
+        const wPt = pxToPt(png.width);
+        const hPt = pxToPt(png.height);
+
+        const page = doc.addPage([wPt, hPt]);
+        page.drawImage(png, { x: 0, y: 0, width: wPt, height: hPt });
     }
     const outBytes = await doc.save();
     fs.writeFileSync(outPath, outBytes);
@@ -456,23 +484,42 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
     };
 
     // 1) Build Plan
-    if (options.forceCmyk) report.fix_plan.push({ action: 'convert_cmyk', enabled: true });
-    if (options.forceBleed) report.fix_plan.push({ action: 'add_bleed_canvas', enabled: true });
-
-    const needsRebuild = options.forceRebuild || issues.some(i => i.id?.includes('low-res'));
-    report.fix_plan.push({ action: 'rebuild_raster', enabled: needsRebuild });
-
+    const needsRebuild = options.forceRebuild === true || issues.some(i => String(i.id || '').toLowerCase() === 'low-res-images');
     const needsFlatten = options.flatten || (options.aggressive && shouldFlattenFromIssues(issues));
-    report.fix_plan.push({ action: 'flatten_transparency', enabled: needsFlatten });
+
+    // Define potential steps
+    const stepCmyk = { action: 'convert_cmyk', enabled: options.forceCmyk || needsRebuild };
+    const stepBleed = { action: 'add_bleed_canvas', enabled: options.forceBleed };
+    const stepRebuild = { action: 'rebuild_raster', enabled: needsRebuild };
+    const stepFlatten = { action: 'flatten_transparency', enabled: needsFlatten };
+
+    if (needsRebuild) {
+        // If rebuilding, do it early, and ensure CMYK is LAST to fix RGB output from rebuild
+        report.fix_plan.push(stepRebuild);
+        report.fix_plan.push(stepBleed);
+        report.fix_plan.push(stepFlatten);
+        report.fix_plan.push(stepCmyk);
+    } else {
+        // Standard order if no rebuild needed
+        report.fix_plan.push(stepCmyk);
+        report.fix_plan.push(stepBleed);
+        report.fix_plan.push(stepRebuild);
+        report.fix_plan.push(stepFlatten);
+    }
 
     let currentPath = inputPath;
     const tmpPaths = [];
 
     try {
+        let stepIndex = 0;
         for (const planStep of report.fix_plan) {
             if (!planStep.enabled) continue;
+            stepIndex++;
 
-            const outPath = path.join(uploadDir, `autofix-${Date.now()}-${Math.random().toString(16).slice(2)}.pdf`);
+            // Unique name: autofix-TIMESTAMP-INDEX-ACTION-RANDOM.pdf
+            const uniqueSuffix = Math.random().toString(16).slice(2, 8);
+            const outPath = path.join(uploadDir, `autofix-${Date.now()}-${stepIndex}-${planStep.action}-${uniqueSuffix}.pdf`);
+
             const t0 = Date.now();
             let stepOk = false;
             let stepWarnings = [];
@@ -484,11 +531,11 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
                 } else if (planStep.action === 'add_bleed_canvas') {
                     await addBleedCanvasPdf(currentPath, outPath, options.bleedMm);
                     stepOk = true;
-                    stepWarnings.push('Bleed added as canvas only; artwork may not extend to bleed.');
+                    stepWarnings.push('Bleed added (scaled content).');
                 } else if (planStep.action === 'rebuild_raster') {
                     await rebuildAtDpi(currentPath, outPath, options.dpiPreferred);
                     stepOk = true;
-                    stepWarnings.push('Rebuild rasterizes pages (vectors/text become images).');
+                    stepWarnings.push('Rasterized pages to ensure visual accuracy.');
                 } else if (planStep.action === 'flatten_transparency') {
                     await gsFlattenTransparency(currentPath, outPath);
                     stepOk = true;
@@ -500,7 +547,15 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
 
             if (stepOk) {
                 const ms = Date.now() - t0;
-                report.applied.push({ action: planStep.action, ok: true, ms, warnings: stepWarnings });
+                report.applied.push({
+                    step: stepIndex,
+                    action: planStep.action,
+                    ok: true,
+                    ms,
+                    input: path.basename(currentPath),
+                    output: path.basename(outPath),
+                    warnings: stepWarnings
+                });
                 if (currentPath !== inputPath) tmpPaths.push(currentPath);
                 currentPath = outPath;
                 tmpPaths.push(outPath);
