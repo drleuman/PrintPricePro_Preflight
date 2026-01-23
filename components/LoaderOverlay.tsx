@@ -139,13 +139,19 @@ export const LoaderOverlay: React.FC<Props> = ({
     // Smooth transition when backend updates stage
     setStepProgress((prev) => {
       const next = { ...prev };
-      // Ensure previous steps are at 100%
-      pipeline.forEach((s, idx) => {
+
+      pipeline.forEach((s) => {
         const status = statuses[s.key];
-        if (status === 'done' && next[s.key] < 100) {
+        if (status === 'done') {
           next[s.key] = 100;
+        } else if (status === 'active') {
+          // Start active step at 14% to avoid blink from 0
+          next[s.key] = Math.max(next[s.key] ?? 0, 14);
+        } else if (status === 'pending') {
+          next[s.key] = next[s.key] ?? 0;
         }
       });
+
       return next;
     });
   }, [stageKey, isOpen, pipeline, statuses]);
@@ -186,7 +192,7 @@ export const LoaderOverlay: React.FC<Props> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 pointer-events-auto"
       aria-modal="true"
       role="dialog"
       style={{
@@ -234,10 +240,10 @@ export const LoaderOverlay: React.FC<Props> = ({
                 <h3 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent leading-tight">
                   Processing your PDF
                 </h3>
-                <p className="text-sm sm:text-base text-gray-700 font-medium mt-0.5 sm:mt-1">
+                <p aria-live="polite" className="text-sm sm:text-base text-gray-700 font-medium mt-0.5 sm:mt-1">
                   {message}
                 </p>
-                <p className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-2 min-h-[16px] sm:min-h-[20px] transition-opacity duration-300 hidden sm:block">
+                <p aria-live="polite" className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-2 min-h-[16px] sm:min-h-[20px] transition-opacity duration-300 truncate">
                   {LOADING_TIPS[tipIndex]}
                 </p>
               </div>
