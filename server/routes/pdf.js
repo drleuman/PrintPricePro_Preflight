@@ -621,12 +621,14 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
         const strictVector = options.strictVector !== false;
         const inputQC = await detectRasterization(inputPath);
         report.quality_checks.input = inputQC;
+        report.quality_checks.tools_available = inputQC.ok;
 
         if (strictVector && inputQC.is_rasterized) {
             report.warnings.push('Input PDF appears rasterized (no fonts + large images). Vector text cannot be recovered.');
         }
     } catch (e) {
         console.warn('RasterGuard pre-check failed:', e);
+        report.warnings.push('Raster Guard unavailable: pdffonts/pdfimages missing or failed. Install poppler-utils.');
     }
 
     // 1) Build Plan
@@ -663,7 +665,8 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
     }
 
     let currentPath = inputPath;
-    const tmpPaths = [];
+    const tmpPaths = new Set();
+    let deliveredPdf = false;
 
     try {
         let stepIndex = 0;
@@ -711,19 +714,14 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
                     output: path.basename(outPath),
                     warnings: stepWarnings
                 });
-                if (currentPath !== inputPath) tmpPaths.push(currentPath);
+                if (currentPath !== inputPath) tmpPaths.add(currentPath);
                 currentPath = outPath;
-                tmpPaths.push(outPath);
+                tmpPaths.add(outPath);
             }
         }
 
         report.endedAt = new Date().toISOString();
         report.duration_total_ms = Date.now() - new Date(report.startedAt).getTime();
-
-        const json = Buffer.from(JSON.stringify(report), 'utf8').toString('base64');
-        res.setHeader('X-PPP-Autofix-Report', json);
-
-        const baseName = path.basename(req.file.originalname || 'document.pdf').replace(/\.pdf$/i, '');
 
         // --- Raster Guard: Post-check ---
         try {
@@ -732,6 +730,11 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
 
             const allowRasterOutput = options.allowRasterOutput === true;
             if (options.strictVector !== false && outputQC.is_rasterized && !allowRasterOutput) {
+                report.blocked = {
+                    reason: 'OUTPUT_RASTERIZED_BLOCKED',
+                    strictVector: options.strictVector !== false,
+                    allowRasterOutput: options.allowRasterOutput === true
+                };
                 return res.status(422).json({
                     ok: false,
                     error: 'OUTPUT_RASTERIZED_BLOCKED',
@@ -741,16 +744,27 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
             }
         } catch (e) {
             console.warn('RasterGuard post-check failed:', e);
+            report.warnings.push('Raster Guard post-check failed (pdffonts/pdfimages missing or errored).');
         }
 
-        return sendPdfAndCleanup(res, currentPath, `${baseName}_fixed.pdf`);
+        const json = Buffer.from(JSON.stringify(report), 'utf8').toString('base64');
+        res.setHeader('X-PPP-Autofix-Report', json);
+
+        const baseName = path.basename(req.file.originalname || 'document.pdf').replace(/\.pdf$/i, '');
+
+        deliveredPdf = true;
+        return sendPdfAndCleanup(res, currentPath, `${baseName}_fixed.pdf`, () => {
+            safeUnlink(inputPath);
+            for (const p of tmpPaths) safeUnlink(p);
+        });
     } catch (err) {
         console.error('autofix orchestrator failed:', err);
         return res.status(500).json({ error: 'AutoFix failed', details: err.message });
     } finally {
-        safeUnlink(inputPath);
-        for (const p of tmpPaths) {
-            if (p !== currentPath) safeUnlink(p);
+        // Only cleanup if we didn't successfully hand off the file for delivery/cleanup
+        if (!deliveredPdf) {
+            safeUnlink(inputPath);
+            for (const p of tmpPaths) safeUnlink(p);
         }
     }
 });
