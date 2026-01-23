@@ -426,15 +426,18 @@ export default function App() {
     setOriginalFile(file);
     setAppMode('ai');
     setProcessMessage('AI Wizard: Analyzing document components...');
+    setProcessStage('upload'); // Stage 1: Upload/Ingest
 
     try {
       setProcessMessage('AI Wizard: Starting deep analysis...');
+      setProcessStage('preflight'); // Stage 2: Preflight
 
       let currentFile: File = file;
       const originalName = file.name.replace(/\.pdf$/i, '');
 
       // 1. Convert to CMYK (Server) - Crucial for print professionalism
       setProcessMessage('AI Wizard: Optimizing color spaces for professional printing...');
+      setProcessStage('fix'); // Stage 3-4: Applying fixes
       const cmykBlob = await convertColorServer(currentFile, 'cmyk');
       currentFile = new File([cmykBlob], `${originalName}_CMYK.pdf`, { type: 'application/pdf' });
 
@@ -445,6 +448,7 @@ export default function App() {
 
       // 3. Final Analysis of the fixed file
       setProcessMessage('AI Wizard: Performing final quality check...');
+      setProcessStage('verify'); // Stage 5: Verification
 
       updateFileState(currentFile, {
         name: currentFile.name,
@@ -458,11 +462,13 @@ export default function App() {
       await runAnalysis(currentFile, { name: currentFile.name, size: currentFile.size, type: 'application/pdf' });
 
       setProcessMessage(null);
+      setProcessStage(undefined); // Reset stage
       setCurrentStep(4); // Jump to review
 
     } catch (e) {
       console.error('Magic Fix failed', e);
       setProcessMessage(null);
+      setProcessStage(undefined); // Reset stage on error
       window.alert('Magic Fix encountered an issue: ' + (e as Error).message + '\n\nSwitching to manual mode.');
       setAppMode('manual');
       setCurrentStep(2);
