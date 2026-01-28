@@ -10,6 +10,9 @@
     "start": "node server.js",
     "test:front": "vitest"
   },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "*"
+  },
   "dependencies": {
     "@google/generative-ai": "^0.16.0",
     "@heroicons/react": "^2.2.0",
