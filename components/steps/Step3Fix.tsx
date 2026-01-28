@@ -42,6 +42,29 @@ interface Step3FixProps {
     onBack: () => void;
 }
 
+const Icon = {
+    Refresh: (p: { className?: string }) => (
+        <svg className={p.className} viewBox="0 0 24 24" fill="none">
+            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    ),
+    Sparkles: (p: { className?: string }) => (
+        <svg className={p.className} viewBox="0 0 24 24" fill="none">
+            <path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    ),
+    ArrowLeft: (p: { className?: string }) => (
+        <svg className={p.className} viewBox="0 0 24 24" fill="none">
+            <path d="M19 12H5m7 7l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    ),
+    ArrowRight: (p: { className?: string }) => (
+        <svg className={p.className} viewBox="0 0 24 24" fill="none">
+            <path d="M5 12h14m-7 7l7-7-7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    ),
+};
+
 export const Step3Fix: React.FC<Step3FixProps> = ({
     file,
     fileMeta,
@@ -87,7 +110,8 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
         forceRebuild: false,
         forceBleed: true,
         forceCmyk: true,
-        flatten: false
+        flatten: false,
+        allowRasterOutput: false
     });
 
     const toggleOption = (key: keyof typeof autoFixOptions) => {
@@ -141,11 +165,11 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
                     />
 
                     <button
-                        className="btn btn--secondary btn--block"
+                        className="btn btn--secondary btn--block flex items-center justify-center gap-2"
                         onClick={onRunAnalysis}
                         disabled={isRunning}
                     >
-                        🔄 Re-analyze PDF
+                        <Icon.Refresh className="h-4 w-4" /> Re-analyze PDF
                     </button>
                 </div>
 
@@ -167,17 +191,18 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
 
             <div className="step__actions">
                 <button
-                    className="btn btn--primary"
+                    className="btn btn--primary flex items-center gap-2"
                     onClick={() => onAutoFix(autoFixOptions)}
                     disabled={!file || isRunning}
                 >
-                    {isRunning ? '⚙️ Running AutoFix...' : '⚙️ Run AutoFix Agent (PRO)'}
+                    <Icon.Sparkles className="h-4 w-4" />
+                    {isRunning ? 'Running AutoFix...' : 'Run AutoFix Agent (PRO)'}
                 </button>
-                <button className="btn btn--secondary" onClick={onBack}>
-                    ← Back to Analysis
+                <button className="btn btn--secondary flex items-center gap-2" onClick={onBack}>
+                    <Icon.ArrowLeft className="h-4 w-4" /> Back to Analysis
                 </button>
-                <button className="btn btn--primary btn--large" onClick={onNext}>
-                    Continue to Review →
+                <button className="btn btn--primary btn--large flex items-center gap-2" onClick={onNext}>
+                    Continue to Review <Icon.ArrowRight className="h-4 w-4" />
                 </button>
             </div>
 

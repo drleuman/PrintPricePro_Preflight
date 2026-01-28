@@ -1,30 +1,14 @@
-// index.tsx (raíz del proyecto)
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 import './workflow.css';
+import { LocaleProvider } from './i18n';
 
-// Auto-recovery for PDF.js worker cache issues
-window.addEventListener('error', (e: any) => {
-  const msg = String(e?.message || '');
-  if (msg.includes('Failed to fetch dynamically imported module') ||
-      msg.includes('Loading chunk') ||
-      msg.includes('pdf.worker')) {
-    console.warn('Cache issue detected, reloading page...');
-    window.location.reload();
-  }
-});
-
-const rootElement = document.getElementById('root');
-
-if (rootElement) {
-  ReactDOM.createRoot(rootElement).render(
-    <React.StrictMode>
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <LocaleProvider>
       <App />
-    </React.StrictMode>
-  );
-} else {
-  console.error('No root element found for React app');
-}
+    </LocaleProvider>
+  </React.StrictMode>
+);

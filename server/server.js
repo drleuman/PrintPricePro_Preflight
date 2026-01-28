@@ -9,6 +9,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');   // ✅ ADD THIS
 const WebSocket = require('ws');
+const helmet = require('helmet');
 
 const { router: proxyRouter, handleWsUpgrade } = require('./routes/proxy');
 const pdfRouter = require('./routes/pdf');
@@ -28,6 +29,7 @@ if (pdfRouter.uploadDir) {
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(helmet());
 
 // Request Logger
 app.use((req, _res, next) => {
@@ -123,9 +125,7 @@ app.get(/^\/(?!api-proxy\/|api\/).*/, (req, res) => {
     } else {
       res.status(404).send(`
         <h1>App Configuration Error</h1>
-        <p>Could not find index.html at ${indexPath}</p>
-        <p>Current server dir: ${__dirname}</p>
-        <p>Please ensure 'npm run build' has been executed.</p>
+        <p>The application is not correctly configured or built. Please contact support.</p>
       `);
     }
   }

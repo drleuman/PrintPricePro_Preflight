@@ -11,36 +11,41 @@ type Props = {
 const Icon = {
   Sparkles: (p: { className?: string }) => (
     <svg className={p.className} viewBox="0 0 24 24" fill="none">
-      <path d="M12 2l1.2 4.2L17.5 8l-4.3 1.8L12 14l-1.2-4.2L6.5 8l4.3-1.8L12 2Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
-      <path d="M19 12l.7 2.3L22 15l-2.3.7L19 18l-.7-2.3L16 15l2.3-.7L19 12Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
-      <path d="M5 13l.8 2.6L8.5 16l-2.7.8L5 19.5l-.8-2.7L1.5 16l2.7-.8L5 13Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
+      <path d="M12 2l1.2 4.2L17.5 8l-4.3 1.8L12 14l-1.2-4.2L6.5 8l4.3-1.8L12 2Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M19 12l.7 2.3L22 15l-2.3.7L19 18l-.7-2.3L16 15l2.3-.7L19 12Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M5 13l.8 2.6L8.5 16l-2.7.8L5 19.5l-.8-2.7L1.5 16l2.7-.8L5 13Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
     </svg>
   ),
   Wand: (p: { className?: string }) => (
     <svg className={p.className} viewBox="0 0 24 24" fill="none">
-      <path d="M4 20l10-10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M7 17l-3 3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M14 10l7-7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M13.5 3.5l2 2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M18.5 8.5l2 2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+      <path d="M4 20l10-10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M7 17l-3 3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M14 10l7-7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M13.5 3.5l2 2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M18.5 8.5l2 2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   ),
   Shield: (p: { className?: string }) => (
     <svg className={p.className} viewBox="0 0 24 24" fill="none">
-      <path d="M12 2l8 4v6c0 5-3.5 9.4-8 10-4.5-.6-8-5-8-10V6l8-4Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
-      <path d="M8.5 12.2l2.3 2.3L15.8 9.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M12 2l8 4v6c0 5-3.5 9.4-8 10-4.5-.6-8-5-8-10V6l8-4Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M8.5 12.2l2.3 2.3L15.8 9.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
   Sliders: (p: { className?: string }) => (
     <svg className={p.className} viewBox="0 0 24 24" fill="none">
-      <path d="M4 6h10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M18 6h2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M10 6v0" stroke="currentColor" strokeWidth="6" strokeLinecap="round"/>
-      <path d="M4 12h2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M10 12h10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M14 12v0" stroke="currentColor" strokeWidth="6" strokeLinecap="round"/>
-      <path d="M4 18h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-      <path d="M20 18h0" stroke="currentColor" strokeWidth="6" strokeLinecap="round"/>
+      <path d="M4 6h10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M18 6h2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M10 6v0" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+      <path d="M4 12h2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M10 12h10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M14 12v0" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+      <path d="M4 18h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M20 18h0" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+    </svg>
+  ),
+  Check: (p: { className?: string }) => (
+    <svg className={p.className} viewBox="0 0 24 24" fill="none">
+      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
 };
@@ -50,8 +55,8 @@ const Badge: React.FC<{ children: React.ReactNode; tone?: "green" | "indigo" | "
     tone === "green"
       ? "bg-emerald-50 text-emerald-700 border-emerald-100"
       : tone === "indigo"
-      ? "bg-indigo-50 text-indigo-700 border-indigo-100"
-      : "bg-gray-50 text-gray-700 border-gray-100";
+        ? "bg-indigo-50 text-indigo-700 border-indigo-100"
+        : "bg-gray-50 text-gray-700 border-gray-100";
   return (
     <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full border ${cls}`}>
       {children}
@@ -138,7 +143,7 @@ export const WorkflowPicker: React.FC<Props> = ({ mode, onModeChange, hasFile })
             <div className="mt-0.5">
               {mode === "magic" ? (
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white">
-                  ✓
+                  <Icon.Check className="h-5 w-5" />
                 </span>
               ) : (
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-400 group-hover:bg-gray-200">
@@ -185,7 +190,7 @@ export const WorkflowPicker: React.FC<Props> = ({ mode, onModeChange, hasFile })
             <div className="mt-0.5">
               {mode === "manual" ? (
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-white">
-                  ✓
+                  <Icon.Check className="h-5 w-5" />
                 </span>
               ) : (
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-400 group-hover:bg-gray-200">

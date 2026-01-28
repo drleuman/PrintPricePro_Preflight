@@ -167,37 +167,33 @@ export const en = {
   // Hint para el bloque IA dentro del drawer
   aiHintInDrawer:
     'Use the AI buttons to get a detailed explanation or efficiency tips for this issue.',
+
+  // UploadStepSimple (Modern headerless)
+  aiMagicFix: 'AI Magic Fix',
+  aiMagicFixDesc: 'One click. We handle everything automatically.',
+  manualMode: 'Manual',
+  manualModeDesc: 'For advanced users who want to review issues and choose fixes.',
+  recommended: 'Recommended',
+  bestWithAi: 'Best with AI Magic Fix',
+  readyForAnalysis: 'Ready for analysis',
+  browseFiles: 'Browse files',
+  processingTime: 'Processing time',
+  processingTimeVal: '~10-60 seconds',
+  pdfLimit: 'PDF up to 50 MB',
+  magicWait: 'Wait for the magic to happen',
+  dragAndDropModern: 'Drag & drop your PDF',
+  changeFile: 'Change selected file',
+  safeProcessing: 'Safe & temporary processing',
+  continue: 'Continue',
+  headerUploadTitle: 'Upload your PDF',
+  headerUploadSubset: 'Choose AI Magic Fix (recommended) or Manual.',
+  chooseWorkflow: 'Choose workflow',
+  recommendMagicHint: 'We recommend Magic Fix for most users.',
+  uploadToContinue: 'Upload a PDF to continue.',
+  magicPoint1: 'Fixes the most common print problems',
+  magicPoint2: 'Produces a print-ready PDF you can download',
+  magicPoint3: 'No technical knowledge required',
+  tempProcessNote: 'We process your file temporarily and clean it up automatically.',
 } as const;
 
-export const es = {
-  // (solo las claves que necesitas en español por ahora)
-
-  appName: 'PDF Preflight Check',
-
-  // Drawer / issue details
-  selectedIssueDetails: 'Detalle de la incidencia seleccionada',
-  currentIssue: 'Incidencia actual',
-  pageLabel: 'Página {{page}}',
-  close: 'Cerrar',
-  details: 'Detalles',
-  suggestedFix: 'Sugerencia de corrección',
-  issueSummary: 'Resumen de la incidencia',
-  engineHint: 'Pista del motor',
-  drawerActions: 'Acciones',
-  actions: 'Acciones', // alias
-  severityError: 'Error',
-  severityWarning: 'Advertencia',
-  severityInfo: 'Información',
-  issue: 'Incidencia',
-
-  // AI en drawer
-  explainSuggestFix: 'Explicar y sugerir corrección (Auditoría IA)',
-  explainAndSuggestFix: 'Explicar y sugerir corrección (Auditoría IA)',
-  getEfficiencyTips: 'Ver consejos de eficiencia (Auditoría IA)',
-  fetchingAIResponse: 'Obteniendo respuesta de la IA...',
-  aiHintInDrawer:
-    'Usa los botones de IA para obtener una explicación detallada o consejos de eficiencia sobre esta incidencia.',
-} as const;
-
-// Si sólo tipas con el inglés:
 export type TranslationKeys = keyof typeof en;

@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
 import type { FileMeta, Issue, PreflightResult } from '../types';
-import { t } from '../i18n';
+import { t, useLocale } from '../i18n';
 import { ISSUE_CATEGORY_LABELS } from '../constants';
 import { generatePreflightReport } from '../utils/reportGenerator';
+import { formatBytes } from '../components/PreflightDropzone';
 import {
   PhotoIcon,
   DocumentTextIcon,
@@ -79,6 +80,7 @@ export const PreflightSummary: React.FC<Props> = ({
   onRunPreflight,
   isRunning,
 }) => {
+  const { currentLocale } = useLocale(); // Obtener el locale actual
   const issues: Issue[] = useMemo(
     () => (Array.isArray(result?.issues) ? (result!.issues as Issue[]) : []),
     [result]
@@ -174,7 +176,7 @@ export const PreflightSummary: React.FC<Props> = ({
                 <p className="text-xs text-gray-500">
                   File: {fileMeta?.name}{' '}
                   {fileMeta?.size
-                    ? `— ${(fileMeta.size / 1024).toFixed(0)} KB`
+                    ? `— ${formatBytes(fileMeta.size, currentLocale)}`
                     : null}
                 </p>
               )}

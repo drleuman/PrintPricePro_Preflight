@@ -6,6 +6,7 @@ import { Step3Fix } from './components/steps/Step3Fix';
 import { Step4Review } from './components/steps/Step4Review';
 import { LoaderOverlay } from './components/LoaderOverlay';
 import { AIAuditModal } from './components/AIAuditModal';
+import { useLocale, Locale } from './i18n';
 
 import { t } from './i18n';
 import {
@@ -66,6 +67,8 @@ export default function App() {
   const [lastPdfName, setLastPdfName] = useState<string | null>(null);
   const lastPdfUrlRef = useRef<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<string>('cmyk');
+
+  const { currentLocale, setLocale } = useLocale(); // Usa el hook useLocale
 
   // ---------- Helpers ----------
 
@@ -351,11 +354,21 @@ export default function App() {
       }, 500);
 
       setProcessMessage(null);
-    } catch (e) {
+    } catch (e: any) {
       console.warn('AutoFix failed:', e);
       setProcessMessage(null);
       setProcessStage(undefined);
-      alert(`AutoFix failed: ${(e as any)?.message || e}`);
+
+      // Handle Blocked/Reported Errors
+      if (e.report) {
+        setAutoFixReport(e.report);
+      }
+
+      if (e.message === 'OUTPUT_RASTERIZED_BLOCKED') {
+        alert('AutoFix Blocked: The result was rasterized (images only), which violates the "Strict Vector" policy. See the report specific details.');
+      } else {
+        alert(`AutoFix failed: ${e.message || e}`);
+      }
     }
   }, [file, fileMeta, result, autoFixServer, downloadAndRemember, updateFileState, runAnalysis]);
 
@@ -508,6 +521,17 @@ export default function App() {
   // ---------- Render ----------
   return (
     <div className="min-h-screen bg-gray-100">
+      <div className="language-selector absolute top-4 right-4">
+        <select
+          value={currentLocale}
+          onChange={(e) => setLocale(e.target.value as Locale)}
+          className="bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 py-1.5 pl-3 pr-8 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
+      </div>
+
       <LoaderOverlay isOpen={!!processMessage || isWorkerRunning} message={processMessage || 'Processing...'} stageKey={processStage} />
 
       <main className="container mx-auto px-4 py-6">

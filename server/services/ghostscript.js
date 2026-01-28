@@ -1,25 +1,37 @@
+const fs = require('fs');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
-const fs = require('fs');
 const execFileAsync = promisify(execFile);
+const unlinkAsync = promisify(fs.unlink);
+const rmdirAsync = promisify(fs.rmdir);
 
 /**
  * Executes Ghostscript with the provided arguments.
  * @param {string[]} args - Array of command line arguments for gs.
  */
 async function runGs(args) {
-    // NOTE: `gs` must be installed in the runtime image.
-    await execFileAsync('gs', args, { maxBuffer: 1024 * 1024 * 20 });
+    // NOTE: `gs` for Linux, `gswin64c` for Windows
+    const gsCmd = process.platform === 'win32' ? 'gswin64c' : 'gs';
+    try {
+        await execFileAsync(gsCmd, args, { maxBuffer: 1024 * 1024 * 20 });
+    } catch (e) {
+        if (process.platform === 'win32' && e.code === 'ENOENT') {
+            // Fallback to 'gswin32c' or just 'gs' if 64-bit missing
+            await execFileAsync('gs', args, { maxBuffer: 1024 * 1024 * 20 });
+        } else {
+            throw e;
+        }
+    }
 }
 
-function safeUnlink(p) {
+async function safeUnlink(p) {
     if (!p) return;
-    try { fs.unlinkSync(p); } catch (e) { }
+    try { await unlinkAsync(p); } catch (e) { console.warn(`Failed to unlink ${p}:`, e.message); }
 }
 
-function safeRmDir(dir) {
+async function safeRmDir(dir) {
     if (!dir) return;
-    try { fs.rmdirSync(dir, { recursive: true }); } catch (e) { }
+    try { await rmdirAsync(dir, { recursive: true }); } catch (e) { console.warn(`Failed to remove dir ${dir}:`, e.message); }
 }
 
 /**
@@ -33,12 +45,12 @@ function sendPdfAndCleanup(res, filePath, downloadName, cleanupFn) {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
     const stream = fs.createReadStream(filePath);
-    stream.on('error', (err) => {
+    stream.on('error', async (err) => {
         console.error('PDF stream error:', err);
         if (!res.headersSent) res.status(500).json({ error: 'Failed to stream output PDF' });
-        try { cleanupFn && cleanupFn(); } catch (e) { }
+        try { cleanupFn && await cleanupFn(); } catch (e) { console.error('Cleanup after stream error failed:', e); }
     });
-    res.on('finish', () => { try { cleanupFn && cleanupFn(); } catch (e) { } });
+    res.on('finish', async () => { try { cleanupFn && await cleanupFn(); } catch (e) { console.error('Cleanup after stream finish failed:', e); } });
     stream.pipe(res);
 }
 

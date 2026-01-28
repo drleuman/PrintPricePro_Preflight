@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
 import * as pdfjsLib from 'pdfjs-dist';
+// @ts-ignore
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { PDFDocument } from 'pdf-lib';
 
@@ -8,6 +9,7 @@ import {
   Severity,
   ISSUE_CATEGORY,
   type Issue,
+  type IssueCategory,
   type PreflightResult,
   type FileMeta,
   type PreflightWorkerMessage,
@@ -15,8 +17,8 @@ import {
 } from '../types';
 
 // Array con todos los valores del enum ISSUE_CATEGORY
-const ISSUE_CATEGORYValues: ISSUE_CATEGORY[] =
-  Object.values(ISSUE_CATEGORY) as ISSUE_CATEGORY[];
+const ISSUE_CATEGORYValues: IssueCategory[] =
+  Object.values(ISSUE_CATEGORY) as IssueCategory[];
 
 // Usamos el mismo worker de pdfjs que el visor
 // Polfill for PDF.js requiring document.createElement for canvas
@@ -232,10 +234,12 @@ function mmFromPt(pt: number): number {
 function classifySize(widthPt: number, heightPt: number): string {
   const w = mmFromPt(Math.min(widthPt, heightPt));
   const h = mmFromPt(Math.max(widthPt, heightPt));
-  const isClose = (a: number, b: number) => Math.abs(a - b) < 3;
+  const isClose = (a: number, b: number, tol = 3) => Math.abs(a - b) < tol;
 
   if (isClose(w, 148) && isClose(h, 210)) return 'A5';
   if (isClose(w, 170) && isClose(h, 240)) return '170 × 240 mm';
+  if (w >= 168 && w <= 190 && h >= 238 && h <= 265) return '170 × 240 mm (detected w/ crops)';
+
   if (isClose(w, 210) && isClose(h, 297)) return 'A4';
   if (isClose(w, 210) && isClose(h, 280)) return 'US Letter-ish';
   return `${w.toFixed(1)} × ${h.toFixed(1)} mm`;
@@ -339,7 +343,7 @@ async function convertPdfToGrayscale(
     size: outBytes.byteLength,
   };
 
-  return { buffer: sliced, fileMeta: newMeta };
+  return { buffer: sliced as ArrayBuffer, fileMeta: newMeta };
 }
 
 // 2) Rasterizar el PDF completo a una resolución mínima (dpi) – “reconstruir ≥150 dpi”
@@ -398,54 +402,64 @@ async function upscalePdf(
     size: outBytes.byteLength,
   };
 
-  return { buffer: sliced, fileMeta: newMeta };
+  return { buffer: sliced as ArrayBuffer, fileMeta: newMeta };
 }
 
 // 3) Añadir sangrado (bleed) a un PDF
+// 3) Añadir sangrado (bleed) a un PDF (Scaling / Zooming Method)
 async function addBleed(
   buffer: ArrayBuffer,
   fileMeta: FileMeta,
   bleedMm: number = 3
 ): Promise<{ buffer: ArrayBuffer; fileMeta: FileMeta }> {
-  // Cargar el documento original (modificamos in-place)
-  const doc = await PDFDocument.load(buffer);
-  const pages = doc.getPages();
+  // Cargar el documento original
+  const srcDoc = await PDFDocument.load(buffer);
+  const dstDoc = await PDFDocument.create();
+  const pages = srcDoc.getPages();
 
   const bleedPt = (bleedMm * 72) / 25.4; // 3mm ~ 8.5 pt
 
   for (let i = 0; i < pages.length; i++) {
-    const page = pages[i];
-    const { width, height } = page.getSize(); // Dimensiones actuales (MediaBox implícito)
+    const srcPage = pages[i];
+    const { width, height } = srcPage.getSize();
 
-    // Obtenemos el MediaBox actual para respetar offset si existiera, 
-    // pero page.getSize() normaliza. 
-    // Vamos a definir un nuevo MediaBox expandido hacia "fuera" (coordenadas negativas)
-    // para que el contenido (0,0) se quede en el centro visual.
-    // Nuevo origen: (-bleed, -bleed)
-    // Nuevo ancho: width + 2*bleed
-    // Nuevo alto: height + 2*bleed
+    // Embed the original page
+    const [embedded] = await dstDoc.embedPages([srcPage]);
 
-    page.setMediaBox(-bleedPt, -bleedPt, width + 2 * bleedPt, height + 2 * bleedPt);
+    // New dimensions
+    const newW = width + (bleedPt * 2);
+    const newH = height + (bleedPt * 2);
 
-    // TrimBox: El tamaño final de corte debe ser el original (0, 0, width, height)
-    page.setTrimBox(0, 0, width, height);
+    // Calculate scale to cover the new area (Zoom in)
+    // We want the original content (width x height) to fill (newW x newH)
+    // Actually we want to "stretch" or "zoom" it?
+    // "Content Scaling" usually means maintaining aspect ratio and covering.
+    const sx = newW / width;
+    const sy = newH / height;
+    const s = Math.max(sx, sy);
 
-    // BleedBox: Igual al nuevo MediaBox
-    page.setBleedBox(-bleedPt, -bleedPt, width + 2 * bleedPt, height + 2 * bleedPt);
+    // Center the scaled content
+    const drawW = width * s;
+    const drawH = height * s;
+    const x = (newW - drawW) / 2;
+    const y = (newH - drawH) / 2;
+
+    const newPage = dstDoc.addPage([newW, newH]);
+    newPage.drawPage(embedded, { x, y, xScale: s, yScale: s });
+
+    // Set explicit boxes for professional output
+    newPage.setTrimBox(bleedPt, bleedPt, width, height); // Trim is the "inner" part
+    // BleedBox is the full page
+    newPage.setBleedBox(0, 0, newW, newH);
 
     post({
       type: 'analysisProgress',
       progress: ((i + 1) / pages.length) * 100,
-      note: `Adding bleed to page ${i + 1}/${pages.length} (Method: Box Expansion)`,
+      note: `Adding bleed to page ${i + 1}/${pages.length} (Method: Scaling)`,
     });
   }
 
-  let outBytes: Uint8Array;
-  try {
-    outBytes = await doc.save();
-  } catch (e: any) {
-    throw new Error(`Failed to save PDF with bleed: ${e.message}`);
-  }
+  const outBytes = await dstDoc.save();
 
   const sliced = outBytes.buffer.slice(
     outBytes.byteOffset,
@@ -495,7 +509,7 @@ function buildResult(
 
   // Resumen por categoría
   const catMap = new Map<
-    ISSUE_CATEGORY,
+    IssueCategory,
     { errors: number; warnings: number; info: number }
   >();
 
@@ -952,9 +966,25 @@ async function analyzePdf(
 
         // --- Color spaces ---
         if (rgbOps.has(fn)) {
-          anyColorLikeOps = true;
-          hasRGB = true;
-          if (firstColorPage === null) firstColorPage = pageIndex;
+          // Check for Black/Gray masquerading as RGB (R=G=B)
+          let isGrayLike = false;
+          if (Array.isArray(args) && args.length >= 3) {
+            const r = args[0];
+            const g = args[1];
+            const b = args[2];
+            // Allow small floating point diffs? usually exact for generated PDF.
+            if (Math.abs(r - g) < 0.001 && Math.abs(g - b) < 0.001) {
+              isGrayLike = true;
+            }
+          }
+
+          if (isGrayLike) {
+            hasGray = true;
+          } else {
+            anyColorLikeOps = true;
+            hasRGB = true;
+            if (firstColorPage === null) firstColorPage = pageIndex;
+          }
         }
 
         if (cmykOps.has(fn)) {
@@ -967,12 +997,30 @@ async function analyzePdf(
 
         // --- Transparencias ---
         if (transparencyOps.has(fn)) {
-          anyTransparencyOps = true;
+          // Default: don't flag unless proven transparent
+          let isTransparent = false;
 
-          // Overprint best-effort (cuando viene por setGState)
-          if (fn === OPS.setGState && args && typeof args === 'object') {
+          if (fn === OPS.setAlphaConstant || fn === OPS.setFillAlpha || fn === OPS.setStrokeAlpha) {
+            // args[0] is alpha usually
+            const alpha = (Array.isArray(args) ? args[0] : args);
+            if (typeof alpha === 'number' && alpha < 0.999) {
+              isTransparent = true;
+            }
+          } else if (fn === OPS.setGState && args && typeof args === 'object') {
             const g = (Array.isArray(args) ? args[0] : args) as any;
             if (g) {
+              // Check Alpha
+              const ca = g.ca ?? g.CA ?? g.alpha ?? 1;
+              const CA = g.CA ?? g.ca ?? 1; // sometimes distinct
+              if (ca < 0.999 || CA < 0.999) isTransparent = true;
+
+              // Check Blend Mode
+              const bm = g.BM ?? g.bm ?? 'Normal';
+              if (bm !== 'Normal' && bm !== 'Compatible') {
+                isTransparent = true;
+              }
+
+              // Check Overprint (keep existing logic)
               const opFlag = g.op ?? g.OP ?? g.overprint;
               const opm = g.opm ?? g.overprintMode;
               if (opFlag === true || opm === 1) {
@@ -982,10 +1030,15 @@ async function analyzePdf(
                 }
               }
             }
+          } else {
+            // If opaque op (setGState not resolved) - safer to assume NO transparency impact if hidden
           }
 
-          if (firstTransparencyPage === null) {
-            firstTransparencyPage = pageIndex;
+          if (isTransparent) {
+            anyTransparencyOps = true;
+            if (firstTransparencyPage === null) {
+              firstTransparencyPage = pageIndex;
+            }
           }
         }
 

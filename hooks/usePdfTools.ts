@@ -114,8 +114,22 @@ export function usePdfTools() {
             });
 
             if (!res.ok) {
+                const reportHeader = res.headers.get('X-PPP-Autofix-Report');
+                let report: any = undefined;
+                if (reportHeader) {
+                    try {
+                        report = JSON.parse(atob(reportHeader));
+                    } catch { /* ignore */ }
+                }
+
                 const err = await res.json().catch(() => ({}));
-                throw new Error(err.error || `AutoFix failed (HTTP ${res.status})`);
+                // If body has report, it might overwrite the header one (usually they match in 422 case)
+                if (err.report) report = err.report;
+
+                const error: any = new Error(err.error || `AutoFix failed (HTTP ${res.status})`);
+                error.report = report;
+                error.serverError = err; // attach full server error for debugging
+                throw error;
             }
 
             const reportHeader = res.headers.get('X-PPP-Autofix-Report');

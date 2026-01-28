@@ -13,6 +13,7 @@ type Props = {
     forceBleed: boolean;
     forceCmyk: boolean;
     flatten: boolean;
+    allowRasterOutput?: boolean;
   };
   onToggleOption?: (key: any) => void;
   onRun?: () => void;
@@ -107,6 +108,7 @@ export const AutoFixProPanel: React.FC<Props> = ({
           <div className="font-bold text-indigo-900 text-lg">AutoFix Agent (PRO)</div>
         </div>
         <div className="flex items-center gap-4">
+          {report?.blocked && <div className="text-xs font-bold text-white bg-red-600 px-2 py-1 rounded-full uppercase tracking-wider">Blocked</div>}
           {runId && <div className="text-xs font-medium text-indigo-600 bg-indigo-100 px-2 py-1 rounded-full">Run #{runId}</div>}
           <div className="text-xs text-gray-500">
             {report?.endedAt ? `Completed: ${new Date(report.endedAt).toLocaleTimeString()}` : ''}
@@ -132,6 +134,35 @@ export const AutoFixProPanel: React.FC<Props> = ({
       )}
 
       <div className="p-5">
+        {report?.blocked && (
+          <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200">
+            <div className="flex items-start gap-3">
+              <div className="text-2xl">🛑</div>
+              <div>
+                <div className="font-bold text-red-900 text-lg">AutoFix Blocked by Raster Guard</div>
+                <p className="text-red-800 text-sm mt-1">
+                  The operation resulted in a rasterized PDF (images only), which violates the default strict vector policy.
+                  Rasterized text is not selectable and may print with lower quality.
+                </p>
+                {onToggleOption && (
+                  <div className="mt-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={options?.allowRasterOutput || false}
+                        onChange={() => onToggleOption('allowRasterOutput')}
+                        className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
+                      />
+                      <span className="text-sm font-bold text-red-900">Allow Raster Output (Override Guard)</span>
+                    </label>
+                    <p className="text-xs text-red-700 ml-6 mt-1">Check this and run again if you accept rasterization.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {!report && options && onToggleOption && (
           <div className="mb-6 p-4 rounded-xl bg-blue-50/50 border border-blue-100">
             <div className="text-sm font-bold text-indigo-900 mb-3 flex items-center gap-2">
@@ -161,6 +192,10 @@ export const AutoFixProPanel: React.FC<Props> = ({
               <label className="flex items-center gap-3 cursor-pointer group">
                 <input type="checkbox" checked={options.flatten} onChange={() => onToggleOption('flatten')} className="w-4 h-4 text-indigo-600 rounded" />
                 <span className="text-sm text-gray-700 group-hover:text-indigo-900 transition-colors">Flatten transparency</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input type="checkbox" checked={options.allowRasterOutput || false} onChange={() => onToggleOption('allowRasterOutput')} className="w-4 h-4 text-indigo-600 rounded" />
+                <span className="text-sm text-gray-700 group-hover:text-indigo-900 transition-colors">Allow Raster Output</span>
               </label>
             </div>
             {onRun && (

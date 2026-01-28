@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import type { PreflightResult, Issue } from '../types';
 import { t } from '../i18n';
-import { ISSUE_CATEGORY_LABELS } from '../constants';
+import { ISSUE_CATEGORY_LABELS, SEVERITY_COLORS } from '../constants'; // Importamos SEVERITY_COLORS
 import { diffPreflight } from '../utils/diffPreflight';
+import { FixedSizeList } from 'react-window'; // Importamos FixedSizeList
 
 import {
   PhotoIcon,
@@ -100,15 +101,16 @@ export const IssuesPanel: React.FC<Props> = ({
     return issues.filter((it) => getSeverity(it) === tab);
   }, [issues, tab]);
 
-  const grouped = useMemo(() => {
-    const g: Record<string, Issue[]> = {};
-    for (const it of filtered) {
-      const key = (it.category || 'other').toLowerCase();
-      if (!g[key]) g[key] = [];
-      g[key].push(it);
-    }
-    return g;
-  }, [filtered]);
+  // Se remueve grouped para usar filtered directamente con FixedSizeList
+  // const grouped = useMemo(() => {
+  //   const g: Record<string, Issue[]> = {};
+  //   for (const it of filtered) {
+  //     const key = (it.category || 'other').toLowerCase();
+  //     if (!g[key]) g[key] = [];
+  //     g[key].push(it);
+  //   }
+  //   return g;
+  // }, [filtered]);
 
   const runBtnLabel = isRunning
     ? t('analyzingPDF') || 'Analyzing PDF...'
@@ -121,6 +123,44 @@ export const IssuesPanel: React.FC<Props> = ({
     }
     return null;
   }, [compareEnabled, autoFixBefore, autoFixAfter]);
+
+  // Componente para renderizar cada fila en la lista virtualizada
+  const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {
+    const iss = filtered[index];
+    if (!iss) return null; // Safety check
+
+    const sev = getSeverity(iss);
+    const sevLabel = severityLabel(sev);
+    const categoryLabel = ISSUE_CATEGORY_LABELS[iss.category as keyof typeof ISSUE_CATEGORY_LABELS] || iss.category || t('other');
+    const sevColorClass = SEVERITY_COLORS[iss.severity] || ''; // Clase de color basada en la severidad
+
+    return (
+      <div style={style} className={`px-4 py-2 border-b border-gray-200 last:border-b-0`}>
+        <button
+          type="button"
+          onClick={() => onSelectIssue(iss)}
+          className={`w-full text-left ppp-issues-row ppp-issues-row--${sev}`}
+        >
+          <div className="ppp-issues-row-main flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className={`text-xs font-semibold ${sevColorClass.split(' ')[0]} ${sevColorClass.split(' ')[1].replace('100', '200')}`}>
+                {sevLabel}
+              </span>
+              <span className="ppp-issues-row-title text-sm font-medium text-gray-800">
+                {iss.message || iss.title || iss.description || t('issue')}
+              </span>
+            </div>
+            <span className="ppp-issues-row-page text-xs text-gray-500">
+              {t('page')} {iss.page ?? '—'}
+            </span>
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            {categoryLabel}
+          </div>
+        </button>
+      </div>
+    );
+  };
 
   if (diff) {
     // Compare view
@@ -373,78 +413,32 @@ onClick={() => setTab('info')}
 {/* Lista de categorías + issues */}
 <div className="ppp-issues-list">
 {counts.total === 0 && (
-<div className="ppp-issues-empty rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
-{emptyHint || t('noIssuesToDisplay')}
-</div>
-)}
+    <div className="ppp-issues-empty rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 text-center absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4">
+      {emptyHint || t('noIssuesToDisplay')}
+    </div>
+  )}
 
-{Object.keys(grouped).map((key) => {
-const list = grouped[key];
-if (!list || !list.length) return null;
+  {counts.total > 0 && (
+    <FixedSizeList
+      height={window.innerHeight - 200} // Ajustar la altura según sea necesario
+      width="100%"
+      itemCount={filtered.length}
+      itemSize={70} // Altura estimada de cada fila
+    >
+      {Row}
+    </FixedSizeList>
+  )}
 
-const Icon =
-CATEGORY_ICONS[key] ||
-CATEGORY_ICONS[list[0].category || ''] ||
-InformationCircleIcon;
-
-const label =
-ISSUE_CATEGORY_LABELS[
-key as keyof typeof ISSUE_CATEGORY_LABELS
-] ||
-ISSUE_CATEGORY_LABELS[
-list[0].category as keyof typeof ISSUE_CATEGORY_LABELS
-] ||
-list[0].category ||
-key;
-
-return (
-<div key={key} className="ppp-issues-category-card">
-<div className="ppp-issues-category-header">
-<div className="ppp-issues-category-title">
-<Icon className="h-4 w-4" />
-<span>{label}</span>
-</div>
-<span className="ppp-issues-category-count">
-{list.length} {list.length === 1 ? 'issue' : 'issues'}
-</span>
-</div>
-
-<div className="ppp-issues-category-body">
-{list.map((iss, idx) => {
-const sev = getSeverity(iss);
-const sevLabel = severityLabel(sev);
-
-return (
-<button
-key={idx}
-type="button"
-onClick={() => onSelectIssue(iss)}
-className={`ppp-issues-row ppp-issues-row--${sev}`}
+{/* Lista virtualizada de issues filtrados */}
+<FixedSizeList
+height={600}
+itemCount={filtered.length}
+itemSize={72}
+width="100%"
+className="ppp-issues-list-virtualizada"
 >
-<div className="ppp-issues-row-main">
-<span className="ppp-issues-row-severity">
-{sevLabel}
-</span>
-
-{/* AQUÍ va ahora la descripción real del issue */}
-<span className="ppp-issues-row-title">
-{iss.message ||
-iss.title ||
-iss.description ||
-t('issue')}
-</span>
-</div>
-
-<span className="ppp-issues-row-page">
-{t('page')} {iss.page ?? '—'}
-</span>
-</button>
-);
-})}
-</div>
-</div>
-);
-})}
+{Row}
+</FixedSizeList>
 </div>
 </section>
 

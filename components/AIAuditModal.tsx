@@ -3,8 +3,9 @@ import { createPortal } from 'react-dom';
 import { Issue, ModalProps, PreflightResult, FileMeta } from '../types';
 import { SafeHtmlMarkdown } from './SafeHtmlMarkdown';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { t } from '../i18n';
+import { t, useLocale } from '../i18n';
 import { getIssueHint } from '../profiles/defaultProfile';
+import { formatBytes } from '../components/PreflightDropzone'; // Importar formatBytes
 
 type ModelInfo = { name: string; supportedGenerationMethods?: string[] };
 
@@ -69,6 +70,7 @@ export const AIAuditModal: React.FC<Props> = ({
   onSaveResponse,
   isVisualMode = false,
 }) => {
+  const { currentLocale } = useLocale(); // Obtener el locale actual
   const [loading, setLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -91,9 +93,7 @@ Provide a concise report with a "Visual Score" (0-10) and bullet points for impr
 
     const fileName = fileMeta?.name || '(unknown file name)';
     const fileSizeStr = fileMeta?.size
-      ? `${fileMeta.size} bytes (~${(fileMeta.size / (1024 * 1024)).toFixed(
-        1
-      )} MB)`
+      ? formatBytes(fileMeta.size, currentLocale)
       : 'unknown size';
 
     const summary =

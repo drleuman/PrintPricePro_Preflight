@@ -150,6 +150,13 @@ const upload = multer({
         },
     }),
     limits: { fileSize: 60 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+        if (file.mimetype === 'application/pdf') {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only PDF files are allowed.'), false);
+        }
+    },
 });
 
 // Export for cleanup service if needed
@@ -447,6 +454,7 @@ async function gsConvertColor(inputPath, outPath, profile) {
     const args = [
         '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
         '-sDEVICE=pdfwrite',
+        '-dCompatibilityLevel=1.4',
         '-dPDFSETTINGS=/prepress',
         '-dDetectDuplicateImages=true',
         '-dEmbedAllFonts=true',
@@ -538,70 +546,49 @@ async function rebuildAtDpi(inputPath, outPath, dpi) {
     const tmpDir = fs.mkdtempSync(path.join(uploadDir, 'rebuild-'));
     const imgPattern = path.join(tmpDir, 'page-%03d.png');
 
-    await runGs([
-        '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
-        '-sDEVICE=png16m',
-        `-r${dpi}`,
-        '-o', imgPattern,
-        inputPath,
-    ]);
+    try {
+        await runGs([
+            '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
+            '-sDEVICE=png16m',
+            `-r${dpi}`,
+            '-o', imgPattern,
+            inputPath,
+        ]);
 
-    const imgs = fs
-        .readdirSync(tmpDir)
-        .filter((f) => /^page-\d+\.png$/i.test(f))
-        .sort()
-        .map((f) => path.join(tmpDir, f));
+        const imgs = fs
+            .readdirSync(tmpDir)
+            .filter((f) => /^page-\d+\.png$/i.test(f))
+            .sort()
+            .map((f) => path.join(tmpDir, f));
 
-    if (!imgs.length) {
+        if (!imgs.length) {
+            throw new Error('No raster images generated.');
+        }
+
+        const doc = await PDFDocument.create();
+
+        // Convert pixel dimensions -> PDF points preserving physical size:
+        // pt = px * 72 / dpi
+        const pxToPt = (px) => (px * 72) / dpi;
+
+        for (const imgPath of imgs) {
+            const pngBytes = fs.readFileSync(imgPath);
+            const png = await doc.embedPng(pngBytes);
+
+            const wPt = pxToPt(png.width);
+            const hPt = pxToPt(png.height);
+
+            const page = doc.addPage([wPt, hPt]);
+            page.drawImage(png, { x: 0, y: 0, width: wPt, height: hPt });
+        }
+        const outBytes = await doc.save();
+        fs.writeFileSync(outPath, outBytes);
+    } finally {
         safeRmDir(tmpDir);
-        throw new Error('No raster images generated.');
     }
-
-    const doc = await PDFDocument.create();
-
-    // Convert pixel dimensions -> PDF points preserving physical size:
-    // pt = px * 72 / dpi
-    const pxToPt = (px) => (px * 72) / dpi;
-
-    for (const imgPath of imgs) {
-        const pngBytes = fs.readFileSync(imgPath);
-        const png = await doc.embedPng(pngBytes);
-
-        const wPt = pxToPt(png.width);
-        const hPt = pxToPt(png.height);
-
-        const page = doc.addPage([wPt, hPt]);
-        page.drawImage(png, { x: 0, y: 0, width: wPt, height: hPt });
-    }
-    const outBytes = await doc.save();
-    fs.writeFileSync(outPath, outBytes);
-    safeRmDir(tmpDir);
 }
 
-router.post('/autofix', upload.single('file'), async (req, res) => {
-    const inputPath = req.file?.path;
-    if (!inputPath) return res.status(400).json({ error: 'No PDF uploaded' });
-
-    const options = {
-        target: String(req.body.target || 'cmyk').toLowerCase(),
-        profile: normalizeProfile(req.body.profile || 'iso_coated_v2'),
-        bleedMm: Number(req.body.bleedMm ?? 3) || 3,
-        dpiPreferred: Number(req.body.dpiPreferred ?? 300) || 300,
-        dpiMin: Number(req.body.dpiMin ?? 150) || 150,
-        safeOnly: String(req.body.safeOnly || '1') === '1',
-        aggressive: String(req.body.aggressive || '0') === '1',
-        forceRebuild: String(req.body.forceRebuild || '0') === '1',
-        forceBleed: String(req.body.forceBleed || '1') === '1',
-        forceCmyk: String(req.body.forceCmyk || '1') === '1',
-        flatten: String(req.body.flatten || '0') === '1',
-        strictVector: String(req.body.strictVector || '1') === '1',
-        allowRasterRebuild: String(req.body.allowRasterRebuild || '0') === '1',
-        allowRasterOutput: String(req.body.allowRasterOutput || '0') === '1',
-    };
-
-    const payload = req.body.issues ? safeJsonParse(req.body.issues) : null;
-    const issues = extractIssuesFromPayload(payload);
-
+async function executeAutofixWorkflow(inputPath, originalFilename, options, issues, tmpPathsRegistry) {
     const report = {
         policy: {
             icc: options.profile === 'fogra39' ? "ISO Coated v2 (FOGRA39)" : options.profile,
@@ -665,108 +652,154 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
     }
 
     let currentPath = inputPath;
-    const tmpPaths = new Set();
-    let deliveredPdf = false;
+    // tmpPathsRegistry is passed in
 
-    try {
-        let stepIndex = 0;
-        for (const planStep of report.fix_plan) {
-            if (!planStep.enabled) continue;
-            stepIndex++;
+    for (const planStep of report.fix_plan) {
+        if (!planStep.enabled) continue;
 
-            // Unique name: autofix-TIMESTAMP-INDEX-ACTION-RANDOM.pdf
-            const uniqueSuffix = Math.random().toString(16).slice(2, 8);
-            const outPath = path.join(uploadDir, `autofix-${Date.now()}-${stepIndex}-${planStep.action}-${uniqueSuffix}.pdf`);
+        const stepIndex = report.applied.length + 1;
+        // Unique name: autofix-TIMESTAMP-INDEX-ACTION-RANDOM.pdf
+        const uniqueSuffix = Math.random().toString(16).slice(2, 8);
+        const outPath = path.join(uploadDir, `autofix-${Date.now()}-${stepIndex}-${planStep.action}-${uniqueSuffix}.pdf`);
 
-            const t0 = Date.now();
-            let stepOk = false;
-            let stepWarnings = [];
+        const t0 = Date.now();
+        let stepOk = false;
+        let stepWarnings = [];
 
-            try {
-                if (planStep.action === 'convert_cmyk') {
-                    await gsConvertColor(currentPath, outPath, options.profile);
-                    stepOk = true;
-                } else if (planStep.action === 'add_bleed_canvas') {
-                    await addBleedCanvasPdf(currentPath, outPath, options.bleedMm);
-                    stepOk = true;
-                    stepWarnings.push('Bleed added (scaled content).');
-                } else if (planStep.action === 'rebuild_raster') {
-                    await rebuildAtDpi(currentPath, outPath, options.dpiPreferred);
-                    stepOk = true;
-                    stepWarnings.push('Rasterized pages to ensure visual accuracy.');
-                } else if (planStep.action === 'flatten_transparency') {
-                    await gsFlattenTransparency(currentPath, outPath);
-                    stepOk = true;
-                }
-            } catch (e) {
-                console.error(`Step ${planStep.action} failed:`, e);
-                report.warnings.push(`Step ${planStep.action} failed: ${e.message}`);
-            }
-
-            if (stepOk) {
-                const ms = Date.now() - t0;
-                report.applied.push({
-                    step: stepIndex,
-                    action: planStep.action,
-                    ok: true,
-                    ms,
-                    input: path.basename(currentPath),
-                    output: path.basename(outPath),
-                    warnings: stepWarnings
-                });
-                if (currentPath !== inputPath) tmpPaths.add(currentPath);
-                currentPath = outPath;
-                tmpPaths.add(outPath);
-            }
-        }
-
-        report.endedAt = new Date().toISOString();
-        report.duration_total_ms = Date.now() - new Date(report.startedAt).getTime();
-
-        // --- Raster Guard: Post-check ---
         try {
-            const outputQC = await detectRasterization(currentPath);
-            report.quality_checks.output = outputQC;
-
-            const allowRasterOutput = options.allowRasterOutput === true;
-            if (options.strictVector !== false && outputQC.is_rasterized && !allowRasterOutput) {
-                report.blocked = {
-                    reason: 'OUTPUT_RASTERIZED_BLOCKED',
-                    strictVector: options.strictVector !== false,
-                    allowRasterOutput: options.allowRasterOutput === true
-                };
-                return res.status(422).json({
-                    ok: false,
-                    error: 'OUTPUT_RASTERIZED_BLOCKED',
-                    message: 'Output PDF appears rasterized. Blocked by Raster Guard (strictVector).',
-                    report,
-                });
+            if (planStep.action === 'convert_cmyk') {
+                await gsConvertColor(currentPath, outPath, options.profile);
+                stepOk = true;
+            } else if (planStep.action === 'add_bleed_canvas') {
+                await addBleedCanvasPdf(currentPath, outPath, options.bleedMm);
+                stepOk = true;
+                stepWarnings.push('Bleed added (scaled content).');
+            } else if (planStep.action === 'rebuild_raster') {
+                await rebuildAtDpi(currentPath, outPath, options.dpiPreferred);
+                stepOk = true;
+                stepWarnings.push('Rasterized pages to ensure visual accuracy.');
+            } else if (planStep.action === 'flatten_transparency') {
+                await gsFlattenTransparency(currentPath, outPath);
+                stepOk = true;
             }
         } catch (e) {
-            console.warn('RasterGuard post-check failed:', e);
-            report.warnings.push('Raster Guard post-check failed (pdffonts/pdfimages missing or errored).');
+            console.error(`Step ${planStep.action} failed:`, e);
+            report.warnings.push(`Step ${planStep.action} failed: ${e.message}`);
         }
+
+        if (stepOk) {
+            const ms = Date.now() - t0;
+            report.applied.push({
+                step: stepIndex,
+                action: planStep.action,
+                ok: true,
+                ms,
+                input: path.basename(currentPath),
+                output: path.basename(outPath),
+                warnings: stepWarnings
+            });
+            if (currentPath !== inputPath && tmpPathsRegistry) tmpPathsRegistry.add(currentPath);
+            currentPath = outPath;
+            if (tmpPathsRegistry) tmpPathsRegistry.add(outPath);
+        }
+    }
+
+    report.endedAt = new Date().toISOString();
+    report.duration_total_ms = Date.now() - new Date(report.startedAt).getTime();
+
+    // --- Raster Guard: Post-check ---
+    try {
+        const outputQC = await detectRasterization(currentPath);
+        report.quality_checks.output = outputQC;
+
+        const allowRasterOutput = options.allowRasterOutput === true;
+        if (options.strictVector !== false && outputQC.is_rasterized && !allowRasterOutput) {
+            report.blocked = {
+                reason: 'OUTPUT_RASTERIZED_BLOCKED',
+                strictVector: options.strictVector !== false,
+                allowRasterOutput: options.allowRasterOutput === true
+            };
+            const e = new Error('OUTPUT_RASTERIZED_BLOCKED');
+            e.report = report;
+            throw e; // Throw to be caught by the route handler
+        }
+    } catch (e) {
+        console.warn('RasterGuard post-check failed:', e);
+        report.warnings.push('Raster Guard post-check failed (pdffonts/pdfimages missing or errored).');
+        if (e.message === 'OUTPUT_RASTERIZED_BLOCKED') throw e; // Re-throw specific error
+    }
+
+    return { report, finalPath: currentPath };
+}
+
+router.post('/autofix', upload.single('file'), async (req, res) => {
+    const inputPath = req.file?.path;
+    if (!inputPath) return res.status(400).json({ error: 'No PDF uploaded' });
+
+    const originalFilename = req.file?.originalname || 'document.pdf';
+
+    const options = {
+        target: String(req.body.target || 'cmyk').toLowerCase(),
+        profile: normalizeProfile(req.body.profile || 'iso_coated_v2'),
+        bleedMm: Number(req.body.bleedMm ?? 3) || 3,
+        dpiPreferred: Number(req.body.dpiPreferred ?? 300) || 300,
+        dpiMin: Number(req.body.dpiMin ?? 150) || 150,
+        safeOnly: String(req.body.safeOnly || '1') === '1',
+        aggressive: String(req.body.aggressive || '0') === '1',
+        forceRebuild: String(req.body.forceRebuild || '0') === '1',
+        forceBleed: String(req.body.forceBleed || '1') === '1',
+        forceCmyk: String(req.body.forceCmyk || '1') === '1',
+        flatten: String(req.body.flatten || '0') === '1',
+        strictVector: String(req.body.strictVector || '1') === '1',
+        allowRasterRebuild: String(req.body.allowRasterRebuild || '0') === '1',
+        allowRasterOutput: String(req.body.allowRasterOutput || '0') === '1',
+    };
+
+    const payload = req.body.issues ? safeJsonParse(req.body.issues) : null;
+    const issues = extractIssuesFromPayload(payload);
+
+    let deliveredPdf = false;
+    let finalPathToCleanup = inputPath;
+    const tempPathsToCleanup = new Set();
+
+    try {
+        const { report, finalPath } = await executeAutofixWorkflow(inputPath, originalFilename, options, issues, tempPathsToCleanup);
+        finalPathToCleanup = finalPath;
+        // tempPathsToCleanup is already populated by executeAutofixWorkflow
 
         const json = Buffer.from(JSON.stringify(report), 'utf8').toString('base64');
         res.setHeader('X-PPP-Autofix-Report', json);
 
-        const baseName = path.basename(req.file.originalname || 'document.pdf').replace(/\.pdf$/i, '');
+        const baseName = path.basename(originalFilename).replace(/\.pdf$/i, '');
 
         deliveredPdf = true;
-        return sendPdfAndCleanup(res, currentPath, `${baseName}_fixed.pdf`, () => {
-            safeUnlink(inputPath);
-            for (const p of tmpPaths) safeUnlink(p);
+        return sendPdfAndCleanup(res, finalPath, `${baseName}_fixed.pdf`, async () => {
+            await safeUnlink(inputPath);
+            for (const p of tempPathsToCleanup) await safeUnlink(p);
         });
     } catch (err) {
         console.error('autofix orchestrator failed:', err);
+        // Handle specific rasterization blocking error
+        if (err.message === 'OUTPUT_RASTERIZED_BLOCKED') {
+            // Need to reconstruct the report from the error object if it was blocked
+            const blockedReport = err.report;
+            const reportJson = Buffer.from(JSON.stringify(blockedReport || {}), 'utf8').toString('base64');
+            res.setHeader('X-PPP-Autofix-Report', reportJson);
+            return res.status(422).json({
+                ok: false,
+                error: 'OUTPUT_RASTERIZED_BLOCKED',
+                message: 'Output PDF appears rasterized. Blocked by Raster Guard (strictVector).',
+                report: blockedReport,
+            });
+        }
         return res.status(500).json({ error: 'AutoFix failed', details: err.message });
     } finally {
-        // Only cleanup if we didn't successfully hand off the file for delivery/cleanup
         if (!deliveredPdf) {
-            safeUnlink(inputPath);
-            for (const p of tmpPaths) safeUnlink(p);
+            await safeUnlink(inputPath);
+            for (const p of tempPathsToCleanup) await safeUnlink(p);
         }
     }
 });
 
 module.exports = router;
+
