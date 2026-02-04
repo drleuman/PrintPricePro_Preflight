@@ -56,10 +56,6 @@ function computeStatuses(steps: LoaderStep[], stageKey?: string): Record<string,
   return out;
 }
 
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
-}
-
 export const LoaderOverlay: React.FC<Props> = ({
   isOpen,
   message = 'Processing…',
@@ -73,7 +69,6 @@ export const LoaderOverlay: React.FC<Props> = ({
   const pipeline = useMemo(() => steps ?? DEFAULT_STEPS, [steps]);
   const statuses = useMemo(() => computeStatuses(pipeline, stageKey), [pipeline, stageKey]);
 
-  // Sync visual progress with stageKey but with emotional smoothing
   useEffect(() => {
     if (!isOpen) {
       setVisualProgress(0);
@@ -89,22 +84,16 @@ export const LoaderOverlay: React.FC<Props> = ({
     const activeIdx = pipeline.findIndex((s) => statuses[s.key] === 'active');
     const doneCount = pipeline.filter((s) => statuses[s.key] === 'done').length;
 
-    // Base progress for completed steps
     const base = (doneCount / total) * 100;
-
-    // Target for the end of the current active step
     const target = activeIdx === -1 ? base : ((activeIdx + 1) / total) * 100;
 
-    // Slowly creep towards the target to keep things moving
     const interval = setInterval(() => {
       setVisualProgress((prev) => {
         if (prev >= target - 1) {
-          // If we are at the target, creep ultra slowly to never look static
-          return Math.min(99, prev + 0.05);
+          return Math.min(99.9, prev + 0.02);
         }
-        // Move faster if we just switched stages
         const diff = target - prev;
-        const step = Math.max(0.1, diff * 0.1);
+        const step = Math.max(0.1, diff * 0.15);
         return prev + step;
       });
     }, 100);
@@ -143,193 +132,184 @@ export const LoaderOverlay: React.FC<Props> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-auto overflow-hidden"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(0, 0, 0, 0.5)',
+        backdropFilter: 'blur(30px)',
+        WebkitBackdropFilter: 'blur(30px)',
+        overflow: 'hidden',
+        fontFamily: 'system-ui, -apple-system, sans-serif'
+      }}
       aria-modal="true"
       role="dialog"
-      style={{
-        background: 'rgba(0, 0, 0, 0.4)',
-        backdropFilter: 'blur(32px)',
-        WebkitBackdropFilter: 'blur(32px)',
-      }}
     >
-      {/* Dynamic Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[20%] left-[20%] w-[40%] h-[40%] bg-emerald-500/15 rounded-full blur-[120px] animate-blob" />
-        <div className="absolute bottom-[20%] right-[20%] w-[40%] h-[40%] bg-blue-500/15 rounded-full blur-[120px] animate-blob" style={{ animationDelay: '2s' }} />
+      {/* Background Animated Blobs */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+        <div className="blob" style={{
+          position: 'absolute', top: '20%', left: '20%', width: '40%', height: '40%',
+          background: 'rgba(16, 185, 129, 0.15)', borderRadius: '50%', filter: 'blur(100px)',
+          animation: 'blob-move 10s infinite alternate ease-in-out'
+        }} />
+        <div className="blob" style={{
+          position: 'absolute', bottom: '20%', right: '20%', width: '45%', height: '45%',
+          background: 'rgba(59, 130, 246, 0.15)', borderRadius: '50%', filter: 'blur(100px)',
+          animation: 'blob-move 12s infinite alternate-reverse ease-in-out'
+        }} />
       </div>
 
-      <div className="relative w-full max-w-xl px-6 flex flex-col items-center">
-        {/* Main Central Loader Component */}
-        <div className="relative w-full aspect-square max-w-[380px] flex items-center justify-center">
-          {/* Progress Circles */}
-          <svg className="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 200 200">
-            {/* Inner Glassy Circle */}
-            <circle cx="100" cy="100" r="85" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+      <div style={{ position: 'relative', width: '100%', maxWidth: '450px', padding: '0 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
-            {/* Track */}
-            <circle
-              cx="100"
-              cy="100"
-              r={radius}
-              stroke="rgba(255,255,255,0.05)"
-              strokeWidth="10"
-              fill="transparent"
-            />
+        {/* Main Circular Loader Area */}
+        <div style={{ position: 'relative', width: '100%', maxWidth: '360px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ paddingBottom: '100%' }}></div> {/* Aspect square fallback */}
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
 
-            <defs>
-              <linearGradient id="wow-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#10b981" />
-                <stop offset="50%" stopColor="#3b82f6" />
-                <stop offset="100%" stopColor="#8b5cf6" />
-              </linearGradient>
-            </defs>
+            {/* SVG Ring */}
+            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', transform: 'rotate(-90deg)' }} viewBox="0 0 200 200">
+              <circle cx="100" cy="100" r={radius} stroke="rgba(255,255,255,0.1)" strokeWidth="10" fill="transparent" />
+              <defs>
+                <linearGradient id="magic-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#10b981" />
+                  <stop offset="50%" stopColor="#3b82f6" />
+                  <stop offset="100%" stopColor="#8b5cf6" />
+                </linearGradient>
+              </defs>
+              <circle
+                cx="100"
+                cy="100"
+                r={radius}
+                stroke="url(#magic-gradient)"
+                strokeWidth="10"
+                fill="transparent"
+                strokeDasharray={circumference}
+                style={{
+                  strokeDashoffset,
+                  transition: 'stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                  strokeLinecap: 'round'
+                }}
+              />
+            </svg>
 
-            {/* Active Progress Stroke */}
-            <circle
-              cx="100"
-              cy="100"
-              r={radius}
-              stroke="url(#wow-gradient)"
-              strokeWidth="10"
-              fill="transparent"
-              strokeDasharray={circumference}
-              style={{
-                strokeDashoffset,
-                transition: 'stroke-dashoffset 0.5s ease-out',
-                strokeLinecap: 'round'
-              }}
-            />
-          </svg>
+            {/* Central Card */}
+            <div style={{
+              position: 'relative', width: '74%', height: '74%', borderRadius: '32px',
+              backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(15px)',
+              border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              padding: '24px', textAlign: 'center', overflow: 'hidden'
+            }} className="card-pulse">
 
-          {/* Centered Rotating Card */}
-          <div className="relative z-10 w-[72%] h-[72%] rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center text-center p-8 overflow-hidden">
-            {/* Premium Shine Effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/10 pointer-events-none" />
-            <div className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] bg-gradient-to-br from-white/5 via-transparent to-transparent rotate-45 pointer-events-none" />
+              {/* Floating Icon */}
+              <div style={{ marginBottom: '16px', fontSize: '32px' }} className="float-icon">✨</div>
 
-            {/* Glowing Icon */}
-            <div className="mb-4 relative">
-              <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full animate-pulse" />
-              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center border border-white/20 shadow-inner">
-                <span className="text-3xl animate-float">✨</span>
+              {/* Step Transitions */}
+              <div style={{ height: '80px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <div key={currentStep.key} style={{ animation: 'slideFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}>
+                  <h3 style={{ color: '#fff', fontSize: '20px', fontWeight: 900, letterSpacing: '-0.5px', marginBottom: '8px', margin: 0 }}>
+                    {currentStep.title}
+                  </h3>
+                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', fontWeight: 500, margin: 0, lineHeight: 1.4 }}>
+                    {currentStep.description}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            {/* Title & Description with "Card Rotation" effect */}
-            <div className="h-24 flex flex-col items-center justify-center">
-              <div
-                key={currentStep.key}
-                className="animate-card-enter"
-              >
-                <h3 className="text-white text-xl font-black tracking-tight mb-2 drop-shadow-sm">
-                  {currentStep.title}
-                </h3>
-                <p className="text-white/60 text-xs font-medium px-2 leading-relaxed max-w-[200px]">
-                  {currentStep.description}
-                </p>
+              {/* Percentage */}
+              <div style={{ marginTop: '20px', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                <span style={{ color: '#fff', fontSize: '42px', fontWeight: 900, letterSpacing: '-2px', fontVariantNumeric: 'tabular-nums' }}>
+                  {Math.floor(visualProgress)}
+                </span>
+                <span style={{ color: '#10b981', fontSize: '14px', fontWeight: 800 }}>%</span>
               </div>
-            </div>
 
-            {/* Percentage */}
-            <div className="mt-6 flex items-baseline gap-1">
-              <span className="text-white text-4xl font-black tracking-tighter tabular-nums drop-shadow-md">
-                {Math.floor(visualProgress)}
-              </span>
-              <span className="text-emerald-400 text-sm font-bold uppercase tracking-widest">%</span>
             </div>
           </div>
         </div>
 
-        {/* Minimal Timeline Dots */}
-        <div className="mt-12 flex items-center gap-3">
-          {pipeline.map((s, idx) => {
+        {/* Timeline Dots */}
+        <div style={{ marginTop: '40px', display: 'flex', gap: '10px' }}>
+          {pipeline.map((s) => {
             const status = statuses[s.key];
             const isActive = status === 'active';
             const isDone = status === 'done';
             return (
-              <div
-                key={s.key}
-                className={`relative h-2 rounded-full transition-all duration-700 ${isActive ? 'w-12 bg-white shadow-[0_0_12px_rgba(255,255,255,0.4)]' : isDone ? 'w-2 bg-emerald-500' : 'w-2 bg-white/20'
-                  }`}
-              >
-                {isActive && (
-                  <div className="absolute inset-0 overflow-hidden rounded-full">
-                    <div className="h-full w-full bg-gradient-to-r from-transparent via-blue-400 to-transparent animate-shimmer" />
-                  </div>
-                )}
+              <div key={s.key} style={{
+                height: '6px', width: isActive ? '40px' : isDone ? '10px' : '10px',
+                borderRadius: '3px', background: isActive ? '#fff' : isDone ? '#10b981' : 'rgba(255,255,255,0.2)',
+                transition: 'all 0.6s ease', position: 'relative', overflow: 'hidden'
+              }}>
+                {isActive && <div style={{
+                  position: 'absolute', inset: 0, background: 'linear-gradient(90deg, transparent, rgba(59,130,246,0.6), transparent)',
+                  animation: 'shimmer-move 2s infinite linear'
+                }} />}
               </div>
             );
           })}
         </div>
 
-        {/* Status Message & Tips */}
-        <div className="mt-10 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-4">
-            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-            <span className="text-white/90 text-xs font-bold uppercase tracking-widest">{message}</span>
+        {/* Message and Tips */}
+        <div style={{ marginTop: '30px', textAlign: 'center', width: '100%', maxWidth: '320px' }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px',
+            backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)',
+            marginBottom: '16px'
+          }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#3b82f6', animation: 'scale-pulse 2s infinite' }} />
+            <span style={{ color: '#fff', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
+              {message}
+            </span>
           </div>
 
-          <div className="h-12 flex flex-col items-center justify-center">
-            <p
-              key={tipIndex}
-              className="text-white/40 text-xs italic leading-relaxed max-w-sm px-8 animate-fade-blur"
-            >
+          <div style={{ height: '40px', overflow: 'hidden' }}>
+            <p key={tipIndex} style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px', fontStyle: 'italic', lineHeight: 1.5, margin: 0, animation: 'tip-fade 5s infinite' }}>
               " {LOADING_TIPS[tipIndex]} "
             </p>
           </div>
         </div>
+
       </div>
 
       <style>{`
-        @keyframes animate-blob {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
+        @keyframes blob-move {
+          0% { transform: translate(0, 0) scale(1); }
+          100% { transform: translate(50px, -30px) scale(1.1); }
         }
-
-        .animate-blob {
-          animation: animate-blob 7s infinite alternate ease-in-out;
+        @keyframes slideFadeUp {
+          from { opacity: 0; transform: translateY(15px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-
-        @keyframes float {
+        @keyframes shimmer-move {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(100%); }
+        }
+        @keyframes scale-pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.5); opacity: 0.5; }
+        }
+        @keyframes float-icon {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-8px); }
         }
-
-        .animate-float {
-          animation: float 3s ease-in-out infinite;
+        .float-icon { animation: float-icon 3s ease-in-out infinite; }
+        
+        .card-pulse { animation: card-border-pulse 4s infinite; }
+        @keyframes card-border-pulse {
+          0%, 100% { border-color: rgba(255,255,255,0.2); }
+          50% { border-color: rgba(16, 185, 129, 0.4); }
         }
 
-        @keyframes card-enter {
-          0% { opacity: 0; transform: translateY(20px) scale(0.9) rotateX(-20deg); filter: blur(10px); }
-          100% { opacity: 1; transform: translateY(0) scale(1) rotateX(0); filter: blur(0); }
-        }
-
-        .animate-card-enter {
-          animation: card-enter 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        @keyframes fade-blur {
-          0% { opacity: 0; filter: blur(4px); transform: translateY(5px); }
-          10%, 90% { opacity: 1; filter: blur(0); transform: translateY(0); }
-          100% { opacity: 0; filter: blur(4px); transform: translateY(-5px); }
-        }
-
-        .animate-fade-blur {
-          animation: fade-blur 5s ease-in-out infinite;
-        }
-
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-
-        .animate-shimmer {
-          animation: shimmer 2.5s infinite linear;
-        }
-
-        .tabular-nums {
-          font-variant-numeric: tabular-nums;
+        @keyframes tip-fade {
+          0% { opacity: 0; transform: translateY(5px); }
+          10%, 90% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-5px); }
         }
       `}</style>
     </div>
