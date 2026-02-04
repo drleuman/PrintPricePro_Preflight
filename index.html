@@ -5,20 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PDF Preflight Check</title>
 
-    <!-- CSP básica para app + worker + Gemini -->
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="
-      default-src 'self';
-      script-src 'self' 'unsafe-inline';
-      style-src  'self' 'unsafe-inline';
-      font-src   'self';
-      connect-src 'self' https://generativelanguage.googleapis.com https://*.googleapis.com https://*.googleusercontent.com;
-      img-src 'self' data: blob:;
-      worker-src 'self' blob:;
-      base-uri 'self'; form-action 'self';
-    "
-    />
+    <!-- El CSP se gestiona desde el servidor para mayor flexibilidad -->
 
     <link rel="stylesheet" href="/index.css" />
   </head>
