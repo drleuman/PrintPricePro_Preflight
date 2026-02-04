@@ -520,16 +520,35 @@ export default function App() {
 
   // ---------- Render ----------
   return (
-    <div className="min-h-screen bg-[#fcfdfe] relative overflow-hidden" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#fcfdfe',
+      position: 'relative',
+      overflowX: 'hidden',
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    }}>
       {/* Background Aesthetic Blobs */}
-      <div className="absolute top-0 right-0 w-[50vw] h-[50vw] bg-blue-100/30 blur-[120px] rounded-full -z-10 translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 left-0 w-[40vw] h-[40vw] bg-red-50/40 blur-[100px] rounded-full -z-10 -translate-x-1/2 translate-y-1/2" />
+      <div style={{
+        position: 'absolute', top: 0, right: 0, width: '50vw', height: '50vw',
+        background: 'rgba(59, 130, 246, 0.05)', filter: 'blur(120px)', borderRadius: '50%',
+        zIndex: 0, transform: 'translate(30%, -30%)'
+      }} />
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, width: '40vw', height: '40vw',
+        background: 'rgba(239, 68, 68, 0.05)', filter: 'blur(100px)', borderRadius: '50%',
+        zIndex: 0, transform: 'translate(-30%, 30%)'
+      }} />
 
-      <div className="language-selector absolute top-6 right-8 z-50">
+      <div style={{ position: 'absolute', top: '24px', right: '32px', zIndex: 50 }}>
         <select
           value={currentLocale}
           onChange={(e) => setLocale(e.target.value as Locale)}
-          className="bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl shadow-sm text-xs font-black uppercase tracking-wider text-gray-700 py-2.5 pl-4 pr-10 hover:bg-white hover:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer"
+          style={{
+            background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)',
+            border: '1px solid #e5e7eb', borderRadius: '16px', fontSize: '11px',
+            fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px',
+            color: '#374151', padding: '10px 16px', cursor: 'pointer', outline: 'none'
+          }}
         >
           <option value="en">English</option>
           <option value="es">Español</option>
@@ -538,107 +557,112 @@ export default function App() {
 
       <LoaderOverlay isOpen={!!processMessage || isWorkerRunning} message={processMessage || 'Processing...'} stageKey={processStage} />
 
-      <main className="container mx-auto px-6 py-12 relative z-10">
-        <div className="max-w-7xl mx-auto">
-          <Stepper currentStep={currentStep} steps={WORKFLOW_STEPS} />
+      <main style={{
+        width: '100%',
+        maxWidth: '1440px',
+        padding: '60px 24px',
+        margin: '0 auto',
+        position: 'relative',
+        zIndex: 10
+      }}>
+        <Stepper currentStep={currentStep} steps={WORKFLOW_STEPS} />
 
-          <div className="mt-8">
-            {currentStep === 1 && (
-              <Step1Upload
-                file={file}
-                fileMeta={fileMeta}
-                onFileSelect={onFileSelect}
-                onNext={(mode) => {
-                  setAppMode(mode);
-                  if (mode === 'ai') {
-                    runMagicAiFix();
-                  } else {
-                    setCurrentStep(2);
-                  }
-                }}
-              />
-            )}
+        <div style={{ marginTop: '32px' }}>
+          {currentStep === 1 && (
+            <Step1Upload
+              file={file}
+              fileMeta={fileMeta}
+              onFileSelect={onFileSelect}
+              onNext={(mode) => {
+                setAppMode(mode);
+                if (mode === 'ai') {
+                  runMagicAiFix();
+                } else {
+                  setCurrentStep(2);
+                }
+              }}
+            />
+          )}
 
-            {currentStep === 2 && (
-              <Step2Analysis
-                file={file}
-                fileMeta={fileMeta}
-                result={result}
-                autoFixBefore={autoFixBefore}
-                autoFixAfter={autoFixAfter}
-                autoFixReport={autoFixReport}
-                autoFixRunId={autoFixRunId}
-                isRunning={isRunning}
-                onRunAnalysis={runPreflight}
-                onNext={() => setCurrentStep(3)}
-                onSkipToReview={() => setCurrentStep(4)}
-                onBack={() => setCurrentStep(1)}
-              />
-            )}
+          {currentStep === 2 && (
+            <Step2Analysis
+              file={file}
+              fileMeta={fileMeta}
+              result={result}
+              autoFixBefore={autoFixBefore}
+              autoFixAfter={autoFixAfter}
+              autoFixReport={autoFixReport}
+              autoFixRunId={autoFixRunId}
+              isRunning={isRunning}
+              onRunAnalysis={runPreflight}
+              onNext={() => setCurrentStep(3)}
+              onSkipToReview={() => setCurrentStep(4)}
+              onBack={() => setCurrentStep(1)}
+            />
+          )}
 
-            {currentStep === 3 && (
-              <Step3Fix
-                file={file}
-                fileMeta={fileMeta}
-                result={result}
-                autoFixBefore={autoFixBefore}
-                autoFixAfter={autoFixAfter}
-                autoFixReport={autoFixReport}
-                autoFixRunId={autoFixRunId}
-                compareEnabled={compareEnabled}
-                numPages={numPages}
-                currentPage={currentPage}
-                selectedIssue={selectedIssue}
-                heatmapData={heatmapData}
-                isHeatmapLoading={heatmapLoading}
-                isRunning={isRunning}
-                selectedProfile={selectedProfile}
-                onPageChange={onPageChange}
-                onNumPagesChange={setNumPages}
-                onSelectIssue={openIssue}
-                onRunAnalysis={runPreflight}
-                onRunHeatmap={() => file && fileMeta && handleRunHeatmap(file, fileMeta, currentPage)}
-                onRunVisualCheck={handleRunVisualCheck}
-                onFixBleed={handleFixBleed}
-                onConvertGrayscale={convertToGrayscale}
-                onConvertCMYK={convertColors}
-                onRebuildPdf={upscaleLowResImages}
-                onAutoFix={autoFixPdf}
-                onToggleCompare={setCompareEnabled}
-                onProfileChange={setSelectedProfile}
-                onOpenAIAudit={handleOpenAIAudit}
-                onOpenEfficiency={handleOpenEfficiencyTips}
-                onNext={() => setCurrentStep(4)}
-                onBack={() => setCurrentStep(2)}
-              />
-            )}
+          {currentStep === 3 && (
+            <Step3Fix
+              file={file}
+              fileMeta={fileMeta}
+              result={result}
+              autoFixBefore={autoFixBefore}
+              autoFixAfter={autoFixAfter}
+              autoFixReport={autoFixReport}
+              autoFixRunId={autoFixRunId}
+              compareEnabled={compareEnabled}
+              numPages={numPages}
+              currentPage={currentPage}
+              selectedIssue={selectedIssue}
+              heatmapData={heatmapData}
+              isHeatmapLoading={heatmapLoading}
+              isRunning={isRunning}
+              selectedProfile={selectedProfile}
+              onPageChange={onPageChange}
+              onNumPagesChange={setNumPages}
+              onSelectIssue={openIssue}
+              onRunAnalysis={runPreflight}
+              onRunHeatmap={() => file && fileMeta && handleRunHeatmap(file, fileMeta, currentPage)}
+              onRunVisualCheck={handleRunVisualCheck}
+              onFixBleed={handleFixBleed}
+              onConvertGrayscale={convertToGrayscale}
+              onConvertCMYK={convertColors}
+              onRebuildPdf={upscaleLowResImages}
+              onAutoFix={autoFixPdf}
+              onToggleCompare={setCompareEnabled}
+              onProfileChange={setSelectedProfile}
+              onOpenAIAudit={handleOpenAIAudit}
+              onOpenEfficiency={handleOpenEfficiencyTips}
+              onNext={() => setCurrentStep(4)}
+              onBack={() => setCurrentStep(2)}
+            />
+          )}
 
-            {currentStep === 4 && (
-              <Step4Review
-                file={file}
-                fileMeta={fileMeta}
-                result={result}
-                numPages={numPages}
-                currentPage={currentPage}
-                lastPdfUrl={lastPdfUrl}
-                lastPdfName={lastPdfName}
-                isRunning={isRunning}
-                onPageChange={onPageChange}
-                onNumPagesChange={setNumPages}
-                onConvertGrayscale={convertToGrayscale}
-                onConvertColors={convertColors}
-                onRebuildPdf={upscaleLowResImages}
-                onMakeBooklet={makeBooklet}
-                onStartOver={handleStartOver}
-                onBack={() => setCurrentStep(3)}
-                appMode={appMode}
-                heatmapData={heatmapData}
-                isHeatmapLoading={heatmapLoading}
-                onRunHeatmap={() => file && fileMeta && handleRunHeatmap(file, fileMeta, currentPage)}
-                originalFile={originalFile}
-              />
-            )}
-          </div>
+          {currentStep === 4 && (
+            <Step4Review
+              file={file}
+              fileMeta={fileMeta}
+              result={result}
+              numPages={numPages}
+              currentPage={currentPage}
+              lastPdfUrl={lastPdfUrl}
+              lastPdfName={lastPdfName}
+              isRunning={isRunning}
+              onPageChange={onPageChange}
+              onNumPagesChange={setNumPages}
+              onConvertGrayscale={convertToGrayscale}
+              onConvertColors={convertColors}
+              onRebuildPdf={upscaleLowResImages}
+              onMakeBooklet={makeBooklet}
+              onStartOver={handleStartOver}
+              onBack={() => setCurrentStep(3)}
+              appMode={appMode}
+              heatmapData={heatmapData}
+              isHeatmapLoading={heatmapLoading}
+              onRunHeatmap={() => file && fileMeta && handleRunHeatmap(file, fileMeta, currentPage)}
+              originalFile={originalFile}
+            />
+          )}
         </div>
       </main>
 

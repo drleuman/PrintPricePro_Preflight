@@ -7,63 +7,41 @@ type Mode = "magic" | "manual";
 type Props = {
   mode: Mode;
   setMode: (m: Mode) => void;
-
-  // Dropzone state
   fileName?: string;
   fileSizeLabel?: string;
   hasFile: boolean;
-
-  // Dropzone actions
   onPickFile: () => void;
   onRemoveFile: () => void;
   onFileDrop?: (file: File | null) => void;
-
-  // Continue
   onContinue: () => void;
   canContinue: boolean;
 };
 
 const I = {
-  Sparkles: (p: { className?: string }) => (
-    <svg className={p.className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 3V5M12 19V21M3 12H5M19 12H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
-      <path d="M12 8L10 11L7 12L10 13L12 16L14 13L17 12L14 11L12 8Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  Sparkles: (p: { style?: React.CSSProperties }) => (
+    <svg style={p.style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3V5M12 19V21M3 12H5M19 12H21" opacity="0.4" />
+      <path d="M12 8L10 11L7 12L10 13L12 16L14 13L17 12L14 11L12 8Z" />
     </svg>
   ),
-  Sliders: (p: { className?: string }) => (
-    <svg className={p.className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 21v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M4 10V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M12 21v-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M12 8V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M20 21v-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M20 12V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M1 14h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M9 8h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M17 16h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  Sliders: (p: { style?: React.CSSProperties }) => (
+    <svg style={p.style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" />
     </svg>
   ),
-  Shield: (p: { className?: string }) => (
-    <svg className={p.className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  Shield: (p: { style?: React.CSSProperties }) => (
+    <svg style={p.style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   ),
-  File: (p: { className?: string }) => (
-    <svg className={p.className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M13 2v7h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  File: (p: { style?: React.CSSProperties }) => (
+    <svg style={p.style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM13 2v7h7" />
     </svg>
   ),
-  Check: (p: { className?: string }) => (
-    <svg className={p.className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ),
-  Magic: (p: { className?: string }) => (
-    <svg className={p.className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h5v5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z" opacity="0.1" />
-      <path d="m13 10 6-6M13 14l6 6M10 11 4 5M10 13l-6 6" />
-      <circle cx="12" cy="12" r="3" />
+  Check: (p: { style?: React.CSSProperties }) => (
+    <svg style={p.style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 6L9 17l-5-5" />
     </svg>
   )
 };
@@ -84,304 +62,265 @@ export const UploadStepSimple = forwardRef<PreflightDropzoneRef, Props>(({
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useImperativeHandle(ref, () => ({
-    openFileDialog: () => {
-      inputRef.current?.click();
-    }
+    openFileDialog: () => { inputRef.current?.click(); }
   }));
 
   const handleFile = (file: File | null | undefined) => {
-    if (!file) {
-      onFileDrop?.(null);
-      return;
-    }
-
-    if (file.type !== 'application/pdf') {
-      alert('Please select a PDF file');
-      return;
-    }
-
+    if (!file) { onFileDrop?.(null); return; }
+    if (file.type !== 'application/pdf') { alert('Please select a PDF file'); return; }
     onFileDrop?.(file);
   };
 
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    const file = e.dataTransfer.files?.[0];
-    handleFile(file);
+    e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+    handleFile(e.dataTransfer.files?.[0]);
   };
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!isDragging) setIsDragging(true);
+    e.preventDefault(); e.stopPropagation(); if (!isDragging) setIsDragging(true);
   };
 
   const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
+    e.preventDefault(); e.stopPropagation(); setIsDragging(false);
   };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    handleFile(file);
+    handleFile(e.target.files?.[0]);
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-6 py-8" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', padding: '0 20px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
-      {/* Premium Header Container */}
-      <div className="relative mb-12 text-center">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-400/10 blur-[100px] rounded-full -z-10" />
-
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 backdrop-blur-md border border-gray-200 shadow-sm mb-6">
-          <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">{t('safeProcessing')}</span>
-          <I.Shield className="h-3.5 w-3.5 text-blue-500" />
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: '60px', position: 'relative' }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px',
+          background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)',
+          border: '1px solid #e5e7eb', borderRadius: '50px', marginBottom: '24px',
+          boxShadow: '0 4px 10px rgba(0,0,0,0.03)'
+        }}>
+          <span style={{ fontSize: '11px', fontWeight: 900, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            {t('safeProcessing')}
+          </span>
+          <I.Shield style={{ width: '14px', height: '14px', color: '#2563eb' }} />
         </div>
-
-        <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight mb-4">
+        <h1 style={{ fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 900, color: '#111827', margin: '0 0 16px', letterSpacing: '-2px', lineHeight: 1 }}>
           {t('headerUploadTitle')}
         </h1>
-        <p className="text-lg text-gray-500 font-medium max-w-2xl mx-auto">
+        <p style={{ fontSize: '18px', fontWeight: 500, color: '#6b7280', maxWidth: '600px', margin: '0 auto' }}>
           {t('headerUploadSubset')}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      {/* Main Grid Layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', alignItems: 'stretch' }}>
 
-        {/* LEFT/TOP: THE DROPZONE (The Gatekeeper) */}
-        <div className="lg:col-span-12 xl:col-span-5 h-full">
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={onPickFile}
-            className={`
-                    relative group cursor-pointer h-full min-h-[400px]
-                    rounded-[3rem] p-4 transition-all duration-500
-                    ${isDragging ? 'scale-[0.98]' : 'scale-100'}
-                `}
-          >
-            {/* Background Layer with Glass and Glow */}
-            <div className={`
-                    absolute inset-0 rounded-[2.8rem] border-2 border-dashed transition-all duration-500 shadow-2xl
-                    ${isDragging
-                ? 'bg-blue-50/80 border-blue-400 shadow-blue-200/50'
-                : hasFile
-                  ? 'bg-emerald-50/50 border-emerald-300 shadow-emerald-100/50'
-                  : 'bg-white/80 border-gray-200 shadow-gray-200/30'
-              }
-                `} />
+        {/* Dropzone Column */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={onPickFile}
+          className="dropzone-hover"
+          style={{
+            background: isDragging ? '#eff6ff' : hasFile ? '#f0fdf4' : '#fff',
+            borderRadius: '48px',
+            border: `3px dashed ${isDragging ? '#3b82f6' : hasFile ? '#10b981' : '#e5e7eb'}`,
+            padding: '40px',
+            cursor: 'pointer',
+            transition: 'all 0.4s ease',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            minHeight: '450px',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.04)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          {!hasFile ? (
+            <>
+              <div style={{
+                width: '110px', height: '110px', borderRadius: '35px',
+                background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', marginBottom: '32px', boxShadow: '0 20px 40px -10px rgba(37,99,235,0.4)',
+                animation: 'float 3s ease-in-out infinite'
+              }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+                </svg>
+              </div>
+              <h3 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: '0 0 8px' }}>{t('dragAndDropModern')}</h3>
+              <p style={{ fontSize: '15px', color: '#9ca3af', fontWeight: 500, fontStyle: 'italic', marginBottom: '40px' }}>{t('magicWait')}</p>
 
-            <div className="relative h-full flex flex-col items-center justify-center text-center p-8">
-              {!hasFile ? (
-                <>
-                  <div className="mb-8 relative">
-                    <div className="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full scale-0 group-hover:scale-150 transition-transform duration-700" />
-                    <div className="relative w-24 h-24 rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] group-hover:-translate-y-2 transition-transform duration-500">
-                      <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <div className="mb-10">
-                    <h3 className="text-3xl font-black text-gray-900 mb-2">{t('dragAndDropModern')}</h3>
-                    <p className="text-gray-400 font-medium italic">{t('magicWait')}</p>
-                  </div>
-
-                  <div className="flex flex-col items-center gap-6">
-                    <div className="px-10 py-4 bg-gray-900 hover:bg-black text-white rounded-full font-bold text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300">
-                      {t('browseFiles')}
-                    </div>
-                    <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest">{t('pdfLimit')}</span>
-                  </div>
-                </>
-              ) : (
-                <div className="animate-in fade-in zoom-in duration-500">
-                  <div className="mb-8 relative flex justify-center">
-                    <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full" />
-                    <div className="relative w-32 h-32 rounded-[3.5rem] bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center shadow-[0_25px_50px_-12px_rgba(16,185,129,0.5)] border-4 border-white mb-4">
-                      <I.File className="h-14 w-14" />
-                      <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-white flex items-center justify-center text-emerald-500 shadow-xl">
-                        <I.Check className="h-6 w-6" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <h2 className="text-3xl font-black text-gray-900 mb-2 truncate max-w-[320px]">{fileName}</h2>
-                  <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-50 rounded-full border border-emerald-100 text-emerald-700 font-bold text-sm mb-10">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    {fileSizeLabel || t('readyForAnalysis')}
-                  </div>
-
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onPickFile(); }}
-                    className="block mx-auto text-sm font-bold text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    {t('changeFile')}
-                  </button>
+              <div style={{
+                padding: '16px 40px', background: '#111827', color: '#fff',
+                borderRadius: '50px', fontWeight: 800, fontSize: '17px',
+                boxShadow: '0 10px 20px rgba(0,0,0,0.1)', transition: 'all 0.3s'
+              }}>
+                {t('browseFiles')}
+              </div>
+              <span style={{ marginTop: '20px', fontSize: '11px', fontWeight: 900, color: '#d1d5db', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                {t('pdfLimit')}
+              </span>
+            </>
+          ) : (
+            <div style={{ animation: 'zoomIn 0.5s ease' }}>
+              <div style={{
+                width: '140px', height: '140px', borderRadius: '50px',
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', marginBottom: '32px', boxShadow: '0 25px 50px -12px rgba(16,185,129,0.5)',
+                border: '6px solid #fff', position: 'relative'
+              }}>
+                <I.File style={{ width: '60px', height: '60px' }} />
+                <div style={{
+                  position: 'absolute', bottom: '-10px', right: '-10px',
+                  width: '45px', height: '45px', borderRadius: '50%',
+                  background: '#fff', color: '#10b981', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 20px rgba(0,0,0,0.1)'
+                }}>
+                  <I.Check style={{ width: '24px', height: '24px' }} />
                 </div>
-              )}
+              </div>
+              <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', margin: '0 0 12px', maxWidth: '300px', wordBreak: 'break-all' }}>{fileName}</h3>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                padding: '8px 20px', background: '#dcfce7', borderRadius: '50px',
+                color: '#15803d', fontWeight: 800, fontSize: '13px', marginBottom: '40px'
+              }}>
+                {fileSizeLabel || t('readyForAnalysis')}
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); onPickFile(); }}
+                style={{ display: 'block', margin: '0 auto', fontSize: '13px', fontWeight: 800, color: '#9ca3af', border: 'none', background: 'none' }}
+              >
+                {t('changeFile')}
+              </button>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* RIGHT: WORKFLOW CHOICES (The Intelligence) */}
-        <div className="lg:col-span-12 xl:col-span-7 space-y-6">
-          <div className="bg-white/80 backdrop-blur-xl rounded-[3rem] p-10 border border-gray-100 shadow-2xl shadow-gray-200/50">
-            <div className="mb-8">
-              <h2 className="text-2xl font-black text-gray-900 mb-1">{t('chooseWorkflow')}</h2>
-              <p className="text-gray-500 font-medium">
-                {hasFile ? t('recommendMagicHint') : t('uploadToContinue')}
-              </p>
-            </div>
+        {/* Workflow Choices Column */}
+        <div style={{
+          background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)',
+          borderRadius: '48px', border: '1px solid #f3f4f6', padding: '40px',
+          boxShadow: '0 30px 60px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column'
+        }}>
+          <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#111827', margin: '0 0 8px' }}>{t('chooseWorkflow')}</h2>
+          <p style={{ fontSize: '15px', color: '#6b7280', fontWeight: 500, marginBottom: '32px' }}>
+            {hasFile ? t('recommendMagicHint') : t('uploadToContinue')}
+          </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Magic Card */}
-              <div
-                onClick={() => setMode('magic')}
-                className={`
-                            relative cursor-pointer p-8 rounded-[2.5rem] border-2 transition-all duration-500 group overflow-hidden h-full
-                            ${mode === 'magic'
-                    ? 'border-emerald-500 bg-emerald-50/30 shadow-2xl shadow-emerald-200/50'
-                    : 'border-gray-100 bg-gray-50/50 hover:border-emerald-200 hover:bg-white'
-                  }
-                        `}
-              >
-                {/* Selection Visuals */}
-                <div className={`
-                            absolute top-6 right-6 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500
-                            ${mode === 'magic' ? 'bg-emerald-500 text-white scale-100' : 'bg-gray-200 text-transparent scale-50'}
-                         `}>
-                  <I.Check className="h-5 w-5" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
+
+            {/* Magic Option */}
+            <div
+              onClick={() => setMode('magic')}
+              style={{
+                padding: '28px', borderRadius: '32px', border: `2px solid ${mode === 'magic' ? '#10b981' : '#f3f4f6'}`,
+                background: mode === 'magic' ? '#f0fdf4' : '#fff', cursor: 'pointer',
+                transition: 'all 0.3s ease', position: 'relative', overflow: 'hidden'
+              }}
+            >
+              <div style={{ display: 'flex', gap: '20px' }}>
+                <div style={{
+                  width: '64px', height: '64px', borderRadius: '20px',
+                  background: mode === 'magic' ? '#10b981' : '#f3f4f6',
+                  color: mode === 'magic' ? '#fff' : '#10b981',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <I.Sparkles style={{ width: '32px', height: '32px' }} />
                 </div>
-
-                <div className={`
-                            w-16 h-16 rounded-[1.5rem] mb-6 flex items-center justify-center transition-all duration-500
-                            ${mode === 'magic'
-                    ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-500/40 rotate-6'
-                    : 'bg-white text-emerald-600 shadow-inner group-hover:scale-110'
-                  }
-                         `}>
-                  <I.Sparkles className="h-10 w-10" />
-                </div>
-
-                <div className="relative">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-xl font-black text-gray-900">{t('aiMagicFix')}</h3>
-                    <span className="px-2.5 py-1 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-black uppercase tracking-wider animate-pulse">
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                    <h4 style={{ fontSize: '18px', fontWeight: 900, color: '#111827', margin: 0 }}>{t('aiMagicFix')}</h4>
+                    <span style={{ padding: '4px 10px', borderRadius: '50px', background: '#dcfce7', color: '#166534', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }}>
                       {t('recommended')}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
-                    {t('aiMagicFixDesc')}
-                  </p>
-
-                  <ul className="space-y-3">
-                    {[t('magicPoint1'), t('magicPoint2'), t('magicPoint3')].map((p, i) => (
-                      <li key={i} className="flex items-center gap-3 text-xs font-semibold text-gray-600">
-                        <div className={`w-1.5 h-1.5 rounded-full ${mode === 'magic' ? 'bg-emerald-400' : 'bg-gray-300'}`} />
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
+                  <p style={{ fontSize: '13px', color: '#6b7280', fontWeight: 500, margin: '0 0 16px' }}>{t('aiMagicFixDesc')}</p>
+                  {mode === 'magic' && (
+                    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                      {[t('magicPoint1'), t('magicPoint2')].map((txt, i) => (
+                        <li key={i} style={{ fontSize: '11px', fontWeight: 800, color: '#166534', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                          {txt}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
+              {mode === 'magic' && <div style={{ position: 'absolute', top: '15px', right: '15px' }}><I.Check style={{ width: '18px', height: '18px', color: '#10b981' }} /></div>}
+            </div>
 
-              {/* Manual Card */}
-              <div
-                onClick={() => setMode('manual')}
-                className={`
-                            relative cursor-pointer p-8 rounded-[2.5rem] border-2 transition-all duration-500 group overflow-hidden h-full
-                            ${mode === 'manual'
-                    ? 'border-indigo-500 bg-indigo-50/30 shadow-2xl shadow-indigo-200/50'
-                    : 'border-gray-100 bg-gray-50/50 hover:border-indigo-200 hover:bg-white'
-                  }
-                        `}
-              >
-                <div className={`
-                            absolute top-6 right-6 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500
-                            ${mode === 'manual' ? 'bg-indigo-500 text-white scale-100' : 'bg-gray-200 text-transparent scale-50'}
-                         `}>
-                  <I.Check className="h-5 w-5" />
+            {/* Manual Option */}
+            <div
+              onClick={() => setMode('manual')}
+              style={{
+                padding: '28px', borderRadius: '32px', border: `2px solid ${mode === 'manual' ? '#2563eb' : '#f3f4f6'}`,
+                background: mode === 'manual' ? '#eff6ff' : '#fff', cursor: 'pointer',
+                transition: 'all 0.3s ease', position: 'relative'
+              }}
+            >
+              <div style={{ display: 'flex', gap: '20px' }}>
+                <div style={{
+                  width: '64px', height: '64px', borderRadius: '20px',
+                  background: mode === 'manual' ? '#2563eb' : '#f3f4f6',
+                  color: mode === 'manual' ? '#fff' : '#2563eb',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <I.Sliders style={{ width: '32px', height: '32px' }} />
                 </div>
-
-                <div className={`
-                            w-16 h-16 rounded-[1.5rem] mb-6 flex items-center justify-center transition-all duration-500
-                            ${mode === 'manual'
-                    ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-500/40 rotate-6'
-                    : 'bg-white text-indigo-600 shadow-inner group-hover:scale-110'
-                  }
-                         `}>
-                  <I.Sliders className="h-10 w-10" />
+                <div>
+                  <h4 style={{ fontSize: '18px', fontWeight: 900, color: '#111827', margin: '0 0 4px' }}>{t('manualMode')}</h4>
+                  <p style={{ fontSize: '13px', color: '#6b7280', fontWeight: 500, margin: 0 }}>{t('manualModeDesc')}</p>
                 </div>
+              </div>
+              {mode === 'manual' && <div style={{ position: 'absolute', top: '15px', right: '15px' }}><I.Check style={{ width: '18px', height: '18px', color: '#2563eb' }} /></div>}
+            </div>
+          </div>
 
-                <div className="relative">
-                  <h3 className="text-xl font-black text-gray-900 mb-2">{t('manualMode')}</h3>
-                  <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
-                    {t('manualModeDesc')}
-                  </p>
-
-                  <div className="pt-4 border-t border-gray-200/50">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-loose">
-                      {t('manualControlTip') || 'FULL CONTROL OVER INDIVIDUAL FIXES AND COLOR PROFILES.'}
-                    </span>
-                  </div>
-                </div>
+          {/* Action Bar */}
+          <div style={{ marginTop: '40px', paddingTop: '30px', borderTop: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f0f4ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <div>
+                <p style={{ margin: 0, fontSize: '10px', fontWeight: 900, color: '#9ca3af', textTransform: 'uppercase' }}>{t('processingTimeVal')}</p>
+                <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: '#6b7280' }}>{t('tempProcessNote')}</p>
               </div>
             </div>
 
-            {/* Footer Insight */}
-            <div className="mt-10 flex items-center justify-between border-t border-gray-100 pt-8">
-              <div className="flex items-center gap-4 text-xs font-bold text-gray-400 uppercase tracking-widest">
-                <div className="flex items-center gap-1.5 p-2 px-3 rounded-xl bg-blue-50 text-blue-600">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {t('processingTimeVal')}
-                </div>
-                <span className="opacity-50">•</span>
-                <span className="text-[10px]">{t('tempProcessNote')}</span>
-              </div>
-
-              <button
-                onClick={onContinue}
-                disabled={!canContinue}
-                className={`
-                            group px-12 py-5 rounded-full font-black text-lg transition-all duration-500 flex items-center gap-3
-                            ${canContinue
-                    ? 'bg-gradient-to-r from-red-600 to-rose-500 text-white shadow-2xl shadow-red-500/30 hover:scale-105 active:scale-95'
-                    : 'bg-gray-100 text-gray-300 cursor-not-allowed shadow-none'
-                  }
-                        `}
-              >
-                {t('continue')}
-                {canContinue && <svg className="w-6 h-6 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>}
-              </button>
-            </div>
+            <button
+              onClick={onContinue}
+              disabled={!canContinue}
+              style={{
+                padding: '18px 45px', borderRadius: '50px', fontSize: '18px', fontWeight: 900,
+                background: canContinue ? 'linear-gradient(135deg, #ef4444, #e11d48)' : '#f3f4f6',
+                color: canContinue ? '#fff' : '#d1d5db', border: 'none', cursor: canContinue ? 'pointer' : 'not-allowed',
+                display: 'flex', alignItems: 'center', gap: '12px', boxShadow: canContinue ? '0 15px 30px rgba(225,29,72,0.3)' : 'none',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              {t('continue')}
+              {canContinue && <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Hidden file input */}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="application/pdf"
-        style={{ display: 'none' }}
-        onChange={handleChange}
-      />
+      <input ref={inputRef} type="file" accept="application/pdf" style={{ display: 'none' }} onChange={handleChange} />
 
       <style>{`
-        @keyframes blob-move {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(20px, -20px) scale(1.1); }
-        }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .dropzone-hover:hover { transform: translateY(-5px) scale(1.01); box-shadow: 0 30px 60px rgba(0,0,0,0.08); border-color: #3b82f6 !important; }
       `}</style>
     </div>
   );
