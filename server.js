@@ -15,45 +15,21 @@ const { router: proxyRouter, handleWsUpgrade } = require('./server/routes/proxy'
 const pdfRouter = require('./server/routes/pdf');
 const { startCleanupTask } = require('./server/services/cleanup');
 
-// File-based logger for Plesk debugging
+// Simple logger without file-system writes to avoid PM2 watch-loop crashes
 const debugLog = (msg) => {
-  const entry = `[${new Date().toISOString()}] ${msg}\n`;
-  try {
-    fs.appendFileSync(path.resolve(__dirname, 'server_debug.log'), entry);
-  } catch (e) { }
-  console.log(msg);
+  console.log(`[${new Date().toISOString()}] ${msg}`);
 };
 
 debugLog('Server starting with relaxed security...');
 
 const app = express();
-// Cloud Run (and most PaaS) inject PORT=8080. Default to 8080 for local runs.
 const port = Number.parseInt(process.env.PORT || '8080', 10);
 
-// -------- Services Init --------
 if (pdfRouter.uploadDir) {
   startCleanupTask(pdfRouter.uploadDir);
 }
 
-// -------- Middlewares base --------
 app.set('trust proxy', 1);
-
-// Super permissive CORS for debugging
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-PPP-Autofix-Report']
-}));
-
-// Basic headers without Helmet's strictness
-app.use((req, res, next) => {
-  res.setHeader('X-Powered-By', 'PrintPricePro');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  next();
-});
-
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // Super permissive CORS for debugging
 app.use(cors({
@@ -68,6 +44,9 @@ app.use((req, res, next) => {
   res.setHeader('X-Accel-Buffering', 'no'); // Global disable for PDF streaming
   next();
 });
+
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // Request Logger
 app.use((req, _res, next) => {
@@ -117,7 +96,6 @@ const server = app.listen(port, '0.0.0.0', () => {
   console.log(`Server listening on :${port}`);
 });
 
-// Increase timeout for long Ghostscript tasks
 server.timeout = 600000; // 10 minutes
 
 const wss = new WebSocket.Server({ noServer: true });
