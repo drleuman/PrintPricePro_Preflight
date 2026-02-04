@@ -38,7 +38,7 @@ export const Step1Upload: React.FC<Step1UploadProps> = ({
     };
 
     return (
-        <div className="step step--upload animate-fade-in">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <UploadStepSimple
                 ref={dropzoneRef}
                 mode={selectedMode}

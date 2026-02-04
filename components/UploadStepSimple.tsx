@@ -59,6 +59,13 @@ const I = {
       <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
+  Magic: (p: { className?: string }) => (
+    <svg className={p.className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h5v5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z" opacity="0.1" />
+      <path d="m13 10 6-6M13 14l6 6M10 11 4 5M10 13l-6 6" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
 };
 
 export const UploadStepSimple = forwardRef<PreflightDropzoneRef, Props>(({
@@ -122,303 +129,244 @@ export const UploadStepSimple = forwardRef<PreflightDropzoneRef, Props>(({
     handleFile(file);
   };
 
-  const borderClass = isDragging ? 'border-red-400 bg-red-50/50' : hasFile ? 'border-emerald-200 bg-emerald-50/50' : 'border-gray-200 bg-white';
-
   return (
-    <div className="w-full max-w-6xl mx-auto px-4">
-      {/* Header (compact, no pills) */}
-      <div className="mt-6 mb-4 flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-            {t('headerUploadTitle')}
-          </h1>
-          <p className="text-sm text-gray-600 mt-1">
-            {t('headerUploadSubset')}
-          </p>
+    <div className="w-full max-w-7xl mx-auto px-6 py-8" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+
+      {/* Premium Header Container */}
+      <div className="relative mb-12 text-center">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-400/10 blur-[100px] rounded-full -z-10" />
+
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 backdrop-blur-md border border-gray-200 shadow-sm mb-6">
+          <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">{t('safeProcessing')}</span>
+          <I.Shield className="h-3.5 w-3.5 text-blue-500" />
         </div>
 
-        <div className="hidden md:flex items-center gap-2 text-xs text-gray-500">
-          <I.Shield className="h-4 w-4" />
-          {t('safeProcessing')}
-        </div>
+        <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight mb-4">
+          {t('headerUploadTitle')}
+        </h1>
+        <p className="text-lg text-gray-500 font-medium max-w-2xl mx-auto">
+          {t('headerUploadSubset')}
+        </p>
       </div>
 
-      {/* 2-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-        {/* LEFT: Dropzone (Modernized) */}
-        <div className="rounded-3xl bg-white/80 backdrop-blur-xl shadow-xl shadow-gray-200/50 overflow-hidden flex flex-col h-full transition-all duration-300 hover:shadow-2xl hover:shadow-gray-200/60">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-          {/* Dropzone Area */}
-          <div className="flex-1 p-5 flex flex-col">
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={onPickFile}
-              role="button"
-              tabIndex={0}
-              className={[
-                "relative flex-1 rounded-2xl border-2 border-dashed transition-all duration-300 ease-in-out group",
-                "flex flex-col items-center justify-center text-center p-8",
-                isDragging
-                  ? "border-blue-500 bg-blue-50/50 shadow-inner ring-4 ring-blue-500/20 scale-[0.99]"
-                  : "border-gray-200 bg-gray-50/30 hover:border-blue-400 hover:bg-blue-50/10 hover:shadow-lg hover:shadow-blue-500/5 hover:-translate-y-0.5",
-              ].join(" ")}
-            >
+        {/* LEFT/TOP: THE DROPZONE (The Gatekeeper) */}
+        <div className="lg:col-span-12 xl:col-span-5 h-full">
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={onPickFile}
+            className={`
+                    relative group cursor-pointer h-full min-h-[400px]
+                    rounded-[3rem] p-4 transition-all duration-500
+                    ${isDragging ? 'scale-[0.98]' : 'scale-100'}
+                `}
+          >
+            {/* Background Layer with Glass and Glow */}
+            <div className={`
+                    absolute inset-0 rounded-[2.8rem] border-2 border-dashed transition-all duration-500 shadow-2xl
+                    ${isDragging
+                ? 'bg-blue-50/80 border-blue-400 shadow-blue-200/50'
+                : hasFile
+                  ? 'bg-emerald-50/50 border-emerald-300 shadow-emerald-100/50'
+                  : 'bg-white/80 border-gray-200 shadow-gray-200/30'
+              }
+                `} />
+
+            <div className="relative h-full flex flex-col items-center justify-center text-center p-8">
               {!hasFile ? (
                 <>
-                  {/* Modern Animated Icon */}
-                  <div className="relative mb-6 group-hover:scale-110 transition-transform duration-300 ease-out">
-                    <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative h-20 w-20 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30 flex items-center justify-center">
-                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" className="drop-shadow-sm">
-                        <path d="M12 16.5V7.5M12 7.5L8.5 11M12 7.5L15.5 11" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M6 19.5H18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                        {/* Cloud shape subtle */}
-                        <path d="M5.5 15.5A4.5 4.5 0 0 1 5.4 6.5A5.5 5.5 0 0 1 16.1 4.5A4.5 4.5 0 0 1 18.5 15.5" stroke="currentColor" strokeWidth="2" strokeOpacity="0.3" strokeLinecap="round" fill="none" />
+                  <div className="mb-8 relative">
+                    <div className="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full scale-0 group-hover:scale-150 transition-transform duration-700" />
+                    <div className="relative w-24 h-24 rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] group-hover:-translate-y-2 transition-transform duration-500">
+                      <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
                       </svg>
                     </div>
-                    {/* Floating pill */}
-                    <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-white px-3 py-1 rounded-full shadow-md border border-gray-100 text-[10px] font-bold uppercase tracking-wider text-blue-600 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
-                      {t('uploadPdf')}
+                  </div>
+
+                  <div className="mb-10">
+                    <h3 className="text-3xl font-black text-gray-900 mb-2">{t('dragAndDropModern')}</h3>
+                    <p className="text-gray-400 font-medium italic">{t('magicWait')}</p>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-6">
+                    <div className="px-10 py-4 bg-gray-900 hover:bg-black text-white rounded-full font-bold text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300">
+                      {t('browseFiles')}
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-bold text-gray-900 tracking-tight group-hover:text-blue-600 transition-colors">
-                      {t('dragAndDropModern')}
-                    </h3>
-                    <p className="text-sm text-gray-400 font-medium">
-                      {t('magicWait')}
-                    </p>
-                  </div>
-
-                  <div className="mt-8 flex flex-col items-center gap-4">
-                    <span className="relative">
-                      <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 opacity-20 blur transition duration-200 group-hover:opacity-40" />
-                      <button
-                        type="button"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPickFile(); }}
-                        className="relative flex items-center gap-2 px-8 py-3 rounded-full bg-gray-900 text-white text-sm font-bold shadow-xl shadow-gray-200 hover:bg-black hover:scale-105 transition-all duration-200 active:scale-95"
-                      >
-                        <span>{t('browseFiles')}</span>
-                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                      </button>
-                    </span>
-                    <p className="text-[10px] uppercase tracking-widest font-bold text-gray-300">
-                      {t('pdfLimit')}
-                    </p>
+                    <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest">{t('pdfLimit')}</span>
                   </div>
                 </>
               ) : (
-                <div className="w-full flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
-                  <div className="relative mb-6">
-                    <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full" />
-                    <div className="relative h-24 w-24 rounded-[2rem] bg-gradient-to-br from-emerald-400 to-teal-500 text-white shadow-2xl shadow-emerald-500/40 flex items-center justify-center ring-4 ring-white">
-                      <I.File className="h-10 w-10" />
-                      <div className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-white flex items-center justify-center shadow-lg text-emerald-600">
-                        <I.Check className="h-5 w-5" />
+                <div className="animate-in fade-in zoom-in duration-500">
+                  <div className="mb-8 relative flex justify-center">
+                    <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full" />
+                    <div className="relative w-32 h-32 rounded-[3.5rem] bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center shadow-[0_25px_50px_-12px_rgba(16,185,129,0.5)] border-4 border-white mb-4">
+                      <I.File className="h-14 w-14" />
+                      <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-white flex items-center justify-center text-emerald-500 shadow-xl">
+                        <I.Check className="h-6 w-6" />
                       </div>
                     </div>
                   </div>
 
-                  <h3 className="text-2xl font-bold text-gray-900 tracking-tight text-center px-4 leading-tight">
-                    {fileName}
-                  </h3>
-
-                  <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 rounded-full border border-emerald-100">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs font-semibold text-emerald-700">{fileSizeLabel || t('readyForAnalysis')}</span>
+                  <h2 className="text-3xl font-black text-gray-900 mb-2 truncate max-w-[320px]">{fileName}</h2>
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-50 rounded-full border border-emerald-100 text-emerald-700 font-bold text-sm mb-10">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    {fileSizeLabel || t('readyForAnalysis')}
                   </div>
 
-                  <div className="mt-8">
-                    <button
-                      type="button"
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPickFile(); }}
-                      className="text-xs font-bold text-gray-400 hover:text-gray-600 hover:underline transition-colors"
-                    >
-                      {t('changeFile')}
-                    </button>
-                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onPickFile(); }}
+                    className="block mx-auto text-sm font-bold text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    {t('changeFile')}
+                  </button>
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Footer bar */}
-          <div className="px-6 py-5 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between gap-4 backdrop-blur-sm">
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">{t('processingTime')}</span>
-                <span className="text-xs font-bold text-gray-700">{t('processingTimeVal')}</span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              disabled={!canContinue}
-              onClick={onContinue}
-              className={[
-                "px-8 py-3 rounded-xl text-sm font-bold shadow-lg transition-all duration-200 flex items-center gap-2",
-                canContinue
-                  ? "bg-gradient-to-r from-red-600 to-red-500 text-white hover:from-red-700 hover:to-red-600 hover:scale-105 hover:shadow-red-500/30"
-                  : "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none",
-              ].join(" ")}
-            >
-              <span>{t('continue')}</span>
-              {canContinue && (
-                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              )}
-            </button>
           </div>
         </div>
 
-        {/* RIGHT: Workflow (two simple cards) */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-4">
-          <div className="text-sm font-semibold text-gray-900">{t('chooseWorkflow')}</div>
-          <div className="text-xs text-gray-500 mt-1">
-            {hasFile ? t('recommendMagicHint') : t('uploadToContinue')}
-          </div>
+        {/* RIGHT: WORKFLOW CHOICES (The Intelligence) */}
+        <div className="lg:col-span-12 xl:col-span-7 space-y-6">
+          <div className="bg-white/80 backdrop-blur-xl rounded-[3rem] p-10 border border-gray-100 shadow-2xl shadow-gray-200/50">
+            <div className="mb-8">
+              <h2 className="text-2xl font-black text-gray-900 mb-1">{t('chooseWorkflow')}</h2>
+              <p className="text-gray-500 font-medium">
+                {hasFile ? t('recommendMagicHint') : t('uploadToContinue')}
+              </p>
+            </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            {/* Magic Fix (black box) */}
-            <button
-              type="button"
-              onClick={() => setMode("magic")}
-              className={`relative text-left rounded-2xl border p-4 transition-all duration-300 ease-out group overflow-hidden ${mode === "magic"
-                ? "border-emerald-300 bg-gradient-to-b from-emerald-50/80 to-emerald-25/40 shadow-lg shadow-emerald-100/50 ring-2 ring-emerald-200/30 scale-[1.02]"
-                : "border-gray-200 hover:border-emerald-200 hover:shadow-md hover:shadow-emerald-50/50 bg-white hover:scale-[1.01] hover:bg-gradient-to-b hover:from-emerald-25/20 hover:to-white"
-                }`}
-            >
-              {/* Subtle background glow for selected state */}
-              {mode === "magic" && (
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/5 to-transparent rounded-2xl" />
-              )}
-
-              <div className="relative flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <div className={`h-11 w-11 rounded-2xl flex items-center justify-center shadow-sm transition-all duration-300 ${mode === "magic"
-                    ? "bg-emerald-600 text-white shadow-emerald-200/50 scale-110"
-                    : "bg-emerald-600 text-white group-hover:scale-105 group-hover:shadow-md"
-                    }`}>
-                    <I.Sparkles className={`h-6 w-6 transition-transform duration-300 ${mode === "magic" ? "scale-110" : "group-hover:scale-105"
-                      }`} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <div className={`text-sm font-semibold transition-colors duration-300 ${mode === "magic" ? "text-emerald-900" : "text-gray-900 group-hover:text-emerald-800"
-                        }`}>{t('aiMagicFix')}</div>
-                      <span className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-all duration-300 ${mode === "magic"
-                        ? "text-emerald-800 bg-emerald-200 shadow-sm"
-                        : "text-emerald-700 bg-emerald-100 group-hover:bg-emerald-150"
-                        }`}>
-                        {t('recommended')}
-                      </span>
-                    </div>
-                    <p className={`text-xs mt-1 transition-colors duration-300 ${mode === "magic" ? "text-emerald-700" : "text-gray-600 group-hover:text-emerald-600"
-                      }`}>
-                      {t('aiMagicFixDesc')}
-                    </p>
-
-                    {/* Simple human bullets */}
-                    <ul className="mt-3 space-y-2 text-xs text-gray-600">
-                      <li className="flex items-start gap-2">
-                        <span className={`mt-1 h-1.5 w-1.5 rounded-full transition-colors duration-300 ${mode === "magic" ? "bg-emerald-500" : "bg-emerald-600 group-hover:bg-emerald-500"
-                          }`} />
-                        {t('magicPoint1')}
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className={`mt-1 h-1.5 w-1.5 rounded-full transition-colors duration-300 ${mode === "magic" ? "bg-emerald-500" : "bg-emerald-600 group-hover:bg-emerald-500"
-                          }`} />
-                        {t('magicPoint2')}
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className={`mt-1 h-1.5 w-1.5 rounded-full transition-colors duration-300 ${mode === "magic" ? "bg-emerald-500" : "bg-emerald-600 group-hover:bg-emerald-500"
-                          }`} />
-                        {t('magicPoint3')}
-                      </li>
-                    </ul>
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Magic Card */}
+              <div
+                onClick={() => setMode('magic')}
+                className={`
+                            relative cursor-pointer p-8 rounded-[2.5rem] border-2 transition-all duration-500 group overflow-hidden h-full
+                            ${mode === 'magic'
+                    ? 'border-emerald-500 bg-emerald-50/30 shadow-2xl shadow-emerald-200/50'
+                    : 'border-gray-100 bg-gray-50/50 hover:border-emerald-200 hover:bg-white'
+                  }
+                        `}
+              >
+                {/* Selection Visuals */}
+                <div className={`
+                            absolute top-6 right-6 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500
+                            ${mode === 'magic' ? 'bg-emerald-500 text-white scale-100' : 'bg-gray-200 text-transparent scale-50'}
+                         `}>
+                  <I.Check className="h-5 w-5" />
                 </div>
 
-                <div className="mt-0.5">
-                  {mode === "magic" ? (
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-200/50 animate-pulse">
-                      <I.Check className="h-5 w-5" />
+                <div className={`
+                            w-16 h-16 rounded-[1.5rem] mb-6 flex items-center justify-center transition-all duration-500
+                            ${mode === 'magic'
+                    ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-500/40 rotate-6'
+                    : 'bg-white text-emerald-600 shadow-inner group-hover:scale-110'
+                  }
+                         `}>
+                  <I.Sparkles className="h-10 w-10" />
+                </div>
+
+                <div className="relative">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-xl font-black text-gray-900">{t('aiMagicFix')}</h3>
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-black uppercase tracking-wider animate-pulse">
+                      {t('recommended')}
                     </span>
-                  ) : (
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-400 group-hover:bg-emerald-100 group-hover:text-emerald-500 transition-all duration-300 group-hover:scale-110">
-                      •
-                    </span>
-                  )}
+                  </div>
+                  <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
+                    {t('aiMagicFixDesc')}
+                  </p>
+
+                  <ul className="space-y-3">
+                    {[t('magicPoint1'), t('magicPoint2'), t('magicPoint3')].map((p, i) => (
+                      <li key={i} className="flex items-center gap-3 text-xs font-semibold text-gray-600">
+                        <div className={`w-1.5 h-1.5 rounded-full ${mode === 'magic' ? 'bg-emerald-400' : 'bg-gray-300'}`} />
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
-            </button>
 
-            {/* Manual */}
-            <button
-              type="button"
-              onClick={() => setMode("manual")}
-              className={`relative text-left rounded-2xl border p-4 transition-all duration-300 ease-out group overflow-hidden ${mode === "manual"
-                ? "border-indigo-300 bg-gradient-to-b from-indigo-50/80 to-indigo-25/40 shadow-lg shadow-indigo-100/50 ring-2 ring-indigo-200/30 scale-[1.02]"
-                : "border-gray-200 hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-50/50 bg-white hover:scale-[1.01] hover:bg-gradient-to-b hover:from-indigo-25/20 hover:to-white"
-                }`}
-            >
-              {/* Subtle background glow for selected state */}
-              {mode === "manual" && (
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-400/5 to-transparent rounded-2xl" />
-              )}
-
-              <div className="relative flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <div className={`h-11 w-11 rounded-2xl flex items-center justify-center shadow-sm transition-all duration-300 ${mode === "manual"
-                    ? "bg-indigo-600 text-white shadow-indigo-200/50 scale-110"
-                    : "bg-indigo-600 text-white group-hover:scale-105 group-hover:shadow-md"
-                    }`}>
-                    <I.Sliders className={`h-6 w-6 transition-transform duration-300 ${mode === "manual" ? "scale-110" : "group-hover:scale-105"
-                      }`} />
-                  </div>
-                  <div>
-                    <div className={`text-sm font-semibold transition-colors duration-300 ${mode === "manual" ? "text-indigo-900" : "text-gray-900 group-hover:text-indigo-800"
-                      }`}>{t('manualMode')}</div>
-                    <p className={`text-xs mt-1 transition-colors duration-300 ${mode === "manual" ? "text-indigo-700" : "text-gray-600 group-hover:text-indigo-600"
-                      }`}>
-                      {t('manualModeDesc')}
-                    </p>
-                  </div>
+              {/* Manual Card */}
+              <div
+                onClick={() => setMode('manual')}
+                className={`
+                            relative cursor-pointer p-8 rounded-[2.5rem] border-2 transition-all duration-500 group overflow-hidden h-full
+                            ${mode === 'manual'
+                    ? 'border-indigo-500 bg-indigo-50/30 shadow-2xl shadow-indigo-200/50'
+                    : 'border-gray-100 bg-gray-50/50 hover:border-indigo-200 hover:bg-white'
+                  }
+                        `}
+              >
+                <div className={`
+                            absolute top-6 right-6 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500
+                            ${mode === 'manual' ? 'bg-indigo-500 text-white scale-100' : 'bg-gray-200 text-transparent scale-50'}
+                         `}>
+                  <I.Check className="h-5 w-5" />
                 </div>
 
-                <div className="mt-0.5">
-                  {mode === "manual" ? (
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 animate-pulse">
-                      <I.Check className="h-5 w-5" />
+                <div className={`
+                            w-16 h-16 rounded-[1.5rem] mb-6 flex items-center justify-center transition-all duration-500
+                            ${mode === 'manual'
+                    ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-500/40 rotate-6'
+                    : 'bg-white text-indigo-600 shadow-inner group-hover:scale-110'
+                  }
+                         `}>
+                  <I.Sliders className="h-10 w-10" />
+                </div>
+
+                <div className="relative">
+                  <h3 className="text-xl font-black text-gray-900 mb-2">{t('manualMode')}</h3>
+                  <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
+                    {t('manualModeDesc')}
+                  </p>
+
+                  <div className="pt-4 border-t border-gray-200/50">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-loose">
+                      {t('manualControlTip') || 'FULL CONTROL OVER INDIVIDUAL FIXES AND COLOR PROFILES.'}
                     </span>
-                  ) : (
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-400 group-hover:bg-indigo-100 group-hover:text-indigo-500 transition-all duration-300 group-hover:scale-110">
-                      •
-                    </span>
-                  )}
+                  </div>
                 </div>
               </div>
-            </button>
-          </div>
+            </div>
 
-          <div className="mt-4 text-[11px] text-gray-400 leading-relaxed">
-            {t('tempProcessNote')}
+            {/* Footer Insight */}
+            <div className="mt-10 flex items-center justify-between border-t border-gray-100 pt-8">
+              <div className="flex items-center gap-4 text-xs font-bold text-gray-400 uppercase tracking-widest">
+                <div className="flex items-center gap-1.5 p-2 px-3 rounded-xl bg-blue-50 text-blue-600">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {t('processingTimeVal')}
+                </div>
+                <span className="opacity-50">•</span>
+                <span className="text-[10px]">{t('tempProcessNote')}</span>
+              </div>
+
+              <button
+                onClick={onContinue}
+                disabled={!canContinue}
+                className={`
+                            group px-12 py-5 rounded-full font-black text-lg transition-all duration-500 flex items-center gap-3
+                            ${canContinue
+                    ? 'bg-gradient-to-r from-red-600 to-rose-500 text-white shadow-2xl shadow-red-500/30 hover:scale-105 active:scale-95'
+                    : 'bg-gray-100 text-gray-300 cursor-not-allowed shadow-none'
+                  }
+                        `}
+              >
+                {t('continue')}
+                {canContinue && <svg className="w-6 h-6 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-
-      <div className="h-4" />
 
       {/* Hidden file input */}
       <input
@@ -428,6 +376,13 @@ export const UploadStepSimple = forwardRef<PreflightDropzoneRef, Props>(({
         style={{ display: 'none' }}
         onChange={handleChange}
       />
+
+      <style>{`
+        @keyframes blob-move {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(20px, -20px) scale(1.1); }
+        }
+      `}</style>
     </div>
   );
 });

@@ -198,4 +198,5 @@ export const es = {
   magicPoint2: 'Genera un PDF listo para imprimir',
   magicPoint3: 'Sin conocimientos técnicos requeridos',
   tempProcessNote: 'Procesamos tu archivo temporalmente y lo limpiamos automáticamente.',
+  manualControlTip: 'CONTROL TOTAL SOBRE CORRECCIONES INDIVIDUALES Y PERFILES DE COLOR.',
 } as const;

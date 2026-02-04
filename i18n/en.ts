@@ -194,6 +194,7 @@ export const en = {
   magicPoint2: 'Produces a print-ready PDF you can download',
   magicPoint3: 'No technical knowledge required',
   tempProcessNote: 'We process your file temporarily and clean it up automatically.',
+  manualControlTip: 'FULL CONTROL OVER INDIVIDUAL FIXES AND COLOR PROFILES.',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

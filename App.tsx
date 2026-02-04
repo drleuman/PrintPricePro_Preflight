@@ -520,12 +520,16 @@ export default function App() {
 
   // ---------- Render ----------
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="language-selector absolute top-4 right-4">
+    <div className="min-h-screen bg-[#fcfdfe] relative overflow-hidden" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      {/* Background Aesthetic Blobs */}
+      <div className="absolute top-0 right-0 w-[50vw] h-[50vw] bg-blue-100/30 blur-[120px] rounded-full -z-10 translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 left-0 w-[40vw] h-[40vw] bg-red-50/40 blur-[100px] rounded-full -z-10 -translate-x-1/2 translate-y-1/2" />
+
+      <div className="language-selector absolute top-6 right-8 z-50">
         <select
           value={currentLocale}
           onChange={(e) => setLocale(e.target.value as Locale)}
-          className="bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 py-1.5 pl-3 pr-8 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          className="bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl shadow-sm text-xs font-black uppercase tracking-wider text-gray-700 py-2.5 pl-4 pr-10 hover:bg-white hover:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer"
         >
           <option value="en">English</option>
           <option value="es">Español</option>
@@ -534,11 +538,11 @@ export default function App() {
 
       <LoaderOverlay isOpen={!!processMessage || isWorkerRunning} message={processMessage || 'Processing...'} stageKey={processStage} />
 
-      <main className="container mx-auto px-4 py-6">
-        <div className="workflow-container">
+      <main className="container mx-auto px-6 py-12 relative z-10">
+        <div className="max-w-7xl mx-auto">
           <Stepper currentStep={currentStep} steps={WORKFLOW_STEPS} />
 
-          <div className="workflow-content">
+          <div className="mt-8">
             {currentStep === 1 && (
               <Step1Upload
                 file={file}
