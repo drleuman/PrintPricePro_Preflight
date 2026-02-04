@@ -13,11 +13,10 @@ async function runGs(args) {
     // NOTE: `gs` for Linux, `gswin64c` for Windows
     const gsCmd = process.platform === 'win32' ? 'gswin64c' : 'gs';
     try {
-        await execFileAsync(gsCmd, args, { maxBuffer: 1024 * 1024 * 20 });
+        await execFileAsync(gsCmd, args, { maxBuffer: 1024 * 1024 * 50 }); // 50MB buffer
     } catch (e) {
         if (process.platform === 'win32' && e.code === 'ENOENT') {
-            // Fallback to 'gswin32c' or just 'gs' if 64-bit missing
-            await execFileAsync('gs', args, { maxBuffer: 1024 * 1024 * 20 });
+            await execFileAsync('gs', args, { maxBuffer: 1024 * 1024 * 50 });
         } else {
             throw e;
         }
@@ -35,23 +34,49 @@ async function safeRmDir(dir) {
 }
 
 /**
- * Streams a PDF to the response and runs a cleanup function afterwards.
+ * Sends a PDF to the response and runs a cleanup function afterwards.
+ * Uses whole-file reading instead of streaming for maximum compatibility with proxies.
  * @param {import('express').Response} res 
  * @param {string} filePath 
  * @param {string} downloadName 
  * @param {function} cleanupFn 
  */
-function sendPdfAndCleanup(res, filePath, downloadName, cleanupFn) {
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
-    const stream = fs.createReadStream(filePath);
-    stream.on('error', async (err) => {
-        console.error('PDF stream error:', err);
-        if (!res.headersSent) res.status(500).json({ error: 'Failed to stream output PDF' });
-        try { cleanupFn && await cleanupFn(); } catch (e) { console.error('Cleanup after stream error failed:', e); }
-    });
-    res.on('finish', async () => { try { cleanupFn && await cleanupFn(); } catch (e) { console.error('Cleanup after stream finish failed:', e); } });
-    stream.pipe(res);
+async function sendPdfAndCleanup(res, filePath, downloadName, cleanupFn) {
+    try {
+        if (!fs.existsSync(filePath)) {
+            throw new Error(`File not found: ${filePath}`);
+        }
+
+        const stats = fs.statSync(filePath);
+        const bytes = fs.readFileSync(filePath);
+
+        // Robust headers for large generated files
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Length', stats.size);
+        res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+        res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+        // CORS Safety
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, X-PPP-Autofix-Report, Content-Length');
+
+        res.send(bytes);
+
+        // Cleanup after send
+        if (cleanupFn) {
+            try { await cleanupFn(); } catch (e) { console.error('Cleanup failed:', e); }
+        }
+    } catch (err) {
+        console.error('sendPdfAndCleanup error:', err);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Failed to process output PDF', details: err.message });
+        }
+        // Attempt cleanup even on error
+        if (cleanupFn) {
+            try { await cleanupFn(); } catch (e) { }
+        }
+    }
 }
 
 module.exports = {

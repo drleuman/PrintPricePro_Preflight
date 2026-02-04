@@ -24,20 +24,23 @@ if (pdfRouter.uploadDir) {
 
 app.set('trust proxy', 1);
 
-// Permissive CORS
+// Permissive CORS with exposed headers
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-PPP-Autofix-Report']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-PPP-Autofix-Report'],
+  exposedHeaders: ['Content-Disposition', 'X-PPP-Autofix-Report', 'Content-Length']
 }));
 
+// Disable buffering globally for Nginx
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('X-Accel-Buffering', 'no');
   next();
 });
 
-app.use(express.json({ limit: '70mb' }));
-app.use(express.urlencoded({ extended: true, limit: '70mb' }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);

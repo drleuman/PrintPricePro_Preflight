@@ -13,6 +13,8 @@ export function usePdfTools() {
             const res = await fetch('/api/convert/grayscale', {
                 method: 'POST',
                 body: formData,
+                cache: 'no-cache',
+                credentials: 'same-origin',
             });
 
             if (!res.ok) {
@@ -38,6 +40,8 @@ export function usePdfTools() {
             const res = await fetch('/api/convert/convert-color', {
                 method: 'POST',
                 body: formData,
+                cache: 'no-cache',
+                credentials: 'same-origin',
             });
 
             if (!res.ok) {
@@ -61,6 +65,8 @@ export function usePdfTools() {
             const res = await fetch(`/api/convert/rebuild-150dpi?dpi=${dpi}`, {
                 method: 'POST',
                 body: formData,
+                cache: 'no-cache',
+                credentials: 'same-origin',
             });
 
             if (!res.ok) {
@@ -111,6 +117,8 @@ export function usePdfTools() {
             const res = await fetch('/api/convert/autofix', {
                 method: 'POST',
                 body: formData,
+                cache: 'no-cache',
+                credentials: 'same-origin',
             });
 
             if (!res.ok) {

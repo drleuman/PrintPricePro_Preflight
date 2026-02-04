@@ -52,8 +52,22 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: '70mb' }));
-app.use(express.urlencoded({ extended: true, limit: '70mb' }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+
+// Super permissive CORS for debugging
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-PPP-Autofix-Report'],
+  exposedHeaders: ['Content-Disposition', 'X-PPP-Autofix-Report', 'Content-Length']
+}));
+
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('X-Accel-Buffering', 'no'); // Global disable for PDF streaming
+  next();
+});
 
 // Request Logger
 app.use((req, _res, next) => {
