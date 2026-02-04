@@ -10,6 +10,7 @@ const path = require('path');
 const fs = require('fs');   // ✅ ADD THIS
 const WebSocket = require('ws');
 const helmet = require('helmet');
+const cors = require('cors'); // ✅ ADD THIS
 
 const { router: proxyRouter, handleWsUpgrade } = require('./routes/proxy');
 const pdfRouter = require('./routes/pdf');
@@ -29,7 +30,13 @@ if (pdfRouter.uploadDir) {
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use(helmet());
+app.use(cors()); // ✅ ADD THIS
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Disabling CSP for now to avoid blocking blobs/workers
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
 // Request Logger
 app.use((req, _res, next) => {
