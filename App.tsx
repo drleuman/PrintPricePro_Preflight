@@ -438,55 +438,67 @@ export default function App() {
     // Store original file for Before/After comparison
     setOriginalFile(file);
     setAppMode('ai');
-    setProcessMessage('AI Wizard: Analyzing document components...');
+    setProcessMessage('AI Wizard: Orchestrating professional PDF optimization...');
     setProcessStage('upload'); // Stage 1: Upload/Ingest
 
     try {
-      setProcessMessage('AI Wizard: Starting deep analysis...');
-      setProcessStage('preflight'); // Stage 2: Preflight
-
-      let currentFile: File = file;
-      const originalName = file.name.replace(/\.pdf$/i, '');
-
-      // 1. Convert to CMYK (Server) - Crucial for print professionalism
-      setProcessMessage('AI Wizard: Optimizing color spaces for professional printing...');
+      setProcessMessage('AI Wizard: Performing deep analysis and applying professional fixes...');
       setProcessStage('fix'); // Stage 3-4: Applying fixes
-      const cmykBlob = await convertColorServer(currentFile, 'cmyk');
-      currentFile = new File([cmykBlob], `${originalName}_CMYK.pdf`, { type: 'application/pdf' });
 
-      // 2. Rebuild High-Res (Server) - Fixes low-res issues and weird structure (150 DPI min / 300 best)
-      setProcessMessage('AI Wizard: Enhancing image resolution and rebuilding PDF structure...');
-      const rebuildBlob = await rebuildPdfServer(currentFile, 300);
-      currentFile = new File([rebuildBlob], `${originalName}_Magic_Fix.pdf`, { type: 'application/pdf' });
+      // Use the advanced orchestrator instead of hardcoded steps
+      // This respects "Strict Vector" policy and avoids rasterizing fonts
+      const { blob, report } = await autoFixServer(file, {
+        target: 'cmyk',
+        profile: 'iso_coated_v2',
+        bleedMm: 3,
+        forceCmyk: true,
+        forceBleed: true,
+        strictVector: true, // IMPORTANT: Prevents font rasterization
+        dpiPreferred: 300
+      });
+
+      const originalName = file.name.replace(/\.pdf$/i, '');
+      const newName = `${originalName}_Magic_Fix.pdf`;
+      const newFile = new File([blob], newName, { type: 'application/pdf' });
+
+      setAutoFixReport(report || null);
+
+      updateFileState(newFile, {
+        name: newFile.name,
+        size: newFile.size,
+        type: 'application/pdf'
+      });
+
+      downloadAndRemember(blob, newName);
 
       // 3. Final Analysis of the fixed file
       setProcessMessage('AI Wizard: Performing final quality check...');
       setProcessStage('verify'); // Stage 5: Verification
 
-      updateFileState(currentFile, {
-        name: currentFile.name,
-        size: currentFile.size,
-        type: 'application/pdf'
-      });
-
-      downloadAndRemember(new Blob([await currentFile.arrayBuffer()], { type: 'application/pdf' }), currentFile.name);
-
-      // Run analysis so Step 4 shows the "fixed" result (hopefully with no issues)
-      await runAnalysis(currentFile, { name: currentFile.name, size: currentFile.size, type: 'application/pdf' });
+      // Run analysis so Step 4 shows the "fixed" result
+      await runAnalysis(newFile, { name: newFile.name, size: newFile.size, type: 'application/pdf' });
 
       setProcessMessage(null);
       setProcessStage(undefined); // Reset stage
       setCurrentStep(4); // Jump to review
 
-    } catch (e) {
+    } catch (e: any) {
       console.error('Magic Fix failed', e);
       setProcessMessage(null);
-      setProcessStage(undefined); // Reset stage on error
-      window.alert('Magic Fix encountered an issue: ' + (e as Error).message + '\n\nSwitching to manual mode.');
+      setProcessStage(undefined);
+
+      let errorMsg = e.message || e;
+      if (e.report) setAutoFixReport(e.report);
+
+      if (e.message === 'OUTPUT_RASTERIZED_BLOCKED') {
+        errorMsg = 'Magic Fix Blocked: The optimization would have rasterized your fonts. Reverting to manual mode to preserve vector quality.';
+      }
+
+      window.alert('Magic Fix status: ' + errorMsg + '\n\nSwitching to manual mode.');
       setAppMode('manual');
       setCurrentStep(2);
     }
-  }, [file, fileMeta, convertColorServer, rebuildPdfServer, updateFileState, downloadAndRemember, runAnalysis]);
+  }, [file, fileMeta, autoFixServer, updateFileState, downloadAndRemember, runAnalysis]);
 
   const onPageChange = useCallback((p: number) => setCurrentPage(p), []);
 

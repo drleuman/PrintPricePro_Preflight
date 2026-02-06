@@ -95,6 +95,7 @@ export function usePdfTools() {
             aggressive?: boolean;
             flatten?: boolean;
             safeOnly?: boolean;
+            strictVector?: boolean;
         }
     ): Promise<{ blob: Blob; report?: any }> => {
         setIsServerRunning(true);
@@ -113,6 +114,8 @@ export function usePdfTools() {
             if (opts?.aggressive) formData.append('aggressive', '1');
             if (opts?.flatten) formData.append('flatten', '1');
             if (opts?.safeOnly === false) formData.append('safeOnly', '0');
+            if (opts?.strictVector === false) formData.append('strictVector', '0');
+            else formData.append('strictVector', '1');
 
             const res = await fetch('/api/convert/autofix', {
                 method: 'POST',

@@ -214,8 +214,14 @@ router.post('/convert-color', upload.single('file'), async (req, res) => {
     let args = [
         '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
         '-sDEVICE=pdfwrite',
-        '-dCompatibilityLevel=1.4',
+        '-dCompatibilityLevel=1.5', // Lowering to 1.3 causes rasterization on transparency
         '-dPDFSETTINGS=/prepress',
+        '-dEmbedAllFonts=true',
+        '-dSubsetFonts=true',
+        '-dCompressFonts=true',
+        '-dNOPLATFONTS',
+        '-dDetectDuplicateImages=true',
+        '-dAutoRotatePages=/None',
         '-dOverrideICC',
         `-sOutputFile=${outPath}`,
     ];
@@ -225,14 +231,14 @@ router.post('/convert-color', upload.single('file'), async (req, res) => {
             '-sColorConversionStrategy=CMYK',
             '-dProcessColorModel=/DeviceCMYK',
             '-dConvertCMYKImagesToRGB=false',
-            '-dAutoRotatePages=/None',
             '-dAutoFilterColorImages=false',
             '-dAutoFilterGrayImages=false',
             '-dColorImageFilter=/DCTEncode',
             '-dGrayImageFilter=/DCTEncode',
             '-dDownsampleMonoImages=false',
             '-dDownsampleGrayImages=false',
-            '-dDownsampleColorImages=false'
+            '-dDownsampleColorImages=false',
+            '-dPreserveOverprintSettings=true'
         );
     } else {
         const profilesDir = path.join(__dirname, '../icc-profiles');
@@ -249,7 +255,10 @@ router.post('/convert-color', upload.single('file'), async (req, res) => {
                 '-sColorConversionStrategy=CMYK',
                 '-dProcessColorModel=/DeviceCMYK',
                 `-sOutputICCProfile=${profilePath}`,
-                '-dRenderIntent=1'
+                `-sDefaultCMYKProfile=${profilePath}`,
+                '-dRenderIntent=1',
+                '-dBlackText=true',
+                '-dBlackVector=true'
             );
         } else {
             console.warn(`Profile ${profile} not found at ${profilePath}, falling back to generic CMYK`);
@@ -454,12 +463,13 @@ async function gsConvertColor(inputPath, outPath, profile) {
     const args = [
         '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
         '-sDEVICE=pdfwrite',
-        '-dCompatibilityLevel=1.4',
+        '-dCompatibilityLevel=1.5', // 1.3 or 1.4 can force rasterization in some profiles
         '-dPDFSETTINGS=/prepress',
         '-dDetectDuplicateImages=true',
         '-dEmbedAllFonts=true',
         '-dSubsetFonts=true',
         '-dCompressFonts=true',
+        '-dNOPLATFONTS',
         '-dAutoRotatePages=/None',
         '-dColorImageDownsampleType=/Bicubic',
         '-dGrayImageDownsampleType=/Bicubic',
@@ -506,7 +516,9 @@ async function gsGrayscale(inputPath, outPath) {
 }
 
 async function gsFlattenTransparency(inputPath, outPath) {
-    // Flattening usually requires targeting a lower PDF version (1.3)
+    // NOTE: Flattening to PDF 1.3 is the only reliable way with GS to flatten,
+    // but it WILL rasterize anything under transparent objects.
+    // If the goal is strict vector fonts, we might want to skip this or use higher resolution.
     await runGs([
         '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
         '-sDEVICE=pdfwrite',
@@ -514,6 +526,9 @@ async function gsFlattenTransparency(inputPath, outPath) {
         '-dPDFSETTINGS=/prepress',
         '-dEmbedAllFonts=true',
         '-dSubsetFonts=true',
+        '-dCompressFonts=true',
+        '-dNOPLATFONTS',
+        '-r600', // Higher resolution for the rasterized parts
         '-o', outPath,
         inputPath
     ]);

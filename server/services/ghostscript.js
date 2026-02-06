@@ -10,13 +10,20 @@ const rmdirAsync = promisify(fs.rmdir);
  * @param {string[]} args - Array of command line arguments for gs.
  */
 async function runGs(args) {
-    // NOTE: `gs` for Linux, `gswin64c` for Windows
-    const gsCmd = process.platform === 'win32' ? 'gswin64c' : 'gs';
+    // Priority: 1. GS_PATH env var, 2. OS-specific default
+    const customPath = process.env.GS_PATH;
+    const gsCmd = customPath || (process.platform === 'win32' ? 'gswin64c' : 'gs');
+
     try {
         await execFileAsync(gsCmd, args, { maxBuffer: 1024 * 1024 * 50 }); // 50MB buffer
     } catch (e) {
-        if (process.platform === 'win32' && e.code === 'ENOENT') {
-            await execFileAsync('gs', args, { maxBuffer: 1024 * 1024 * 50 });
+        // Fallback for Windows if gswin64c fails
+        if (!customPath && process.platform === 'win32' && e.code === 'ENOENT') {
+            try {
+                await execFileAsync('gs', args, { maxBuffer: 1024 * 1024 * 50 });
+            } catch (e2) {
+                throw e2;
+            }
         } else {
             throw e;
         }
