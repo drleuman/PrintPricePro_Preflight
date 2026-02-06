@@ -453,7 +453,7 @@ export default function App() {
         bleedMm: 3,
         forceCmyk: true,
         forceBleed: true,
-        strictVector: true, // IMPORTANT: Prevents font rasterization
+        strictVector: false, // Temporarily disabled enforcement to avoid 422 in prod before redeploy
         dpiPreferred: 300
       });
 
