@@ -481,7 +481,7 @@ async function gsConvertColor(inputPath, outPath, profile) {
         '-dBlackText=true',
         '-dBlackVector=true',
         '-sColorConversionStrategy=CMYK',
-        '-sProcessColorModel=DeviceCMYK',
+        '-dProcessColorModel=/DeviceCMYK',
         '-dOverrideICC=true',
     ];
 
@@ -728,20 +728,30 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
         report.quality_checks.output = outputQC;
 
         const allowRasterOutput = options.allowRasterOutput === true;
-        if (options.strictVector !== false && outputQC.is_rasterized && !allowRasterOutput) {
+        const strictVector = options.strictVector !== false;
+
+        // We only block if:
+        // 1. Strict vector is enabled
+        // 2. The output is rasterized
+        // 3. The INPUT was NOT rasterized (meaning WE broke it)
+        // 4. Tools (pdffonts/pdfimages) actually worked (QC.ok is true)
+        const inputWasVector = report.quality_checks.input?.ok && !report.quality_checks.input?.is_rasterized;
+        const outputBecameRaster = outputQC.ok && outputQC.is_rasterized;
+
+        if (strictVector && inputWasVector && outputBecameRaster && !allowRasterOutput) {
             report.blocked = {
                 reason: 'OUTPUT_RASTERIZED_BLOCKED',
-                strictVector: options.strictVector !== false,
-                allowRasterOutput: options.allowRasterOutput === true
+                strictVector: true,
+                allowRasterOutput: false
             };
             const e = new Error('OUTPUT_RASTERIZED_BLOCKED');
             e.report = report;
-            throw e; // Throw to be caught by the route handler
+            throw e;
         }
     } catch (e) {
-        console.warn('RasterGuard post-check failed:', e);
-        report.warnings.push('Raster Guard post-check failed (pdffonts/pdfimages missing or errored).');
-        if (e.message === 'OUTPUT_RASTERIZED_BLOCKED') throw e; // Re-throw specific error
+        if (e.message === 'OUTPUT_RASTERIZED_BLOCKED') throw e;
+        console.warn('RasterGuard post-check failed (likely tools missing):', e.message);
+        report.warnings.push('Raster Guard post-check skipped or failed.');
     }
 
     return { report, finalPath: currentPath };

@@ -19,9 +19,9 @@ RUN npm install && npm run build
 # Stage 2: Runtime image (Cloud Run)
 FROM node:22
 
-# Ghostscript required for PDF fixes (grayscale, RGB->CMYK, rebuild to >=150dpi)
+# Ghostscript required for PDF fixes, poppler-utils for rasterization detection
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ghostscript \
+  && apt-get install -y --no-install-recommends ghostscript poppler-utils \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
