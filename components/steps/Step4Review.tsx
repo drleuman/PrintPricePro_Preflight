@@ -95,7 +95,7 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                         </p>
                         {appMode === 'ai' && hasBeenProcessed && (
                             <div className="review-summary__tech mt-3 p-2 bg-blue-50 rounded text-xs text-blue-800 border border-blue-200">
-                                <strong>Profile:</strong> ISO Coated v2 (FOGRA39) | <strong>Bleed:</strong> 3mm | <strong>Min DPI:</strong> 150 (300 recommended)
+                                <strong>Profile:</strong> ISO Coated v2 (FOGRA39) | <strong>Bleed:</strong> Real 3mm (Box Geometry) | <strong>Standard DPI:</strong> 300 (High-End Print)
                             </div>
                         )}
                     </div>
@@ -125,8 +125,8 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                     <button
                                         onClick={() => setShowBeforeAfter('before')}
                                         className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${showBeforeAfter === 'before'
-                                                ? 'bg-red-100 text-red-700 border border-red-200'
-                                                : 'text-gray-500 hover:text-gray-700'
+                                            ? 'bg-red-100 text-red-700 border border-red-200'
+                                            : 'text-gray-500 hover:text-gray-700'
                                             }`}
                                     >
                                         📄 Before
@@ -134,8 +134,8 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                     <button
                                         onClick={() => setShowBeforeAfter('after')}
                                         className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${showBeforeAfter === 'after'
-                                                ? 'bg-green-100 text-green-700 border border-green-200'
-                                                : 'text-gray-500 hover:text-gray-700'
+                                            ? 'bg-green-100 text-green-700 border border-green-200'
+                                            : 'text-gray-500 hover:text-gray-700'
                                             }`}
                                     >
                                         ✨ After
@@ -172,7 +172,7 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                             onClick={onRebuildPdf}
                             disabled={isRunning}
                         >
-                            🛠️ Rebuild High-Res (150 DPI min / 300 best)
+                            🛠️ Rebuild High-Res (300 DPI Native)
                         </button>
 
                         <button

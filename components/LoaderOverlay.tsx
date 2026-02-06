@@ -28,7 +28,7 @@ const DEFAULT_STEPS: LoaderStep[] = [
 
 const LOADING_TIPS = [
   'Please wait — complex PDFs can take a little longer.',
-  'Tip: Photos should be at least 150 DPI (300 recommended for offset).',
+  'Tip: We use 300 DPI by default for high-quality professional printing.',
   'Tip: Always include 3 mm bleed on all sides for trimming safety.',
   'Tip: Embed fonts to prevent substitutions at print time.',
   'Tip: We\'ll convert colors safely for professional printing.',

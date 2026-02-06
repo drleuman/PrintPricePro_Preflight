@@ -85,7 +85,7 @@ export default function App() {
     return cleanupUrl;
   }, [cleanupUrl]);
 
-  const downloadAndRemember = useCallback((blob: Blob, filename: string) => {
+  const downloadAndRemember = useCallback((blob: Blob, filename: string, autoDownload = true) => {
     cleanupUrl();
 
     const url = URL.createObjectURL(blob);
@@ -93,12 +93,14 @@ export default function App() {
     setLastPdfUrl(url);
     setLastPdfName(filename);
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename || 'output.pdf';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    if (autoDownload) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename || 'output.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
   }, [cleanupUrl]);
 
   const updateFileState = useCallback((newFile: File, newMeta: FileMeta) => {
@@ -140,9 +142,7 @@ export default function App() {
     else if (operation === 'fixBleed') opLabel = 'Bleed Fixed';
 
     updateFileState(new File([blob], meta.name, { type: 'application/pdf' }), meta);
-    downloadAndRemember(blob, meta.name);
-
-    window.alert(`Your ${opLabel} PDF is ready and has been downloaded.`);
+    downloadAndRemember(blob, meta.name, false); // No auto-download here
   }, [updateFileState, downloadAndRemember]);
 
   const onWorkerError = useCallback((msg: string) => {
@@ -245,7 +245,7 @@ export default function App() {
       const newName = file.name.replace(/\.pdf$/i, '') + '_bw.pdf';
       const newFile = new File([blob], newName, { type: 'application/pdf' });
 
-      downloadAndRemember(blob, newName);
+      downloadAndRemember(blob, newName, false); // No auto-download
       updateFileState(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
 
       // Auto-reanalyze the processed file
@@ -282,7 +282,7 @@ export default function App() {
       const newName = file.name.replace(/\.pdf$/i, '') + '_rebuild_300dpi.pdf';
       const newFile = new File([blob], newName, { type: 'application/pdf' });
 
-      downloadAndRemember(blob, newName);
+      downloadAndRemember(blob, newName, false); // No auto-download
       updateFileState(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
 
       // Auto-reanalyze the processed file
@@ -344,7 +344,7 @@ export default function App() {
       setAutoFixReport(report || null);
       if (report) console.info('AutoFix report:', report);
 
-      downloadAndRemember(blob, newName);
+      downloadAndRemember(blob, newName, false);
       updateFileState(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
 
       setTimeout(() => {
@@ -384,7 +384,7 @@ export default function App() {
       const newName = file.name.replace(/\.pdf$/i, '') + `_${selectedProfile}.pdf`;
       const newFile = new File([blob], newName, { type: 'application/pdf' });
 
-      downloadAndRemember(blob, newName);
+      downloadAndRemember(blob, newName, false);
       updateFileState(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
 
       // Auto-reanalyze the processed file
@@ -409,7 +409,7 @@ export default function App() {
       const newName = file.name.replace(/\.pdf$/i, '') + '_booklet.pdf';
       const newFile = new File([blob], newName, { type: 'application/pdf' });
 
-      downloadAndRemember(blob, newName);
+      downloadAndRemember(blob, newName, false);
       updateFileState(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
       window.alert('Booklet created successfully (2-up saddle stitch implementation).');
     } catch (e) {
@@ -469,7 +469,7 @@ export default function App() {
         type: 'application/pdf'
       });
 
-      downloadAndRemember(blob, newName);
+      downloadAndRemember(blob, newName, false);
 
       // 3. Final Analysis of the fixed file
       setProcessMessage('AI Wizard: Performing final quality check...');
