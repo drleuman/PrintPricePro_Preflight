@@ -425,25 +425,59 @@ async function addBleedCanvasPdf(inputPath, outPath, bleedMm) {
     for (let i = 0; i < pages.length; i++) {
         const p = pages[i];
         const { width, height } = p.getSize();
+
+        // Embed the page once as a resource
         const [embedded] = await dst.embedPages([p]);
 
         const newW = width + (bleedPt * 2);
         const newH = height + (bleedPt * 2);
 
-        // Calculate scale to cover the new area
-        const sx = newW / width;
-        const sy = newH / height;
-        const s = Math.max(sx, sy);
-
-        const drawW = width * s;
-        const drawH = height * s;
-
-        // Center the scaled content
-        const x = (newW - drawW) / 2;
-        const y = (newH - drawH) / 2;
-
         const newPage = dst.addPage([newW, newH]);
-        newPage.drawPage(embedded, { x, y, xScale: s, yScale: s });
+
+        /**
+         * "Real Bleed" Professional Strategy:
+         * 1. Layer 1 (Bottom): We draw the page slightly enlarged to fill the bleed area.
+         *    This ensures no white gaps even if the original design didn't have bleed.
+         * 2. Layer 2 (Top): We draw the page at exactly 100% scale, centered.
+         *    This ensures text and critical elements remain at their original exact measurements.
+         */
+
+        // LAYER 1: Background (Scaled to cover everything)
+        // We use a small extra factor (e.g., 1.01) if necessary, but here we cover newW/newH
+        const sBg = Math.max(newW / width, newH / height);
+        const wBg = width * sBg;
+        const hBg = height * sBg;
+        const xBg = (newW - wBg) / 2;
+        const yBg = (newH - hBg) / 2;
+
+        newPage.drawPage(embedded, {
+            x: xBg,
+            y: yBg,
+            xScale: sBg,
+            yScale: sBg,
+            opacity: 1 // We can even dim it or blur it if we wanted, but standard is full opacity
+        });
+
+        // LAYER 2: Foreground (The "Real" content at 1:1)
+        const xFg = bleedPt;
+        const yFg = bleedPt;
+
+        newPage.drawPage(embedded, {
+            x: xFg,
+            y: yFg,
+            xScale: 1,
+            yScale: 1
+        });
+
+        /**
+         * Professional PDF Box Geometry:
+         * TrimBox: The final size after cutting (the original size).
+         * BleedBox: The area that contains the extra 3mm.
+         * MediaBox: The physical canvas size.
+         */
+        newPage.setTrimBox(bleedPt, bleedPt, width, height);
+        newPage.setBleedBox(0, 0, newW, newH);
+        // MediaBox is set automatically by addPage([newW, newH])
     }
     const outBytes = await dst.save();
     fs.writeFileSync(outPath, outBytes);
@@ -688,7 +722,7 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
             } else if (planStep.action === 'add_bleed_canvas') {
                 await addBleedCanvasPdf(currentPath, outPath, options.bleedMm);
                 stepOk = true;
-                stepWarnings.push('Bleed added (scaled content).');
+                stepWarnings.push('Bleed added (1:1 content with professional Box geometry).');
             } else if (planStep.action === 'rebuild_raster') {
                 await rebuildAtDpi(currentPath, outPath, options.dpiPreferred);
                 stepOk = true;
