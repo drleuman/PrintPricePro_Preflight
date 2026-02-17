@@ -135,26 +135,26 @@ export const IssuesPanel: React.FC<Props> = ({
     const sevColorClass = SEVERITY_COLORS[iss.severity] || ''; // Clase de color basada en la severidad
 
     return (
-      <div style={style} className={`px-4 py-2 border-b border-gray-200 last:border-b-0`}>
+      <div style={style} className="px-3 py-1 border-b border-gray-200 last:border-b-0">
         <button
           type="button"
           onClick={() => onSelectIssue(iss)}
-          className={`w-full text-left ppp-issues-row ppp-issues-row--${sev}`}
+          className={`w-full text-left ppp-issues-row ppp-issues-row--${sev} !py-1 !px-2`}
         >
-          <div className="ppp-issues-row-main flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className={`text-xs font-semibold ${sevColorClass.split(' ')[0]} ${sevColorClass.split(' ')[1].replace('100', '200')}`}>
+          <div className="ppp-issues-row-main flex items-center justify-between !gap-0">
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className={`text-[10px] uppercase tracking-wider font-bold ${sevColorClass.split(' ')[0]} ${sevColorClass.split(' ')[1].replace('100', '200')}`}>
                 {sevLabel}
               </span>
-              <span className="ppp-issues-row-title text-sm font-medium text-gray-800">
-                {iss.message || iss.title || iss.description || t('issue')}
+              <span className="ppp-issues-row-title text-xs font-semibold text-gray-800 truncate">
+                {iss.message || iss.title || iss.description || 'Issue'}
               </span>
             </div>
-            <span className="ppp-issues-row-page text-xs text-gray-500">
+            <span className="ppp-issues-row-page text-[10px] text-gray-500 ml-2 whitespace-nowrap">
               {t('page')} {iss.page ?? '—'}
             </span>
           </div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-[10px] text-gray-400 mt-0.5 leading-none">
             {categoryLabel}
           </div>
         </button>
@@ -328,119 +328,109 @@ export const IssuesPanel: React.FC<Props> = ({
 
   // Normal view
   return (
-  <section className="ppp-issues-panel">
-{/* Header */}
-<div className="ppp-issues-panel__header">
-{/* Línea superior: título + resumen + botón */}
-<div className="ppp-issues-panel__header-main">
-<div className="flex flex-col gap-1">
-<div className="flex items-center gap-2">
-<h2 className="ppp-issues-panel__title">
-{t('issuesFound') || 'Issues Found'}
-</h2>
-<span className="ppp-badge-total">
-{counts.total}
-</span>
-</div>
-<p className="text-xs text-gray-500">
-{counts.total
-? `${counts.total} issues · ${counts.error} errors · ${counts.warning} warnings · ${counts.info} info`
-: t('noIssuesToDisplay')}
-</p>
-</div>
+    <section className="ppp-issues-panel">
+      {/* Header */}
+      <div className="ppp-issues-panel__header">
+        {/* Línea superior: título + resumen + botón */}
+        <div className="ppp-issues-panel__header-main">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <h2 className="ppp-issues-panel__title">
+                {t('issuesFound') || 'Issues Found'}
+              </h2>
+              <span className="ppp-badge-total">
+                {counts.total}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500">
+              {counts.total
+                ? `${counts.total} issues · ${counts.error} errors · ${counts.warning} warnings · ${counts.info} info`
+                : t('noIssuesToDisplay')}
+            </p>
+          </div>
 
 
-</div>
+        </div>
 
-{/* Tabs — cuadrados, alineados a la izquierda, sin pill redondo */}
-<div className="ppp-issues-tabs">
-<button
-type="button"
-className={
-'ppp-issues-tab ' +
-(tab === 'all' ? 'ppp-issues-tab--active' : '')
-}
-onClick={() => setTab('all')}
->
-<InformationCircleIcon className="h-4 w-4" />
-<span>{t('issues') || 'Issues'}</span>
-</button>
+        {/* Tabs — cuadrados, alineados a la izquierda, sin pill redondo */}
+        <div className="ppp-issues-tabs">
+          <button
+            type="button"
+            className={
+              'ppp-issues-tab ' +
+              (tab === 'all' ? 'ppp-issues-tab--active' : '')
+            }
+            onClick={() => setTab('all')}
+          >
+            <InformationCircleIcon className="h-4 w-4" />
+            <span>{t('issues') || 'Issues'}</span>
+          </button>
 
-<button
-type="button"
-className={
-'ppp-issues-tab ' +
-(tab === 'error' ? 'ppp-issues-tab--active' : '')
-}
-onClick={() => setTab('error')}
->
-<ExclamationCircleIcon className="h-4 w-4" />
-<span>
-{t('errors') || 'Errors'} ({counts.error})
-</span>
-</button>
+          <button
+            type="button"
+            className={
+              'ppp-issues-tab ' +
+              (tab === 'error' ? 'ppp-issues-tab--active' : '')
+            }
+            onClick={() => setTab('error')}
+          >
+            <ExclamationCircleIcon className="h-4 w-4" />
+            <span>
+              {t('errors') || 'Errors'} ({counts.error})
+            </span>
+          </button>
 
-<button
-type="button"
-className={
-'ppp-issues-tab ' +
-(tab === 'warning' ? 'ppp-issues-tab--active' : '')
-}
-onClick={() => setTab('warning')}
->
-<ExclamationTriangleIcon className="h-4 w-4" />
-<span>
-{t('warnings') || 'Warnings'} ({counts.warning})
-</span>
-</button>
+          <button
+            type="button"
+            className={
+              'ppp-issues-tab ' +
+              (tab === 'warning' ? 'ppp-issues-tab--active' : '')
+            }
+            onClick={() => setTab('warning')}
+          >
+            <ExclamationTriangleIcon className="h-4 w-4" />
+            <span>
+              {t('warnings') || 'Warnings'} ({counts.warning})
+            </span>
+          </button>
 
-<button
-type="button"
-className={
-'ppp-issues-tab ' +
-(tab === 'info' ? 'ppp-issues-tab--active' : '')
-}
-onClick={() => setTab('info')}
->
-<InformationCircleIcon className="h-4 w-4" />
-<span>
-{t('info') || 'Info'} ({counts.info})
-</span>
-</button>
-</div>
-</div>
+          <button
+            type="button"
+            className={
+              'ppp-issues-tab ' +
+              (tab === 'info' ? 'ppp-issues-tab--active' : '')
+            }
+            onClick={() => setTab('info')}
+          >
+            <InformationCircleIcon className="h-4 w-4" />
+            <span>
+              {t('info') || 'Info'} ({counts.info})
+            </span>
+          </button>
+        </div>
+      </div>
 
-{/* Lista de categorías + issues */}
-<div className="ppp-issues-list">
-{counts.total === 0 && (
-    <div className="ppp-issues-empty rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 text-center absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4">
-      {emptyHint || t('noIssuesToDisplay')}
-    </div>
-  )}
+      {/* Lista de categorías + issues */}
+      <div className="ppp-issues-list">
+        {counts.total === 0 && (
+          <div className="ppp-issues-empty rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 text-center absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4">
+            {emptyHint || t('noIssuesToDisplay')}
+          </div>
+        )}
 
-  {counts.total > 0 && (
-    <FixedSizeList
-      height={window.innerHeight - 200} // Ajustar la altura según sea necesario
-      width="100%"
-      itemCount={filtered.length}
-      itemSize={70} // Altura estimada de cada fila
-    >
-      {Row}
-    </FixedSizeList>
-  )}
-
-{/* Lista virtualizada de issues filtrados */}
-<FixedSizeList
-height={600}
-itemCount={filtered.length}
-itemSize={72}
-width="100%"
-className="ppp-issues-list-virtualizada"
->
-{Row}
-</FixedSizeList>
-</div>
-</section>
+        {counts.total > 0 && (
+          <FixedSizeList
+            height={580} // Altura fija razonable para el panel lateral
+            width="100%"
+            itemCount={filtered.length}
+            itemSize={62} // Más compacto
+            className="ppp-issues-list-virtualizada"
+          >
+            {Row}
+          </FixedSizeList>
+        )}
+      </div>
+    </section>
 
   );
 };
