@@ -18,7 +18,7 @@ type Props = {
   onClose: () => void;
   onOpenAIAudit?: (issue: Issue) => void;
   onOpenEfficiencyTips?: (issue: Issue) => void;
-  onFixBleed?: () => void;
+  onFixBleed?: (mode: 'safe' | 'aggressive') => void;
   onConvertGrayscale?: () => void;
   onConvertCMYK?: () => void;
   onRebuildPdf?: () => void;
@@ -211,6 +211,7 @@ export const FixDrawer: React.FC<Props> = ({
   const [explainText, setExplainText] = useState<string | null>(null);
   const [effText, setEffText] = useState<string | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const [bleedMode, setBleedMode] = useState<'safe' | 'aggressive'>('safe');
 
   // sincroniza textos con cache cuando cambia el issue
   useEffect(() => {
@@ -431,14 +432,35 @@ export const FixDrawer: React.FC<Props> = ({
           <div className="space-y-2">
             {/* Bleed Fix */}
             {onFixBleed && isBleedIssue && (
-              <button
-                type="button"
-                onClick={onFixBleed}
-                disabled={isFixing}
-                className="btn btn--bleed btn--block"
-              >
-                {isFixing ? 'Fixing...' : '🔧 Fix: Add 3mm Bleed'}
-              </button>
+              <div className="space-y-2">
+                <div className="mb-2">
+                  <label htmlFor="bleed-mode" className="block text-xs font-medium text-gray-700 mb-1">
+                    {t('bleedMode') || 'Bleed Mode:'}
+                  </label>
+                  <select
+                    id="bleed-mode"
+                    value={bleedMode}
+                    onChange={(e) => setBleedMode(e.target.value as 'safe' | 'aggressive')}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="safe">{t('bleedSafe') || 'Safe (Box-only / Canvas)'}</option>
+                    <option value="aggressive">{t('bleedAggressive') || 'Aggressive (Scale-fill)'}</option>
+                  </select>
+                  {bleedMode === 'safe' && (
+                    <p className="mt-2 text-[11px] text-amber-600 bg-amber-50 p-2 rounded border border-amber-100 italic">
+                      ℹ️ {t('bleedSafeHint') || 'Safe mode adds margin without stretching.'}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onFixBleed(bleedMode)}
+                  disabled={isFixing}
+                  className="btn btn--bleed btn--block"
+                >
+                  {isFixing ? t('fixing') || 'Fixing...' : t('add3mmBleed') || '🔧 Fix: Add 3mm Bleed'}
+                </button>
+              </div>
             )}
 
             {/* Color Space Fixes */}

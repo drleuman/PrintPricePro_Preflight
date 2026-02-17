@@ -64,6 +64,7 @@ type FixBleedCmd = {
   type: 'fixBleed';
   fileMeta: FileMeta;
   buffer: ArrayBuffer;
+  mode?: 'safe' | 'aggressive';
 };
 
 type TacHeatmapCmd = {
@@ -406,74 +407,167 @@ async function upscalePdf(
 }
 
 // 3) Añadir sangrado (bleed) a un PDF
-// 3) Añadir sangrado (bleed) a un PDF (Scaling / Zooming Method)
 async function addBleed(
   buffer: ArrayBuffer,
   fileMeta: FileMeta,
-  bleedMm: number = 3
+  bleedMm: number = 3,
+  mode: 'safe' | 'aggressive' = 'safe'
 ): Promise<{ buffer: ArrayBuffer; fileMeta: FileMeta }> {
-  // Cargar el documento original
-  const srcDoc = await PDFDocument.load(buffer);
+  // Cargar el documento original (con ignoreEncryption: true)
+  const srcDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
   const dstDoc = await PDFDocument.create();
   const pages = srcDoc.getPages();
 
   const bleedPt = (bleedMm * 72) / 25.4; // 3mm ~ 8.5 pt
+  const appliedModes: string[] = [];
+  const EPSILON = 1; // 1pt tolerance for floating point calculations
 
   for (let i = 0; i < pages.length; i++) {
     const srcPage = pages[i];
-    const { width, height } = srcPage.getSize();
+    const rotation = srcPage.getRotation();
 
-    // Embed the original page
+    // Use original MediaBox (native coordinates)
+    const mediaBox = srcPage.getMediaBox();
+    const nativeW = mediaBox.width;
+    const nativeH = mediaBox.height;
+
+    // Embed content (ignores rotation flag)
     const [embedded] = await dstDoc.embedPages([srcPage]);
 
-    // New dimensions
-    const newW = width + (bleedPt * 2);
-    const newH = height + (bleedPt * 2);
+    // Current boxes for heuristics
+    let cropBox;
+    try {
+      cropBox = srcPage.getCropBox();
+    } catch {
+      cropBox = mediaBox;
+    }
+    let trimBox;
+    try {
+      trimBox = srcPage.getTrimBox();
+    } catch {
+      trimBox = cropBox;
+    }
 
-    // Calculate scale to cover the new area (Zoom in)
-    // We want the original content (width x height) to fill (newW x newH)
-    // Actually we want to "stretch" or "zoom" it?
-    // "Content Scaling" usually means maintaining aspect ratio and covering.
-    const sx = newW / width;
-    const sy = newH / height;
-    const s = Math.max(sx, sy);
+    // Artwork real (TrimBox width/height are already native-relative in pdf-lib)
+    const artW = trimBox.width;
+    const artH = trimBox.height;
 
-    // Center the scaled content
-    const drawW = width * s;
-    const drawH = height * s;
-    const x = (newW - drawW) / 2;
-    const y = (newH - drawH) / 2;
+    let appliedMode: 'box-only' | 'canvas-expand' | 'scale-fill' =
+      'canvas-expand';
+    let reason = '';
 
-    const newPage = dstDoc.addPage([newW, newH]);
-    newPage.drawPage(embedded, { x, y, xScale: s, yScale: s });
+    if (mode === 'aggressive') {
+      appliedMode = 'scale-fill';
+      reason = 'user-choice';
+    } else {
+      // Per-side margin check: TrimBox relative to CropBox (baseBox)
+      // Since trimBox coordinates are usually in the same system as cropBox/mediaBox
+      const left = trimBox.x - cropBox.x;
+      const bottom = trimBox.y - cropBox.y;
+      const right = cropBox.x + cropBox.width - (trimBox.x + trimBox.width);
+      const top = cropBox.y + cropBox.height - (trimBox.y + trimBox.height);
 
-    // Set explicit boxes for professional output
-    newPage.setTrimBox(bleedPt, bleedPt, width, height); // Trim is the "inner" part
-    // BleedBox is the full page
-    newPage.setBleedBox(0, 0, newW, newH);
+      const minMargin = Math.min(left, bottom, right, top);
+
+      if (minMargin >= bleedPt - EPSILON) {
+        appliedMode = 'box-only';
+        reason = 'margin-found';
+      } else {
+        appliedMode = 'canvas-expand';
+        reason = 'no-margin';
+      }
+    }
+
+    appliedModes.push(appliedMode);
+
+    if (appliedMode === 'box-only') {
+      // Keep native size from cropBox
+      const finalW = cropBox.width;
+      const finalH = cropBox.height;
+      const newPage = dstDoc.addPage([finalW, finalH]);
+      newPage.setRotation(rotation);
+
+      // Draw content relative to original origin
+      // Account for cropBox.x/y offset if the original didn't start at MediaBox origin
+      newPage.drawPage(embedded, { x: -cropBox.x, y: -cropBox.y });
+
+      newPage.setMediaBox(0, 0, finalW, finalH);
+      newPage.setCropBox(0, 0, finalW, finalH);
+
+      // Seteamos TrimBox a 3mm dentro del CropBox
+      newPage.setTrimBox(
+        bleedPt,
+        bleedPt,
+        finalW - 2 * bleedPt,
+        finalH - 2 * bleedPt
+      );
+      newPage.setBleedBox(0, 0, finalW, finalH);
+    } else if (appliedMode === 'canvas-expand') {
+      const finalW = nativeW + bleedPt * 2;
+      const finalH = nativeH + bleedPt * 2;
+
+      const newPage = dstDoc.addPage([finalW, finalH]);
+      newPage.setRotation(rotation);
+      newPage.drawPage(embedded, { x: bleedPt, y: bleedPt });
+
+      newPage.setMediaBox(0, 0, finalW, finalH);
+      newPage.setCropBox(0, 0, finalW, finalH);
+      newPage.setTrimBox(bleedPt, bleedPt, nativeW, nativeH);
+      newPage.setBleedBox(0, 0, finalW, finalH);
+    } else {
+      // scale-fill (Aggressive)
+      const finalW = nativeW + bleedPt * 2;
+      const finalH = nativeH + bleedPt * 2;
+
+      const sx = finalW / nativeW;
+      const sy = finalH / nativeH;
+      const s = Math.max(sx, sy);
+
+      const drawW = nativeW * s;
+      const drawH = nativeH * s;
+      const drawX = (finalW - drawW) / 2;
+      const drawY = (finalH - drawH) / 2;
+
+      const newPage = dstDoc.addPage([finalW, finalH]);
+      newPage.setRotation(rotation);
+      newPage.drawPage(embedded, { x: drawX, y: drawY, xScale: s, yScale: s });
+
+      newPage.setMediaBox(0, 0, finalW, finalH);
+      newPage.setCropBox(0, 0, finalW, finalH);
+      newPage.setTrimBox(bleedPt, bleedPt, nativeW, nativeH);
+      newPage.setBleedBox(0, 0, finalW, finalH);
+    }
 
     post({
       type: 'analysisProgress',
       progress: ((i + 1) / pages.length) * 100,
-      note: `Adding bleed to page ${i + 1}/${pages.length} (Method: Scaling)`,
+      note: `Fixing bleed P${i + 1} (${appliedMode}: ${reason})`,
     });
   }
 
   const outBytes = await dstDoc.save();
-
   const sliced = outBytes.buffer.slice(
     outBytes.byteOffset,
     outBytes.byteOffset + outBytes.byteLength
   );
 
+  // Naming with extra detail
+  const uniqueModes = Array.from(new Set(appliedModes));
+  let modeSuffix = uniqueModes.length > 1 ? 'mixed' : uniqueModes[0];
+  modeSuffix = modeSuffix.replace('expand', '').replace('fill', '').replace('-', '');
+
   const newMeta: FileMeta = {
     ...fileMeta,
-    name: fileMeta.name.replace(/\.pdf$/i, '') + `_bleed_${bleedMm}mm.pdf`,
+    name:
+      fileMeta.name.replace(/\.pdf$/i, '') +
+      `_bleed_${bleedMm}mm_${modeSuffix}.pdf`,
     size: outBytes.byteLength,
   };
 
   return { buffer: sliced as ArrayBuffer, fileMeta: newMeta };
 }
+
+
 
 /* =========================
    Construcción de resultado (ORIGINAL)
@@ -1558,7 +1652,7 @@ self.addEventListener('message', async (event: MessageEvent) => {
     }
 
     if (msg.type === 'fixBleed') {
-      const out = await addBleed(msg.buffer, msg.fileMeta);
+      const out = await addBleed(msg.buffer, msg.fileMeta, 3, msg.mode || 'safe');
       post({
         type: 'transformResult',
         operation: 'fixBleed',

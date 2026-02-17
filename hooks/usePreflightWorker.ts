@@ -130,7 +130,7 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
         }
     }, []);
 
-    const runFixBleed = useCallback(async (file: File, fileMeta: FileMeta) => {
+    const runFixBleed = useCallback(async (file: File, fileMeta: FileMeta, mode: 'safe' | 'aggressive' = 'safe') => {
         if (!workerRef.current) return;
         try {
             setIsWorkerRunning(true);
@@ -139,6 +139,7 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
                 type: 'fixBleed',
                 fileMeta,
                 buffer,
+                mode,
             };
             workerRef.current.postMessage(cmd, [buffer]);
         } catch (e) {

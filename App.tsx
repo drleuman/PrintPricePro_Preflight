@@ -420,11 +420,11 @@ export default function App() {
     }
   }, [file, createBookletClient, downloadAndRemember, updateFileState]);
 
-  const handleFixBleed = useCallback(async () => {
+  const handleFixBleed = useCallback(async (mode: 'safe' | 'aggressive' = 'safe') => {
     if (!file || !fileMeta) return;
     setProcessMessage('Applying Bleed Fix...');
     try {
-      await runFixBleed(file, fileMeta);
+      await runFixBleed(file, fileMeta, mode);
     } catch (e) {
       console.error('Fix bleed failed', e);
       window.alert('Fix bleed failed: ' + (e as Error).message);

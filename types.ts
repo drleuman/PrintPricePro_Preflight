@@ -78,6 +78,7 @@ export interface Issue {
   bbox?: Bbox; // Optional bounding box for visual indication
   severity: Severity;
   category: IssueCategory;
+  title?: string;
   message: string;
   details?: string; // More detailed explanation of the issue
   /**
@@ -148,6 +149,7 @@ export type PreflightWorkerCommand =
     type: 'fixBleed';
     fileMeta: FileMeta;
     buffer: ArrayBuffer;
+    mode?: 'safe' | 'aggressive';
   }
   | {
     type: 'tacHeatmap';

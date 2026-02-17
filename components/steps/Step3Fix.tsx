@@ -29,7 +29,7 @@ interface Step3FixProps {
     onRunAnalysis: () => void;
     onRunHeatmap: () => void;
     onRunVisualCheck: () => void;
-    onFixBleed: () => void;
+    onFixBleed: (mode: 'safe' | 'aggressive') => void;
     onConvertGrayscale: () => void;
     onConvertCMYK: () => void;
     onRebuildPdf: () => void;

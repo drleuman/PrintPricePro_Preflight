@@ -104,6 +104,7 @@ export const en = {
   convertToGrayscaleBtn: '⚫ Convert to Grayscale',
   rebuildHighRes300dpi: '🛠️ Rebuild High-Res (300 DPI)',
   converting: 'Converting...',
+  fixing: 'Fixing...',
 
   // CMYK Profiles
   cmykProfile: 'CMYK Profile:',
@@ -112,6 +113,10 @@ export const en = {
   gracol2006: 'GRACoL 2006 (Coated #1)',
   swop2006: 'SWOP 2006 (Coated #3)',
   uncoatedFogra29: 'Uncoated FOGRA29',
+  bleedSafe: 'Safe (Box-only / Canvas)',
+  bleedAggressive: 'Aggressive (Scale-fill)',
+  bleedMode: 'Bleed Mode:',
+  bleedSafeHint: 'Safe mode adds margin without stretching. Border may appear white. Note: Interactive elements (links/annotations) might not be preserved.',
 
   // Optional Tools (Step 4)
   optionalTools: 'Optional Tools',

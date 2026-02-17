@@ -108,6 +108,7 @@ export const es = {
   convertToGrayscaleBtn: '⚫ Convertir a Escala de Grises',
   rebuildHighRes300dpi: '🛠️ Reconstruir Alta Resolución (300 DPI)',
   converting: 'Convirtiendo...',
+  fixing: 'Corrigiendo...',
 
   // CMYK Profiles
   cmykProfile: 'Perfil CMYK:',
@@ -116,6 +117,10 @@ export const es = {
   gracol2006: 'GRACoL 2006 (Coated #1)',
   swop2006: 'SWOP 2006 (Coated #3)',
   uncoatedFogra29: 'Uncoated FOGRA29',
+  bleedSafe: 'Seguro (Solo Boxes / Lienzo)',
+  bleedAggressive: 'Agresivo (Escalado-relleno)',
+  bleedMode: 'Modo de Sangrado:',
+  bleedSafeHint: 'El modo seguro añade margen sin deformar. El diseño puede quedar con borde blanco. Nota: Las acciones interactivas (links/anotaciones) podrían no conservarse.',
 
   // Optional Tools (Step 4)
   optionalTools: 'Herramientas Opcionales',
