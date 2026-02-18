@@ -278,11 +278,16 @@ export const en = {
   spotRiskGreen: 'GREEN',
   spotRiskAttention: 'ATTENTION',
   spotRiskBlocking: 'BLOCKING',
-  spotWarnWhitelistOnly: 'Only technical spot colors detected (whitelisted).',
-  spotWarnNonWhitelist: 'Non-whitelisted spot colors detected.',
+  spotWarnWhitelistOnly: 'Only technical spot colors detected (printer whitelist).',
+  spotWarnNonWhitelist: 'Non-whitelisted spot colors detected for this profile.',
   spotNoteTacIncluded: 'Spots are included in the TAC estimate (spot-to-CMYK conversion).',
-  spotNoteRegistration: 'Registration color detected (/All or /Registration).',
-  spotNoteSpotsInText: 'Spot colors detected in text; conversion may affect sharpness.',
+  spotNoteRegistration: 'Registration color detected (/All or /Registration); forbidden in artwork.',
+  spotNoteSpotsInText: 'Spot colors detected in text; conversion may affect typographic sharpness.',
+
+  bleedMethod: 'Bleed Method:',
+  bleedMethodScale: 'Centered Scaling (V3)',
+  bleedMethodBox: 'Box Adjustment (Real Margin)',
+  bleedScaleWarning: 'Aggressive scaling detected (>4%). Safety margins are compressed.',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

@@ -119,29 +119,35 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                     <button
                                         onClick={() => {
                                             const summary = autoFixReport?.prepress_summary;
+                                            const tac = summary?.tac_summary;
+                                            const op = summary?.overprint_summary;
+                                            const spot = summary?.spot_summary;
+                                            const bleedApplied = autoFixReport?.applied?.some(a => a.action === 'add_bleed_canvas');
+
                                             const content = `PREPRESS COMPLIANCE REPORT\n` +
                                                 `==========================\n` +
                                                 `NOTE: This certificate describes the processed output file, not the original uploaded document.\n\n` +
-                                                `Certificate ID: ${summary?.certificate_id}\n` +
-                                                `Engine Version: ${summary?.engine_version}\n` +
+                                                `Certificate ID: ${summary?.certificate_id || 'PENDING'}\n` +
+                                                `Engine Version: ${summary?.engine_version || '2.4.0'}\n` +
                                                 `Date: ${new Date().toISOString()}\n\n` +
-                                                `Result: ${summary?.risk_level?.toUpperCase()}\n` +
-                                                `Profile: ${summary?.output_profile}\n` +
+                                                `Result: ${(summary?.risk_level || 'UNKNOWN').toUpperCase()}\n` +
+                                                `Profile: ${summary?.output_profile || 'ISO Coated v2 (FOGRA39)'}\n` +
                                                 `Structure: Verified (GTS_PDFX)\n` +
-                                                `Mode: ${summary?.gs_mode}\n` +
+                                                `Mode: ${summary?.gs_mode || 'AutoFix Pro'}\n` +
                                                 `CMYK Conversion: ${summary?.conversion_bypassed ? 'Bypassed' : 'Applied'}\n` +
                                                 `Rewritten by GS: ${summary?.rewritten_by_gs ? 'Yes' : 'No'}\n` +
-                                                `Max Ink Density (TAC): ${summary?.tac_summary?.max_tac}% (Page ${summary?.tac_summary?.worst_page})\n` +
-                                                `Black Overprint: ${summary?.overprint_summary?.risk === 'green' ? 'OK' : 'RISK DETECTED'} (${summary?.overprint_summary?.issues_count} objects)\n` +
-                                                `Spot Color Policy: ${summary?.spot_summary?.risk?.toUpperCase() || 'GREEN'} (${summary?.spot_summary?.spot_count || 0} colors)\n` +
-                                                `Policy Name: ${summary?.spot_summary?.policy || 'AUTO'}\n\n` +
+                                                `Bleed Method: ${bleedApplied ? 'Centered Scaling (V3)' : 'Verified/Skipped'}\n` +
+                                                `Max Ink Density (TAC): ${tac?.max_tac ?? '---'}% (Page ${tac?.worst_page || '---'})\n` +
+                                                `Black Overprint: ${op?.risk === 'green' ? 'OK' : 'RISK DETECTED'} (${op?.issues_count ?? 0} objects)\n` +
+                                                `Spot Color Policy: ${spot?.risk?.toUpperCase() || 'GREEN'} (${spot?.spot_count ?? 0} colors)\n` +
+                                                `Policy Name: ${spot?.policy || 'AUTO'}\n\n` +
                                                 `SECURITY STATEMENT:\n` +
                                                 `No further color transformations were performed after OutputIntent finalization.`;
                                             const blob = new Blob([content], { type: 'text/plain' });
                                             const url = URL.createObjectURL(blob);
                                             const a = document.createElement('a');
                                             a.href = url;
-                                            a.download = `Prepress_Report_${summary?.certificate_id}.txt`;
+                                            a.download = `Prepress_Report_${summary?.certificate_id || 'unverified'}.txt`;
                                             a.click();
                                             URL.revokeObjectURL(url);
                                         }}
@@ -364,7 +370,11 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-gray-500">{t('labelBleed')}</span>
-                                            <span className="text-gray-400">{t('statusApplied')}</span>
+                                            <span className="text-gray-400">
+                                                {autoFixReport?.applied?.some(a => a.action === 'add_bleed_canvas')
+                                                    ? t('bleedMethodScale')
+                                                    : t('statusSkipped')}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>

@@ -449,91 +449,68 @@ async function addBleed(
     }
 
     // Artwork real (TrimBox width/height are already native-relative in pdf-lib)
-    const artW = trimBox.width;
-    const artH = trimBox.height;
-
-    let appliedMode: 'box-only' | 'canvas-expand' | 'scale-fill' =
-      'canvas-expand';
+    let appliedMode: 'box-only' | 'scale-to-bleed' = 'scale-to-bleed';
     let reason = '';
+    let scaleFactor = 1.0;
 
-    if (mode === 'aggressive') {
-      appliedMode = 'scale-fill';
-      reason = 'user-choice';
+    // Side-check for existing margins
+    const left = trimBox.x - cropBox.x;
+    const bottom = trimBox.y - cropBox.y;
+    const right = cropBox.x + cropBox.width - (trimBox.x + trimBox.width);
+    const top = cropBox.y + cropBox.height - (trimBox.y + trimBox.height);
+    const minMargin = Math.min(left, bottom, right, top);
+
+    if (mode !== 'aggressive' && minMargin >= bleedPt - EPSILON) {
+      appliedMode = 'box-only';
+      reason = 'margin-found';
     } else {
-      // Per-side margin check: TrimBox relative to CropBox (baseBox)
-      // Since trimBox coordinates are usually in the same system as cropBox/mediaBox
-      const left = trimBox.x - cropBox.x;
-      const bottom = trimBox.y - cropBox.y;
-      const right = cropBox.x + cropBox.width - (trimBox.x + trimBox.width);
-      const top = cropBox.y + cropBox.height - (trimBox.y + trimBox.height);
-
-      const minMargin = Math.min(left, bottom, right, top);
-
-      if (minMargin >= bleedPt - EPSILON) {
-        appliedMode = 'box-only';
-        reason = 'margin-found';
-      } else {
-        appliedMode = 'canvas-expand';
-        reason = 'no-margin';
-      }
+      appliedMode = 'scale-to-bleed';
+      reason = mode === 'aggressive' ? 'user-choice' : 'no-margin';
     }
 
     appliedModes.push(appliedMode);
 
     if (appliedMode === 'box-only') {
-      // Keep native size from cropBox
       const finalW = cropBox.width;
       const finalH = cropBox.height;
       const newPage = dstDoc.addPage([finalW, finalH]);
       newPage.setRotation(rotation);
 
       // Draw content relative to original origin
-      // Account for cropBox.x/y offset if the original didn't start at MediaBox origin
       newPage.drawPage(embedded, { x: -cropBox.x, y: -cropBox.y });
 
       newPage.setMediaBox(0, 0, finalW, finalH);
       newPage.setCropBox(0, 0, finalW, finalH);
-
-      // Seteamos TrimBox a 3mm dentro del CropBox
-      newPage.setTrimBox(
-        bleedPt,
-        bleedPt,
-        finalW - 2 * bleedPt,
-        finalH - 2 * bleedPt
-      );
-      newPage.setBleedBox(0, 0, finalW, finalH);
-    } else if (appliedMode === 'canvas-expand') {
-      const finalW = nativeW + bleedPt * 2;
-      const finalH = nativeH + bleedPt * 2;
-
-      const newPage = dstDoc.addPage([finalW, finalH]);
-      newPage.setRotation(rotation);
-      newPage.drawPage(embedded, { x: bleedPt, y: bleedPt });
-
-      newPage.setMediaBox(0, 0, finalW, finalH);
-      newPage.setCropBox(0, 0, finalW, finalH);
-      newPage.setTrimBox(bleedPt, bleedPt, nativeW, nativeH);
+      newPage.setTrimBox(bleedPt, bleedPt, finalW - 2 * bleedPt, finalH - 2 * bleedPt);
       newPage.setBleedBox(0, 0, finalW, finalH);
     } else {
-      // scale-fill (Aggressive)
+      // Scale-to-Bleed Centered (Industrial V3)
       const finalW = nativeW + bleedPt * 2;
       const finalH = nativeH + bleedPt * 2;
 
       const sx = finalW / nativeW;
       const sy = finalH / nativeH;
-      const s = Math.max(sx, sy);
+      scaleFactor = Math.max(sx, sy);
 
-      const drawW = nativeW * s;
-      const drawH = nativeH * s;
+      const drawW = nativeW * scaleFactor;
+      const drawH = nativeH * scaleFactor;
+
+      // Centering Formula: (CanvasSize - ScaledSize) / 2
       const drawX = (finalW - drawW) / 2;
       const drawY = (finalH - drawH) / 2;
 
       const newPage = dstDoc.addPage([finalW, finalH]);
       newPage.setRotation(rotation);
-      newPage.drawPage(embedded, { x: drawX, y: drawY, xScale: s, yScale: s });
+      newPage.drawPage(embedded, {
+        x: drawX,
+        y: drawY,
+        xScale: scaleFactor,
+        yScale: scaleFactor
+      });
 
       newPage.setMediaBox(0, 0, finalW, finalH);
       newPage.setCropBox(0, 0, finalW, finalH);
+      // TrimBox is the original intended size (Internal)
       newPage.setTrimBox(bleedPt, bleedPt, nativeW, nativeH);
       newPage.setBleedBox(0, 0, finalW, finalH);
     }
@@ -541,7 +518,7 @@ async function addBleed(
     post({
       type: 'analysisProgress',
       progress: ((i + 1) / pages.length) * 100,
-      note: `Fixing bleed P${i + 1} (${appliedMode}: ${reason})`,
+      note: `Fixing bleed P${i + 1} (${appliedMode}${scaleFactor > 1.0 ? ` s:${scaleFactor.toFixed(4)}` : ''})`,
     });
   }
 

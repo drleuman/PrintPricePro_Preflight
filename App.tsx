@@ -421,7 +421,9 @@ export default function App() {
       setProcessMessage(null);
       setProcessStage(undefined);
 
-      const isServerDown = e.message?.includes('500') || e.message?.includes('Failed to fetch') || e.message?.includes('unreachable');
+      const isServerDown = e.message?.includes('Failed to fetch') || e.message?.includes('unreachable');
+      const isProcessingError = e.status >= 500 || e.message?.includes('GS Error');
+
       if (isServerDown) {
         setServerAvailable(false);
       }
@@ -435,9 +437,9 @@ export default function App() {
         alert('AutoFix Blocked: The result was rasterized (images only), which violates the "Strict Vector" policy. See the report specific details.');
       } else {
         const errorMsg = isServerDown
-          ? 'SERVER CONNECTION REQUIRED: The backend service is currently unavailable or returned a 500 error. Please ensure the server is running.'
-          : (e.message || e);
-        alert(`AutoFix failed: ${errorMsg}`);
+          ? 'SERVER UNREACHABLE: Please ensure the backend service is running locally.'
+          : (isProcessingError ? `PROCESSING FAILED (500): The server encountered an error (timeout, memory, or Ghostscript crash). Try a smaller file or manual mode.` : (e.message || e));
+        alert(`AutoFix Error: ${errorMsg}`);
       }
     }
   }, [file, fileMeta, result, autoFixServer, downloadAndRemember, updateFileState, runAnalysis]);
@@ -465,12 +467,13 @@ export default function App() {
 
     } catch (e: any) {
       console.error('convertColors failed', e);
-      const isServerDown = e.message?.includes('500') || e.message?.includes('Failed to fetch');
+      const isServerDown = e.message?.includes('Failed to fetch');
+      const isProcessingError = e.status >= 500 || e.message?.includes('GS Error');
       if (isServerDown) setServerAvailable(false);
 
       window.alert(isServerDown
-        ? 'Color conversion requires server connection. The server seems to be offline or returned an error (500).'
-        : `Color conversion failed: ${e.message}`);
+        ? 'Server is unreachable. Please ensure the backend is running.'
+        : (isProcessingError ? 'Server error (500) during conversion. The file might be too complex for a single pass.' : `Conversion failed: ${e.message}`));
     } finally {
       setProcessMessage(null);
     }

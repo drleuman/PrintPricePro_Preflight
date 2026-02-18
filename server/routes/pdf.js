@@ -480,60 +480,42 @@ async function addBleedCanvasPdf(inputPath, outPath, bleedMm) {
     const pages = src.getPages();
     for (let i = 0; i < pages.length; i++) {
         const p = pages[i];
-        const { width, height } = p.getSize();
+        const rotation = p.getRotation();
+        const { width, height } = p.getSize(); // native size
 
-        // Embed the page once as a resource
         const [embedded] = await dst.embedPages([p]);
 
+        // Target: Original + 3mm bleed on all sides
         const newW = width + (bleedPt * 2);
         const newH = height + (bleedPt * 2);
 
+        // Calculate Scale-to-Bleed (Industrial V3)
+        const sx = newW / width;
+        const sy = newH / height;
+        const scale = Math.max(sx, sy);
+
+        const drawW = width * scale;
+        const drawH = height * scale;
+
+        // Centering: (Canvas - ScaledContent) / 2
+        const drawX = (newW - drawW) / 2;
+        const drawY = (newH - drawH) / 2;
+
         const newPage = dst.addPage([newW, newH]);
-
-        /**
-         * "Real Bleed" Professional Strategy:
-         * 1. Layer 1 (Bottom): We draw the page slightly enlarged to fill the bleed area.
-         *    This ensures no white gaps even if the original design didn't have bleed.
-         * 2. Layer 2 (Top): We draw the page at exactly 100% scale, centered.
-         *    This ensures text and critical elements remain at their original exact measurements.
-         */
-
-        // LAYER 1: Background (Scaled to cover everything)
-        // We use a small extra factor (e.g., 1.01) if necessary, but here we cover newW/newH
-        const sBg = Math.max(newW / width, newH / height);
-        const wBg = width * sBg;
-        const hBg = height * sBg;
-        const xBg = (newW - wBg) / 2;
-        const yBg = (newH - hBg) / 2;
+        newPage.setRotation(rotation);
 
         newPage.drawPage(embedded, {
-            x: xBg,
-            y: yBg,
-            xScale: sBg,
-            yScale: sBg,
-            opacity: 1 // We can even dim it or blur it if we wanted, but standard is full opacity
+            x: drawX,
+            y: drawY,
+            xScale: scale,
+            yScale: scale
         });
 
-        // LAYER 2: Foreground (The "Real" content at 1:1)
-        const xFg = bleedPt;
-        const yFg = bleedPt;
-
-        newPage.drawPage(embedded, {
-            x: xFg,
-            y: yFg,
-            xScale: 1,
-            yScale: 1
-        });
-
-        /**
-         * Professional PDF Box Geometry:
-         * TrimBox: The final size after cutting (the original size).
-         * BleedBox: The area that contains the extra 3mm.
-         * MediaBox: The physical canvas size.
-         */
+        // Set technical boxes
+        newPage.setMediaBox(0, 0, newW, newH);
+        newPage.setCropBox(0, 0, newW, newH);
         newPage.setTrimBox(bleedPt, bleedPt, width, height);
         newPage.setBleedBox(0, 0, newW, newH);
-        // MediaBox is set automatically by addPage([newW, newH])
     }
     const outBytes = await dst.save();
     fs.writeFileSync(outPath, outBytes);
@@ -886,6 +868,11 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
         startedAt: new Date().toISOString()
     };
 
+    // --- Pre-extract issues for cross-module analysis ---
+    const knockoutIssues = issues.filter(i => i.id === 'black-text-knockout');
+    const registrationIssues = issues.filter(i => i.id === 'registration-color-used');
+    const richBlackIssues = issues.filter(i => i.id === 'rich-black-text');
+
     // --- Spot Color Policy Analysis ---
     const spotIssue = issues.find(i => i.id === 'spot-colors-detected');
     const spotData = spotIssue ? spotIssue.payload : { spot_names: [], page_spots: {}, spots_in_text: false };
@@ -939,9 +926,6 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
     };
 
     // --- Overprint Analysis (from preflight payload) ---
-    const knockoutIssues = issues.filter(i => i.id === 'black-text-knockout');
-    const registrationIssues = issues.filter(i => i.id === 'registration-color-used');
-    const richBlackIssues = issues.filter(i => i.id === 'rich-black-text');
 
     // Aggregate worst page for overprint
     const opPages = [...knockoutIssues, ...registrationIssues, ...richBlackIssues].map(i => i.page);
@@ -1036,7 +1020,7 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
 
                 // Expanded color detection for safer bypass
                 const hasColorIssues = issues.some(i =>
-                    ['rgb-colors', 'cmyk-colors', 'spot-colors', 'unintended-colors',
+                    ['rgb-colors', 'cmyk-colors', 'spot-colors-detected', 'unintended-colors',
                         'mixed-rgb-cmyk', 'rgb-only-content', 'overprint-detected'].includes(i.id)
                 );
 
@@ -1110,7 +1094,7 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
 
     // --- TAC Scan: Final viability check ---
     try {
-        const hasSpots = issues.some(i => i.id === 'spot-colors');
+        const hasSpots = issues.some(i => i.id === 'spot-colors-detected');
         const tacResult = await scanTac(currentPath, options.profile, hasSpots);
         report.prepress_summary.tac_summary = tacResult;
 
