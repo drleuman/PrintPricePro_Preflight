@@ -7,6 +7,16 @@ const crypto = require('crypto');
 const { PDFDocument, PDFName, PDFArray, PDFDict, pushGraphicsState, popGraphicsState, concatTransformationMatrix } = require('pdf-lib');
 const { runGs, sendPdfAndCleanup, safeUnlink, safeRmDir } = require('../services/ghostscript');
 const { spawn } = require('child_process');
+const JobManager = require('../services/jobManager');
+const JobProcessor = require('../services/jobProcessor');
+const { getPdfInfoGS, getPdfGeometryGS } = require('../utils/pdfInfo');
+const {
+    normalizeProfile,
+    gsConvertColor,
+    gsFlattenTransparency,
+    rebuildAtDpi,
+    addBleedCanvasPdf
+} = require('../services/pdfPipeline');
 
 function execCmd(cmd, args, opts = {}) {
     const timeoutMs = opts.timeoutMs ?? 60000; // Increased timeout for larger docs
@@ -156,7 +166,7 @@ const upload = multer({
             cb(null, `${Date.now()}_${Math.random().toString(16).slice(2)}_${safe}`);
         },
     }),
-    limits: { fileSize: 60 * 1024 * 1024 },
+    limits: { fileSize: 500 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
         if (file.mimetype === 'application/pdf') {
             cb(null, true);
@@ -173,7 +183,12 @@ async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmati
     const customPath = process.env.GS_PATH;
     const gsCmd = customPath || (process.platform === 'win32' ? 'gswin64c' : 'gs');
 
-    const limitMap = { 'fogra39': 300, 'gracol': 320, 'swop': 300, 'fogra51': 300 };
+    const limitMap = {
+        'iso_coated_v3': 300,
+        'iso_uncoated_v3': 260,
+        'gracol': 320,
+        'swop': 300
+    };
     const limit = limitMap[requestedProfile] || 300;
     const dpi = isConfirmation ? 150 : 72;
 
@@ -1011,8 +1026,17 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
             if (planStep.action === 'convert_cmyk') {
                 // Optimization: Skip if source already matches requested profile AND no color issues found
                 const requestedProf = normalizeProfile(options.profile);
-                const condMap = { 'fogra39': 'FOGRA39', 'gracol': 'GRACoL', 'swop': 'SWOP' };
+                const condMap = {
+                    'iso_coated_v3': 'FOGRA51',
+                    'iso_uncoated_v3': 'FOGRA52',
+                    'gracol': 'GRACoL',
+                    'swop': 'SWOP'
+                };
                 const expectedCond = condMap[requestedProf] || requestedProf;
+
+                // Legacy migration check: If source is FOGRA39/29, we MUST force conversion to FOGRA51/52
+                const sourceIsLegacy = sourceOI.identifier === 'FOGRA39' || sourceOI.identifier === 'COATED FOGRA39' || sourceOI.identifier === 'FOGRA29';
+                const forcedMigration = sourceIsLegacy && (requestedProf === 'iso_coated_v3' || requestedProf === 'iso_uncoated_v3');
 
                 // Expanded color detection for safer bypass
                 const hasColorIssues = issues.some(i =>
@@ -1020,7 +1044,7 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
                         'mixed-rgb-cmyk', 'rgb-only-content', 'overprint-detected'].includes(i.id)
                 );
 
-                if (sourceOI.identifier === expectedCond && sourceOI.present && !hasColorIssues) {
+                if (sourceOI.identifier === expectedCond && sourceOI.present && !hasColorIssues && !forcedMigration) {
                     report.applied.push({ step: 'convert_cmyk', status: 'skipped', reason: 'Source matches requested OutputIntent & no RGB/Spot issues detected' });
                     report.prepress_summary.conversion_bypassed = true;
                     report.prepress_summary.bypassed_stage = 'convert_cmyk';
@@ -1037,6 +1061,10 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
                     report.prepress_summary.outputintent_identifier = v.identifier;
                     report.prepress_summary.matches_requested_profile = (v.identifier === v.expectedCond);
                     stepOk = true;
+                    if (forcedMigration) {
+                        stepWarnings.push(`Migrated legacy ${sourceOI.identifier} to modern ${expectedCond} (forced).`);
+                        report.prepress_summary.source_legacy_detected = sourceOI.identifier;
+                    }
                 } else {
                     const v = await gsConvertColor(currentPath, outPath, options.profile, { finalizeOnly: false });
                     report.prepress_summary.finalize_stage_ran = true;
@@ -1048,6 +1076,10 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
                     report.prepress_summary.outputintent_identifier = v.identifier;
                     report.prepress_summary.matches_requested_profile = (v.identifier === v.expectedCond);
                     stepOk = true;
+                    if (forcedMigration) {
+                        stepWarnings.push(`Migrated legacy ${sourceOI.identifier} to modern ${expectedCond}.`);
+                        report.prepress_summary.source_legacy_detected = sourceOI.identifier;
+                    }
                 }
             } else if (planStep.action === 'add_bleed_canvas') {
                 await addBleedCanvasPdf(currentPath, outPath, options.bleedMm);
@@ -1110,7 +1142,7 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
     // --- TAC Scan: Final viability check ---
     try {
         const hasSpots = issues.some(i => i.id === 'spot-colors-detected');
-        const tacResult = await scanTac(currentPath, options.profile, hasSpots);
+        const tacResult = await scanTac(currentPath, normalizeProfile(options.profile), hasSpots);
         report.prepress_summary.tac_summary = tacResult;
 
         // Update risk if TAC is problematic
@@ -1195,10 +1227,74 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
     if (!inputPath) return res.status(400).json({ error: 'No PDF uploaded' });
 
     const originalFilename = req.file?.originalname || 'document.pdf';
+    const fileSize = req.file?.size || 0;
 
+    // --- LARGE DOCUMENT MODE (LDM) DETECTION ---
+    let pageCount = 0;
+    try {
+        const info = await getPdfInfoGS(inputPath);
+        pageCount = info.pageCount;
+    } catch (e) {
+        console.warn('Fast page count failed, falling back to 0', e.message);
+    }
+
+    const isLDM = fileSize > 80 * 1024 * 1024 || pageCount > 150;
+
+    if (isLDM) {
+        const job = await JobManager.createJob(originalFilename);
+        const jobPath = JobManager.getOriginalPath(job.id);
+
+        // Move file to job directory
+        fs.renameSync(inputPath, jobPath);
+
+        // Streaming SHA256 calculation (post-upload but before backgrounding)
+        const hash = crypto.createHash('sha256');
+        const stream = fs.createReadStream(jobPath);
+        stream.on('data', (d) => hash.update(d));
+        await new Promise(resolve => stream.on('end', resolve));
+        const sha256 = hash.digest('hex');
+
+        await JobManager.updateJob(job.id, {
+            large_mode: true,
+            status: 'QUEUED',
+            file_path_original: jobPath,
+            file_sha256: sha256,
+            file_size_bytes: fileSize,
+            page_count: pageCount
+        });
+
+        // Trigger background processing
+        const options = {
+            target: String(req.body.target || 'cmyk').toLowerCase(),
+            profile: normalizeProfile(req.body.profile || 'iso_coated_v3'),
+            bleedMm: Number(req.body.bleedMm ?? 3) || 3,
+            dpiPreferred: Number(req.body.dpiPreferred ?? 300) || 300,
+            dpiMin: Number(req.body.dpiMin ?? 150) || 150,
+            safeOnly: String(req.body.safeOnly || '1') === '1',
+            aggressive: String(req.body.aggressive || '0') === '1',
+            forceRebuild: String(req.body.forceRebuild || '0') === '1',
+            forceBleed: String(req.body.forceBleed || '1') === '1',
+            forceCmyk: String(req.body.forceCmyk || '1') === '1',
+            flatten: String(req.body.flatten || '0') === '1',
+            strictVector: String(req.body.strictVector || '1') === '1',
+        };
+
+        // Enqueue first task: SPLIT
+        await JobManager.enqueueTask(job.id, 'SPLIT', options);
+
+        return res.json({
+            ok: true,
+            jobId: job.id,
+            status: 'QUEUED',
+            largeDocumentMode: true,
+            message: 'Your large document has been enqueued for background processing.'
+        });
+    }
+
+    // --- NORMAL MODE (CONTINUE AS BEFORE) ---
     const options = {
         target: String(req.body.target || 'cmyk').toLowerCase(),
-        profile: normalizeProfile(req.body.profile || 'iso_coated_v2'),
+        profile: normalizeProfile(req.body.profile || 'iso_coated_v3'),
         bleedMm: Number(req.body.bleedMm ?? 3) || 3,
         dpiPreferred: Number(req.body.dpiPreferred ?? 300) || 300,
         dpiMin: Number(req.body.dpiMin ?? 150) || 150,
@@ -1333,6 +1429,75 @@ router.post('/preview/pages', upload.single('file'), async (req, res) => {
         safeUnlink(inputPath);
         safeRmDir(tmpDir);
     }
+});
+
+// --- LDM JOB STATUS ENDPOINT ---
+router.get('/job/status/:id', async (req, res) => {
+    const job = await JobManager.getJob(req.params.id);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    res.json(job);
+});
+
+// --- LDM JOB CANCEL ENDPOINT ---
+router.post('/job/cancel/:id', async (req, res) => {
+    await JobManager.cancelJob(req.params.id);
+    res.json({ ok: true, message: 'Job cancellation requested' });
+});
+
+// --- LDM PAGE PREVIEW ENDPOINT ---
+router.get('/preview/:jobId/:page', async (req, res) => {
+    const { jobId, page } = req.params;
+    const job = await JobManager.getJob(jobId);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+
+    const pageInt = parseInt(page);
+    const jobDir = JobManager.getJobDir(jobId);
+    const previewPath = path.join(jobDir, 'previews', `page_${pageInt}.png`);
+
+    // Check cache
+    if (fs.existsSync(previewPath)) {
+        return res.sendFile(previewPath);
+    }
+
+    // On-demand render
+    const originalPath = JobManager.getOriginalPath(jobId);
+    const previewDir = path.dirname(previewPath);
+    if (!fs.existsSync(previewDir)) fs.mkdirSync(previewDir, { recursive: true });
+
+    try {
+        await runGs([
+            '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
+            '-sDEVICE=png16m',
+            '-r150',
+            '-dUseCropBox',
+            `-dFirstPage=${pageInt}`,
+            `-dLastPage=${pageInt}`,
+            '-o', previewPath,
+            originalPath
+        ]);
+        res.sendFile(previewPath);
+    } catch (err) {
+        console.error('LDM preview failed:', err);
+        res.status(500).json({ error: 'Preview failed' });
+    }
+});
+
+// --- LDM DOWNLOAD ENDPOINT ---
+router.get('/download-job/:jobId', async (req, res) => {
+    const { jobId } = req.params;
+    const job = await JobManager.getJob(jobId);
+    if (!job || job.status !== 'CERTIFIED') {
+        return res.status(404).json({ error: 'Job not ready or not found' });
+    }
+
+    const jobDir = JobManager.getJobDir(jobId);
+    const finalPath = path.join(jobDir, 'final_fixed.pdf');
+
+    if (!fs.existsSync(finalPath)) {
+        return res.status(404).json({ error: 'Final file missing' });
+    }
+
+    res.download(finalPath, `${job.original_name.replace(/\.pdf$/i, '')}_fixed_ldm.pdf`);
 });
 
 module.exports = router;

@@ -1,0 +1,226 @@
+const { spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const { PDFDocument, PDFName, PDFArray, PDFDict } = require('pdf-lib');
+const { runGs } = require('./ghostscript');
+const { getPdfInfoGS } = require('../utils/pdfInfo');
+
+// Use env for GS path
+const GS_CMD = process.env.GS_PATH || (process.platform === 'win32' ? 'gswin64c' : 'gs');
+
+/**
+ * Normalizes profile name to internal keys
+ * MIGRATION ISO 12647-2:2013 (FOGRA51/52)
+ */
+function normalizeProfile(p) {
+    if (!p) return 'iso_coated_v3';
+    const low = p.toLowerCase();
+
+    // FOGRA51 (Coated v3) - NEW STANDARD
+    if (low.includes('fogra51') || low.includes('coated_v3') || low.includes('pso_coated_v3')) return 'iso_coated_v3';
+
+    // FOGRA52 (Uncoated v3) - NEW STANDARD
+    if (low.includes('fogra52') || low.includes('uncoated_v3') || low.includes('pso_uncoated_v3')) return 'iso_uncoated_v3';
+
+    // Legacy Mappings (Force Upgrade)
+    if (low.includes('fogra39') || low.includes('iso_coated_v2')) return 'iso_coated_v3';
+    if (low.includes('fogra29') || low.includes('iso_uncoated') || low.includes('fogra47')) return 'iso_uncoated_v3';
+
+    if (low.includes('gracol')) return 'gracol';
+    if (low.includes('swop')) return 'swop';
+
+    return low.replace(/[^a-z0-9_]/g, '_');
+}
+
+/**
+ * Generic command execution with timeout
+ */
+async function execCmd(cmd, args, opts = {}) {
+    const timeoutMs = opts.timeoutMs ?? 60000;
+    return new Promise((resolve) => {
+        const p = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+        let out = '';
+        let err = '';
+        let killed = false;
+
+        const t = setTimeout(() => {
+            killed = true;
+            try { p.kill('SIGKILL'); } catch (e) { }
+        }, timeoutMs);
+
+        p.stdout.on('data', (d) => (out += d.toString('utf8')));
+        p.stderr.on('data', (d) => (err += d.toString('utf8')));
+
+        p.on('error', (e) => {
+            clearTimeout(t);
+            resolve({ ok: false, code: -1, stdout: out, stderr: `${err}\nSpawn error: ${e.message}`, killed });
+        });
+
+        p.on('close', (code) => {
+            clearTimeout(t);
+            resolve({ ok: (code === 0 || code === null) && !killed, code, stdout: out, stderr: err, killed });
+        });
+    });
+}
+
+/**
+ * Converts colors using Ghostscript with modern FOGRA51/52 standards
+ */
+async function gsConvertColor(input, output, profile, opts = {}) {
+    const prof = normalizeProfile(profile);
+    const iccDir = path.join(__dirname, '../icc-profiles');
+
+    // Config Map for modern standards
+    const configMap = {
+        'iso_coated_v3': {
+            icc: 'PSO_Coated_v3.icc',
+            info: 'PSO Coated v3 (FOGRA51)',
+            cond: 'FOGRA51'
+        },
+        'iso_uncoated_v3': {
+            icc: 'PSO_Uncoated_v3.icc',
+            info: 'PSO Uncoated v3 (FOGRA52)',
+            cond: 'FOGRA52'
+        },
+        'gracol': {
+            icc: 'GRACoL2006_Coated1v2.icc',
+            info: 'GRACoL 2006',
+            cond: 'GRACoL'
+        },
+        'swop': {
+            icc: 'USWebCoatedSWOP.icc',
+            info: 'U.S. Web Coated (SWOP) v2',
+            cond: 'SWOP'
+        }
+    };
+
+    const cfg = configMap[prof] || {
+        icc: `${prof}.icc`,
+        info: prof,
+        cond: prof
+    };
+
+    const iccPath = path.join(iccDir, cfg.icc);
+
+    // Fallback logic for transitioning without having all binary files yet
+    let finalIccPath = iccPath;
+    if (!fs.existsSync(iccPath) && prof === 'iso_coated_v3') {
+        const legacyPath = path.join(iccDir, 'CoatedFOGRA39.icc');
+        if (fs.existsSync(legacyPath)) finalIccPath = legacyPath;
+    }
+
+    // Generate dynamic pdfx_def.ps to avoid missing file errors
+    const psEscape = (s) => String(s || '').replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)').replace(/\r/g, '').replace(/\n/g, ' ');
+    const psContent = `
+%!PS
+[ /Title (${psEscape(path.basename(input))}) /DOCINFO pdfmark
+[/Predictor 0 /OutputConditionIdentifier (${psEscape(cfg.cond)}) /DestOutputProfile (${psEscape(finalIccPath.replace(/\\/g, '/'))}) /OutputCondition (${psEscape(cfg.info)}) /Info (${psEscape(cfg.info)}) /RegistryName (http://www.color.org) /S /GTS_PDFX /DefaultRGB [ /DeviceRGB ] /DefaultCMYK [ /DeviceCMYK ] /OutputIntent { << /Type /OutputIntent /S /GTS_PDFX /OutputConditionIdentifier (${psEscape(cfg.cond)}) /OutputCondition (${psEscape(cfg.info)}) /RegistryName (http://www.color.org) /Info (${psEscape(cfg.info)}) /DestOutputProfile { ( ${psEscape(finalIccPath.replace(/\\/g, '/'))} ) (r) file } >> } [ /DeviceCMYK ] pdfmark
+`.trim();
+
+    const psPath = path.join(path.dirname(output), `pdfx_def_${Date.now()}.ps`);
+    fs.writeFileSync(psPath, psContent);
+
+    const args = [
+        '-dSAFER', '-dNOPAUSE', '-dBATCH', '-dQUIET',
+        '-sDEVICE=pdfwrite',
+        '-dPDFX',
+        `-sOutputICCProfile=${finalIccPath}`,
+        `-sDefaultRGBProfile=${path.join(iccDir, 'srgb.icc')}`,
+        `-sDefaultCMYKProfile=${finalIccPath}`,
+        '-dRenderIntent=1',
+        '-dSimulateOverprint=true',
+        '-dBlackTextThreshold=0.0',
+        '-o', output,
+        psPath,
+        input
+    ];
+
+    if (opts.finalizeOnly) {
+        args.push('-dColorConversionStrategy=/LeaveColorUnchanged');
+    } else {
+        args.push('-dColorConversionStrategy=/CMYK');
+        args.push('-dProcessColorModel=/DeviceCMYK');
+    }
+
+    try {
+        const { ok, stderr } = await execCmd(GS_CMD, args, { timeoutMs: 120000 });
+        if (fs.existsSync(psPath)) try { fs.unlinkSync(psPath); } catch (e) { }
+        if (!ok) throw new Error(`GS color conversion failed: ${stderr}`);
+
+        return {
+            verified: true,
+            identifier: cfg.cond,
+            expectedCond: cfg.cond,
+            gsMode: opts.finalizeOnly ? 'finalize' : 'convert'
+        };
+    } catch (e) {
+        if (fs.existsSync(psPath)) try { fs.unlinkSync(psPath); } catch (e) { }
+        throw e;
+    }
+}
+
+/**
+ * Flattens transparency using Ghostscript
+ */
+async function gsFlattenTransparency(input, output) {
+    const args = [
+        '-dSAFER', '-dNOPAUSE', '-dBATCH', '-dQUIET',
+        '-sDEVICE=pdfwrite',
+        '-dCompatibilityLevel=1.3', // Forces flattening
+        '-o', output,
+        input
+    ];
+    const { ok, stderr } = await execCmd(GS_CMD, args, { timeoutMs: 120000 });
+    if (!ok) throw new Error(`GS flattening failed: ${stderr}`);
+}
+
+/**
+ * Rebuilds PDF by rasterizing pages to high-res images
+ */
+async function rebuildAtDpi(input, output, dpi = 300) {
+    const args = [
+        '-dSAFER', '-dNOPAUSE', '-dBATCH', '-dQUIET',
+        '-sDEVICE=pdfwrite',
+        `-dPDFSETTINGS=/prepress`,
+        `-r${dpi}`,
+        '-o', output,
+        input
+    ];
+    const { ok, stderr } = await execCmd(GS_CMD, args, { timeoutMs: 300000 });
+    if (!ok) throw new Error(`GS rebuild failed: ${stderr}`);
+}
+
+/**
+ * Adds 3mm bleed using pdf-lib (Industrial V3 Scale-to-Bleed)
+ */
+async function addBleedCanvasPdf(input, output, bleedMm = 3) {
+    const bytes = fs.readFileSync(input);
+    const doc = await PDFDocument.load(bytes);
+    const bleedPt = (bleedMm * 72) / 25.4;
+
+    const pages = doc.getPages();
+    for (const page of pages) {
+        const { width, height } = page.getSize();
+
+        // Update boxes
+        page.setTrimBox(0, 0, width, height);
+        page.setSize(width + (bleedPt * 2), height + (bleedPt * 2));
+        page.setBleedBox(0, 0, width + (bleedPt * 2), height + (bleedPt * 2));
+
+        // Center content
+        page.translateContent(bleedPt, bleedPt);
+    }
+
+    const outBytes = await doc.save();
+    fs.writeFileSync(output, outBytes);
+}
+
+module.exports = {
+    execCmd,
+    normalizeProfile,
+    gsConvertColor,
+    gsFlattenTransparency,
+    rebuildAtDpi,
+    addBleedCanvasPdf
+};

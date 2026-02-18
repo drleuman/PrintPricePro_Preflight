@@ -97,7 +97,7 @@ export function usePdfTools() {
             safeOnly?: boolean;
             strictVector?: boolean;
         }
-    ): Promise<{ blob: Blob; report?: any }> => {
+    ): Promise<{ blob: Blob; report?: any; jobId?: string; ldm?: boolean }> => {
         setIsServerRunning(true);
         try {
             const formData = new FormData();
@@ -123,6 +123,14 @@ export function usePdfTools() {
                 cache: 'no-cache',
                 credentials: 'same-origin',
             });
+
+            const contentType = res.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const data = await res.json();
+                if (data.jobId) {
+                    return { blob: new Blob(), jobId: data.jobId, ldm: true };
+                }
+            }
 
             if (!res.ok) {
                 const reportHeader = res.headers.get('X-PPP-Autofix-Report');
@@ -160,6 +168,40 @@ export function usePdfTools() {
         } finally {
             setIsServerRunning(false);
         }
+    }, []);
+
+    const getJobStatus = useCallback(async (jobId: string) => {
+        const res = await fetch(`/api/convert/job/status/${jobId}`);
+        if (!res.ok) throw new Error('Failed to get job status');
+        return await res.json();
+    }, []);
+
+    const pollJob = useCallback(async (jobId: string, onProgress?: (p: number) => void) => {
+        return new Promise((resolve, reject) => {
+            const interval = setInterval(async () => {
+                try {
+                    const job = await getJobStatus(jobId);
+                    if (onProgress && job.progress !== undefined) onProgress(job.progress);
+
+                    if (job.status === 'CERTIFIED') {
+                        clearInterval(interval);
+                        // In LDM, we might need to fetch the final file separately?
+                        // For now, let's assume we return the job info
+                        resolve(job);
+                    } else if (job.status === 'FAILED') {
+                        clearInterval(interval);
+                        reject(new Error(job.error || 'Job failed'));
+                    }
+                } catch (e) {
+                    clearInterval(interval);
+                    reject(e);
+                }
+            }, 2000);
+        });
+    }, [getJobStatus]);
+
+    const getLdmPagePreviewUrl = useCallback((jobId: string, page: number) => {
+        return `/api/convert/preview/${jobId}/${page}`;
     }, []);
 
     const createBookletClient = useCallback(async (file: File) => {
@@ -202,5 +244,8 @@ export function usePdfTools() {
         autoFixServer,
         createBookletClient,
         generatePreviewServer,
+        getJobStatus,
+        pollJob,
+        getLdmPagePreviewUrl,
     };
 }

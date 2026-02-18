@@ -23,6 +23,8 @@ interface PageViewerProps {
   onRunVisualCheck?: () => void;
   previewPages?: string[] | null;
   previewLoading?: boolean;
+  ldmMode?: boolean;
+  ldmJobId?: string | null;
 }
 
 export const PageViewer: React.FC<PageViewerProps> = ({
@@ -39,6 +41,8 @@ export const PageViewer: React.FC<PageViewerProps> = ({
   onRunVisualCheck,
   previewPages,
   previewLoading,
+  ldmMode,
+  ldmJobId,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pdfRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
@@ -64,6 +68,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
   // Effect to load PDF when file changes
   useEffect(() => {
     const loadPdf = async () => {
+      if (ldmMode) return; // In LDM Mode we don't load the full PDF in PDF.js
       if (!file) {
         if (pdfRef.current) {
           pdfRef.current.destroy();
@@ -105,6 +110,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
   // Render Page
   useEffect(() => {
     const renderPage = async () => {
+      if (ldmMode) return;
       const canvas = canvasRef.current;
       if (!canvas || !pdfRef.current || currentPage < 1 || currentPage > numPages || numPages === 0) {
         if (canvas) {
@@ -322,23 +328,39 @@ export const PageViewer: React.FC<PageViewerProps> = ({
         )}
 
         {/* The PDF.js Canvas (fallback or base for overlays) */}
-        <canvas
-          ref={canvasRef}
-          className="shadow-lg border border-gray-300 max-w-full h-auto block"
-          style={{
-            position: 'relative',
-            zIndex: 1,
-            display: previewPages?.[currentPage - 1] ? 'none' : 'block'
-          }}
-        />
+        {!ldmMode && (
+          <canvas
+            ref={canvasRef}
+            className="shadow-lg border border-gray-300 max-w-full h-auto block"
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              display: previewPages?.[currentPage - 1] ? 'none' : 'block'
+            }}
+          />
+        )}
 
         {/* The Server-side PNG (high-quality CMYK + Transparency) */}
-        {previewPages?.[currentPage - 1] && (
+        {previewPages?.[currentPage - 1] && !ldmMode && (
           <img
             src={previewPages[currentPage - 1]}
             alt={`Page ${currentPage}`}
             className="shadow-lg border border-gray-300 max-w-full h-auto block"
             style={{ position: 'relative', zIndex: 1 }}
+          />
+        )}
+
+        {/* LDM On-demand Page Preview */}
+        {ldmMode && ldmJobId && (
+          <img
+            src={`/api/convert/preview/${ldmJobId}/${currentPage}`}
+            key={`ldm-${ldmJobId}-${currentPage}`}
+            alt={`LDM Page ${currentPage}`}
+            className="shadow-lg border border-gray-300 max-w-full h-auto block"
+            style={{ position: 'relative', zIndex: 1, minHeight: '400px', backgroundColor: '#f3f4f6' }}
+            onLoad={(e) => {
+              // Ensure we inform parent about page dimensions if needed
+            }}
           />
         )}
 

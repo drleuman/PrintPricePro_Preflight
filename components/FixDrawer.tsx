@@ -495,15 +495,14 @@ export const FixDrawer: React.FC<Props> = ({
                         </label>
                         <select
                           id="color-profile"
-                          value={selectedProfile || 'cmyk'}
+                          value={selectedProfile || 'iso_coated_v3'}
                           onChange={(e) => onProfileChange(e.target.value)}
                           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500"
                         >
-                          <option value="cmyk">Generic CMYK</option>
-                          <option value="coated">Coated FOGRA39 (ISO 12647-2:2004)</option>
+                          <option value="iso_coated_v3">Coated FOGRA51 (PSO v3) - NEW</option>
+                          <option value="iso_uncoated_v3">Uncoated FOGRA52 (PSO v3) - NEW</option>
                           <option value="gracol">GRACoL 2006 (Coated #1)</option>
                           <option value="swop">SWOP 2006 (Coated #3)</option>
-                          <option value="uncoated">Uncoated FOGRA29</option>
                         </select>
                       </div>
                     )}

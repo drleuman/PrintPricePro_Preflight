@@ -43,6 +43,11 @@ interface Step3FixProps {
     serverAvailable?: boolean;
     previewPages?: string[] | null;
     previewLoading?: boolean;
+    ldmActive?: boolean;
+    ldmProgress?: number;
+    ldmStatus?: string | null;
+    ldmMode?: boolean;
+    ldmJobId?: string | null;
 }
 
 const Icon = {
@@ -104,6 +109,11 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
     serverAvailable = true,
     previewPages = null,
     previewLoading = false,
+    ldmActive = false,
+    ldmProgress = 0,
+    ldmStatus = null,
+    ldmMode = false,
+    ldmJobId = null,
 }) => {
     const [aiAuditOpen, setAiAuditOpen] = useState(false);
     const [efficiencyOpen, setEfficiencyOpen] = useState(false);
@@ -150,6 +160,39 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
                 compareEnabled={compareEnabled}
                 onToggleCompare={onToggleCompare}
             />
+
+            {ldmActive && (
+                <div className="mb-6 animate-in slide-in-from-top duration-500">
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl p-5 shadow-lg border border-blue-400/30 text-white overflow-hidden relative">
+                        <div className="absolute top-0 right-0 p-3 opacity-20 transform translate-x-1/4 -translate-y-1/4">
+                            <Icon.Sparkles className="w-24 h-24" />
+                        </div>
+                        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="bg-white/20 p-3 rounded-lg backdrop-blur-md">
+                                    <Icon.Refresh className="w-6 h-6 animate-spin" />
+                                </div>
+                                <div className="text-left">
+                                    <h3 className="text-lg font-bold">Large Document Mode Active</h3>
+                                    <p className="text-blue-100 text-sm">{ldmStatus || 'Processing sequential pages to optimize RAM...'}</p>
+                                </div>
+                            </div>
+                            <div className="w-full md:w-1/3">
+                                <div className="flex justify-between mb-1 text-xs font-semibold">
+                                    <span>Progress</span>
+                                    <span>{ldmProgress}%</span>
+                                </div>
+                                <div className="w-full bg-white/20 rounded-full h-2.5 overflow-hidden">
+                                    <div
+                                        className="bg-white h-full transition-all duration-500 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]"
+                                        style={{ width: `${ldmProgress}%` }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className="step__header">
                 <h2 className="step__title">Fix Issues</h2>
                 <p className="step__description">
@@ -193,6 +236,8 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
                         onRunVisualCheck={onRunVisualCheck}
                         previewPages={previewPages}
                         previewLoading={previewLoading}
+                        ldmMode={ldmMode}
+                        ldmJobId={ldmJobId}
                     />
                 </div>
             </div>

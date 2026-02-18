@@ -50,7 +50,7 @@ function fmtMs(ms: any) {
 }
 
 function opLabel(op: string) {
-  if (op === 'cmyk') return 'Convert → CMYK (ISO Coated v2)';
+  if (op === 'cmyk') return 'Convert → CMYK (PSO Coated v3 / FOGRA51)';
   if (op === 'gray') return 'Convert → Grayscale';
   if (op === 'rebuild') return 'Rebuild / Upscale';
   if (op === 'bleed') return 'Add Bleed Canvas';
@@ -183,7 +183,7 @@ export const AutoFixProPanel: React.FC<Props> = ({
               </label>
               <label className="flex items-center gap-3 cursor-pointer group">
                 <input type="checkbox" checked={options.forceCmyk} onChange={() => onToggleOption('forceCmyk')} className="w-4 h-4 text-indigo-600 rounded" />
-                <span className="text-sm text-gray-700 group-hover:text-indigo-900 transition-colors">Convert to CMYK (ISO Coated v2)</span>
+                <span className="text-sm text-gray-700 group-hover:text-indigo-900 transition-colors">Convert to CMYK (FOGRA51 / PSO V3)</span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer group">
                 <input type="checkbox" checked={options.forceRebuild} onChange={() => onToggleOption('forceRebuild')} className="w-4 h-4 text-indigo-600 rounded" />

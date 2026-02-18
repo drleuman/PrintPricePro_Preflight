@@ -59,6 +59,13 @@ export default function App() {
   const [heatmapData, setHeatmapData] = useState<HeatmapData | null>(null);
   const [heatmapLoading, setHeatmapLoading] = useState(false);
 
+  // ---------- Large Document Mode (LDM) State ----------
+  const [ldmActive, setLdmActive] = useState(false);
+  const [ldmJobId, setLdmJobId] = useState<string | null>(null);
+  const [ldmProgress, setLdmProgress] = useState(0);
+  const [ldmStatus, setLdmStatus] = useState<string | null>(null);
+  const [ldmMode, setLdmMode] = useState(false);
+
   // Preview State (Server-side GS PNGs)
   const [previewPages, setPreviewPages] = useState<string[] | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -71,7 +78,7 @@ export default function App() {
   const [lastPdfUrl, setLastPdfUrl] = useState<string | null>(null);
   const [lastPdfName, setLastPdfName] = useState<string | null>(null);
   const lastPdfUrlRef = useRef<string | null>(null);
-  const [selectedProfile, setSelectedProfile] = useState<string>('cmyk');
+  const [selectedProfile, setSelectedProfile] = useState<string>('iso_coated_v3');
   const [serverAvailable, setServerAvailable] = useState(true);
 
   const { currentLocale, setLocale } = useLocale(); // Usa el hook useLocale
@@ -132,6 +139,8 @@ export default function App() {
     autoFixServer,
     createBookletClient,
     generatePreviewServer,
+    pollJob,
+    getLdmPagePreviewUrl
   } = usePdfTools();
 
   const runAnalysisRef = useRef<any>(null);
@@ -249,6 +258,10 @@ export default function App() {
     if (!file) {
       setHeatmapData(null);
       setPreviewPages(null);
+      setLdmActive(false);
+      setLdmMode(false);
+      setLdmJobId(null);
+      setLdmProgress(0);
     } else {
       // Trigger server preview generation for reliable CMYK visualization
       const generatePreview = async () => {
@@ -412,7 +425,7 @@ export default function App() {
     setProcessMessage('AutoFix Agent (PRO): Orchestrating PDF transformations...');
     setProcessStage('preflight');
     try {
-      const { blob, report } = await autoFixServer(file, {
+      const { blob, report, jobId, ldm } = await autoFixServer(file, {
         target: options?.forceCmyk ? 'cmyk' : 'none',
         profile: 'iso_coated_v2',
         bleedMm: options?.forceBleed ? (options?.bleedMm || 3) : 0,
@@ -421,6 +434,50 @@ export default function App() {
         issues: before || undefined,
         ...options
       });
+
+      if (ldm && jobId) {
+        setLdmActive(true);
+        setLdmJobId(jobId);
+        setLdmStatus('Large document processing active');
+        setProcessMessage('Large Document Mode: Processing pages sequentially (background job)...');
+
+        // Start polling
+        try {
+          const finishedJob = await pollJob(jobId, (p) => setLdmProgress(p));
+
+          // Job finished, fetch final file
+          const finalRes = await fetch(`/api/convert/job/status/${jobId}`);
+          const jobData = await finalRes.json();
+
+          // In a real app we'd fetch the file from /jobs/{id}/final_fixed.pdf
+          // For now let's assume certified status means we can proceed
+          // We'll need a way to get the final blob
+          const fileRes = await fetch(`/api/convert/download-job/${jobId}`);
+          const finalBlob = await fileRes.blob();
+
+          const suffix = '_autofix_ldm.pdf';
+          const newName = file.name.replace(/\.pdf$/i, '') + suffix;
+          const newFile = new File([finalBlob], newName, { type: 'application/pdf' });
+
+          setAutoFixReport(jobData.report || null);
+          downloadAndRemember(finalBlob, newName, false);
+          updateFileState(newFile, { name: newName, size: finalBlob.size, type: 'application/pdf' });
+
+          setLdmActive(false);
+          setLdmMode(true);
+          setProcessMessage(null);
+
+          setTimeout(() => {
+            runAnalysis(newFile, { name: newName, size: finalBlob.size, type: 'application/pdf' });
+          }, 500);
+
+        } catch (pollErr: any) {
+          setProcessMessage(null);
+          setLdmActive(false);
+          alert(`LDM Job failed: ${pollErr.message}`);
+        }
+        return;
+      }
 
       const suffix = '_autofix_isoCoatedv2_bleed3mm.pdf';
       const newName = file.name.replace(/\.pdf$/i, '') + suffix;
@@ -716,6 +773,11 @@ export default function App() {
               serverAvailable={serverAvailable}
               previewPages={previewPages}
               previewLoading={previewLoading}
+              ldmActive={ldmActive}
+              ldmProgress={ldmProgress}
+              ldmStatus={ldmStatus}
+              ldmMode={ldmMode}
+              ldmJobId={ldmJobId}
             />
           )}
 
