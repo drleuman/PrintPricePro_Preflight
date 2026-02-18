@@ -18,10 +18,10 @@ function normalizeProfile(p) {
     const low = p.toLowerCase();
 
     // FOGRA51 (Coated v3) - NEW STANDARD
-    if (low.includes('fogra51') || low.includes('coated_v3') || low.includes('pso_coated_v3')) return 'iso_coated_v3';
+    if (low.includes('fogra51') || low.includes('coated_v3') || low.includes('coated v3') || low.includes('pso_coated')) return 'iso_coated_v3';
 
     // FOGRA52 (Uncoated v3) - NEW STANDARD
-    if (low.includes('fogra52') || low.includes('uncoated_v3') || low.includes('pso_uncoated_v3')) return 'iso_uncoated_v3';
+    if (low.includes('fogra52') || low.includes('uncoated_v3') || low.includes('uncoated v3') || low.includes('pso_uncoated')) return 'iso_uncoated_v3';
 
     // Legacy Mappings (Force Upgrade)
     if (low.includes('fogra39') || low.includes('iso_coated_v2')) return 'iso_coated_v3';
