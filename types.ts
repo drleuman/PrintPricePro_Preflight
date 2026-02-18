@@ -86,6 +86,10 @@ export interface Issue {
    * Ej: ['critical', 'warn', 'low-res', 'font-embedding']
    */
   tags?: string[];
+  /**
+   * Optional key-value payload for structured data extraction.
+   */
+  payload?: any;
 }
 
 /**

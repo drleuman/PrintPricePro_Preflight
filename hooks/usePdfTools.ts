@@ -137,8 +137,12 @@ export function usePdfTools() {
                 // If body has report, it might overwrite the header one (usually they match in 422 case)
                 if (err.report) report = err.report;
 
-                const error: any = new Error(err.error || `AutoFix failed (HTTP ${res.status})`);
+                const error: any = new Error(err.message || err.error || `AutoFix failed (HTTP ${res.status})`);
                 error.report = report;
+                error.error_code = err.error_code;
+                error.step = err.step;
+                error.stderr = err.stderr;
+                error.status = res.status;
                 error.serverError = err; // attach full server error for debugging
                 throw error;
             }

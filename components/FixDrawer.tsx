@@ -25,6 +25,7 @@ type Props = {
   selectedProfile?: string;
   onProfileChange?: (profile: string) => void;
   isFixing?: boolean;
+  serverAvailable?: boolean;
 };
 
 /* =========================================================
@@ -204,7 +205,8 @@ export const FixDrawer: React.FC<Props> = ({
   onRebuildPdf,
   selectedProfile,
   onProfileChange,
-  isFixing
+  isFixing,
+  serverAvailable = true
 }) => {
   const [isLoadingExplain, setIsLoadingExplain] = useState(false);
   const [isLoadingEff, setIsLoadingEff] = useState(false);
@@ -463,6 +465,24 @@ export const FixDrawer: React.FC<Props> = ({
               </div>
             )}
 
+            {!serverAvailable && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs mb-4">
+                <p className="font-bold flex items-center gap-1">
+                  <ExclamationCircleIcon className="h-3 w-3" />
+                  {t('serverUnavailable') || 'SERVER CONNECTION REQUIRED'}
+                </p>
+                <p className="mt-1">
+                  {t('serverUnavailableDesc') || 'Color conversion (CMYK/Gray) and Magic Fix are currently unavailable. Please check your internet connection or try again later.'}
+                </p>
+                <button
+                  className="mt-2 text-red-800 font-bold underline cursor-pointer"
+                  onClick={() => window.location.reload()}
+                >
+                  {t('retry') || 'Retry / Reload'}
+                </button>
+              </div>
+            )}
+
             {/* Color Space Fixes */}
             {isColorSpaceIssue && (
               <>
@@ -490,8 +510,8 @@ export const FixDrawer: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={onConvertCMYK}
-                      disabled={isFixing}
-                      className="btn btn--cmyk btn--block"
+                      disabled={isFixing || !serverAvailable}
+                      className={`btn btn--cmyk btn--block ${!serverAvailable ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                     >
                       {isFixing ? 'Converting...' : '🎨 Convert to CMYK'}
                     </button>
@@ -501,8 +521,8 @@ export const FixDrawer: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={onConvertGrayscale}
-                    disabled={isFixing}
-                    className="btn btn--grayscale btn--block"
+                    disabled={isFixing || !serverAvailable}
+                    className={`btn btn--grayscale btn--block ${!serverAvailable ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                   >
                     {isFixing ? 'Converting...' : '⚫ Convert to Grayscale'}
                   </button>

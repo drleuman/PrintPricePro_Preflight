@@ -47,6 +47,7 @@ export default function App() {
   const [autoFixRunId, setAutoFixRunId] = useState<number | null>(null);
   const [compareEnabled, setCompareEnabled] = useState(false);
   const autoFixPendingAfterRef = useRef(false);
+  const magicFixStepRef = useRef<{ active: boolean; options: any } | null>(null);
 
   // Visual QA State
   const [visualPageImage, setVisualPageImage] = useState<string | null>(null);
@@ -67,6 +68,7 @@ export default function App() {
   const [lastPdfName, setLastPdfName] = useState<string | null>(null);
   const lastPdfUrlRef = useRef<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<string>('cmyk');
+  const [serverAvailable, setServerAvailable] = useState(true);
 
   const { currentLocale, setLocale } = useLocale(); // Usa el hook useLocale
 
@@ -117,6 +119,16 @@ export default function App() {
   }, []);
 
   // ---------- Hooks ----------
+  const {
+    isServerRunning,
+    convertToGrayscaleServer,
+    convertColorServer,
+    rebuildPdfServer,
+    autoFixServer,
+    createBookletClient,
+  } = usePdfTools();
+
+  const runAnalysisRef = useRef<any>(null);
 
   const onAnalysisResult = useCallback((res: PreflightResult) => {
     setResult(res || null);
@@ -143,7 +155,55 @@ export default function App() {
 
     updateFileState(new File([blob], meta.name, { type: 'application/pdf' }), meta);
     downloadAndRemember(blob, meta.name, false); // No auto-download here
-  }, [updateFileState, downloadAndRemember]);
+
+    // --- MAGIC FIX ORCHESTRATION ---
+    if (magicFixStepRef.current?.active && operation === 'fixBleed') {
+      const options = magicFixStepRef.current.options;
+      const nextFile = new File([blob], meta.name, { type: 'application/pdf' });
+
+      // Stage 2: Server-side CMYK + Profile + OutputIntent
+      setProcessMessage('AI Wizard: Stage 2/2 - Applying professional color profiles & ICC...');
+      setProcessStage('fix');
+
+      autoFixServer(nextFile, {
+        target: 'cmyk',
+        profile: options.profile || 'iso_coated_v2',
+        bleedMm: 0, // Already handled by worker
+        forceCmyk: true,
+        forceBleed: false, // SKIP server bleed
+        strictVector: true, // Re-enable for final stage
+        dpiPreferred: 300
+      }).then(({ blob: finalBlob, report }) => {
+        const originalName = file?.name.replace(/\.pdf$/i, '') || 'document';
+        const newName = `${originalName}_Magic_Fix.pdf`;
+        const finalFile = new File([finalBlob], newName, { type: 'application/pdf' });
+
+        setAutoFixReport(report || null);
+        updateFileState(finalFile, { name: nextFile.name, size: finalFile.size, type: 'application/pdf' });
+        downloadAndRemember(finalBlob, newName, false);
+
+        setProcessMessage('AI Wizard: Performing final quality check...');
+        setProcessStage('verify');
+        if (runAnalysisRef.current) {
+          runAnalysisRef.current(finalFile, { name: nextFile.name, size: finalFile.size, type: 'application/pdf' });
+        }
+
+        setProcessMessage(null);
+        setProcessStage(undefined);
+        setCurrentStep(4);
+        magicFixStepRef.current = null;
+      }).catch((e) => {
+        // Handle error in Stage 2
+        console.error('Magic Fix Stage 2 failed', e);
+        setProcessMessage(null);
+        setProcessStage(undefined);
+        magicFixStepRef.current = null;
+        alert(`Magic Fix Stage 2 failed: ${e.message}\nSwitching to manual mode.`);
+        setAppMode('manual');
+        setCurrentStep(2);
+      });
+    }
+  }, [file, updateFileState, downloadAndRemember, autoFixServer]);
 
   const onWorkerError = useCallback((msg: string) => {
     console.error('Worker error:', msg);
@@ -174,14 +234,8 @@ export default function App() {
     onRenderPageResult,
   });
 
-  const {
-    isServerRunning,
-    convertToGrayscaleServer,
-    convertColorServer,
-    rebuildPdfServer,
-    autoFixServer,
-    createBookletClient,
-  } = usePdfTools();
+  // Connect the ref
+  runAnalysisRef.current = runAnalysis;
 
   const isRunning = isWorkerRunning || isServerRunning;
 
@@ -256,10 +310,14 @@ export default function App() {
 
       setProcessMessage(null);
       setProcessStage(undefined);
-    } catch (e) {
+    } catch (e: any) {
       console.warn('Server grayscale failed:', e);
       setProcessMessage(null);
       setProcessStage(undefined);
+
+      if (e.message?.includes('500') || e.message?.includes('Failed to fetch')) {
+        setServerAvailable(false);
+      }
 
       if (window.confirm(
         'Server method unavailable. Do you want to use the local fallback?\n\n' +
@@ -292,9 +350,13 @@ export default function App() {
       }, 500);
 
       setProcessMessage(null);
-    } catch (e) {
+    } catch (e: any) {
       console.warn('Server rebuild failed:', e);
       setProcessMessage(null);
+
+      if (e.message?.includes('500') || e.message?.includes('Failed to fetch')) {
+        setServerAvailable(false);
+      }
 
       if (window.confirm(
         'Server method unavailable. Do you want to use the local fallback?\n\n' +
@@ -359,6 +421,11 @@ export default function App() {
       setProcessMessage(null);
       setProcessStage(undefined);
 
+      const isServerDown = e.message?.includes('500') || e.message?.includes('Failed to fetch') || e.message?.includes('unreachable');
+      if (isServerDown) {
+        setServerAvailable(false);
+      }
+
       // Handle Blocked/Reported Errors
       if (e.report) {
         setAutoFixReport(e.report);
@@ -367,7 +434,10 @@ export default function App() {
       if (e.message === 'OUTPUT_RASTERIZED_BLOCKED') {
         alert('AutoFix Blocked: The result was rasterized (images only), which violates the "Strict Vector" policy. See the report specific details.');
       } else {
-        alert(`AutoFix failed: ${e.message || e}`);
+        const errorMsg = isServerDown
+          ? 'SERVER CONNECTION REQUIRED: The backend service is currently unavailable or returned a 500 error. Please ensure the server is running.'
+          : (e.message || e);
+        alert(`AutoFix failed: ${errorMsg}`);
       }
     }
   }, [file, fileMeta, result, autoFixServer, downloadAndRemember, updateFileState, runAnalysis]);
@@ -393,9 +463,14 @@ export default function App() {
         runAnalysis(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
       }, 500);
 
-    } catch (e) {
+    } catch (e: any) {
       console.error('convertColors failed', e);
-      window.alert('Color conversion requires server connection. Please try again later.');
+      const isServerDown = e.message?.includes('500') || e.message?.includes('Failed to fetch');
+      if (isServerDown) setServerAvailable(false);
+
+      window.alert(isServerDown
+        ? 'Color conversion requires server connection. The server seems to be offline or returned an error (500).'
+        : `Color conversion failed: ${e.message}`);
     } finally {
       setProcessMessage(null);
     }
@@ -438,63 +513,28 @@ export default function App() {
     // Store original file for Before/After comparison
     setOriginalFile(file);
     setAppMode('ai');
-    setProcessMessage('AI Wizard: Orchestrating professional PDF optimization...');
-    setProcessStage('upload'); // Stage 1: Upload/Ingest
+
+    // Stage 1: Client-side Bleed Fix (Safe/Aggressive logic in worker)
+    setProcessMessage('AI Wizard: Stage 1/2 - Applying localized Bleed Fix (Bleed Engine v2)...');
+    setProcessStage('upload');
 
     try {
-      setProcessMessage('AI Wizard: Performing deep analysis and applying professional fixes...');
-      setProcessStage('fix'); // Stage 3-4: Applying fixes
+      // Set up orchestration state
+      magicFixStepRef.current = {
+        active: true,
+        options: { profile: 'iso_coated_v2' }
+      };
 
-      // Use the advanced orchestrator instead of hardcoded steps
-      // This respects "Strict Vector" policy and avoids rasterizing fonts
-      const { blob, report } = await autoFixServer(file, {
-        target: 'cmyk',
-        profile: 'iso_coated_v2',
-        bleedMm: 3,
-        forceCmyk: true,
-        forceBleed: true,
-        strictVector: false, // Temporarily disabled enforcement to avoid 422 in prod before redeploy
-        dpiPreferred: 300
-      });
-
-      const originalName = file.name.replace(/\.pdf$/i, '');
-      const newName = `${originalName}_Magic_Fix.pdf`;
-      const newFile = new File([blob], newName, { type: 'application/pdf' });
-
-      setAutoFixReport(report || null);
-
-      updateFileState(newFile, {
-        name: newFile.name,
-        size: newFile.size,
-        type: 'application/pdf'
-      });
-
-      downloadAndRemember(blob, newName, false);
-
-      // 3. Final Analysis of the fixed file
-      setProcessMessage('AI Wizard: Performing final quality check...');
-      setProcessStage('verify'); // Stage 5: Verification
-
-      // Run analysis so Step 4 shows the "fixed" result
-      await runAnalysis(newFile, { name: newFile.name, size: newFile.size, type: 'application/pdf' });
-
-      setProcessMessage(null);
-      setProcessStage(undefined); // Reset stage
-      setCurrentStep(4); // Jump to review
+      // Trigger worker first
+      runFixBleed(file, fileMeta, 'safe');
+      // Logic continues in onTransformResult when 'fixBleed' finishes
 
     } catch (e: any) {
-      console.error('Magic Fix failed', e);
+      console.error('Magic Fix initiation failed', e);
       setProcessMessage(null);
       setProcessStage(undefined);
-
-      let errorMsg = e.message || e;
-      if (e.report) setAutoFixReport(e.report);
-
-      if (e.message === 'OUTPUT_RASTERIZED_BLOCKED') {
-        errorMsg = 'Magic Fix Blocked: The optimization would have rasterized your fonts. Reverting to manual mode to preserve vector quality.';
-      }
-
-      window.alert('Magic Fix status: ' + errorMsg + '\n\nSwitching to manual mode.');
+      magicFixStepRef.current = null;
+      alert(`Magic Fix failed to start: ${e.message}`);
       setAppMode('manual');
       setCurrentStep(2);
     }
@@ -647,6 +687,7 @@ export default function App() {
               onOpenEfficiency={handleOpenEfficiencyTips}
               onNext={() => setCurrentStep(4)}
               onBack={() => setCurrentStep(2)}
+              serverAvailable={serverAvailable}
             />
           )}
 
@@ -673,6 +714,7 @@ export default function App() {
               isHeatmapLoading={heatmapLoading}
               onRunHeatmap={() => file && fileMeta && handleRunHeatmap(file, fileMeta, currentPage)}
               originalFile={originalFile}
+              autoFixReport={autoFixReport}
             />
           )}
         </div>

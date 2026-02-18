@@ -40,6 +40,7 @@ interface Step3FixProps {
     onOpenEfficiency: (issue: Issue) => void;
     onNext: () => void;
     onBack: () => void;
+    serverAvailable?: boolean;
 }
 
 const Icon = {
@@ -98,6 +99,7 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
     onOpenEfficiency,
     onNext,
     onBack,
+    serverAvailable = true,
 }) => {
     const [aiAuditOpen, setAiAuditOpen] = useState(false);
     const [efficiencyOpen, setEfficiencyOpen] = useState(false);
@@ -218,6 +220,7 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
                 selectedProfile={selectedProfile}
                 onProfileChange={onProfileChange}
                 isFixing={isRunning}
+                serverAvailable={serverAvailable}
             />
 
             <AIAuditModal

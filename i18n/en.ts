@@ -12,6 +12,12 @@ export const en = {
   analyzingPDF: 'Analyzing PDF...',
   thisMayTakeAMoment: 'This may take a moment.',
   runPreflight: 'Run Preflight',
+  or: 'or',
+  browseYourComputer: 'browse your computer',
+  pdfMaxHint: 'PDF · max. ~50 MB',
+  selectedLabel: 'Selected PDF',
+  changeLabel: 'Change',
+  uploadTipLargePdf: 'Tip: large PDFs may take a bit longer.',
 
   // Step titles and descriptions
   uploadYourPdf: 'Upload Your PDF',
@@ -200,6 +206,83 @@ export const en = {
   magicPoint3: 'No technical knowledge required',
   tempProcessNote: 'We process your file temporarily and clean it up automatically.',
   manualControlTip: 'FULL CONTROL OVER INDIVIDUAL FIXES AND COLOR PROFILES.',
+  serverUnavailable: 'SERVER CONNECTION REQUIRED',
+  serverUnavailableDesc: 'Color conversion (CMYK/Gray) and Magic Fix are currently unavailable. Please check your internet connection or try again later.',
+  retry: 'Retry / Reload',
+
+  // Prepress / Report labels
+  profileLabel: 'Profile:',
+  outputIntentLabel: 'OutputIntent:',
+  bleedLabel: 'Bleed:',
+  standardDpiLabel: 'Standard DPI:',
+  verified: 'Verified ✅',
+  embedded: 'Embedded',
+  real3mmBox: 'Real 3mm (Box Geometry)',
+  highEndPrint: '300 (High-End Print)',
+
+  // Technical Note
+  technicalNoteTitle: 'Prepress Technical Note',
+  technicalNoteDesc: 'This document has been professionally optimized for prepress production.',
+  outputIntentExplain: 'A valid PDF/X OutputIntent (GTS_PDFX) has been embedded to guarantee color consistency across professional RIP software.',
+  bypassExplain: 'No color conversion was applied to existing compliant objects because they already matched the requested profile.',
+  rewriteExplain: 'The file has been structurally stabilized using Ghostscript pdfwrite to ensure font embedding and xref integrity.',
+  negativeStatement: 'No further color transformations were performed after OutputIntent finalization.',
+  closeNote: 'Close Note',
+
+  // Compliance Summary Labels
+  complianceSummaryTitle: 'Prepress Compliance Summary',
+  labelCertificateId: 'Certificate ID:',
+  labelEngineVersion: 'Engine Version:',
+  labelRiskLevel: 'Risk Level:',
+  labelOutputIntent: 'Output Intent:',
+  labelStructure: 'Structure:',
+  labelConversion: 'CMYK Conversion:',
+  labelProcessing: 'Processing:',
+  labelTransparency: 'Transparency:',
+  labelBleed: 'Bleed:',
+
+  statusVerified: 'Verified (GTS_PDFX)',
+  statusSkipped: 'Skipped (Compliant)',
+  statusStabilized: 'Stabilized via Rewrite',
+  statusPreserved: 'Preserved',
+  statusApplied: 'Applied',
+
+  // Risk Levels
+  riskGreen: 'GREEN (Safe for Production)',
+  riskAttention: 'ATTENTION (Review Required)',
+  riskBlocking: 'BLOCKING (Rejected by Preflight)',
+
+  // TAC Labels
+  labelInkCoverage: 'Ink Coverage (TAC):',
+  labelMaxTac: 'Max. Ink Density:',
+  labelWorstPage: 'Worst Page:',
+  labelTacLimit: 'Density Limit:',
+  tacWarningDrying: 'Ink density may cause drying or setoff issues on press.',
+  tacVerified: 'Verified within limits',
+
+  // Overprint Labels
+  labelOverprint: 'Black Overprint:',
+  statusOverprintOk: 'Verified ✅',
+  statusOverprintRisk: 'Knockout Risk',
+  overprintWarningKnockout: 'Black text may knock out underlying inks, causing halos or misregistration.',
+  overprintWarningRegistration: 'Registration color (100% CMYK) detected in artwork, which can cause artifacts.',
+  overprintWarningRichBlack: 'Rich black text detected in small font sizes; some presses recommend K-only for sharpness.',
+
+  // Spot Color Policy Labels
+  spotTitle: 'Spot Color Policy',
+  spotLabelDetected: 'Spot Colors:',
+  spotLabelPolicy: 'Policy:',
+  spotStatusNone: 'NONE',
+  spotPolicyStrict: 'Strict CMYK (Offset)',
+  spotPolicyConvert: 'Convert to CMYK (Digital)',
+  spotRiskGreen: 'GREEN',
+  spotRiskAttention: 'ATTENTION',
+  spotRiskBlocking: 'BLOCKING',
+  spotWarnWhitelistOnly: 'Only technical spot colors detected (whitelisted).',
+  spotWarnNonWhitelist: 'Non-whitelisted spot colors detected.',
+  spotNoteTacIncluded: 'Spots are included in the TAC estimate (spot-to-CMYK conversion).',
+  spotNoteRegistration: 'Registration color detected (/All or /Registration).',
+  spotNoteSpotsInText: 'Spot colors detected in text; conversion may affect sharpness.',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

@@ -3,12 +3,13 @@ const multer = require('multer');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
-const { PDFDocument } = require('pdf-lib');
+const crypto = require('crypto');
+const { PDFDocument, PDFName, PDFArray, PDFDict } = require('pdf-lib');
 const { runGs, sendPdfAndCleanup, safeUnlink, safeRmDir } = require('../services/ghostscript');
 const { spawn } = require('child_process');
 
 function execCmd(cmd, args, opts = {}) {
-    const timeoutMs = opts.timeoutMs ?? 20000;
+    const timeoutMs = opts.timeoutMs ?? 60000; // Increased timeout for larger docs
 
     return new Promise((resolve) => {
         const p = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -24,9 +25,14 @@ function execCmd(cmd, args, opts = {}) {
         p.stdout.on('data', (d) => (out += d.toString('utf8')));
         p.stderr.on('data', (d) => (err += d.toString('utf8')));
 
+        p.on('error', (e) => {
+            clearTimeout(t);
+            resolve({ ok: false, code: -1, stdout: out, stderr: `${err}\nSpawn error: ${e.message}`, killed });
+        });
+
         p.on('close', (code) => {
             clearTimeout(t);
-            resolve({ ok: code === 0 && !killed, code, stdout: out, stderr: err, killed });
+            resolve({ ok: (code === 0 || code === null) && !killed, code, stdout: out, stderr: err, killed });
         });
     });
 }
@@ -51,6 +57,7 @@ function parsePdfimagesList(stdout) {
     // page num type width height color comp bpc enc interp object ID x-ppi y-ppi size ratio
     const lines = stdout.split('\n').map(l => l.trim()).filter(Boolean);
     // Find header line starting with "page"
+    if (lines.length < 2) return { images: [], perPage: {}, largePerPage: {}, total: 0 }; // Not enough lines for header + data
     const headerIdx = lines.findIndex(l => l.toLowerCase().startsWith('page '));
     if (headerIdx < 0) return { images: [], perPage: {}, largePerPage: {}, total: 0 };
 
@@ -158,6 +165,113 @@ const upload = multer({
         }
     },
 });
+/**
+ * Scans a PDF for Total Ink Coverage (TAC) peaks.
+ * Uses Ghostscript pamcmyk device to extract raw separation data.
+ */
+async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmation = false) {
+    const customPath = process.env.GS_PATH;
+    const gsCmd = customPath || (process.platform === 'win32' ? 'gswin64c' : 'gs');
+
+    const limitMap = { 'fogra39': 300, 'gracol': 320, 'swop': 300, 'fogra51': 300 };
+    const limit = limitMap[requestedProfile] || 300;
+    const dpi = isConfirmation ? 150 : 72;
+
+    const args = [
+        '-dSAFER', '-dNOPAUSE', '-dBATCH', '-dQUIET',
+        '-sDEVICE=pamcmyk',
+        `-r${dpi}`,
+        '-o', '-',
+        pdfPath
+    ];
+
+    return new Promise((resolve) => {
+        const proc = spawn(gsCmd, args);
+        let maxTacTotal = 0;
+        let worstPage = 1;
+        let currentPage = 0;
+        let pagesExceeding = [];
+
+        let buf = Buffer.alloc(0);
+
+        proc.stdout.on('data', (chunk) => {
+            buf = Buffer.concat([buf, chunk]);
+            while (buf.length > 0) {
+                const headerEnd = buf.indexOf('ENDHDR\n');
+                if (headerEnd === -1) break;
+
+                const header = buf.toString('utf8', 0, headerEnd);
+                const wMatch = header.match(/WIDTH\s+(\d+)/);
+                const hMatch = header.match(/HEIGHT\s+(\d+)/);
+                if (!wMatch || !hMatch) {
+                    buf = buf.slice(headerEnd + 7);
+                    continue;
+                }
+
+                const w = parseInt(wMatch[1]);
+                const h = parseInt(hMatch[2]);
+                const bodySize = w * h * 4;
+                if (buf.length < headerEnd + 7 + bodySize) break;
+
+                currentPage++;
+                let pageMaxTac = 0;
+                let hotspotPixelCount = 0;
+                const body = buf.slice(headerEnd + 7, headerEnd + 7 + bodySize);
+
+                // Sample pixels
+                const step = isConfirmation ? 4 : 16; // Finer scan in confirmation pass
+                for (let i = 0; i < body.length; i += step) {
+                    const tac = Math.round(((body[i] + body[i + 1] + body[i + 2] + body[i + 3]) / 255) * 100);
+                    if (tac > pageMaxTac) pageMaxTac = tac;
+                    if (tac > limit) hotspotPixelCount++;
+                }
+
+                // Minimum Area Logic: ignore microscopic hotspots (e.g. registration dots)
+                // 0.5mm² at 72dpi ≈ 4 pixels. at 150dpi ≈ 18 pixels.
+                const minPixels = dpi === 72 ? 4 : 18;
+                const significantPeak = pageMaxTac > limit && hotspotPixelCount >= minPixels;
+
+                if (significantPeak) {
+                    if (pageMaxTac > maxTacTotal) {
+                        maxTacTotal = pageMaxTac;
+                        worstPage = currentPage;
+                    }
+                    if (!pagesExceeding.includes(currentPage)) pagesExceeding.push(currentPage);
+                }
+
+                buf = buf.slice(headerEnd + 7 + bodySize);
+            }
+        });
+
+        proc.on('close', async () => {
+            // Near-limit logic: if peak is within 5% of limit at 72dpi, trigger high-res pass
+            if (!isConfirmation && maxTacTotal > (limit * 0.95) && maxTacTotal <= (limit + 10)) {
+                const confirmed = await scanTac(pdfPath, requestedProfile, hasSpots, true);
+                return resolve({ ...confirmed, confirmation_pass: true });
+            }
+
+            let risk = "green";
+            if (maxTacTotal > limit + 15) risk = "blocking";
+            else if (maxTacTotal > limit) risk = "attention";
+
+            resolve({
+                max_tac: maxTacTotal,
+                limit,
+                worst_page: worstPage,
+                pages_exceeding: pagesExceeding.slice(0, 10),
+                spot_colors_detected: hasSpots,
+                measurement_dpi: dpi,
+                confirmation_pass: isConfirmation,
+                risk
+            });
+        });
+
+        proc.on('error', (err) => {
+            console.error('GS TAC Scan Process Error:', err);
+            resolve({ max_tac: 0, limit, worst_page: 0, pages_exceeding: [], risk: "unknown" });
+        });
+    });
+}
 
 // Export for cleanup service if needed
 router.uploadDir = uploadDir;
@@ -211,66 +325,8 @@ router.post('/convert-color', upload.single('file'), async (req, res) => {
     const outName = `${baseName}_${profile}.pdf`;
     const outPath = path.join(uploadDir, `${Date.now()}_out_${profile}.pdf`);
 
-    let args = [
-        '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
-        '-sDEVICE=pdfwrite',
-        '-dCompatibilityLevel=1.5', // Lowering to 1.3 causes rasterization on transparency
-        '-dPDFSETTINGS=/prepress',
-        '-dEmbedAllFonts=true',
-        '-dSubsetFonts=true',
-        '-dCompressFonts=true',
-        '-dNOPLATFONTS',
-        '-dDetectDuplicateImages=true',
-        '-dAutoRotatePages=/None',
-        '-dOverrideICC',
-        `-sOutputFile=${outPath}`,
-    ];
-
-    if (profile === 'cmyk') {
-        args.push(
-            '-sColorConversionStrategy=CMYK',
-            '-dProcessColorModel=/DeviceCMYK',
-            '-dConvertCMYKImagesToRGB=false',
-            '-dAutoFilterColorImages=false',
-            '-dAutoFilterGrayImages=false',
-            '-dColorImageFilter=/DCTEncode',
-            '-dGrayImageFilter=/DCTEncode',
-            '-dDownsampleMonoImages=false',
-            '-dDownsampleGrayImages=false',
-            '-dDownsampleColorImages=false',
-            '-dPreserveOverprintSettings=true'
-        );
-    } else {
-        const profilesDir = path.join(__dirname, '../icc-profiles');
-        const map = {
-            'fogra39': 'CoatedFOGRA39.icc',
-            'gracol': 'GRACoL2006_Coated1v2.icc',
-            'swop': 'USWebCoatedSWOP.icc'
-        };
-        const fileName = map[profile] || `${profile}.icc`;
-        const profilePath = path.join(profilesDir, fileName);
-
-        if (fs.existsSync(profilePath)) {
-            args.push(
-                '-sColorConversionStrategy=CMYK',
-                '-dProcessColorModel=/DeviceCMYK',
-                `-sOutputICCProfile=${profilePath}`,
-                `-sDefaultCMYKProfile=${profilePath}`,
-                '-dRenderIntent=1',
-                '-dBlackText=true',
-                '-dBlackVector=true'
-            );
-        } else {
-            console.warn(`Profile ${profile} not found at ${profilePath}, falling back to generic CMYK`);
-            args.push(
-                '-sColorConversionStrategy=CMYK',
-                '-dProcessColorModel=/DeviceCMYK'
-            );
-        }
-    }
-
     try {
-        await runGs([...args, inputPath]);
+        await gsConvertColor(inputPath, outPath, profile);
 
         sendPdfAndCleanup(res, outPath, outName, () => {
             safeUnlink(inputPath);
@@ -280,7 +336,7 @@ router.post('/convert-color', upload.single('file'), async (req, res) => {
         console.error('Color conversion failed:', err);
         safeUnlink(inputPath);
         safeUnlink(outPath);
-        res.status(500).json({ error: 'Color conversion failed' });
+        res.status(500).json({ error: 'Color conversion failed', details: err.message });
     }
 });
 
@@ -483,21 +539,39 @@ async function addBleedCanvasPdf(inputPath, outPath, bleedMm) {
     fs.writeFileSync(outPath, outBytes);
 }
 
-async function gsConvertColor(inputPath, outPath, profile) {
+/**
+ * Step 3: GS with OutputIntent hardening (PDF/X style)
+ * Added options.finalizeOnly to allow embedding metadata without destructive color rewrite.
+ */
+async function gsConvertColor(inputPath, outPath, profile, options = { finalizeOnly: false }) {
     const prof = normalizeProfile(profile);
     const profilesDir = path.join(__dirname, '../icc-profiles');
     const map = {
         'fogra39': 'CoatedFOGRA39.icc',
+        'iso_coated_v2': 'CoatedFOGRA39.icc', // Alias
         'gracol': 'GRACoL2006_Coated1v2.icc',
         'swop': 'USWebCoatedSWOP.icc'
     };
+    const infoMap = {
+        'fogra39': 'ISO Coated v2 (FOGRA39)',
+        'gracol': 'GRACoL 2006',
+        'swop': 'U.S. Web Coated (SWOP) v2'
+    };
+    const condMap = {
+        'fogra39': 'FOGRA39',
+        'gracol': 'GRACoL',
+        'swop': 'SWOP'
+    };
+
     const fileName = map[prof] || `${prof}.icc`;
     const profilePath = path.join(profilesDir, fileName);
+    const info = infoMap[prof] || prof;
+    const cond = condMap[prof] || prof;
 
     const args = [
         '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
         '-sDEVICE=pdfwrite',
-        '-dCompatibilityLevel=1.5', // 1.3 or 1.4 can force rasterization in some profiles
+        '-dCompatibilityLevel=1.5',
         '-dPDFSETTINGS=/prepress',
         '-dDetectDuplicateImages=true',
         '-dEmbedAllFonts=true',
@@ -505,27 +579,121 @@ async function gsConvertColor(inputPath, outPath, profile) {
         '-dCompressFonts=true',
         '-dNOPLATFONTS',
         '-dAutoRotatePages=/None',
-        '-dColorImageDownsampleType=/Bicubic',
-        '-dGrayImageDownsampleType=/Bicubic',
-        '-dMonoImageDownsampleType=/Bicubic',
         '-dDownsampleMonoImages=false',
         '-dDownsampleGrayImages=false',
         '-dDownsampleColorImages=false',
         '-dPreserveOverprintSettings=true',
         '-dBlackText=true',
-        '-dBlackVector=true',
-        '-sColorConversionStrategy=CMYK',
-        '-dProcessColorModel=/DeviceCMYK',
-        '-dOverrideICC=true',
     ];
 
+    if (!options.finalizeOnly) {
+        args.push(
+            '-dUseCIEColor=true',
+            '-sColorConversionStrategy=CMYK',
+            '-dProcessColorModel=/DeviceCMYK',
+            '-dOverrideICC=true',
+            '-dRenderIntent=1' // Relative Colorimetric
+        );
+    }
+
+    let psPath = null;
     if (fs.existsSync(profilePath)) {
         args.push(`-sOutputICCProfile=${profilePath}`);
         args.push(`-sDefaultCMYKProfile=${profilePath}`);
+        args.push('-dPDFX');
+
+        // Phase 3: Enforce OutputIntent for PDF/X recognition
+        try {
+            psPath = path.join(uploadDir, `pdfx_def_${Date.now()}.ps`);
+
+            // Helper to escape PostScript strings
+            const psEscape = (s) => String(s || '')
+                .replace(/\\/g, '\\\\')
+                .replace(/\(/g, '\\(')
+                .replace(/\)/g, '\\)')
+                .replace(/\r/g, '')
+                .replace(/\n/g, ' ');
+
+            const escapedProfilePath = psEscape(profilePath.replace(/\\/g, '/'));
+            const psInfo = psEscape(info);
+            const psCond = psEscape(cond);
+
+            const psContent = `
+[ /_objdef {icc_file} /type /stream /OBJ pdfmark
+[ {icc_file} << /N 4 >> /PUT pdfmark
+[ {icc_file} (${escapedProfilePath}) (r) file /PUT pdfmark
+
+[ /_objdef {intent} /type /dict /OBJ pdfmark
+[ {intent} <<
+  /Type /OutputIntent
+  /S /GTS_PDFX
+  /OutputCondition (${psCond})
+  /OutputConditionIdentifier (${psCond})
+  /RegistryName (http://www.color.org)
+  /Info (${psInfo})
+  /DestOutputProfile {icc_file}
+>> /PUT pdfmark
+
+[ {Catalog} << /OutputIntents [ {intent} ] >> /PUT pdfmark
+`;
+            fs.writeFileSync(psPath, psContent);
+        } catch (err) {
+            console.warn('Failed to generate PDF/X definition:', err.message);
+        }
     }
 
-    args.push('-o', outPath, inputPath);
-    await runGs(args);
+    // Bulletproof ordering: all flags first, then -o, then metadata .ps, then input.pdf
+    args.push('-o', outPath);
+    if (psPath) args.push('-f', psPath);
+    args.push('-f', inputPath);
+
+    try {
+        await runGs(args);
+
+        // Verification phase: deterministic check for OutputIntent
+        try {
+            const outBytes = fs.readFileSync(outPath);
+            const doc = await PDFDocument.load(outBytes, { ignoreEncryption: true });
+            const catalog = doc.catalog;
+            const oi = catalog.get(PDFName.of('OutputIntents'));
+
+            let verified = false;
+            let identifier = null;
+            let intentCount = 0;
+
+            if (oi) {
+                const oiArray = doc.context.lookup(oi);
+                if (oiArray instanceof PDFArray) {
+                    intentCount = oiArray.size();
+                    for (let i = 0; i < intentCount; i++) {
+                        const intent = doc.context.lookup(oiArray.get(i));
+                        if (intent instanceof PDFDict) {
+                            const s = intent.get(PDFName.of('S'));
+                            const ident = intent.get(PDFName.of('OutputConditionIdentifier'));
+                            if (s?.toString() === '/GTS_PDFX') {
+                                verified = true;
+                                if (ident) {
+                                    const currentId = ident.toString().replace(/^\(|\)$/g, '');
+                                    // If we haven't found a match yet, or this is an exact match for what we expected
+                                    if (!identifier || currentId === cond) {
+                                        identifier = currentId;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return { verified, identifier, expectedCond: cond, intentCount, gsMode: options.finalizeOnly ? 'finalize_only' : 'full_convert' };
+        } catch (vErr) {
+            console.warn('Post-conversion verification failed:', vErr.message);
+            return { verified: false, identifier: null, expectedCond: cond, intentCount: 0, gsMode: options.finalizeOnly ? 'finalize_only' : 'full_convert' };
+        }
+    } catch (e) {
+        throw new Error(`GS Error: ${e.message}. Args: ${args.join(' ')}`);
+    } finally {
+        if (psPath && fs.existsSync(psPath)) fs.unlinkSync(psPath);
+    }
 }
 
 async function gsGrayscale(inputPath, outPath) {
@@ -583,6 +751,7 @@ async function gsConvertToPdfX(inputPath, outPath, profilePath) {
 
     if (fs.existsSync(profilePath)) {
         args.push(`-sOutputICCProfile=${profilePath}`);
+        args.push(`-sDefaultCMYKProfile=${profilePath}`);
     }
 
     // Note: True PDF/X-4 requires a .ps setup file or specific GS flags which might 
@@ -638,6 +807,42 @@ async function rebuildAtDpi(inputPath, outPath, dpi) {
 }
 
 async function executeAutofixWorkflow(inputPath, originalFilename, options, issues, tmpPathsRegistry) {
+    // --- Phase 4.1: Hard Limits & Input Detection ---
+    let pageCount = 0;
+    let sourceOI = { present: false, identifier: null };
+    try {
+        const bytes = fs.readFileSync(inputPath);
+        const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+        pageCount = doc.getPageCount();
+        if (pageCount > 100) {
+            const e = new Error(`PDF has ${pageCount} pages. Max limit for AutoFix is 100.`);
+            e.error_code = 'DOCUMENT_TOO_LARGE';
+            e.step = 'pre-check';
+            throw e;
+        }
+
+        // Future-proofing: Detect Input OutputIntent
+        try {
+            const catalog = doc.catalog;
+            const oi = catalog.get(PDFName.of('OutputIntents'));
+            if (oi) {
+                const oiArray = doc.context.lookup(oi);
+                if (oiArray instanceof PDFArray && oiArray.size() > 0) {
+                    const intent = doc.context.lookup(oiArray.get(0));
+                    if (intent instanceof PDFDict) {
+                        sourceOI.present = true;
+                        const ident = intent.get(PDFName.of('OutputConditionIdentifier'));
+                        if (ident) sourceOI.identifier = ident.toString().replace(/^\(|\)$/g, '');
+                    }
+                }
+            }
+        } catch (e) { /* ignore detection errors */ }
+
+    } catch (e) {
+        if (e.error_code === 'DOCUMENT_TOO_LARGE') throw e;
+        console.warn('Failed to pre-check input PDF:', e.message);
+    }
+
     const report = {
         policy: {
             icc: options.profile === 'fogra39' ? "ISO Coated v2 (FOGRA39)" : options.profile,
@@ -645,11 +850,114 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
             min_dpi: options.dpiMin,
             preferred_dpi: options.dpiPreferred
         },
+        prepress_summary: {
+            certificate_id: `PPP-${new Date().toISOString().split('T')[0]}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
+            engine_version: "2.4.0-stable",
+            risk_level: "green",
+            tac_summary: null,
+            output_profile: options.profile === 'fogra39' ? "ISO Coated v2 (FOGRA39)" : options.profile,
+            source_profile_detected: sourceOI.identifier || "none",
+            source_outputintent_present: sourceOI.present,
+            source_outputintent_identifier: sourceOI.identifier,
+            conversion_bypassed: false,
+            bypassed_stage: null,
+            finalize_stage_ran: false,
+            gs_mode: null,
+            rewritten_by_gs: false,
+            bypass_reason: null,
+            outputintent: false,
+            outputintent_valid: false,
+            outputintent_count: 0,
+            outputintent_identifier: null,
+            matches_requested_profile: false,
+            overprint_summary: {
+                checked: true,
+                risk: "green",
+                issues_count: 0,
+                registration_color_detected: false,
+                black_text_knockout_detected: false,
+                rich_black_text_detected: false
+            }
+        },
         quality_checks: {},
         fix_plan: [],
         applied: [],
         warnings: [],
         startedAt: new Date().toISOString()
+    };
+
+    // --- Spot Color Policy Analysis ---
+    const spotIssue = issues.find(i => i.id === 'spot-colors-detected');
+    const spotData = spotIssue ? spotIssue.payload : { spot_names: [], page_spots: {}, spots_in_text: false };
+
+    const SPOT_WHITELIST = [
+        "cutcontour", "cut", "dieline", "die line", "crease", "fold", "perf", "perforation",
+        "varnish", "spotuv", "uv", "gloss", "matte", "white"
+    ];
+
+    // Determine Policy
+    // FOGRA/GRACoL -> OFFSET_CMYK_STRICT, else DIGITAL_POD_CONVERT
+    const oiId = String(report.prepress_summary.source_outputintent_identifier || "").toUpperCase();
+    const isStrictOffset = oiId.includes('FOGRA') || oiId.includes('GRACOL') || report.prepress_summary.output_profile.toUpperCase().includes('FOGRA');
+    const policy = isStrictOffset ? "OFFSET_CMYK_STRICT" : "DIGITAL_POD_CONVERT";
+
+    const whitelisted = [];
+    const nonWhitelisted = [];
+
+    spotData.spot_names.forEach(name => {
+        const lower = name.toLowerCase();
+        if (SPOT_WHITELIST.some(w => lower.includes(w))) {
+            whitelisted.push(name);
+        } else {
+            nonWhitelisted.push(name);
+        }
+    });
+
+    let spotRisk = "green";
+    if (registrationIssues.length > 0) {
+        spotRisk = "blocking"; // Registration in artwork is always bad
+    } else if (policy === 'OFFSET_CMYK_STRICT') {
+        if (nonWhitelisted.length > 0) spotRisk = "blocking";
+        else if (whitelisted.length > 0) spotRisk = "green"; // Technical spots allowed in strict offset? Usually yes if they don't print
+    } else {
+        // DIGITAL_POD_CONVERT
+        if (nonWhitelisted.length > 0) spotRisk = "attention";
+        else if (whitelisted.length > 0) spotRisk = "green";
+    }
+
+    report.prepress_summary.spot_summary = {
+        checked: true,
+        spots_detected: spotData.spot_names.length > 0,
+        spot_count: spotData.spot_names.length,
+        spot_names: spotData.spot_names,
+        whitelisted_spots: whitelisted,
+        non_whitelisted_spots: nonWhitelisted,
+        policy: policy,
+        spots_in_text: spotData.spots_in_text,
+        risk: spotRisk,
+        worst_page: spotData.page_spots ? (Object.keys(spotData.page_spots)[0] || 1) : 1
+    };
+
+    // --- Overprint Analysis (from preflight payload) ---
+    const knockoutIssues = issues.filter(i => i.id === 'black-text-knockout');
+    const registrationIssues = issues.filter(i => i.id === 'registration-color-used');
+    const richBlackIssues = issues.filter(i => i.id === 'rich-black-text');
+
+    // Aggregate worst page for overprint
+    const opPages = [...knockoutIssues, ...registrationIssues, ...richBlackIssues].map(i => i.page);
+    const opWorstPage = opPages.length > 0 ? Math.min(...opPages) : 1;
+
+    report.prepress_summary.overprint_summary = {
+        checked: true,
+        risk: (knockoutIssues.length > 0 || registrationIssues.length > 0) ? "blocking" : (richBlackIssues.length > 0 ? "attention" : "green"),
+        issues_count: knockoutIssues.length + registrationIssues.length + richBlackIssues.length,
+        registration_color_detected: registrationIssues.length > 0,
+        black_text_knockout_detected: knockoutIssues.length > 0,
+        rich_black_text_detected: richBlackIssues.length > 0,
+        knockout_count: knockoutIssues.length,
+        registration_count: registrationIssues.length,
+        rich_black_count: richBlackIssues.length,
+        worst_page: opWorstPage
     };
 
     // --- Raster Guard: Pre-check ---
@@ -681,23 +989,27 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
     const needsFlatten = options.flatten || (options.aggressive && shouldFlattenFromIssues(issues));
 
     // Define potential steps
+    // Define potential steps
     const stepCmyk = { action: 'convert_cmyk', enabled: options.forceCmyk || needsRebuild };
     const stepBleed = { action: 'add_bleed_canvas', enabled: options.forceBleed };
     const stepRebuild = { action: 'rebuild_raster', enabled: needsRebuild };
     const stepFlatten = { action: 'flatten_transparency', enabled: needsFlatten };
 
-    if (needsRebuild) {
-        // If rebuilding, do it early, and ensure CMYK is LAST to fix RGB output from rebuild
-        report.fix_plan.push(stepRebuild);
-        report.fix_plan.push(stepBleed);
-        report.fix_plan.push(stepFlatten);
+    // --- PIPELINE ORDER CORE LOGIC ---
+    // Rule 1: Always do rebuild_raster FIRST if needed (it creates a fresh RGB/Gray PDF)
+    // Rule 2: Do add_bleed_canvas (pdf-lib) BEFORE final color conversion
+    // Rule 3: Do flatten_transparency BEFORE or AS PART OF color conversion
+    // Rule 4: ALWAYS end with convert_cmyk (Ghostscript) if any pdf-lib steps were run, 
+    //         to restore ICC profile / OutputIntent.
+
+    if (stepRebuild.enabled) report.fix_plan.push(stepRebuild);
+    if (stepBleed.enabled) report.fix_plan.push(stepBleed);
+    if (stepFlatten.enabled) report.fix_plan.push(stepFlatten);
+
+    // Ensure CMYK is always the final step if anything else happened, to re-apply profile
+    if (stepCmyk.enabled || stepRebuild.enabled || stepBleed.enabled) {
+        stepCmyk.enabled = true; // Force enabled if we're rebuilding/bleeding
         report.fix_plan.push(stepCmyk);
-    } else {
-        // Standard order if no rebuild needed
-        report.fix_plan.push(stepCmyk);
-        report.fix_plan.push(stepBleed);
-        report.fix_plan.push(stepRebuild);
-        report.fix_plan.push(stepFlatten);
     }
 
     let currentPath = inputPath;
@@ -717,8 +1029,46 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
 
         try {
             if (planStep.action === 'convert_cmyk') {
-                await gsConvertColor(currentPath, outPath, options.profile);
-                stepOk = true;
+                // Optimization: Skip if source already matches requested profile AND no color issues found
+                const requestedProf = normalizeProfile(options.profile);
+                const condMap = { 'fogra39': 'FOGRA39', 'gracol': 'GRACoL', 'swop': 'SWOP' };
+                const expectedCond = condMap[requestedProf] || requestedProf;
+
+                // Expanded color detection for safer bypass
+                const hasColorIssues = issues.some(i =>
+                    ['rgb-colors', 'cmyk-colors', 'spot-colors', 'unintended-colors',
+                        'mixed-rgb-cmyk', 'rgb-only-content', 'overprint-detected'].includes(i.id)
+                );
+
+                if (sourceOI.identifier === expectedCond && sourceOI.present && !hasColorIssues) {
+                    report.applied.push({ step: 'convert_cmyk', status: 'skipped', reason: 'Source matches requested OutputIntent & no RGB/Spot issues detected' });
+                    report.prepress_summary.conversion_bypassed = true;
+                    report.prepress_summary.bypassed_stage = 'convert_cmyk';
+                    report.prepress_summary.bypass_reason = 'source_matches_and_clean';
+
+                    // Run "Finalize Only" path: embed fresh OutputIntent without color rewrite
+                    const v = await gsConvertColor(currentPath, outPath, options.profile, { finalizeOnly: true });
+                    report.prepress_summary.finalize_stage_ran = true;
+                    report.prepress_summary.gs_mode = v.gsMode;
+                    report.prepress_summary.rewritten_by_gs = true; // Structurally rewritten by pdfwrite
+
+                    report.prepress_summary.outputintent = v.verified;
+                    report.prepress_summary.outputintent_valid = v.verified;
+                    report.prepress_summary.outputintent_identifier = v.identifier;
+                    report.prepress_summary.matches_requested_profile = (v.identifier === v.expectedCond);
+                    stepOk = true;
+                } else {
+                    const v = await gsConvertColor(currentPath, outPath, options.profile, { finalizeOnly: false });
+                    report.prepress_summary.finalize_stage_ran = true;
+                    report.prepress_summary.gs_mode = v.gsMode;
+                    report.prepress_summary.rewritten_by_gs = true;
+                    report.prepress_summary.outputintent = v.verified;
+                    report.prepress_summary.outputintent_valid = v.verified;
+                    report.prepress_summary.outputintent_count = v.intentCount;
+                    report.prepress_summary.outputintent_identifier = v.identifier;
+                    report.prepress_summary.matches_requested_profile = (v.identifier === v.expectedCond);
+                    stepOk = true;
+                }
             } else if (planStep.action === 'add_bleed_canvas') {
                 await addBleedCanvasPdf(currentPath, outPath, options.bleedMm);
                 stepOk = true;
@@ -733,7 +1083,9 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
             }
         } catch (e) {
             console.error(`Step ${planStep.action} failed:`, e);
+            e.step = planStep.action; // Phase 0: attach step name to error
             report.warnings.push(`Step ${planStep.action} failed: ${e.message}`);
+            throw e; // Re-throw to be caught by the route handler
         }
 
         if (stepOk) {
@@ -753,7 +1105,55 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
         }
     }
 
-    report.endedAt = new Date().toISOString();
+    // Final Risk Assessment initial state
+    let finalRisk = "green";
+
+    // --- TAC Scan: Final viability check ---
+    try {
+        const hasSpots = issues.some(i => i.id === 'spot-colors');
+        const tacResult = await scanTac(currentPath, options.profile, hasSpots);
+        report.prepress_summary.tac_summary = tacResult;
+
+        // Update risk if TAC is problematic
+        if (tacResult.risk === 'blocking') finalRisk = "blocking";
+        else if (tacResult.risk === 'attention' && finalRisk === 'green') finalRisk = "attention";
+    } catch (tacErr) {
+        console.warn('TAC Scan failed:', tacErr.message);
+        report.warnings.push('Ink coverage scan could not be completed.');
+    }
+
+    // --- Overprint Risk Upgrade ---
+    if (report.prepress_summary.overprint_summary.risk === 'blocking') {
+        finalRisk = "blocking";
+    } else if (report.prepress_summary.overprint_summary.risk === 'attention' && finalRisk === 'green') {
+        finalRisk = "attention";
+    }
+
+    // --- Spot Color Policy Risk Upgrade ---
+    if (report.prepress_summary.spot_summary?.risk === 'blocking') {
+        finalRisk = "blocking";
+    } else if (report.prepress_summary.spot_summary?.risk === 'attention' && finalRisk === 'green') {
+        finalRisk = "attention";
+    }
+
+    // Final Risk Assessment: evaluate based on final state + remaining issues
+    // 1. OutputIntent is MANDATORY for Green
+    if (!report.prepress_summary.outputintent_valid) {
+        finalRisk = "blocking";
+    }
+
+    // 2. Critical issues that weren't fixed
+    const hasCritical = issues.some(i => i.severity === 'error' && !report.applied.some(a => a.action === 'rebuild_raster' || a.action === 'convert_cmyk'));
+    if (hasCritical) finalRisk = "blocking";
+
+    // 3. Warnings (like low-res) trigger 'attention' if not already 'blocking'
+    const hasWarnings = issues.some(i => i.severity === 'warning');
+    if (hasWarnings && finalRisk === "green") {
+        finalRisk = "attention";
+    }
+
+    report.prepress_summary.risk_level = finalRisk;
+    report.finishedAt = new Date().toISOString();
     report.duration_total_ms = Date.now() - new Date(report.startedAt).getTime();
 
     // --- Raster Guard: Post-check ---
@@ -821,13 +1221,15 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
     let finalPathToCleanup = inputPath;
     const tempPathsToCleanup = new Set();
 
+    const tStart = Date.now();
     try {
         const { report, finalPath } = await executeAutofixWorkflow(inputPath, originalFilename, options, issues, tempPathsToCleanup);
         finalPathToCleanup = finalPath;
-        // tempPathsToCleanup is already populated by executeAutofixWorkflow
 
+        const tElapsed = Date.now() - tStart;
         const json = Buffer.from(JSON.stringify(report), 'utf8').toString('base64');
         res.setHeader('X-PPP-Autofix-Report', json);
+        res.setHeader('X-PPP-Autofix-ElapsedMs', tElapsed.toString());
 
         const baseName = path.basename(originalFilename).replace(/\.pdf$/i, '');
 
@@ -837,21 +1239,43 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
             for (const p of tempPathsToCleanup) await safeUnlink(p);
         });
     } catch (err) {
+        const tElapsed = Date.now() - tStart;
         console.error('autofix orchestrator failed:', err);
+
+        res.setHeader('X-PPP-Autofix-ElapsedMs', tElapsed.toString());
+
+        // Phase 0: Instrument Failure Step
+        const failedStep = err.step || 'unknown';
+        res.setHeader('X-PPP-Autofix-Step-Failed', failedStep);
+        res.setHeader('X-PPP-Autofix-Reason', err.message || 'unknown');
+
         // Handle specific rasterization blocking error
         if (err.message === 'OUTPUT_RASTERIZED_BLOCKED') {
-            // Need to reconstruct the report from the error object if it was blocked
             const blockedReport = err.report;
             const reportJson = Buffer.from(JSON.stringify(blockedReport || {}), 'utf8').toString('base64');
             res.setHeader('X-PPP-Autofix-Report', reportJson);
             return res.status(422).json({
                 ok: false,
                 error: 'OUTPUT_RASTERIZED_BLOCKED',
+                error_code: 'STRICT_VECTOR_VIOLATION',
+                step: 'raster_guard',
                 message: 'Output PDF appears rasterized. Blocked by Raster Guard (strictVector).',
                 report: blockedReport,
             });
         }
-        return res.status(500).json({ error: 'AutoFix failed', details: err.message });
+
+        const errorCode = err.error_code ||
+            (err.message?.includes('TIMEOUT') ? 'TIMEOUT' :
+                err.message?.includes('GS Error') ? 'GS_FAILED' : 'UNKNOWN_ERROR');
+
+        return res.status(500).json({
+            ok: false,
+            error: 'AutoFix failed',
+            error_code: errorCode,
+            step: failedStep,
+            details: err.message,
+            stderr: err.stderr || undefined
+        });
     } finally {
         if (!deliveredPdf) {
             await safeUnlink(inputPath);

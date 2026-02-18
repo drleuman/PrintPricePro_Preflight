@@ -19,6 +19,9 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
     const [isWorkerReady, setIsWorkerReady] = useState(false);
     const [isWorkerRunning, setIsWorkerRunning] = useState(false);
 
+    const callbacksRef = useRef(callbacks);
+    callbacksRef.current = callbacks;
+
     useEffect(() => {
         let w: Worker;
         try {
@@ -32,24 +35,26 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
                 const data = ev.data;
                 if (!data) return;
 
+                const cb = callbacksRef.current;
+
                 if (data.type === 'analysisProgress') {
                     // Optional: expose progress
                 } else if (data.type === 'analysisResult') {
                     setIsWorkerRunning(false);
-                    callbacks.onAnalysisResult?.(data.result);
+                    cb.onAnalysisResult?.(data.result);
                 } else if (data.type === 'analysisError') {
                     setIsWorkerRunning(false);
-                    callbacks.onError?.(data.message);
+                    cb.onError?.(data.message);
                 } else if (data.type === 'transformResult') {
                     setIsWorkerRunning(false);
                     const blob = new Blob([data.buffer], { type: 'application/pdf' });
-                    callbacks.onTransformResult?.(blob, data.fileMeta, data.operation);
+                    cb.onTransformResult?.(blob, data.fileMeta, data.operation);
                 } else if (data.type === 'transformError') {
                     setIsWorkerRunning(false);
-                    callbacks.onError?.(`${data.operation} failed: ${data.message}`);
+                    cb.onError?.(`${data.operation} failed: ${data.message}`);
                 } else if (data.type === 'tacHeatmapResult') {
                     setIsWorkerRunning(false);
-                    callbacks.onHeatmapResult?.({
+                    cb.onHeatmapResult?.({
                         values: data.values,
                         width: data.width,
                         height: data.height,
@@ -57,18 +62,18 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
                     });
                 } else if (data.type === 'tacHeatmapError') {
                     setIsWorkerRunning(false);
-                    callbacks.onError?.(`Heatmap failed: ${data.message}`);
+                    cb.onError?.(`Heatmap failed: ${data.message}`);
                 } else if (data.type === 'renderPageResult') {
                     setIsWorkerRunning(false);
-                    callbacks.onRenderPageResult?.(data.base64);
+                    cb.onRenderPageResult?.(data.base64);
                 } else if (data.type === 'renderError') {
                     setIsWorkerRunning(false);
-                    callbacks.onError?.(`Render failed: ${data.message}`);
+                    cb.onError?.(`Render failed: ${data.message}`);
                 }
             };
         } catch (e) {
             console.error('Error creating worker', e);
-            callbacks.onError?.('Failed to create worker');
+            callbacksRef.current.onError?.('Failed to create worker');
         }
 
         return () => {
@@ -76,7 +81,7 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
             workerRef.current = null;
             setIsWorkerReady(false);
         };
-    }, []); // Eslint disable-line react-hooks/exhaustive-deps
+    }, []);
 
     const runAnalysis = useCallback(async (file: File, fileMeta: FileMeta) => {
         if (!workerRef.current) return;

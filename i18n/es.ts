@@ -204,4 +204,81 @@ export const es = {
   magicPoint3: 'Sin conocimientos técnicos requeridos',
   tempProcessNote: 'Procesamos tu archivo temporalmente y lo limpiamos automáticamente.',
   manualControlTip: 'CONTROL TOTAL SOBRE CORRECCIONES INDIVIDUALES Y PERFILES DE COLOR.',
+  serverUnavailable: 'CONEXIÓN CON EL SERVIDOR REQUERIDA',
+  serverUnavailableDesc: 'La conversión de color (CMYK/Gris) y el Magic Fix no están disponibles actualmente. Por favor, verifica tu conexión o inténtalo más tarde.',
+  retry: 'Reintentar / Recargar',
+
+  // Prepress / Report labels
+  profileLabel: 'Perfil:',
+  outputIntentLabel: 'OutputIntent:',
+  bleedLabel: 'Sangrado:',
+  standardDpiLabel: 'DPI Estándar:',
+  verified: 'Verificado ✅',
+  embedded: 'Incrustado',
+  real3mmBox: '3mm Reales (Geometría Box)',
+  highEndPrint: '300 (Gama Alta)',
+
+  // Technical Note
+  technicalNoteTitle: 'Nota Técnica de Pre-impresión',
+  technicalNoteDesc: 'Este documento ha sido optimizado profesionalmente para la producción en imprenta.',
+  outputIntentExplain: 'Se ha incrustado un OutputIntent PDF/X (GTS_PDFX) válido para garantizar la consistencia del color en RIPs profesionales.',
+  bypassExplain: 'No se aplicó conversión de color a los objetos conformes existentes porque ya coincidían con el perfil solicitado.',
+  rewriteExplain: 'El archivo ha sido estabilizado estructuralmente con Ghostscript pdfwrite para asegurar la incrustación de fuentes e integridad xref.',
+  negativeStatement: 'No se realizaron más transformaciones de color después de la finalización del OutputIntent.',
+  closeNote: 'Cerrar Nota',
+
+  // Compliance Summary Labels
+  complianceSummaryTitle: 'Resumen de Cumplimiento de Pre-impresión',
+  labelCertificateId: 'ID de Certificado:',
+  labelEngineVersion: 'Versión del Motor:',
+  labelRiskLevel: 'Nivel de Riesgo:',
+  labelOutputIntent: 'Output Intent:',
+  labelStructure: 'Estructura:',
+  labelConversion: 'Conversión CMYK:',
+  labelProcessing: 'Procesamiento:',
+  labelTransparency: 'Transparencia:',
+  labelBleed: 'Sangrado:',
+
+  statusVerified: 'Verificado (GTS_PDFX)',
+  statusSkipped: 'Omitido (Conforme)',
+  statusStabilized: 'Estabilizado via Rewrite',
+  statusPreserved: 'Preservada',
+  statusApplied: 'Aplicado',
+
+  // Risk Levels
+  riskGreen: 'VERDE (Seguro para Producción)',
+  riskAttention: 'ATENCIÓN (Requiere Revisión)',
+  riskBlocking: 'BLOQUEANTE (Rechazado por Preflight)',
+
+  // TAC Labels
+  labelInkCoverage: 'Carga de Tinta (TAC):',
+  labelMaxTac: 'Densidad Máx. Tinta:',
+  labelWorstPage: 'Peor Página:',
+  labelTacLimit: 'Límite Densidad:',
+  tacWarningDrying: 'La densidad de tinta puede causar problemas de secado o repinte en prensa.',
+  tacVerified: 'Verificado dentro de límites',
+
+  // Overprint Labels
+  labelOverprint: 'Sobreimpresión Negro:',
+  statusOverprintOk: 'Verificado ✅',
+  statusOverprintRisk: 'Riesgo de Reserva',
+  overprintWarningKnockout: 'El texto negro puede hacer reserva sobre las tintas inferiores, causando halos o desajuste.',
+  overprintWarningRegistration: 'Se detectó color de registro (100% CMYK) en el arte, lo que puede causar artefactos.',
+  overprintWarningRichBlack: 'Texto en negro enriquecido en fuentes pequeñas; se recomienda K-único para mayor nitidez.',
+
+  // Spot Color Policy Labels
+  spotTitle: 'Política de Tintas Directas (Spot)',
+  spotLabelDetected: 'Tintas Directas:',
+  spotLabelPolicy: 'Política:',
+  spotStatusNone: 'NINGUNA',
+  spotPolicyStrict: 'CMYK Estricto (Offset)',
+  spotPolicyConvert: 'Convertir a CMYK (Digital)',
+  spotRiskGreen: 'VERDE',
+  spotRiskAttention: 'ATENCIÓN',
+  spotRiskBlocking: 'BLOQUEANTE',
+  spotWarnWhitelistOnly: 'Solo se detectaron tintas técnicas (lista permitida).',
+  spotWarnNonWhitelist: 'Tintas directas fuera de la lista permitida.',
+  spotNoteTacIncluded: 'Tintas directas incluidas en la estimación TAC (conversión Spot→CMYK).',
+  spotNoteRegistration: 'Se detectó color de registro (/All o /Registration).',
+  spotNoteSpotsInText: 'Tintas directas detectadas en texto; la conversión puede afectar la nitidez.',
 } as const;

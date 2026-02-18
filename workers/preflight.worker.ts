@@ -775,6 +775,19 @@ async function analyzePdf(
   let hairlineStrokes = 0;
   let firstHairlinePage: number | null = null;
 
+  // Black Overprint Detectors
+  let blackTextKnockoutCount = 0;
+  let firstBlackTextKnockoutPage: number | null = null;
+  let registrationUsageCount = 0;
+  let firstRegistrationPage: number | null = null;
+  let richBlackTextCount = 0;
+  let firstRichBlackTextPage: number | null = null;
+
+  // Spot Color Detectors
+  const spotNamesUsed = new Set<string>();
+  const pageSpotsMap = new Map<number, Set<string>>();
+  let spotsInTextDetected = false;
+
   // Overprint
   let overprintOps = 0;
   let firstOverprintPage: number | null = null;
@@ -1054,10 +1067,148 @@ async function analyzePdf(
         imageOps.add(OPS.paintImageXObjectRepeat);
       }
 
+      let currentFillOverprint = false;
+      let currentStrokeOverprint = false;
+      let currentFontSize = 0;
+      let currentFillIsKOnly = false;
+      let currentFillIsRegistration = false;
+      let currentFillIsRichBlack = false;
+      let currentFillIsSpot = false;
+      const currentFillSpotNames: string[] = [];
+
+      const textOps = new Set<number>();
+      if (OPS.showText != null) textOps.add(OPS.showText);
+      if (OPS.showTextWithPositioning != null) textOps.add(OPS.showTextWithPositioning);
+      if (OPS.nextLineShowText != null) textOps.add(OPS.nextLineShowText);
+      if (OPS.nextLineSetSpacingShowText != null) textOps.add(OPS.nextLineSetSpacingShowText);
+
+      // Access page resources for ExtGState resolution
+      const objs = (page as any).objs;
+
       for (let i = 0; i < fnArray.length; i++) {
         const fn = fnArray[i];
         const args = argsArray[i];
 
+        // --- Overprint Tracking (with ExtGState resolution) ---
+        if (fn === OPS.setGState && args && args.length > 0) {
+          const gStateKey = args[0];
+          let gState = null;
+
+          if (typeof gStateKey === 'string' && objs) {
+            gState = objs.get(gStateKey);
+          } else if (typeof gStateKey === 'object') {
+            gState = gStateKey;
+          }
+
+          if (gState) {
+            // Track fill/stroke overprint specifically
+            if (gState.op !== undefined) currentFillOverprint = !!gState.op;
+            if (gState.OP !== undefined) currentStrokeOverprint = !!gState.OP;
+            if (gState.OPM !== undefined && gState.OPM === 1) currentFillOverprint = true;
+          }
+        }
+
+        // Direct toggle operators (some creators use these instead of ExtGState)
+        if (OPS.setOverprint !== undefined && fn === OPS.setOverprint) {
+          currentFillOverprint = !!args[0];
+          currentStrokeOverprint = !!args[0];
+        }
+
+        // --- Font Size Tracking ---
+        if (fn === OPS.setFont && args && args.length >= 2) {
+          currentFontSize = Math.abs(args[1] || 0);
+        }
+
+        // --- Color Tracking: Refined tolerances ---
+        if (fn === OPS.setFillCMYKColor && args && args.length >= 4) {
+          const [c, m, y, k] = args;
+          // K-only tolerance: very low C,M,Y contribution, very high K
+          currentFillIsKOnly = (c < 0.02 && m < 0.02 && y < 0.02 && k > 0.98);
+          // Rich black: significantly contributes to all channels
+          currentFillIsRichBlack = (k > 0.2 && (c > 0.1 || m > 0.1 || y > 0.1));
+          currentFillIsRegistration = false;
+          currentFillIsSpot = false;
+        } else if (fn === OPS.setFillRGBColor && args && args.length >= 3) {
+          const [r, g, b] = args;
+          currentFillIsKOnly = false;
+          currentFillIsRichBlack = (r < 0.05 && g < 0.05 && b < 0.05);
+          currentFillIsRegistration = false;
+          currentFillIsSpot = false;
+        } else if (fn === OPS.setFillGray && args && args.length >= 1) {
+          currentFillIsKOnly = (args[0] < 0.02); // Gray 0 is Black
+          currentFillIsRichBlack = false;
+          currentFillIsRegistration = false;
+          currentFillIsSpot = false;
+        } else if ((fn === OPS.setFillColorSpace || fn === OPS.setStrokeColorSpace) && args && args.length > 0) {
+          // Detect Registration (multi-name aware) and Spots
+          const space = Array.isArray(args[0]) ? args[0][0] : args[0];
+          if (space === 'Separation' || space === 'DeviceN') {
+            const details = Array.isArray(args[0]) ? args[0] : [];
+
+            const detectedNames: string[] = [];
+            if (space === 'Separation' && details.length >= 2) {
+              detectedNames.push(String(details[1]));
+            } else if (space === 'DeviceN' && Array.isArray(details[1])) {
+              details[1].forEach((n: any) => detectedNames.push(String(n)));
+            }
+
+            const isReg = detectedNames.some((n: string) => {
+              const str = n.toLowerCase();
+              return str === 'all' || str === 'registration';
+            });
+
+            if (fn === OPS.setFillColorSpace) {
+              currentFillIsRegistration = isReg;
+              currentFillIsSpot = !isReg && detectedNames.length > 0;
+              currentFillSpotNames.length = 0;
+              if (currentFillIsSpot) {
+                detectedNames.forEach(n => currentFillSpotNames.push(n));
+              }
+            }
+
+            if (isReg) {
+              registrationUsageCount++;
+              if (firstRegistrationPage === null) firstRegistrationPage = pageIndex;
+            } else {
+              // Capture normalized spot names
+              detectedNames.forEach(n => {
+                const normalized = n.trim().replace(/\s+/g, ' ');
+                spotNamesUsed.add(normalized);
+
+                if (!pageSpotsMap.has(pageIndex)) pageSpotsMap.set(pageIndex, new Set());
+                pageSpotsMap.get(pageIndex)!.add(normalized);
+              });
+            }
+          } else {
+            if (fn === OPS.setFillColorSpace) {
+              currentFillIsSpot = false;
+              currentFillIsRegistration = false;
+              currentFillSpotNames.length = 0;
+            }
+          }
+        }
+
+        // --- Text Detection: Scenario Classifiers ---
+        if (textOps.has(fn)) {
+          // 1. Black Text Knockout: K-only body text, overprint OFF
+          if (currentFillIsKOnly && !currentFillOverprint && currentFontSize > 0 && currentFontSize <= 12) {
+            blackTextKnockoutCount++;
+            if (firstBlackTextKnockoutPage === null) firstBlackTextKnockoutPage = pageIndex;
+          }
+
+          // 2. Rich Black Text: Small body text using CMYK builds (misregistration blur risk)
+          if (currentFillIsRichBlack && currentFontSize > 0 && currentFontSize <= 12) {
+            richBlackTextCount++;
+            if (firstRichBlackTextPage === null) firstRichBlackTextPage = pageIndex;
+          }
+
+          // 3. Spots in text
+          if (currentFillIsSpot) {
+            spotsInTextDetected = true;
+          }
+        }
+
+        // --- Original Transparency / Color analysis logic ---
         // --- Color spaces ---
         if (rgbOps.has(fn)) {
           // Check for Black/Gray masquerading as RGB (R=G=B)
@@ -1100,8 +1251,13 @@ async function analyzePdf(
             if (typeof alpha === 'number' && alpha < 0.999) {
               isTransparent = true;
             }
-          } else if (fn === OPS.setGState && args && typeof args === 'object') {
-            const g = (Array.isArray(args) ? args[0] : args) as any;
+          } else if (fn === OPS.setGState && args && args.length > 0) {
+            // Already resolved gState above, but transparency logic might use different keys
+            const gStateKey = args[0];
+            let g = null;
+            if (typeof gStateKey === 'string' && objs) g = objs.get(gStateKey);
+            else if (typeof gStateKey === 'object') g = gStateKey;
+
             if (g) {
               // Check Alpha
               const ca = g.ca ?? g.CA ?? g.alpha ?? 1;
@@ -1483,6 +1639,89 @@ async function analyzePdf(
         'Review critical text and small objects in a separations preview before sending to print.',
       bbox: { x: 0, y: 0, width: 1, height: 1 },
     });
+  }
+
+  // Black Text Knockout
+  if (blackTextKnockoutCount > 0) {
+    issues.push({
+      id: 'black-text-knockout',
+      page: firstBlackTextKnockoutPage || 1,
+      category: ISSUE_CATEGORY.COLOR,
+      severity: Severity.ERROR, // Blocking by default in most prepress
+      message: 'Small black text set to knockout.',
+      details:
+        `Detected ${blackTextKnockoutCount} instance(s) of 100% K-only text (<= 12pt) with overprint OFF. ` +
+        'This creates a knockout which can cause visible white halos or misregistration on press. ' +
+        'Standard practice is to set small black text to overprint.',
+      bbox: { x: 0, y: 0, width: 1, height: 1 },
+      tags: ['critical', 'prepress', 'overprint']
+    });
+  }
+
+  // Registration Color
+  if (registrationUsageCount > 0) {
+    issues.push({
+      id: 'registration-color-used',
+      page: firstRegistrationPage || 1,
+      category: ISSUE_CATEGORY.COLOR,
+      severity: Severity.ERROR,
+      message: 'Registration color detected in artwork.',
+      details:
+        'Separation /All (Registration) was detected on sampled pages. ' +
+        'Registration color (100% CMYK) is reserved only for printer marks. ' +
+        'Using it in artwork causes extreme ink density and potential printing artifacts.',
+      bbox: { x: 0, y: 0, width: 1, height: 1 },
+      tags: ['critical', 'ink-limit', 'prepress']
+    });
+  }
+
+  // Rich Black Text
+  if (richBlackTextCount > 0) {
+    issues.push({
+      id: 'rich-black-text',
+      page: firstRichBlackTextPage || 1,
+      category: ISSUE_CATEGORY.COLOR,
+      severity: Severity.WARNING,
+      message: 'Small text using rich black.',
+      details:
+        `Small text (<= 12pt) was found using a rich black build (C+M+Y+K). ` +
+        'While acceptable for larger display text, using rich black for small body text ' +
+        'increases the risk of misregistration blurring.',
+      bbox: { x: 0, y: 0, width: 1, height: 1 },
+      tags: ['prepress', 'legibility']
+    });
+  }
+
+  // Spot Colors
+  if (spotNamesUsed.size > 0) {
+    issues.push({
+      id: 'spot-colors-detected',
+      page: 1,
+      category: ISSUE_CATEGORY.COLOR,
+      severity: Severity.INFO,
+      message: `${spotNamesUsed.size} spot color(s) detected.`,
+      details: `Normalized spot names: ${Array.from(spotNamesUsed).join(', ')}.`,
+      bbox: { x: 0, y: 0, width: 1, height: 1 },
+      payload: {
+        spot_names: Array.from(spotNamesUsed),
+        page_spots: Object.fromEntries(
+          Array.from(pageSpotsMap.entries()).map(([k, v]) => [k, Array.from(v)])
+        ),
+        spots_in_text: spotsInTextDetected
+      }
+    });
+
+    if (spotsInTextDetected) {
+      issues.push({
+        id: 'spot-colors-in-text',
+        page: 1,
+        category: ISSUE_CATEGORY.COLOR,
+        severity: Severity.WARNING, // Attention
+        message: 'Spot colors detected in text objects.',
+        details: 'Some text objects are using spot colors. If these spots are converted to CMYK, fine text details might become blurry or change appearance.',
+        bbox: { x: 0, y: 0, width: 1, height: 1 }
+      });
+    }
   }
 
   // --------- Generación de resultados (PACK B) ---------
