@@ -41,6 +41,8 @@ interface Step3FixProps {
     onNext: () => void;
     onBack: () => void;
     serverAvailable?: boolean;
+    previewPages?: string[] | null;
+    previewLoading?: boolean;
 }
 
 const Icon = {
@@ -100,6 +102,8 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
     onNext,
     onBack,
     serverAvailable = true,
+    previewPages = null,
+    previewLoading = false,
 }) => {
     const [aiAuditOpen, setAiAuditOpen] = useState(false);
     const [efficiencyOpen, setEfficiencyOpen] = useState(false);
@@ -187,6 +191,8 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
                         onRunHeatmap={onRunHeatmap}
                         isHeatmapLoading={isHeatmapLoading}
                         onRunVisualCheck={onRunVisualCheck}
+                        previewPages={previewPages}
+                        previewLoading={previewLoading}
                     />
                 </div>
             </div>

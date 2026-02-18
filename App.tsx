@@ -59,6 +59,10 @@ export default function App() {
   const [heatmapData, setHeatmapData] = useState<HeatmapData | null>(null);
   const [heatmapLoading, setHeatmapLoading] = useState(false);
 
+  // Preview State (Server-side GS PNGs)
+  const [previewPages, setPreviewPages] = useState<string[] | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
   // UI / Loader
   const [processMessage, setProcessMessage] = useState<string | null>(null);
   const [processStage, setProcessStage] = useState<string | undefined>(undefined);
@@ -116,6 +120,7 @@ export default function App() {
     setAutoFixBefore(null);
     setAutoFixAfter(null);
     setCompareEnabled(false);
+    setPreviewPages(null);
   }, []);
 
   // ---------- Hooks ----------
@@ -126,6 +131,7 @@ export default function App() {
     rebuildPdfServer,
     autoFixServer,
     createBookletClient,
+    generatePreviewServer,
   } = usePdfTools();
 
   const runAnalysisRef = useRef<any>(null);
@@ -240,8 +246,25 @@ export default function App() {
   const isRunning = isWorkerRunning || isServerRunning;
 
   useEffect(() => {
-    if (!file) setHeatmapData(null);
-  }, [file]);
+    if (!file) {
+      setHeatmapData(null);
+      setPreviewPages(null);
+    } else {
+      // Trigger server preview generation for reliable CMYK visualization
+      const generatePreview = async () => {
+        setPreviewLoading(true);
+        try {
+          const res = await generatePreviewServer(file);
+          if (res.ok) setPreviewPages(res.pages);
+        } catch (e) {
+          console.warn('Server preview failed, falling back to PDF.js', e);
+        } finally {
+          setPreviewLoading(false);
+        }
+      };
+      generatePreview();
+    }
+  }, [file, generatePreviewServer]);
 
   const handleRunHeatmap = useCallback((f: File, meta: FileMeta, page: number) => {
     setHeatmapLoading(true);
@@ -691,6 +714,8 @@ export default function App() {
               onNext={() => setCurrentStep(4)}
               onBack={() => setCurrentStep(2)}
               serverAvailable={serverAvailable}
+              previewPages={previewPages}
+              previewLoading={previewLoading}
             />
           )}
 
@@ -718,6 +743,8 @@ export default function App() {
               onRunHeatmap={() => file && fileMeta && handleRunHeatmap(file, fileMeta, currentPage)}
               originalFile={originalFile}
               autoFixReport={autoFixReport}
+              previewPages={previewPages}
+              previewLoading={previewLoading}
             />
           )}
         </div>

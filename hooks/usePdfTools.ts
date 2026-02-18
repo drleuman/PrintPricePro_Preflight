@@ -170,6 +170,30 @@ export function usePdfTools() {
         return new Blob([pdfBytes as any], { type: 'application/pdf' });
     }, []);
 
+    const generatePreviewServer = useCallback(async (file: File): Promise<{ ok: boolean; pages: string[]; pageCount: number }> => {
+        setIsServerRunning(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const res = await fetch('/api/convert/preview/pages', {
+                method: 'POST',
+                body: formData,
+                cache: 'no-cache',
+                credentials: 'same-origin',
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || `Preview failed: ${res.status}`);
+            }
+
+            return await res.json();
+        } finally {
+            setIsServerRunning(false);
+        }
+    }, []);
+
     return {
         isServerRunning,
         convertToGrayscaleServer,
@@ -177,5 +201,6 @@ export function usePdfTools() {
         rebuildPdfServer,
         autoFixServer,
         createBookletClient,
+        generatePreviewServer,
     };
 }

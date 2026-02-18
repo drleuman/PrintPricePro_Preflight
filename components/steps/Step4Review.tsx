@@ -26,6 +26,8 @@ interface Step4ReviewProps {
     onRunHeatmap?: () => void;
     originalFile?: File | null;
     autoFixReport?: any;
+    previewPages?: string[] | null;
+    previewLoading?: boolean;
 }
 
 export const Step4Review: React.FC<Step4ReviewProps> = ({
@@ -51,6 +53,8 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
     onRunHeatmap,
     originalFile,
     autoFixReport,
+    previewPages = null,
+    previewLoading = false,
 }) => {
     const [showBeforeAfter, setShowBeforeAfter] = useState<'before' | 'after'>('after');
     const [showTechNote, setShowTechNote] = useState(false);
@@ -256,6 +260,8 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                         heatmapData={heatmapData || null}
                         onRunHeatmap={onRunHeatmap || (() => { })}
                         isHeatmapLoading={isHeatmapLoading}
+                        previewPages={previewPages}
+                        previewLoading={previewLoading}
                     />
                 </div>
             </div>

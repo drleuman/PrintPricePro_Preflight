@@ -3,7 +3,12 @@
 import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { PDFDocument } from 'pdf-lib';
+import {
+  PDFDocument,
+  pushGraphicsState,
+  popGraphicsState,
+  concatTransformationMatrix,
+} from 'pdf-lib';
 
 import {
   Severity,
@@ -114,8 +119,6 @@ function post(msg: Outbound) {
   (self as unknown as Worker).postMessage(msg as PreflightWorkerMessage);
 }
 
-// ... Utils ...
-
 // 4) TAC Heatmap Analysis
 async function generateTacHeatmap(
   buffer: ArrayBuffer,
@@ -135,41 +138,14 @@ async function generateTacHeatmap(
   }
 
   const page = await pdf.getPage(pageIndex);
-  // Render to a small-ish canvas for heatmap analysis
-  // We don't need full print resolution. 72 DPI is enough for a UI heatmap.
-  // Actually, maybe lower? 36 DPI?
-  // Let's target a grid of approx 100-200 px wide.
   const viewportRaw = page.getViewport({ scale: 1.0 });
-  // Scale to make width ~ 150px
   const scale = 150 / viewportRaw.width;
   const { canvas, viewport } = await renderPageToCanvas(page, scale);
 
   const ctx = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
   const { width, height } = canvas;
   const imgData = ctx.getImageData(0, 0, width, height);
-  const data = imgData.data; // R,G,B,A, R,G,B,A...
-
-  // Analyze TAC.
-  // Note: We only have RGB from canvas. Precise TAC requires CMYK source access.
-  // Converting RGB -> CMYK is an approximation.
-  // Standard naive conversion:
-  // K = 1 - max(R,G,B)
-  // C = (1-R-K)/(1-K) ...
-  // This is "GCR" (Gray Component Replacement) dependent.
-  // Simple naive formula:
-  // C = 1 - R, M = 1 - G, Y = 1 - B. 
-  // Wait, that's just inverted RGB.
-  // Naive CMYK:
-  // R' = R/255, etc.
-  // K = 1 - max(R', G', B')
-  // C = (1 - R' - K) / (1 - K)
-  // M = (1 - G' - K) / (1 - K)
-  // Y = (1 - B' - K) / (1 - K)
-  // TAC = (C+M+Y+K) * 100.
-
-  // However, in standard RGB-to-CMYK profiles (e.g. SWOP), rich black can be high.
-  // This approximation is ONLY for the "Heatmap" visual aid, explicitly stating it's estimated from RGB render.
-  // It detects "dark" areas primarily.
+  const data = imgData.data;
 
   const heatmapValues = new Uint8Array(width * height);
   let maxTacFound = 0;
@@ -178,12 +154,8 @@ async function generateTacHeatmap(
     const r = data[i] / 255;
     const g = data[i + 1] / 255;
     const b = data[i + 2] / 255;
-    // alpha ignored for ink coverage usually (paper is white), assuming composition against white?
-    // If alpha is 0, it's white paper -> 0% ink.
     const a = data[i + 3] / 255;
 
-    // Composit against white
-    // r_final = r*a + 1*(1-a) ...
     const r_vis = r * a + (1 - a);
     const g_vis = g * a + (1 - a);
     const b_vis = b * a + (1 - a);
@@ -197,20 +169,10 @@ async function generateTacHeatmap(
       y = (1 - b_vis - k) / (1 - k);
     }
 
-    const totalInk = (c + m + y + k) * 400; // 0-4.0 -> 0-400%
-    // We'll store it as Uint8, so divide by 2 to fit 0-200 (representing 0-400%)?
-    // Or just count "badness"?
-    // Let's store actual % value if < 255, but normally we care about > 280.
-    // Let's store (Value - 200)? No.
-    // Let's map 0-400 to 0-255?  val * 255/400. 
-    // Or better: Just store percent integer. 300% = 255 (clamped)? No.
-    // Let's store TAC.
+    const totalInk = (c + m + y + k) * 400;
     const tac = Math.round(totalInk);
     maxTacFound = Math.max(maxTacFound, tac);
-
-    // We output a packed array.
-    // Since we likely care most about > 280, let's clamp.
-    heatmapValues[i / 4] = Math.min(255, tac * 255 / 400); // 400% -> 255. 300% -> 191.
+    heatmapValues[i / 4] = Math.min(255, (tac * 255) / 400);
   }
 
   post({
@@ -219,10 +181,9 @@ async function generateTacHeatmap(
     width,
     height,
     values: heatmapValues,
-    maxTac: maxTacFound
+    maxTac: maxTacFound,
   });
 }
-
 
 /* =========================
    Utils de tamaño / severidad
@@ -239,7 +200,8 @@ function classifySize(widthPt: number, heightPt: number): string {
 
   if (isClose(w, 148) && isClose(h, 210)) return 'A5';
   if (isClose(w, 170) && isClose(h, 240)) return '170 × 240 mm';
-  if (w >= 168 && w <= 190 && h >= 238 && h <= 265) return '170 × 240 mm (detected w/ crops)';
+  if (w >= 168 && w <= 190 && h >= 238 && h <= 265)
+    return '170 × 240 mm (detected w/ crops)';
 
   if (isClose(w, 210) && isClose(h, 297)) return 'A4';
   if (isClose(w, 210) && isClose(h, 280)) return 'US Letter-ish';
@@ -306,8 +268,6 @@ async function convertPdfToGrayscale(
   const pageCount = pdf.numPages;
 
   const outDoc = await PDFDocument.create();
-
-  // 72 * 2.1 ≈ 150 dpi
   const scale = 2.1;
 
   for (let pageIndex = 1; pageIndex <= pageCount; pageIndex++) {
@@ -364,8 +324,6 @@ async function upscalePdf(
   const pageCount = pdf.numPages;
 
   const outDoc = await PDFDocument.create();
-
-  // Aproximación: 1pt = 1/72 inch → dpi ≈ 72 * scale
   const scale = minDpi / 72;
 
   for (let pageIndex = 1; pageIndex <= pageCount; pageIndex++) {
@@ -406,149 +364,67 @@ async function upscalePdf(
   return { buffer: sliced as ArrayBuffer, fileMeta: newMeta };
 }
 
-// 3) Añadir sangrado (bleed) a un PDF
+// 3) Añadir sangrado (bleed) a un PDF (V3 Non-Destructive RIP-style)
 async function addBleed(
   buffer: ArrayBuffer,
   fileMeta: FileMeta,
   bleedMm: number = 3,
   mode: 'safe' | 'aggressive' = 'safe'
 ): Promise<{ buffer: ArrayBuffer; fileMeta: FileMeta }> {
-  // Cargar el documento original (con ignoreEncryption: true)
   const srcDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
-  const dstDoc = await PDFDocument.create();
   const pages = srcDoc.getPages();
-
-  const bleedPt = (bleedMm * 72) / 25.4; // 3mm ~ 8.5 pt
-  const appliedModes: string[] = [];
-  const EPSILON = 1; // 1pt tolerance for floating point calculations
+  const bleedPt = (bleedMm * 72) / 25.4;
 
   for (let i = 0; i < pages.length; i++) {
-    const srcPage = pages[i];
-    const rotation = srcPage.getRotation();
+    const page = pages[i];
+    const { width, height } = page.getSize();
 
-    // Use original MediaBox (native coordinates)
-    const mediaBox = srcPage.getMediaBox();
-    const nativeW = mediaBox.width;
-    const nativeH = mediaBox.height;
+    const sx = (width + 2 * bleedPt) / width;
+    const sy = (height + 2 * bleedPt) / height;
+    const s = Math.max(sx, sy);
 
-    // Embed content (ignores rotation flag)
-    const [embedded] = await dstDoc.embedPages([srcPage]);
+    const tx = ((1 - s) * width) / 2;
+    const ty = ((1 - s) * height) / 2;
 
-    // Current boxes for heuristics
-    let cropBox;
-    try {
-      cropBox = srcPage.getCropBox();
-    } catch {
-      cropBox = mediaBox;
-    }
-    let trimBox;
-    try {
-      trimBox = srcPage.getTrimBox();
-    } catch {
-      trimBox = cropBox;
-    }
+    page.prependOperators(
+      pushGraphicsState(),
+      concatTransformationMatrix(s, 0, 0, s, tx, ty)
+    );
+    page.pushOperators(popGraphicsState());
 
-    // Artwork real (TrimBox width/height are already native-relative in pdf-lib)
-    let appliedMode: 'box-only' | 'scale-to-bleed' = 'scale-to-bleed';
-    let reason = '';
-    let scaleFactor = 1.0;
+    page.setTrimBox(0, 0, width, height);
 
-    // Side-check for existing margins
-    const left = trimBox.x - cropBox.x;
-    const bottom = trimBox.y - cropBox.y;
-    const right = cropBox.x + cropBox.width - (trimBox.x + trimBox.width);
-    const top = cropBox.y + cropBox.height - (trimBox.y + trimBox.height);
-    const minMargin = Math.min(left, bottom, right, top);
+    const newX = -bleedPt;
+    const newY = -bleedPt;
+    const newW = width + 2 * bleedPt;
+    const newH = height + 2 * bleedPt;
 
-    if (mode !== 'aggressive' && minMargin >= bleedPt - EPSILON) {
-      appliedMode = 'box-only';
-      reason = 'margin-found';
-    } else {
-      appliedMode = 'scale-to-bleed';
-      reason = mode === 'aggressive' ? 'user-choice' : 'no-margin';
-    }
-
-    appliedModes.push(appliedMode);
-
-    if (appliedMode === 'box-only') {
-      const finalW = cropBox.width;
-      const finalH = cropBox.height;
-      const newPage = dstDoc.addPage([finalW, finalH]);
-      newPage.setRotation(rotation);
-
-      // Draw content relative to original origin
-      newPage.drawPage(embedded, { x: -cropBox.x, y: -cropBox.y });
-
-      newPage.setMediaBox(0, 0, finalW, finalH);
-      newPage.setCropBox(0, 0, finalW, finalH);
-      newPage.setTrimBox(bleedPt, bleedPt, finalW - 2 * bleedPt, finalH - 2 * bleedPt);
-      newPage.setBleedBox(0, 0, finalW, finalH);
-    } else {
-      // Scale-to-Bleed Centered (Industrial V3)
-      const finalW = nativeW + bleedPt * 2;
-      const finalH = nativeH + bleedPt * 2;
-
-      const sx = finalW / nativeW;
-      const sy = finalH / nativeH;
-      scaleFactor = Math.max(sx, sy);
-
-      const drawW = nativeW * scaleFactor;
-      const drawH = nativeH * scaleFactor;
-
-      // Centering Formula: (CanvasSize - ScaledSize) / 2
-      const drawX = (finalW - drawW) / 2;
-      const drawY = (finalH - drawH) / 2;
-
-      const newPage = dstDoc.addPage([finalW, finalH]);
-      newPage.setRotation(rotation);
-      newPage.drawPage(embedded, {
-        x: drawX,
-        y: drawY,
-        xScale: scaleFactor,
-        yScale: scaleFactor
-      });
-
-      newPage.setMediaBox(0, 0, finalW, finalH);
-      newPage.setCropBox(0, 0, finalW, finalH);
-      // TrimBox is the original intended size (Internal)
-      newPage.setTrimBox(bleedPt, bleedPt, nativeW, nativeH);
-      newPage.setBleedBox(0, 0, finalW, finalH);
-    }
+    page.setBleedBox(newX, newY, newW, newH);
+    page.setMediaBox(newX, newY, newW, newH);
+    page.setCropBox(newX, newY, newW, newH);
 
     post({
       type: 'analysisProgress',
       progress: ((i + 1) / pages.length) * 100,
-      note: `Fixing bleed P${i + 1} (${appliedMode}${scaleFactor > 1.0 ? ` s:${scaleFactor.toFixed(4)}` : ''})`,
+      note: `Applying RIP-style bleed P${i + 1} (s:${s.toFixed(4)})`,
     });
   }
 
-  const outBytes = await dstDoc.save();
+  const outBytes = await srcDoc.save();
   const sliced = outBytes.buffer.slice(
     outBytes.byteOffset,
     outBytes.byteOffset + outBytes.byteLength
   );
 
-  // Naming with extra detail
-  const uniqueModes = Array.from(new Set(appliedModes));
-  let modeSuffix = uniqueModes.length > 1 ? 'mixed' : uniqueModes[0];
-  modeSuffix = modeSuffix.replace('expand', '').replace('fill', '').replace('-', '');
-
   const newMeta: FileMeta = {
     ...fileMeta,
     name:
-      fileMeta.name.replace(/\.pdf$/i, '') +
-      `_bleed_${bleedMm}mm_${modeSuffix}.pdf`,
+      fileMeta.name.replace(/\.pdf$/i, '') + `_bleed_${bleedMm}mm_v3.pdf`,
     size: outBytes.byteLength,
   };
 
   return { buffer: sliced as ArrayBuffer, fileMeta: newMeta };
 }
-
-
-
-/* =========================
-   Construcción de resultado (ORIGINAL)
-   ========================= */
 
 function buildResult(
   issues: Issue[],

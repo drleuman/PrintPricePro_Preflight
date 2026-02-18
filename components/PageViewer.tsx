@@ -21,6 +21,8 @@ interface PageViewerProps {
   onRunHeatmap: (file: File, meta: FileMeta, page: number) => void;
   isHeatmapLoading: boolean;
   onRunVisualCheck?: () => void;
+  previewPages?: string[] | null;
+  previewLoading?: boolean;
 }
 
 export const PageViewer: React.FC<PageViewerProps> = ({
@@ -35,6 +37,8 @@ export const PageViewer: React.FC<PageViewerProps> = ({
   onRunHeatmap,
   isHeatmapLoading,
   onRunVisualCheck,
+  previewPages,
+  previewLoading,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pdfRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
@@ -308,12 +312,41 @@ export const PageViewer: React.FC<PageViewerProps> = ({
       </div>
 
       <div className="pdf-viewer-container relative">
-        <canvas ref={canvasRef} className="shadow-lg border border-gray-300 max-w-full h-auto block" style={{ position: 'relative', zIndex: 1 }}></canvas>
+        {previewLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-20 backdrop-blur-sm rounded-lg">
+            <div className="flex flex-col items-center gap-3">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+              <p className="text-sm font-medium text-blue-800">Generating High-Quality Preview...</p>
+            </div>
+          </div>
+        )}
+
+        {/* The PDF.js Canvas (fallback or base for overlays) */}
+        <canvas
+          ref={canvasRef}
+          className="shadow-lg border border-gray-300 max-w-full h-auto block"
+          style={{
+            position: 'relative',
+            zIndex: 1,
+            display: previewPages?.[currentPage - 1] ? 'none' : 'block'
+          }}
+        />
+
+        {/* The Server-side PNG (high-quality CMYK + Transparency) */}
+        {previewPages?.[currentPage - 1] && (
+          <img
+            src={previewPages[currentPage - 1]}
+            alt={`Page ${currentPage}`}
+            className="shadow-lg border border-gray-300 max-w-full h-auto block"
+            style={{ position: 'relative', zIndex: 1 }}
+          />
+        )}
+
         {showHeatmap && (
           <>
             {isHeatmapLoading && (
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/50 text-white px-3 py-1 rounded" style={{ zIndex: 20 }}>
-                Analyzing Ink...
+                {t('analyzingInk')}
               </div>
             )}
             <canvas

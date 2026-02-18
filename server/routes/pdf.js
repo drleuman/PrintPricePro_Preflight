@@ -4,7 +4,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const crypto = require('crypto');
-const { PDFDocument, PDFName, PDFArray, PDFDict } = require('pdf-lib');
+const { PDFDocument, PDFName, PDFArray, PDFDict, pushGraphicsState, popGraphicsState, concatTransformationMatrix } = require('pdf-lib');
 const { runGs, sendPdfAndCleanup, safeUnlink, safeRmDir } = require('../services/ghostscript');
 const { spawn } = require('child_process');
 
@@ -474,50 +474,46 @@ function shouldFlattenFromIssues(issues) {
 async function addBleedCanvasPdf(inputPath, outPath, bleedMm) {
     const bleedPt = mmToPt(bleedMm || 3);
     const bytes = fs.readFileSync(inputPath);
-    const src = await PDFDocument.load(bytes);
-    const dst = await PDFDocument.create();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
 
-    const pages = src.getPages();
+    const pages = doc.getPages();
     for (let i = 0; i < pages.length; i++) {
         const p = pages[i];
-        const rotation = p.getRotation();
         const { width, height } = p.getSize(); // native size
 
-        const [embedded] = await dst.embedPages([p]);
-
-        // Target: Original + 3mm bleed on all sides
-        const newW = width + (bleedPt * 2);
-        const newH = height + (bleedPt * 2);
-
         // Calculate Scale-to-Bleed (Industrial V3)
-        const sx = newW / width;
-        const sy = newH / height;
+        const sx = (width + (bleedPt * 2)) / width;
+        const sy = (height + (bleedPt * 2)) / height;
         const scale = Math.max(sx, sy);
 
-        const drawW = width * scale;
-        const drawH = height * scale;
+        // RIP-style Matrix Translation & Scaling
+        const tx = ((1 - scale) * width) / 2;
+        const ty = ((1 - scale) * height) / 2;
 
-        // Centering: (Canvas - ScaledContent) / 2
-        const drawX = (newW - drawW) / 2;
-        const drawY = (newH - drawH) / 2;
+        // Apply transformation matrix to the page content stream:
+        // Translate(-W/2, -H/2) -> Scale(s, s) -> Translate(W/2, H/2)
+        // This is non-destructive and preserves transparency/overprint
+        p.prependOperators(
+            pushGraphicsState(),
+            concatTransformationMatrix(scale, 0, 0, scale, tx, ty)
+        );
+        p.pushOperators(popGraphicsState());
 
-        const newPage = dst.addPage([newW, newH]);
-        newPage.setRotation(rotation);
+        // Set technical boxes (RIP-style)
+        // TrimBox = original page size
+        p.setTrimBox(0, 0, width, height);
 
-        newPage.drawPage(embedded, {
-            x: drawX,
-            y: drawY,
-            xScale: scale,
-            yScale: scale
-        });
+        // BleedBox, MediaBox, CropBox = expanded by bleedPt
+        const newX = -bleedPt;
+        const newY = -bleedPt;
+        const newW = width + 2 * bleedPt;
+        const newH = height + 2 * bleedPt;
 
-        // Set technical boxes
-        newPage.setMediaBox(0, 0, newW, newH);
-        newPage.setCropBox(0, 0, newW, newH);
-        newPage.setTrimBox(bleedPt, bleedPt, width, height);
-        newPage.setBleedBox(0, 0, newW, newH);
+        p.setBleedBox(newX, newY, newW, newH);
+        p.setMediaBox(newX, newY, newW, newH);
+        p.setCropBox(newX, newY, newW, newH);
     }
-    const outBytes = await dst.save();
+    const outBytes = await doc.save();
     fs.writeFileSync(outPath, outBytes);
 }
 
@@ -1083,6 +1079,25 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
                 output: path.basename(outPath),
                 warnings: stepWarnings
             });
+
+            // --- Debug Mode: Save intermediate files ---
+            if (process.env.DEBUG_PREPRESS === '1') {
+                try {
+                    const debugNameMap = {
+                        'add_bleed_canvas': 'step1_geometry.pdf',
+                        'convert_cmyk': report.prepress_summary.finalize_stage_ran ? 'step3_pdfx.pdf' : 'step2_cmyk.pdf',
+                        'rebuild_raster': 'step0_raster.pdf'
+                    };
+                    const debugName = debugNameMap[planStep.action] || `step${stepIndex}_${planStep.action}.pdf`;
+                    const debugPath = path.join(uploadDir, `${Date.now()}_DEBUG_${debugName}`);
+                    fs.copyFileSync(outPath, debugPath);
+
+                    // Attach debug info to report for headers
+                    if (!report.debug_files) report.debug_files = {};
+                    report.debug_files[planStep.action] = path.basename(debugPath);
+                } catch (de) { console.warn('Debug save failed:', de); }
+            }
+
             if (currentPath !== inputPath && tmpPathsRegistry) tmpPathsRegistry.add(currentPath);
             currentPath = outPath;
             if (tmpPathsRegistry) tmpPathsRegistry.add(outPath);
@@ -1215,6 +1230,15 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
         res.setHeader('X-PPP-Autofix-Report', json);
         res.setHeader('X-PPP-Autofix-ElapsedMs', tElapsed.toString());
 
+        // Debug Headers
+        if (report.debug_files) {
+            if (report.debug_files['add_bleed_canvas']) res.setHeader('X-PPP-Stage-Geometry', report.debug_files['add_bleed_canvas']);
+            if (report.debug_files['convert_cmyk']) {
+                res.setHeader('X-PPP-Stage-Color', report.debug_files['convert_cmyk']);
+                res.setHeader('X-PPP-Stage-Finalize', report.debug_files['convert_cmyk']);
+            }
+        }
+
         const baseName = path.basename(originalFilename).replace(/\.pdf$/i, '');
 
         deliveredPdf = true;
@@ -1265,6 +1289,49 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
             await safeUnlink(inputPath);
             for (const p of tempPathsToCleanup) await safeUnlink(p);
         }
+    }
+});
+
+router.post('/preview/pages', upload.single('file'), async (req, res) => {
+    const inputPath = req.file?.path;
+    if (!inputPath) return res.status(400).json({ error: 'Missing file' });
+
+    const tmpDir = fs.mkdtempSync(path.join(uploadDir, 'preview-'));
+    const imgPattern = path.join(tmpDir, 'page-%03d.png');
+
+    try {
+        // Ghostscript command for high-quality CMYK-aware preview
+        // png16m supports millions of colors, r150 is specified resolution
+        await runGs([
+            '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
+            '-sDEVICE=png16m',
+            '-r150',
+            '-dUseCropBox',
+            '-o', imgPattern,
+            inputPath
+        ]);
+
+        const files = fs.readdirSync(tmpDir)
+            .filter(f => /^page-\d+\.png$/i.test(f))
+            .sort();
+
+        const pages = files.map(f => {
+            const filePath = path.join(tmpDir, f);
+            const data = fs.readFileSync(filePath);
+            return `data:image/png;base64,${data.toString('base64')}`;
+        });
+
+        res.json({
+            ok: true,
+            pageCount: pages.length,
+            pages: pages
+        });
+    } catch (err) {
+        console.error('Preview generation failed:', err);
+        res.status(500).json({ error: 'Preview generation failed', details: err.message });
+    } finally {
+        safeUnlink(inputPath);
+        safeRmDir(tmpDir);
     }
 });
 
