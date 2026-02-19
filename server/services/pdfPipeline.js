@@ -38,10 +38,13 @@ function normalizeProfile(p) {
  */
 async function execCmd(cmd, args, opts = {}) {
     const timeoutMs = opts.timeoutMs ?? 60000;
+    const maxOut = opts.maxOutputBytes || 1024 * 1024; // 1MB
     return new Promise((resolve) => {
         const p = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
         let out = '';
         let err = '';
+        let outTruncated = false;
+        let errTruncated = false;
         let killed = false;
 
         const t = setTimeout(() => {
@@ -49,17 +52,34 @@ async function execCmd(cmd, args, opts = {}) {
             try { p.kill('SIGKILL'); } catch (e) { }
         }, timeoutMs);
 
-        p.stdout.on('data', (d) => (out += d.toString('utf8')));
-        p.stderr.on('data', (d) => (err += d.toString('utf8')));
+        p.stdout.on('data', (d) => {
+            if (!outTruncated) {
+                const chunk = d.toString('utf8');
+                const space = maxOut - out.length;
+                if (space <= 0) outTruncated = true;
+                else if (chunk.length > space) { out += chunk.slice(0, space); outTruncated = true; }
+                else out += chunk;
+            }
+        });
+
+        p.stderr.on('data', (d) => {
+            if (!errTruncated) {
+                const chunk = d.toString('utf8');
+                const space = maxOut - err.length;
+                if (space <= 0) errTruncated = true;
+                else if (chunk.length > space) { err += chunk.slice(0, space); errTruncated = true; }
+                else err += chunk;
+            }
+        });
 
         p.on('error', (e) => {
             clearTimeout(t);
-            resolve({ ok: false, code: -1, stdout: out, stderr: `${err}\nSpawn error: ${e.message}`, killed });
+            resolve({ ok: false, code: -1, stdout: out, stderr: `${err}\nSpawn error: ${e.message}`, killed, stdout_truncated: outTruncated, stderr_truncated: errTruncated });
         });
 
         p.on('close', (code) => {
             clearTimeout(t);
-            resolve({ ok: (code === 0 || code === null) && !killed, code, stdout: out, stderr: err, killed });
+            resolve({ ok: (code === 0 || code === null) && !killed, code, stdout: out, stderr: err, killed, stdout_truncated: outTruncated, stderr_truncated: errTruncated });
         });
     });
 }
@@ -119,7 +139,7 @@ async function gsConvertColor(input, output, profile, opts = {}) {
 `.trim();
 
     const psPath = path.join(path.dirname(output), `pdfx_def_${Date.now()}.ps`);
-    fs.writeFileSync(psPath, psContent);
+    await fs.promises.writeFile(psPath, psContent);
 
     const args = [
         '-dSAFER', '-dNOPAUSE', '-dBATCH', '-dQUIET',
@@ -145,7 +165,7 @@ async function gsConvertColor(input, output, profile, opts = {}) {
 
     try {
         const { ok, stderr } = await execCmd(GS_CMD, args, { timeoutMs: 120000 });
-        if (fs.existsSync(psPath)) try { fs.unlinkSync(psPath); } catch (e) { }
+        try { await fs.promises.unlink(psPath); } catch (e) { }
         if (!ok) throw new Error(`GS color conversion failed: ${stderr}`);
 
         return {
@@ -155,7 +175,7 @@ async function gsConvertColor(input, output, profile, opts = {}) {
             gsMode: opts.finalizeOnly ? 'finalize' : 'convert'
         };
     } catch (e) {
-        if (fs.existsSync(psPath)) try { fs.unlinkSync(psPath); } catch (e) { }
+        try { await fs.promises.unlink(psPath); } catch (e2) { }
         throw e;
     }
 }
@@ -199,7 +219,7 @@ async function rebuildAtDpi(input, output, dpi = 300) {
  */
 async function addBleedCanvasPdf(inputPath, outPath, bleedMm = 3) {
     const bleedPt = (Number(bleedMm) || 3) * 72 / 25.4;
-    const bytes = fs.readFileSync(inputPath);
+    const bytes = await fs.promises.readFile(inputPath);
     const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
 
     const pages = doc.getPages();
@@ -258,7 +278,7 @@ async function addBleedCanvasPdf(inputPath, outPath, bleedMm = 3) {
     }
 
     const outBytes = await doc.save();
-    fs.writeFileSync(outPath, outBytes);
+    await fs.promises.writeFile(outPath, outBytes);
 }
 
 module.exports = {

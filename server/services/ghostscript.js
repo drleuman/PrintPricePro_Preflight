@@ -50,12 +50,9 @@ async function safeRmDir(dir) {
  */
 async function sendPdfAndCleanup(res, filePath, downloadName, cleanupFn) {
     try {
-        if (!fs.existsSync(filePath)) {
-            throw new Error(`File not found: ${filePath}`);
-        }
-
-        const stats = fs.statSync(filePath);
-        const bytes = fs.readFileSync(filePath);
+        // Ensure file exists and get size
+        let stats;
+        try { stats = await fs.promises.stat(filePath); } catch (e) { throw new Error(`File not found: ${filePath}`); }
 
         // Robust headers for large generated files
         res.setHeader('Content-Type', 'application/pdf');
@@ -64,16 +61,26 @@ async function sendPdfAndCleanup(res, filePath, downloadName, cleanupFn) {
         res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
-        // CORS Safety
-        res.setHeader('Access-Control-Allow-Origin', '*');
+        // Expose useful headers; CORS origin handled globally
         res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, X-PPP-Autofix-Report, Content-Length');
 
-        res.send(bytes);
+        // Stream file to client to avoid buffering whole file in memory
+        const stream = fs.createReadStream(filePath);
+        stream.on('error', (err) => {
+            console.error('Stream error while sending PDF:', err);
+            if (!res.headersSent) res.status(500).json({ error: 'Failed to stream PDF', details: err.message });
+            // Attempt cleanup
+            if (cleanupFn) try { cleanupFn(); } catch (_) { }
+        });
 
-        // Cleanup after send
-        if (cleanupFn) {
-            try { await cleanupFn(); } catch (e) { console.error('Cleanup failed:', e); }
-        }
+        stream.pipe(res);
+
+        // After stream finishes, run cleanup
+        stream.on('close', async () => {
+            if (cleanupFn) {
+                try { await cleanupFn(); } catch (e) { console.error('Cleanup failed:', e); }
+            }
+        });
     } catch (err) {
         console.error('sendPdfAndCleanup error:', err);
         if (!res.headersSent) {

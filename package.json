@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.js",
-    "test:front": "vitest"
+    "test:front": "vitest",
+    "test:probe": "node scripts/test_probe.js"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "*"

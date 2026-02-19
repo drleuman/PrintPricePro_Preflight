@@ -69,7 +69,7 @@ class JobProcessor {
 
         const jobDir = JobManager.getJobDir(jobId);
         const splitDir = path.join(jobDir, 'split');
-        if (!fs.existsSync(splitDir)) fs.mkdirSync(splitDir, { recursive: true });
+        try { await fs.promises.mkdir(splitDir, { recursive: true }); } catch (e) { }
 
         // Update job with total pages
         await JobManager.updateJob(jobId, { page_count: info.pageCount });
@@ -91,7 +91,7 @@ class JobProcessor {
         const jobDir = JobManager.getJobDir(jobId);
         const splitPath = path.join(jobDir, 'split', `p${pageNo.toString().padStart(4, '0')}.pdf`);
         const processedDir = path.join(jobDir, 'processed');
-        if (!fs.existsSync(processedDir)) fs.mkdirSync(processedDir, { recursive: true });
+        try { await fs.promises.mkdir(processedDir, { recursive: true }); } catch (e) { }
         const outPath = path.join(processedDir, `p${pageNo.toString().padStart(4, '0')}.pdf`);
 
         // Pipeline Logic
@@ -119,10 +119,14 @@ class JobProcessor {
             await gsConvertColor(current, outPath, payload.profile || 'iso_coated_v3', { finalizeOnly: false });
 
             // Cleanup temp files
-            for (const f of tmpFiles) if (fs.existsSync(f)) fs.unlinkSync(f);
+            for (const f of tmpFiles) {
+                try { await fs.promises.unlink(f); } catch (e) { }
+            }
 
         } catch (e) {
-            for (const f of tmpFiles) if (fs.existsSync(f)) fs.unlinkSync(f);
+            for (const f of tmpFiles) {
+                try { await fs.promises.unlink(f); } catch (err) { }
+            }
             throw e;
         }
     }
@@ -136,7 +140,7 @@ class JobProcessor {
         const pages = [];
         for (let i = 1; i <= job.page_count; i++) {
             const p = path.join(processedDir, `p${i.toString().padStart(4, '0')}.pdf`);
-            if (!fs.existsSync(p)) throw new Error(`Missing processed page ${i}`);
+            try { await fs.promises.access(p); } catch (e) { throw new Error(`Missing processed page ${i}`); }
             pages.push(p);
         }
 
@@ -148,7 +152,7 @@ class JobProcessor {
         await gsConvertColor(finalMergedPath, finalPath, payload.profile || 'iso_coated_v3', { finalizeOnly: true });
 
         // Cleanup merged temp
-        if (fs.existsSync(finalMergedPath)) fs.unlinkSync(finalMergedPath);
+        try { await fs.promises.unlink(finalMergedPath); } catch (e) { }
 
         // Enqueue final verify
         await JobManager.enqueueTask(jobId, 'VERIFY', payload);

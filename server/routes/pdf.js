@@ -17,14 +17,17 @@ const {
     rebuildAtDpi,
     addBleedCanvasPdf
 } = require('../services/pdfPipeline');
+const apiKeyMiddleware = require('../middleware/apiKey');
 
 function execCmd(cmd, args, opts = {}) {
     const timeoutMs = opts.timeoutMs ?? 60000; // Increased timeout for larger docs
-
     return new Promise((resolve) => {
         const p = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+        const maxOut = opts.maxOutputBytes ?? 1024 * 1024; // cap output to 1MB by default
         let out = '';
         let err = '';
+        let outTruncated = false;
+        let errTruncated = false;
         let killed = false;
 
         const t = setTimeout(() => {
@@ -32,17 +35,44 @@ function execCmd(cmd, args, opts = {}) {
             try { p.kill('SIGKILL'); } catch (e) { }
         }, timeoutMs);
 
-        p.stdout.on('data', (d) => (out += d.toString('utf8')));
-        p.stderr.on('data', (d) => (err += d.toString('utf8')));
+        p.stdout.on('data', (d) => {
+            if (!outTruncated) {
+                const chunk = d.toString('utf8');
+                const space = maxOut - out.length;
+                if (space <= 0) {
+                    outTruncated = true;
+                } else if (chunk.length > space) {
+                    out += chunk.slice(0, space);
+                    outTruncated = true;
+                } else {
+                    out += chunk;
+                }
+            }
+        });
+
+        p.stderr.on('data', (d) => {
+            if (!errTruncated) {
+                const chunk = d.toString('utf8');
+                const space = maxOut - err.length;
+                if (space <= 0) {
+                    errTruncated = true;
+                } else if (chunk.length > space) {
+                    err += chunk.slice(0, space);
+                    errTruncated = true;
+                } else {
+                    err += chunk;
+                }
+            }
+        });
 
         p.on('error', (e) => {
             clearTimeout(t);
-            resolve({ ok: false, code: -1, stdout: out, stderr: `${err}\nSpawn error: ${e.message}`, killed });
+            resolve({ ok: false, code: -1, stdout: out, stderr: `${err}\nSpawn error: ${e.message}`, killed, stdout_truncated: outTruncated, stderr_truncated: errTruncated });
         });
 
         p.on('close', (code) => {
             clearTimeout(t);
-            resolve({ ok: (code === 0 || code === null) && !killed, code, stdout: out, stderr: err, killed });
+            resolve({ ok: (code === 0 || code === null) && !killed, code, stdout: out, stderr: err, killed, stdout_truncated: outTruncated, stderr_truncated: errTruncated });
         });
     });
 }
@@ -152,10 +182,40 @@ async function detectRasterization(pdfPath) {
     return result;
 }
 
+// Probe PDF metadata using a child worker to avoid loading large PDFs in the main process
+async function probePdfMetadata(inputPath, opts = {}) {
+    const workerScript = path.join(__dirname, '..', 'workers', 'pdf_probe.js');
+    const nodeExe = process.execPath || 'node';
+    const timeoutMs = opts.timeoutMs || 30000;
+    const maxOutput = opts.maxOutputBytes || 200 * 1024; // 200KB
+
+    // Allow limiting worker memory to avoid OOM in probe process
+    const workerMb = Number(process.env.PPP_WORKER_MAX_OLD_SPACE_MB) || 256;
+    const nodeArgs = [`--max-old-space-size=${workerMb}`, workerScript, inputPath];
+
+    const res = await execCmd(nodeExe, nodeArgs, { timeoutMs, maxOutputBytes: maxOutput });
+    if (!res.ok) {
+        // try parse stderr JSON if any
+        try {
+            const errJson = JSON.parse(res.stderr || '{}');
+            return { error: errJson.error || 'worker_failed', message: errJson.message || res.stderr };
+        } catch (e) {
+            return { error: 'worker_failed', message: res.stderr || 'worker failed' };
+        }
+    }
+
+    try {
+        const j = JSON.parse(res.stdout || '{}');
+        return j;
+    } catch (e) {
+        return { error: 'invalid_worker_output', message: e.message };
+    }
+}
+
 const router = express.Router();
 
-// Setup upload
-const uploadDir = path.join(os.tmpdir(), 'ppp-preflight');
+// Setup upload (make upload dir configurable for Windows/AV issues)
+const uploadDir = process.env.PPP_UPLOAD_DIR || path.join(os.tmpdir(), 'ppp-preflight');
 try { fs.mkdirSync(uploadDir, { recursive: true }); } catch (e) { }
 
 const upload = multer({
@@ -168,13 +228,58 @@ const upload = multer({
     }),
     limits: { fileSize: 500 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
-        if (file.mimetype === 'application/pdf') {
-            cb(null, true);
-        } else {
-            cb(new Error('Invalid file type. Only PDF files are allowed.'), false);
-        }
+        const name = String(file.originalname || '').toLowerCase();
+        const isPdfName = name.endsWith('.pdf');
+        const mt = String(file.mimetype || '').toLowerCase();
+
+        const allowed =
+            mt === 'application/pdf' ||
+            mt === 'application/octet-stream' ||
+            mt === '' ||
+            isPdfName;
+
+        if (allowed) return cb(null, true);
+        return cb(new Error('Invalid file type. Only PDF files are allowed.'), false);
     },
 });
+
+// Helper: basic PDF validation by checking file exists and signature
+async function ensurePdfFile(inputPath) {
+    if (!inputPath) return { ok: false, code: 'MISSING_PATH' };
+    try {
+        await fs.promises.access(inputPath);
+    } catch (e) {
+        return { ok: false, code: 'MISSING_ON_DISK' };
+    }
+
+    try {
+        const fh = await fs.promises.open(inputPath, 'r');
+        try {
+            const { buffer } = await fh.read(Buffer.alloc(5), 0, 5, 0);
+            const head = buffer.toString('utf8');
+            await fh.close();
+            if (head !== '%PDF-') return { ok: false, code: 'INVALID_SIGNATURE' };
+        } catch (e) {
+            try { await fh.close(); } catch (_) {}
+            return { ok: false, code: 'READ_ERROR', message: e.message };
+        }
+    } catch (e) {
+        return { ok: false, code: 'READ_ERROR', message: e.message };
+    }
+    return { ok: true };
+}
+
+// Middleware: ensure uploaded file exists and has PDF signature.
+async function ensurePdfMiddleware(req, res, next) {
+    const inputPath = req.file?.path;
+    const v = await ensurePdfFile(inputPath);
+    if (!v.ok) {
+        try { if (inputPath) await safeUnlink(inputPath); } catch (_) { }
+        if (v.code === 'MISSING_ON_DISK') return res.status(400).json({ error: 'Uploaded file missing on disk (upload failed)' });
+        return res.status(400).json({ error: 'File is not a valid PDF' });
+    }
+    return next();
+}
 /**
  * Scans a PDF for Total Ink Coverage (TAC) peaks.
  * Uses Ghostscript pamcmyk device to extract raw separation data.
@@ -292,15 +397,17 @@ async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmati
 router.uploadDir = uploadDir;
 
 // -------- Preview Routes --------
-router.post('/preview/pages', upload.single('file'), async (req, res) => {
+router.post('/preview/pages', upload.single('file'), ensurePdfMiddleware, async (req, res) => {
     console.log('[PDF-ROUTER] POST /preview/pages hit');
     const inputPath = req.file?.path;
-    if (!inputPath) return res.status(400).json({ error: 'Missing file' });
 
-    const tmpDir = fs.mkdtempSync(path.join(uploadDir, 'preview-'));
-    const imgPattern = path.join(tmpDir, 'page-%03d.png');
+    let tmpDir = null;
+    const imgPatternBase = path.join(uploadDir, 'preview-');
 
     try {
+        tmpDir = await fs.promises.mkdtemp(imgPatternBase);
+        const imgPattern = path.join(tmpDir, 'page-%03d.png');
+
         await runGs([
             '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
             '-sDEVICE=png16m',
@@ -309,24 +416,31 @@ router.post('/preview/pages', upload.single('file'), async (req, res) => {
             '-o', imgPattern,
             inputPath
         ]);
-
-        const files = fs.readdirSync(tmpDir)
+        const files = (await fs.promises.readdir(tmpDir))
             .filter(f => /^page-\d+\.png$/i.test(f))
             .sort();
 
-        const pages = files.map(f => {
-            const filePath = path.join(tmpDir, f);
-            const data = fs.readFileSync(filePath);
-            return `data:image/png;base64,${data.toString('base64')}`;
-        });
+        const total = files.length;
+        const defaultMax = 10;
+        const requested = Number(req.query && req.query.maxPages) || defaultMax;
+        const maxPages = Math.max(1, Math.min(100, requested)); // allow up to 100 if explicitly requested
 
-        res.json({ ok: true, pageCount: pages.length, pages });
+        const take = files.slice(0, Math.min(maxPages, defaultMax));
+
+        const pages = [];
+        for (const f of take) {
+            const filePath = path.join(tmpDir, f);
+            const data = await fs.promises.readFile(filePath);
+            pages.push(`data:image/png;base64,${data.toString('base64')}`);
+        }
+
+        res.json({ ok: true, pageCount: total, pages, truncated: total > pages.length });
     } catch (err) {
         console.error('Preview generation failed:', err);
         res.status(500).json({ error: 'Preview generation failed', details: err.message });
     } finally {
         safeUnlink(inputPath);
-        safeRmDir(tmpDir);
+        if (tmpDir) safeRmDir(tmpDir);
     }
 });
 
@@ -336,9 +450,8 @@ router.get('/preview/pages', (req, res) => res.status(405).json({ error: 'Method
 
 // -------- Business Routes --------
 
-router.post('/grayscale', upload.single('file'), async (req, res) => {
+router.post('/grayscale', upload.single('file'), apiKeyMiddleware, ensurePdfMiddleware, async (req, res) => {
     const inputPath = req.file && req.file.path;
-    if (!inputPath) return res.status(400).json({ error: 'Missing file' });
 
     const baseName = path.basename(req.file.originalname || 'document.pdf').replace(/\.pdf$/i, '');
     const outName = `${baseName}_bw.pdf`;
@@ -373,9 +486,8 @@ router.post('/grayscale', upload.single('file'), async (req, res) => {
     }
 });
 
-router.post('/convert-color', upload.single('file'), async (req, res) => {
+router.post('/convert-color', upload.single('file'), apiKeyMiddleware, ensurePdfMiddleware, async (req, res) => {
     const inputPath = req.file && req.file.path;
-    if (!inputPath) return res.status(400).json({ error: 'Missing file' });
 
     const profile = (req.body.profile || 'cmyk').toLowerCase();
 
@@ -398,9 +510,8 @@ router.post('/convert-color', upload.single('file'), async (req, res) => {
     }
 });
 
-router.post('/rebuild-150dpi', upload.single('file'), async (req, res) => {
+router.post('/rebuild-150dpi', upload.single('file'), apiKeyMiddleware, ensurePdfMiddleware, async (req, res) => {
     const inputPath = req.file && req.file.path;
-    if (!inputPath) return res.status(400).json({ error: 'Missing file' });
 
     const requested = Number((req.query && req.query.dpi) || 150);
     const dpi = Number.isFinite(requested) ? Math.min(600, Math.max(72, requested)) : 150;
@@ -410,10 +521,11 @@ router.post('/rebuild-150dpi', upload.single('file'), async (req, res) => {
     const outPath = path.join(uploadDir, `${Date.now()}_out_rebuild_${dpi}.pdf`);
 
     // Render pages to images and rebuild a fresh PDF.
-    const tmpDir = fs.mkdtempSync(path.join(uploadDir, 'rebuild_'));
-    const imgPattern = path.join(tmpDir, 'page-%03d.png');
-
+    let tmpDir = null;
     try {
+        tmpDir = await fs.promises.mkdtemp(path.join(uploadDir, 'rebuild_'));
+        const imgPattern = path.join(tmpDir, 'page-%03d.png');
+
         // 1) Rasterize PDF -> PNG (Ghostscript sí puede hacer esto)
         await runGs([
             '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
@@ -423,8 +535,7 @@ router.post('/rebuild-150dpi', upload.single('file'), async (req, res) => {
             inputPath,
         ]);
 
-        const imgs = fs
-            .readdirSync(tmpDir)
+        const imgs = (await fs.promises.readdir(tmpDir))
             .filter((f) => /^page-\d+\.png$/i.test(f))
             .sort()
             .map((f) => path.join(tmpDir, f));
@@ -441,7 +552,7 @@ router.post('/rebuild-150dpi', upload.single('file'), async (req, res) => {
         const pxToPt = (px) => (px * 72) / dpi;
 
         for (const imgPath of imgs) {
-            const pngBytes = fs.readFileSync(imgPath);
+            const pngBytes = await fs.promises.readFile(imgPath);
             const png = await pdfDoc.embedPng(pngBytes);
 
             const wPt = pxToPt(png.width);
@@ -452,12 +563,12 @@ router.post('/rebuild-150dpi', upload.single('file'), async (req, res) => {
         }
 
         const pdfBytes = await pdfDoc.save();
-        fs.writeFileSync(outPath, pdfBytes);
+        await fs.promises.writeFile(outPath, pdfBytes);
 
         sendPdfAndCleanup(res, outPath, outName, () => {
             safeUnlink(inputPath);
             safeUnlink(outPath);
-            safeRmDir(tmpDir);
+            if (tmpDir) safeRmDir(tmpDir);
         });
     } catch (err) {
         console.error('rebuild dpi failed:', err);
@@ -591,9 +702,20 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
     let pageCount = 0;
     let sourceOI = { present: false, identifier: null };
     try {
-        const bytes = fs.readFileSync(inputPath);
-        const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
-        pageCount = doc.getPageCount();
+        const maxInMemory = Number(process.env.PPP_MAX_INMEMORY_PDF_BYTES) || (200 * 1024 * 1024); // 200MB default
+        let st;
+        try { st = await fs.promises.stat(inputPath); } catch (e) { st = null; }
+        if (st && st.size > maxInMemory) {
+            const e = new Error(`PDF is too large for in-memory processing (${st.size} bytes).`);
+            e.error_code = 'FILE_TOO_LARGE_FOR_INMEMORY';
+            e.step = 'pre-check';
+            throw e;
+        }
+
+        // Use worker to probe PDF metadata to avoid heavy memory usage in main process
+        const probe = await probePdfMetadata(inputPath, { timeoutMs: 30000 });
+        if (probe && probe.error) throw new Error(probe.message || probe.error);
+        pageCount = probe.pageCount || 0;
         if (pageCount > 100) {
             const e = new Error(`PDF has ${pageCount} pages. Max limit for AutoFix is 100.`);
             e.error_code = 'DOCUMENT_TOO_LARGE';
@@ -603,18 +725,9 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
 
         // Future-proofing: Detect Input OutputIntent
         try {
-            const catalog = doc.catalog;
-            const oi = catalog.get(PDFName.of('OutputIntents'));
-            if (oi) {
-                const oiArray = doc.context.lookup(oi);
-                if (oiArray instanceof PDFArray && oiArray.size() > 0) {
-                    const intent = doc.context.lookup(oiArray.get(0));
-                    if (intent instanceof PDFDict) {
-                        sourceOI.present = true;
-                        const ident = intent.get(PDFName.of('OutputConditionIdentifier'));
-                        if (ident) sourceOI.identifier = ident.toString().replace(/^\(|\)$/g, '');
-                    }
-                }
+            if (probe && probe.sourceOI) {
+                sourceOI.present = Boolean(probe.sourceOI.present);
+                sourceOI.identifier = probe.sourceOI.identifier || null;
             }
         } catch (e) { /* ignore detection errors */ }
 
@@ -1011,9 +1124,8 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
     return { report, finalPath: currentPath };
 }
 
-router.post('/autofix', upload.single('file'), async (req, res) => {
+router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddleware, async (req, res) => {
     const inputPath = req.file?.path;
-    if (!inputPath) return res.status(400).json({ error: 'No PDF uploaded' });
 
     const originalFilename = req.file?.originalname || 'document.pdf';
     const fileSize = req.file?.size || 0;
@@ -1039,8 +1151,22 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
         // Streaming SHA256 calculation (post-upload but before backgrounding)
         const hash = crypto.createHash('sha256');
         const stream = fs.createReadStream(jobPath);
-        stream.on('data', (d) => hash.update(d));
-        await new Promise(resolve => stream.on('end', resolve));
+        const shaTimeout = Number(process.env.PPP_SHA_TIMEOUT_MS) || 120000; // 2 minutes default
+        try {
+            await new Promise((resolve, reject) => {
+                const to = setTimeout(() => {
+                    try { stream.destroy(); } catch (_) { }
+                    reject(new Error('SHA_TIMEOUT'));
+                }, shaTimeout);
+                stream.on('data', (d) => hash.update(d));
+                stream.on('end', () => { clearTimeout(to); resolve(); });
+                stream.on('error', (e) => { clearTimeout(to); reject(e); });
+            });
+        } catch (e) {
+            console.error('SHA calculation failed for LDM job:', e);
+            await JobManager.updateJob(job.id, { status: 'FAILED', error: e.message });
+            return res.status(500).json({ ok: false, error: 'SHA calculation failed', details: e.message });
+        }
         const sha256 = hash.digest('hex');
 
         await JobManager.updateJob(job.id, {

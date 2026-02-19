@@ -13,5 +13,7 @@ build/
 coverage/
 temp/
 tmp/
+tmp-*/
+git_status.txt
 server_debug.log
 error.log
