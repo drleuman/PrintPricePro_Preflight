@@ -200,7 +200,14 @@ export default function App() {
         setProcessMessage('AI Wizard: Performing final quality check...');
         setProcessStage('verify');
         if (runAnalysisRef.current) {
-          runAnalysisRef.current(finalFile, { name: nextFile.name, size: finalFile.size, type: 'application/pdf' });
+          const config = {
+            paperType: selectedProfile.includes('uncoated') ? 'uncoated' : 'coated' as 'uncoated' | 'coated',
+            paperGsm: selectedProfile.includes('uncoated') ? 90 : 150,
+            trimWidthMm: 210,
+            trimHeightMm: 297,
+            bleedMm: 3
+          };
+          runAnalysisRef.current(finalFile, { name: nextFile.name, size: finalFile.size, type: 'application/pdf' }, config);
         }
 
         setProcessMessage(null);
@@ -320,8 +327,18 @@ export default function App() {
 
     setProcessMessage('Analyzing PDF Structure & Content...');
     setProcessStage('analyze');
-    runAnalysis(file, fileMeta);
-  }, [file, fileMeta, runAnalysis]);
+
+    // Default production config for validation module
+    const config = {
+      paperType: selectedProfile.includes('uncoated') ? 'uncoated' : 'coated' as 'uncoated' | 'coated',
+      paperGsm: selectedProfile.includes('uncoated') ? 90 : 150,
+      trimWidthMm: 210, // Default A4 or detected later
+      trimHeightMm: 297,
+      bleedMm: 3
+    };
+
+    runAnalysis(file, fileMeta, config);
+  }, [file, fileMeta, runAnalysis, selectedProfile]);
 
   const convertToGrayscale = useCallback(async () => {
     if (!file || !fileMeta) return;
@@ -341,7 +358,14 @@ export default function App() {
       // Auto-reanalyze the processed file
       setTimeout(() => {
         setProcessMessage('Re-analyzing grayscale PDF...');
-        runAnalysis(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
+        const config = {
+          paperType: 'uncoated' as 'uncoated',
+          paperGsm: 90,
+          trimWidthMm: 210,
+          trimHeightMm: 297,
+          bleedMm: 3
+        };
+        runAnalysis(newFile, { name: newName, size: blob.size, type: 'application/pdf' }, config);
       }, 500);
 
       setProcessMessage(null);
@@ -382,7 +406,14 @@ export default function App() {
       // Auto-reanalyze the processed file
       setTimeout(() => {
         setProcessMessage('Re-analyzing rebuilt PDF...');
-        runAnalysis(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
+        const config = {
+          paperType: selectedProfile.includes('uncoated') ? 'uncoated' : 'coated' as 'uncoated' | 'coated',
+          paperGsm: selectedProfile.includes('uncoated') ? 90 : 150,
+          trimWidthMm: 210,
+          trimHeightMm: 297,
+          bleedMm: 3
+        };
+        runAnalysis(newFile, { name: newName, size: blob.size, type: 'application/pdf' }, config);
       }, 500);
 
       setProcessMessage(null);
@@ -468,7 +499,14 @@ export default function App() {
           setProcessMessage(null);
 
           setTimeout(() => {
-            runAnalysis(newFile, { name: newName, size: finalBlob.size, type: 'application/pdf' });
+            const config = {
+              paperType: selectedProfile.includes('uncoated') ? 'uncoated' : 'coated' as 'uncoated' | 'coated',
+              paperGsm: selectedProfile.includes('uncoated') ? 90 : 150,
+              trimWidthMm: 210,
+              trimHeightMm: 297,
+              bleedMm: 3
+            };
+            runAnalysis(newFile, { name: newName, size: finalBlob.size, type: 'application/pdf' }, config);
           }, 500);
 
         } catch (pollErr: any) {
@@ -492,7 +530,14 @@ export default function App() {
       setTimeout(() => {
         setProcessMessage('Re-analyzing AutoFixed PDF...');
         setProcessStage('verify');
-        runAnalysis(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
+        const config = {
+          paperType: selectedProfile.includes('uncoated') ? 'uncoated' : 'coated' as 'uncoated' | 'coated',
+          paperGsm: selectedProfile.includes('uncoated') ? 90 : 150,
+          trimWidthMm: 210,
+          trimHeightMm: 297,
+          bleedMm: 3
+        };
+        runAnalysis(newFile, { name: newName, size: blob.size, type: 'application/pdf' }, config);
       }, 500);
 
       setProcessMessage(null);
@@ -542,7 +587,14 @@ export default function App() {
       // Auto-reanalyze the processed file
       setTimeout(() => {
         setProcessMessage('Re-analyzing converted PDF...');
-        runAnalysis(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
+        const config = {
+          paperType: selectedProfile.includes('uncoated') ? 'uncoated' : 'coated' as 'uncoated' | 'coated',
+          paperGsm: selectedProfile.includes('uncoated') ? 90 : 150,
+          trimWidthMm: 210,
+          trimHeightMm: 297,
+          bleedMm: 3
+        };
+        runAnalysis(newFile, { name: newName, size: blob.size, type: 'application/pdf' }, config);
       }, 500);
 
     } catch (e: any) {
@@ -665,7 +717,7 @@ export default function App() {
       {/* Background Aesthetic Blobs */}
       <div style={{
         position: 'absolute', top: 0, right: 0, width: '50vw', height: '50vw',
-        background: 'rgba(59, 130, 246, 0.05)', filter: 'blur(120px)', borderRadius: '50%',
+        background: 'rgba(220, 0, 0, 0.05)', filter: 'blur(120px)', borderRadius: '50%',
         zIndex: 0, transform: 'translate(30%, -30%)'
       }} />
       <div style={{
@@ -695,14 +747,14 @@ export default function App() {
       <main style={{
         width: '100%',
         maxWidth: '1440px',
-        padding: '60px 24px',
+        padding: '30px 24px',
         margin: '0 auto',
         position: 'relative',
         zIndex: 10
       }}>
         <Stepper currentStep={currentStep} steps={WORKFLOW_STEPS} />
 
-        <div style={{ marginTop: '32px' }}>
+        <div style={{ marginTop: '16px' }}>
           {currentStep === 1 && (
             <Step1Upload
               file={file}

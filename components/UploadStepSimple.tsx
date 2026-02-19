@@ -91,26 +91,8 @@ export const UploadStepSimple = forwardRef<PreflightDropzoneRef, Props>(({
   return (
     <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', padding: '0 20px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
-      {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: '60px', position: 'relative' }}>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px',
-          background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)',
-          border: '1px solid #e5e7eb', borderRadius: '50px', marginBottom: '24px',
-          boxShadow: '0 4px 10px rgba(0,0,0,0.03)'
-        }}>
-          <span style={{ fontSize: '11px', fontWeight: 900, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '1px' }}>
-            {t('safeProcessing')}
-          </span>
-          <I.Shield style={{ width: '14px', height: '14px', color: '#2563eb' }} />
-        </div>
-        <h1 style={{ fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 900, color: '#111827', margin: '0 0 16px', letterSpacing: '-2px', lineHeight: 1 }}>
-          {t('headerUploadTitle')}
-        </h1>
-        <p style={{ fontSize: '18px', fontWeight: 500, color: '#6b7280', maxWidth: '600px', margin: '0 auto' }}>
-          {t('headerUploadSubset')}
-        </p>
-      </div>
+      {/* Header removed for single view adjustment */}
+
 
       {/* Main Grid Layout */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', alignItems: 'stretch' }}>
@@ -123,9 +105,9 @@ export const UploadStepSimple = forwardRef<PreflightDropzoneRef, Props>(({
           onClick={onPickFile}
           className="dropzone-hover"
           style={{
-            background: isDragging ? '#eff6ff' : hasFile ? '#f0fdf4' : '#fff',
+            background: isDragging ? '#fef2f2' : hasFile ? '#f0fdf4' : '#fff',
             borderRadius: '48px',
-            border: `3px dashed ${isDragging ? '#3b82f6' : hasFile ? '#10b981' : '#e5e7eb'}`,
+            border: `3px dashed ${isDragging ? '#dc0000' : hasFile ? '#10b981' : '#e5e7eb'}`,
             padding: '40px',
             cursor: 'pointer',
             transition: 'all 0.4s ease',
@@ -144,9 +126,9 @@ export const UploadStepSimple = forwardRef<PreflightDropzoneRef, Props>(({
             <>
               <div style={{
                 width: '110px', height: '110px', borderRadius: '35px',
-                background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
+                background: 'linear-gradient(135deg, #dc0000, #b90000)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fff', marginBottom: '32px', boxShadow: '0 20px 40px -10px rgba(37,99,235,0.4)',
+                color: '#fff', marginBottom: '32px', boxShadow: '0 20px 40px -10px rgba(220,0,0,0.4)',
                 animation: 'float 3s ease-in-out infinite'
               }}>
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -262,16 +244,16 @@ export const UploadStepSimple = forwardRef<PreflightDropzoneRef, Props>(({
             <div
               onClick={() => setMode('manual')}
               style={{
-                padding: '28px', borderRadius: '32px', border: `2px solid ${mode === 'manual' ? '#2563eb' : '#f3f4f6'}`,
-                background: mode === 'manual' ? '#eff6ff' : '#fff', cursor: 'pointer',
+                padding: '28px', borderRadius: '32px', border: `2px solid ${mode === 'manual' ? '#dc0000' : '#f3f4f6'}`,
+                background: mode === 'manual' ? '#fef2f2' : '#fff', cursor: 'pointer',
                 transition: 'all 0.3s ease', position: 'relative'
               }}
             >
               <div style={{ display: 'flex', gap: '20px' }}>
                 <div style={{
                   width: '64px', height: '64px', borderRadius: '20px',
-                  background: mode === 'manual' ? '#2563eb' : '#f3f4f6',
-                  color: mode === 'manual' ? '#fff' : '#2563eb',
+                  background: mode === 'manual' ? '#dc0000' : '#f3f4f6',
+                  color: mode === 'manual' ? '#fff' : '#dc0000',
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
                   <I.Sliders style={{ width: '32px', height: '32px' }} />
@@ -281,14 +263,14 @@ export const UploadStepSimple = forwardRef<PreflightDropzoneRef, Props>(({
                   <p style={{ fontSize: '13px', color: '#6b7280', fontWeight: 500, margin: 0 }}>{t('manualModeDesc')}</p>
                 </div>
               </div>
-              {mode === 'manual' && <div style={{ position: 'absolute', top: '15px', right: '15px' }}><I.Check style={{ width: '18px', height: '18px', color: '#2563eb' }} /></div>}
+              {mode === 'manual' && <div style={{ position: 'absolute', top: '15px', right: '15px' }}><I.Check style={{ width: '18px', height: '18px', color: '#dc0000' }} /></div>}
             </div>
           </div>
 
           {/* Action Bar */}
           <div style={{ marginTop: '40px', paddingTop: '30px', borderTop: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f0f4ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef2f2', color: '#dc0000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               </div>
               <div>

@@ -122,7 +122,7 @@ export const PreflightDropzone = forwardRef<PreflightDropzoneRef, Props>(
     const containerClass = hasFile
       ? 'border-emerald-200 bg-emerald-50/40 ring-1 ring-emerald-600/10'
       : isDragging
-        ? 'border-blue-400 bg-blue-50 ring-4 ring-blue-100'
+        ? 'border-red-400 bg-red-50 ring-4 ring-red-100'
         : 'border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50/50';
 
     const selectedLabel = currentLocale === 'es' ? 'PDF seleccionado' : 'PDF selected';
@@ -173,7 +173,7 @@ export const PreflightDropzone = forwardRef<PreflightDropzoneRef, Props>(
 
               {/* Main Text */}
               <p className="text-base text-gray-500 font-medium">
-                <span className="text-blue-600 font-semibold border-b border-transparent hover:border-blue-600 transition-colors">
+                <span className="text-red-600 font-semibold border-b border-transparent hover:border-red-600 transition-colors">
                   {currentLocale === 'es' ? 'Haz clic para subir' : 'Click to upload'}
                 </span>
                 {' '}

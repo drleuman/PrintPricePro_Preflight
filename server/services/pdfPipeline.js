@@ -216,18 +216,32 @@ async function addBleedCanvasPdf(inputPath, outPath, bleedMm = 3) {
         const tx = ((1 - scale) * width) / 2;
         const ty = ((1 - scale) * height) / 2;
 
-        // Apply transformation matrix to the page content stream:
+        // Apply transformation matrix to the page content stream (Industrial V3)
+        const ops = [
+            pushGraphicsState(),
+            concatTransformationMatrix(scale, 0, 0, scale, tx, ty)
+        ];
+
         if (typeof p.prependOperators === 'function') {
-            p.prependOperators(
-                pushGraphicsState(),
-                concatTransformationMatrix(scale, 0, 0, scale, tx, ty)
-            );
+            p.prependOperators(...ops);
         } else {
-            console.warn('prependOperators not found on PDFPage (pipeline), falling back to pushOperators');
-            p.pushOperators(
-                pushGraphicsState(),
-                concatTransformationMatrix(scale, 0, 0, scale, tx, ty)
-            );
+            // Robust fallback for older builds: manually insert into content streams array
+            try {
+                const contents = p.node.get(PDFName.of('Contents'));
+                const newStream = doc.context.register(
+                    doc.context.flateStream(ops.map(o => o.toString()).join(' '))
+                );
+
+                if (Array.isArray(contents)) {
+                    p.node.set(PDFName.of('Contents'), doc.context.obj([newStream, ...contents]));
+                } else if (contents) {
+                    p.node.set(PDFName.of('Contents'), doc.context.obj([newStream, contents]));
+                } else {
+                    p.pushOperators(...ops);
+                }
+            } catch (e) {
+                p.pushOperators(...ops);
+            }
         }
         p.pushOperators(popGraphicsState());
 

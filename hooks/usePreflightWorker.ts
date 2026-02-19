@@ -83,7 +83,7 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
         };
     }, []);
 
-    const runAnalysis = useCallback(async (file: File, fileMeta: FileMeta) => {
+    const runAnalysis = useCallback(async (file: File, fileMeta: FileMeta, config?: any) => {
         if (!workerRef.current) return;
         try {
             setIsWorkerRunning(true);
@@ -92,13 +92,14 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
                 type: 'analyze',
                 fileMeta,
                 buffer,
+                config,
             };
             workerRef.current.postMessage(cmd, [buffer]);
         } catch (e) {
             setIsWorkerRunning(false);
             callbacks.onError?.((e as Error).message);
         }
-    }, []);
+    }, [callbacks.onError]);
 
     const runClientGrayscale = useCallback(async (file: File, fileMeta: FileMeta) => {
         if (!workerRef.current) return;

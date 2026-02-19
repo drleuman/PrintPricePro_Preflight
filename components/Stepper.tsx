@@ -32,8 +32,8 @@ const getStepIcon = (stepNumber: number) => {
 export const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
     return (
         <div style={{
-            marginBottom: '40px',
-            padding: '40px 30px',
+            marginBottom: '20px',
+            padding: '24px 30px',
             background: 'rgba(255, 255, 255, 0.7)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
@@ -79,11 +79,11 @@ export const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
                                     background: isCompleted
                                         ? 'linear-gradient(135deg, #10b981, #059669)'
                                         : isActive
-                                            ? 'linear-gradient(135deg, #2563eb, #1d4ed8)'
+                                            ? 'linear-gradient(135deg, #dc0000, #b90000)'
                                             : '#fff',
                                     color: (isCompleted || isActive) ? '#fff' : '#d1d5db',
                                     border: (isCompleted || isActive) ? 'none' : '2px solid #f3f4f6',
-                                    boxShadow: isActive ? '0 15px 30px rgba(37, 99, 235, 0.3)' : 'none',
+                                    boxShadow: isActive ? '0 15px 30px rgba(220, 0, 0, 0.3)' : 'none',
                                     transform: isActive ? 'scale(1.1) translateY(-5px)' : 'scale(1)'
                                 }}>
                                     {isActive && (
@@ -91,7 +91,7 @@ export const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
                                             position: 'absolute',
                                             inset: '-4px',
                                             borderRadius: '28px',
-                                            border: '2px solid #2563eb',
+                                            border: '2px solid #dc0000',
                                             opacity: 0.3
                                         }} />
                                     )}
@@ -131,7 +131,7 @@ export const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
                                         textTransform: 'uppercase',
                                         letterSpacing: '1px',
                                         marginBottom: '4px',
-                                        color: isActive ? '#2563eb' : isCompleted ? '#10b981' : '#9ca3af'
+                                        color: isActive ? '#dc0000' : isCompleted ? '#10b981' : '#9ca3af'
                                     }}>
                                         Step 0{step.number}
                                     </div>

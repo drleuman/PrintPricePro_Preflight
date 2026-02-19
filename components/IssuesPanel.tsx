@@ -292,7 +292,7 @@ export const IssuesPanel: React.FC<Props> = ({
 
           {diff.issueChanges.remainingIssues.length > 0 && (
             <div>
-              <h5 className="font-semibold text-blue-700 mb-2">🔄 Remaining Issues ({diff.issueChanges.remainingIssues.length})</h5>
+              <h5 className="font-semibold text-red-700 mb-2">🔄 Remaining Issues ({diff.issueChanges.remainingIssues.length})</h5>
               <ul className="space-y-1 max-h-40 overflow-y-auto">
                 {diff.issueChanges.remainingIssues.slice(0, 10).map((issue, i) => (
                   <li key={i} className="text-sm text-gray-700">

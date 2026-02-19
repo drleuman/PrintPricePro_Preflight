@@ -163,7 +163,7 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
 
             {ldmActive && (
                 <div className="mb-6 animate-in slide-in-from-top duration-500">
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl p-5 shadow-lg border border-blue-400/30 text-white overflow-hidden relative">
+                    <div className="bg-gradient-to-r from-red-600 to-red-800 rounded-xl p-5 shadow-lg border border-red-400/30 text-white overflow-hidden relative">
                         <div className="absolute top-0 right-0 p-3 opacity-20 transform translate-x-1/4 -translate-y-1/4">
                             <Icon.Sparkles className="w-24 h-24" />
                         </div>
@@ -174,7 +174,7 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
                                 </div>
                                 <div className="text-left">
                                     <h3 className="text-lg font-bold">Large Document Mode Active</h3>
-                                    <p className="text-blue-100 text-sm">{ldmStatus || 'Processing sequential pages to optimize RAM...'}</p>
+                                    <p className="text-red-100 text-sm">{ldmStatus || 'Processing sequential pages to optimize RAM...'}</p>
                                 </div>
                             </div>
                             <div className="w-full md:w-1/3">

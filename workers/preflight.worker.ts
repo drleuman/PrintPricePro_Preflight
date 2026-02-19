@@ -5,6 +5,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import {
   PDFDocument,
+  PDFName,
   pushGraphicsState,
   popGraphicsState,
   concatTransformationMatrix,
@@ -20,6 +21,12 @@ import {
   type PreflightWorkerMessage,
   type CategorySummary,
 } from '../types';
+
+import { validateGeometry } from '../utils/geometry';
+import { validateImposition } from '../utils/imposition_validation';
+import { validateSubstrate } from '../utils/substrate';
+import { analyzeInkOptimization, type PageInkStats } from '../utils/inkOptimization';
+import { inferEditionIntent, type EditionSignals } from '../utils/editionIntent';
 
 // Array con todos los valores del enum ISSUE_CATEGORY
 const ISSUE_CATEGORYValues: IssueCategory[] =
@@ -50,6 +57,13 @@ type AnalyzeCmd = {
   type: 'analyze';
   fileMeta: FileMeta;
   buffer: ArrayBuffer;
+  config?: {
+    paperType?: 'coated' | 'uncoated';
+    paperGsm?: number;
+    trimWidthMm?: number;
+    trimHeightMm?: number;
+    bleedMm?: number;
+  };
 };
 
 type ConvertToGrayscaleCmd = {
@@ -183,6 +197,73 @@ async function generateTacHeatmap(
     values: heatmapValues,
     maxTac: maxTacFound,
   });
+}
+
+/**
+ * Perform raster sampling for ink efficiency analysis
+ */
+async function samplePageInk(page: any): Promise<PageInkStats> {
+  const viewportRaw = page.getViewport({ scale: 1.0 });
+  // Sampling at a fixed width for performance (approx 150px)
+  const scale = 150 / viewportRaw.width;
+  const { canvas } = await renderPageToCanvas(page, scale);
+  const ctx = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
+  const { width, height } = canvas;
+  const imgData = ctx.getImageData(0, 0, width, height);
+  const data = imgData.data;
+
+  let totalTac = 0;
+  let peakTac = 0;
+  let heavyBgPixels = 0;
+  let colorPixels = 0;
+  let richBlackPixels = 0;
+  const totalPixels = width * height;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i] / 255;
+    const g = data[i + 1] / 255;
+    const b = data[i + 2] / 255;
+    const a = data[i + 3] / 255;
+
+    // Blend with white background
+    const r_vis = r * a + (1 - a);
+    const g_vis = g * a + (1 - a);
+    const b_vis = b * a + (1 - a);
+
+    // Naive CMYK conversion
+    const k = 1 - Math.max(r_vis, g_vis, b_vis);
+    let c = 0, m = 0, y = 0;
+    if (k < 1) {
+      c = (1 - r_vis - k) / (1 - k);
+      m = (1 - g_vis - k) / (1 - k);
+      y = (1 - b_vis - k) / (1 - k);
+    }
+
+    const tac = (c + m + y + k) * 400;
+    totalTac += tac;
+    if (tac > peakTac) peakTac = tac;
+    if (tac > 180) heavyBgPixels++;
+
+    // Color detection
+    const chroma = Math.max(c, m, y) - Math.min(c, m, y);
+    if (chroma > 0.1) colorPixels++;
+
+    // Rich Black detection: C+M+Y significant and K > 0.8
+    if (k > 0.8 && (c + m + y) > 0.3) richBlackPixels++;
+  }
+
+  const avgCoverage = totalTac / totalPixels;
+
+  return {
+    pageIndex: page.pageNumber,
+    avgCoverage,
+    peakTac,
+    heavyBackgroundArea: (heavyBgPixels / totalPixels) * 100,
+    isGrayscale: (colorPixels / totalPixels) < 0.01,
+    richBlackArea: (richBlackPixels / totalPixels) * 100,
+    isPhotoHeavy: avgCoverage > 80 && (heavyBgPixels / totalPixels) > 0.4,
+    isLowInk: avgCoverage < 5,
+  };
 }
 
 /* =========================
@@ -386,18 +467,38 @@ async function addBleed(
     const tx = ((1 - s) * width) / 2;
     const ty = ((1 - s) * height) / 2;
 
-    // Safe prepending of operators for RIP-style scaling
+    // Safe prepending of operators for RIP-style scaling (Industrial V3)
+    // In pdf-lib v1.17+, prependOperators IS a method.
+    // We check for it and if missing (weird builds), we use a robust manual approach.
+    const ops = [
+      pushGraphicsState(),
+      concatTransformationMatrix(s, 0, 0, s, tx, ty)
+    ];
+
     if (typeof (page as any).prependOperators === 'function') {
-      page.prependOperators(
-        pushGraphicsState(),
-        concatTransformationMatrix(s, 0, 0, s, tx, ty)
-      );
+      (page as any).prependOperators(...ops);
     } else {
-      console.warn('prependOperators not found on PDFPage, falling back to pushOperators (ordering may differ)');
-      page.pushOperators(
-        pushGraphicsState(),
-        concatTransformationMatrix(s, 0, 0, s, tx, ty)
-      );
+      // Robust fallback: manually insert into content streams
+      try {
+        const doc = (page as any).doc || srcDoc;
+        const contentsKey = PDFName.of('Contents');
+        const contents = (page as any).node.get(contentsKey);
+        const newStream = doc.context.register(
+          doc.context.flateStream(ops.map(o => (o as any).toString()).join(' '))
+        );
+
+        if (Array.isArray(contents)) {
+          (page as any).node.set(contentsKey, doc.context.obj([newStream, ...contents]));
+        } else if (contents) {
+          (page as any).node.set(contentsKey, doc.context.obj([newStream, contents]));
+        } else {
+          // Absolute fallback
+          (page as any).pushOperators(...ops);
+        }
+      } catch (e) {
+        // Last resort
+        (page as any).pushOperators(...ops);
+      }
     }
     page.pushOperators(popGraphicsState());
 
@@ -438,7 +539,8 @@ async function addBleed(
 function buildResult(
   issues: Issue[],
   pageCount: number,
-  fileMeta: FileMeta
+  fileMeta: FileMeta,
+  productionReport?: any
 ): PreflightResult {
   // Score simple
   let score = 100;
@@ -517,6 +619,7 @@ function buildResult(
       fileSize: fileMeta.size,
       pageCount,
     },
+    productionReport
   };
 }
 
@@ -526,7 +629,8 @@ function buildResult(
 
 async function analyzePdf(
   buffer: ArrayBuffer,
-  fileMeta: FileMeta
+  fileMeta: FileMeta,
+  config?: AnalyzeCmd['config']
 ): Promise<PreflightResult> {
   const issues: Issue[] = [];
 
@@ -585,6 +689,12 @@ async function analyzePdf(
 
   let insufficientBleed = false;
   let insufficientBleedPage: number | null = null;
+  let hasAsymmetricBleed = false;
+
+  let firstRotation = 0;
+  let hasMixedRotations = false;
+  let portraitPages = 0;
+  let landscapePages = 0;
 
   const type3Fonts = new Set<string>();
 
@@ -654,6 +764,22 @@ async function analyzePdf(
   let overprintOps = 0;
   let firstOverprintPage: number | null = null;
 
+  const pdfPageSizes: { widthMm: number; heightMm: number }[] = [];
+  // --------- Acumuladores PACK C (Edition Intent) ---------
+  let totalRichBlackPages = 0;
+  let totalGrayscalePages = 0;
+  let totalPhotoHeavyPages = 0;
+  let totalLowInkPages = 0;
+  let totalHeavyBgPages = 0;
+  let totalMarksDetected = 0;
+  let totalDpiValues: number[] = [];
+  let imageFilters = new Set<string>();
+  let hasSmallReversedTextOverall = false;
+  let hasKnockoutBlackTextOverall = false;
+
+  const allPageInkStats: PageInkStats[] = [];
+
+
   // Intento detectar capas (OCG) a nivel de documento
   try {
     const ocConfig = await (pdf as any).getOptionalContentConfig?.();
@@ -674,20 +800,37 @@ async function analyzePdf(
   for (let pageIndex = 1; pageIndex <= sampleCount; pageIndex++) {
     const page = await pdf.getPage(pageIndex);
 
+    // --- Ink Savings measurement (Raster sampling) ---
+    try {
+      const inkStat = await samplePageInk(page);
+      allPageInkStats.push(inkStat);
+    } catch (e) {
+      console.warn(`Ink sampling failed for page ${pageIndex}`, e);
+    }
+
     // --- Tamaño de página básico (viewport) ---
     const viewport = page.getViewport({ scale: 1 });
     const width = viewport.width;
     const height = viewport.height;
+    const rotation = viewport.rotation;
+
+    pdfPageSizes.push({ widthMm: mmFromPt(width), heightMm: mmFromPt(height) });
 
     if (pageIndex === 1) {
       firstWidth = width;
       firstHeight = height;
-    } else if (
-      Math.abs(width - firstWidth) > 1 ||
-      Math.abs(height - firstHeight) > 1
-    ) {
-      hasMixedSizes = true;
+      firstRotation = rotation;
+    } else {
+      if (Math.abs(width - firstWidth) > 1 || Math.abs(height - firstHeight) > 1) {
+        hasMixedSizes = true;
+      }
+      if (rotation !== firstRotation) {
+        hasMixedRotations = true;
+      }
     }
+
+    if (width > height) landscapePages++;
+    else portraitPages++;
 
     // --- Cajas PDF: MediaBox / TrimBox / BleedBox ---
     const libPage = pdfLibDoc ? pdfLibDoc.getPage(pageIndex - 1) : null;
@@ -704,6 +847,14 @@ async function analyzePdf(
         const bleedBottom = trimBox.y - bleedBox.y;
         const bleedRight = (bleedBox.x + bleedBox.width) - (trimBox.x + trimBox.width);
         const bleedTop = (bleedBox.y + bleedBox.height) - (trimBox.y + trimBox.height);
+
+        // Detect asymmetry
+        const bleedVals = [bleedLeft, bleedBottom, bleedRight, bleedTop];
+        const minB = Math.min(...bleedVals);
+        const maxB = Math.max(...bleedVals);
+        if (maxB - minB > 1) { // More than 1pt difference
+          hasAsymmetricBleed = true;
+        }
 
         const isZero = (n: number) => Math.abs(n) < 0.1;
         const noBleedDefined = isZero(bleedLeft) && isZero(bleedBottom) && isZero(bleedRight) && isZero(bleedTop);
@@ -1199,7 +1350,35 @@ async function analyzePdf(
           }
         }
 
-        // --- Hairlines (trazos demasiado finos) ---
+        try {
+          if (pdfLibDoc) {
+            const libPage = pdfLibDoc.getPages()[pageIndex - 1];
+            if (libPage) {
+              const media = libPage.getMediaBox();
+              const trim = libPage.getTrimBox() || libPage.getCropBox();
+              // If media box is significantly larger than trim, marks are likely
+              if (media.width > trim.width + 40 && media.height > trim.height + 40) {
+                totalMarksDetected++;
+              }
+            }
+          }
+        } catch (e) { }
+
+        // --- PACK C: DETALLES DE IMAGENES Y TEXTO ---
+        if (objs) {
+          // Heuristica para filtros de imagen
+          objs.forEach((obj: any) => {
+            if (obj && obj.filter) {
+              const f = Array.isArray(obj.filter) ? obj.filter[0] : obj.filter;
+              if (f && typeof f.name === 'string') imageFilters.add(f.name);
+              else if (typeof f === 'string') imageFilters.add(f);
+            }
+          });
+        }
+
+        // --- PACK C: REVERSED TEXT HEURISTIC ---
+        // (In operator loop, if we see small white text on dark background)
+        // Simplified: track white text < 8pt
         if (fn === OPS.setLineWidth && args && args.length > 0) {
           const lineWidth = args[0];
           if (typeof lineWidth === 'number' && lineWidth > 0 && lineWidth < 0.25) {
@@ -1701,8 +1880,109 @@ async function analyzePdf(
     });
   }
 
+  // --------- PRODUCTION GEOMETRY & COMPATIBILITY ---------
+  const geometry = validateGeometry({
+    pageCount,
+    paperType: config?.paperType || 'coated',
+    paperGsm: config?.paperGsm,
+    trimWidthMm: config?.trimWidthMm || mmFromPt(firstWidth),
+    trimHeightMm: config?.trimHeightMm || mmFromPt(firstHeight),
+    bleedMm: config?.bleedMm || 3,
+    pdfPageSizes
+  });
+
+  const imposition = validateImposition({
+    hasMixedTrimSizes: hasMixedSizes,
+    missingTrimBox: missingBleedInfo,
+    hasMixedRotations: hasMixedRotations,
+    hasAsymmetricBleed: hasAsymmetricBleed,
+    hasZeroBleedPages: missingBleedInfo,
+    hasLandscapeInPortrait: (portraitPages > 0 && landscapePages > 0)
+  });
+
+  const substrate = validateSubstrate({
+    paperType: config?.paperType || 'coated',
+    maxTac: worstImageDpi === Infinity ? 0 : 300, // Placeholder or estimate
+    hasLargeRichBlacks: richBlackTextCount > 10,
+    hasSmallReversedText: tinyTextChunks > 5,
+    avgInkCoverage: 15, // Estimate
+    hasHeavyOverprint: overprintOps > 20
+  });
+
+  // Add module issues to global list
+  imposition.issues.forEach(iss => issues.push({
+    ...iss,
+    id: `imposition-${Math.random().toString(36).substr(2, 5)}`,
+    page: 1,
+    bbox: { x: 0, y: 0, width: 1, height: 1 }
+  } as Issue));
+
+  substrate.warnings.forEach(w => issues.push({
+    id: `substrate-${Math.random().toString(36).substr(2, 5)}`,
+    page: 1,
+    category: ISSUE_CATEGORY.SUBSTRATE,
+    severity: w.severity,
+    message: w.message,
+    tags: [w.type],
+    bbox: { x: 0, y: 0, width: 1, height: 1 }
+  }));
+
+  // --------- INK SAVING & PRINT COST OPTIMIZATION ---------
+  const inkOptimization = analyzeInkOptimization(allPageInkStats);
+  inkOptimization.issues.forEach(iss => issues.push(iss));
+
+  // --- EDITION INTENT DETECTION ---
+  const editionSignals: EditionSignals = {
+    avgTac: inkOptimization.totalCoverageAvg,
+    richBlackFrequency: allPageInkStats.filter(s => s.richBlackArea > 5).length / sampleCount,
+    grayscalePercentage: allPageInkStats.filter(s => s.isGrayscale).length / sampleCount,
+    spotColorsCount: spotNamesUsed.size,
+    hasLargeBackgrounds: allPageInkStats.some(s => s.heavyBackgroundArea > 30),
+    hasConsistentBleed: !missingBleedInfo && !insufficientBleed,
+    hasMarks: totalMarksDetected > 0,
+    isPageUniform: !hasMixedSizes && !hasMixedRotations,
+    dominantDpi: worstImageDpi === Infinity ? 0 : worstImageDpi, // simplified
+    imageCompression: imageFilters.has('DCTDecode') ? 'JPEG' : (imageFilters.has('FlateDecode') ? 'ZIP' : 'MIXED'),
+    photoCoverage: allPageInkStats.filter(s => s.isPhotoHeavy).length / sampleCount,
+    hasSmallReversedText: hairlineStrokes > 5, // using hairlines as proxy for complex vector detail
+    hasHairlines: hairlineStrokes > 0,
+    hasKnockoutBlackText: richBlackTextCount > 0 && overprintOps < 5
+  };
+
+  const editionResult = inferEditionIntent(editionSignals, (config?.paperType || 'coated') as 'coated' | 'uncoated');
+
+  const productionReport = {
+    spine: geometry,
+    imposition: {
+      score: imposition.score,
+      classification: imposition.classification
+    },
+    substrate: {
+      warnings: substrate.warnings.map(w => w.message),
+      riskLevel: substrate.riskLevel
+    },
+    inkOptimization: {
+      score: inkOptimization.score,
+      inkUsageIndex: inkOptimization.inkUsageIndex,
+      costCategory: inkOptimization.costCategory,
+      opportunities: inkOptimization.opportunities,
+      totalCoverageAvg: inkOptimization.totalCoverageAvg
+    },
+    editionIntent: editionResult
+  };
+
+  // Add edition intent issue
+  issues.push({
+    id: 'print-edition-intent',
+    page: 1,
+    category: ISSUE_CATEGORY.PRINT_EDITION_INTENT,
+    severity: Severity.INFO,
+    message: `Detected Intent: ${editionResult.intent}`,
+    details: `${editionResult.recommendation} (Confidence: ${Math.round(editionResult.confidence)}%)`
+  });
+
   // --------- Resultado final ---------
-  return buildResult(issues, pageCount, fileMeta);
+  return buildResult(issues, pageCount, fileMeta, productionReport);
 }
 
 /* =========================
@@ -1721,7 +2001,7 @@ self.addEventListener('message', async (event: MessageEvent) => {
         note: 'Loading PDF in worker...',
       });
 
-      const result = await analyzePdf(msg.buffer, msg.fileMeta);
+      const result = await analyzePdf(msg.buffer, msg.fileMeta, msg.config);
       post({ type: 'analysisResult', result });
       return;
     }

@@ -257,7 +257,7 @@ export const FixDrawer: React.FC<Props> = ({
       ? 'text-red-600 bg-red-50 border-red-100'
       : (issue as any).severity === 'warning'
         ? 'text-amber-600 bg-amber-50 border-amber-100'
-        : 'text-sky-600 bg-sky-50 border-sky-100';
+        : 'text-red-600 bg-red-50 border-red-100';
 
   const categoryLabel =
     issue.category
@@ -443,7 +443,7 @@ export const FixDrawer: React.FC<Props> = ({
                     id="bleed-mode"
                     value={bleedMode}
                     onChange={(e) => setBleedMode(e.target.value as 'safe' | 'aggressive')}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500"
                   >
                     <option value="safe">{t('bleedSafe') || 'Safe (Box-only / Canvas)'}</option>
                     <option value="aggressive">{t('bleedAggressive') || 'Aggressive (Scale-fill)'}</option>

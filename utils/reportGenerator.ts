@@ -128,6 +128,43 @@ export async function generatePreflightReport(
         }
     }
 
+    // --- Ink Efficiency Section ---
+    if (result.productionReport?.inkOptimization) {
+        checkY(100);
+        drawLine();
+        const ink = result.productionReport.inkOptimization;
+        drawText('Ink saving & Efficiency Report:', { font: timesBold, size: fontSizeSubHeader });
+        yPosition -= 5;
+        drawText(`Cost Category: ${ink.costCategory}`);
+        drawText(`Ink Usage Index: ${ink.inkUsageIndex}/100`);
+        drawText(`Avg Page Coverage: ${ink.totalCoverageAvg.toFixed(2)}%`);
+
+        if (ink.opportunities?.length > 0) {
+            drawText('Optimization Opportunities:', { font: timesBold, size: 10 });
+            ink.opportunities.forEach((opt: string) => {
+                drawText(`• ${opt}`, { size: 9, indent: 10 });
+            });
+        }
+        yPosition -= 10;
+    }
+
+    // --- Edition Intent Section ---
+    if (result.productionReport?.editionIntent) {
+        checkY(100);
+        drawLine();
+        const intent = result.productionReport.editionIntent;
+        drawText('Print Edition Intent Detection:', { font: timesBold, size: fontSizeSubHeader });
+        yPosition -= 5;
+        drawText(`Detected Intent: ${intent.intent} (${Math.round(intent.confidence)}% confidence)`);
+        drawText(`Offset Index: ${Math.round(intent.offsetScore)} | Digital Index: ${Math.round(intent.digitalScore)}`);
+
+        if (intent.recommendation) {
+            drawText('Recommendation:', { font: timesBold, size: 10 });
+            drawText(intent.recommendation, { size: 9, indent: 10 });
+        }
+        yPosition -= 10;
+    }
+
     // --- Footer ---
     // Add page numbers
     const pages = pdfDoc.getPages();

@@ -101,15 +101,15 @@ export const AutoFixProPanel: React.FC<Props> = ({
   const warnings = Array.isArray(report?.warnings) ? report.warnings : [];
 
   return (
-    <div className="mb-6 rounded-2xl bg-white shadow-lg border border-blue-100 overflow-hidden">
-      <div className="px-5 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 flex items-center justify-between">
+    <div className="mb-6 rounded-2xl bg-white shadow-lg border border-red-100 overflow-hidden">
+      <div className="px-5 py-4 bg-gradient-to-r from-red-50 to-red-50 border-b border-red-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-xl">🛡️</span>
-          <div className="font-bold text-indigo-900 text-lg">AutoFix Agent (PRO)</div>
+          <div className="font-bold text-red-900 text-lg">AutoFix Agent (PRO)</div>
         </div>
         <div className="flex items-center gap-4">
           {report?.blocked && <div className="text-xs font-bold text-white bg-red-600 px-2 py-1 rounded-full uppercase tracking-wider">Blocked</div>}
-          {runId && <div className="text-xs font-medium text-indigo-600 bg-indigo-100 px-2 py-1 rounded-full">Run #{runId}</div>}
+          {runId && <div className="text-xs font-medium text-red-600 bg-red-100 px-2 py-1 rounded-full">Run #{runId}</div>}
           <div className="text-xs text-gray-500">
             {report?.endedAt ? `Completed: ${new Date(report.endedAt).toLocaleTimeString()}` : ''}
           </div>
@@ -126,7 +126,7 @@ export const AutoFixProPanel: React.FC<Props> = ({
               onChange={(e) => onToggleCompare(e.target.checked)}
               className="w-4 h-4 text-indigo-600 rounded"
             />
-            <span className="text-sm font-medium text-gray-700 group-hover:text-indigo-900 transition-colors">
+            <span className="text-sm font-medium text-gray-700 group-hover:text-red-900 transition-colors">
               Compare Before/After
             </span>
           </label>
@@ -164,38 +164,38 @@ export const AutoFixProPanel: React.FC<Props> = ({
         )}
 
         {!report && options && onToggleOption && (
-          <div className="mb-6 p-4 rounded-xl bg-blue-50/50 border border-blue-100">
-            <div className="text-sm font-bold text-indigo-900 mb-3 flex items-center gap-2">
+          <div className="mb-6 p-4 rounded-xl bg-red-50/50 border border-red-100">
+            <div className="text-sm font-bold text-red-900 mb-3 flex items-center gap-2">
               <span>⚙️</span> Configuration
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-3">
               <label className="flex items-center gap-3 cursor-pointer group">
-                <input type="checkbox" checked={options.safeOnly} onChange={() => onToggleOption('safeOnly')} className="w-4 h-4 text-indigo-600 rounded" />
-                <span className="text-sm text-gray-700 group-hover:text-indigo-900 transition-colors">Safe fixes only (default)</span>
+                <input type="checkbox" checked={options.safeOnly} onChange={() => onToggleOption('safeOnly')} className="w-4 h-4 text-red-600 rounded" />
+                <span className="text-sm text-gray-700 group-hover:text-red-900 transition-colors">Safe fixes only (default)</span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer group">
-                <input type="checkbox" checked={options.aggressive} onChange={() => onToggleOption('aggressive')} className="w-4 h-4 text-indigo-600 rounded" />
-                <span className="text-sm text-gray-700 group-hover:text-indigo-900 transition-colors">Aggressive fixes <span className="text-[10px] font-bold text-red-500 uppercase">Unsafe</span></span>
+                <input type="checkbox" checked={options.aggressive} onChange={() => onToggleOption('aggressive')} className="w-4 h-4 text-red-600 rounded" />
+                <span className="text-sm text-gray-700 group-hover:text-red-900 transition-colors">Aggressive fixes <span className="text-[10px] font-bold text-red-500 uppercase">Unsafe</span></span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer group">
-                <input type="checkbox" checked={options.forceBleed} onChange={() => onToggleOption('forceBleed')} className="w-4 h-4 text-indigo-600 rounded" />
-                <span className="text-sm text-gray-700 group-hover:text-indigo-900 transition-colors">Add 3mm bleed canvas</span>
+                <input type="checkbox" checked={options.forceBleed} onChange={() => onToggleOption('forceBleed')} className="w-4 h-4 text-red-600 rounded" />
+                <span className="text-sm text-gray-700 group-hover:text-red-900 transition-colors">Add 3mm bleed canvas</span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer group">
-                <input type="checkbox" checked={options.forceCmyk} onChange={() => onToggleOption('forceCmyk')} className="w-4 h-4 text-indigo-600 rounded" />
-                <span className="text-sm text-gray-700 group-hover:text-indigo-900 transition-colors">Convert to CMYK (FOGRA51 / PSO V3)</span>
+                <input type="checkbox" checked={options.forceCmyk} onChange={() => onToggleOption('forceCmyk')} className="w-4 h-4 text-red-600 rounded" />
+                <span className="text-sm text-gray-700 group-hover:text-red-900 transition-colors">Convert to CMYK (FOGRA51 / PSO V3)</span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer group">
-                <input type="checkbox" checked={options.forceRebuild} onChange={() => onToggleOption('forceRebuild')} className="w-4 h-4 text-indigo-600 rounded" />
-                <span className="text-sm text-gray-700 group-hover:text-indigo-900 transition-colors">Force rebuild to 300 dpi</span>
+                <input type="checkbox" checked={options.forceRebuild} onChange={() => onToggleOption('forceRebuild')} className="w-4 h-4 text-red-600 rounded" />
+                <span className="text-sm text-gray-700 group-hover:text-red-900 transition-colors">Force rebuild to 300 dpi</span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer group">
-                <input type="checkbox" checked={options.flatten} onChange={() => onToggleOption('flatten')} className="w-4 h-4 text-indigo-600 rounded" />
-                <span className="text-sm text-gray-700 group-hover:text-indigo-900 transition-colors">Flatten transparency</span>
+                <input type="checkbox" checked={options.flatten} onChange={() => onToggleOption('flatten')} className="w-4 h-4 text-red-600 rounded" />
+                <span className="text-sm text-gray-700 group-hover:text-red-900 transition-colors">Flatten transparency</span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer group">
-                <input type="checkbox" checked={options.allowRasterOutput || false} onChange={() => onToggleOption('allowRasterOutput')} className="w-4 h-4 text-indigo-600 rounded" />
-                <span className="text-sm text-gray-700 group-hover:text-indigo-900 transition-colors">Allow Raster Output</span>
+                <input type="checkbox" checked={options.allowRasterOutput || false} onChange={() => onToggleOption('allowRasterOutput')} className="w-4 h-4 text-red-600 rounded" />
+                <span className="text-sm text-gray-700 group-hover:text-red-900 transition-colors">Allow Raster Output</span>
               </label>
             </div>
             {onRun && (
@@ -203,7 +203,7 @@ export const AutoFixProPanel: React.FC<Props> = ({
                 <button
                   onClick={onRun}
                   disabled={isRunning}
-                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold rounded-lg shadow-md transition-all active:scale-95 flex items-center gap-2"
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-bold rounded-lg shadow-md transition-all active:scale-95 flex items-center gap-2"
                 >
                   {isRunning ? 'Processing...' : '🚀 Start AutoFix Pipeline'}
                 </button>
@@ -225,8 +225,8 @@ export const AutoFixProPanel: React.FC<Props> = ({
                 </div>
                 <div className="text-gray-300 text-2xl">→</div>
                 <div className="flex flex-col items-center">
-                  <div className="text-[10px] text-indigo-500 uppercase font-bold">After</div>
-                  <div className={`text-4xl font-extrabold ${scoreDelta && scoreDelta > 0 ? 'text-green-600' : 'text-indigo-600'}`}>
+                  <div className="text-[10px] text-red-500 uppercase font-bold">After</div>
+                  <div className={`text-4xl font-extrabold ${scoreDelta && scoreDelta > 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {scoreAfter ?? '—'}
                   </div>
                 </div>
@@ -254,7 +254,7 @@ export const AutoFixProPanel: React.FC<Props> = ({
                   </div>
                 </div>
                 <div className="flex flex-col">
-                  <div className="text-[10px] text-blue-400 uppercase font-bold">Info</div>
+                  <div className="text-[10px] text-gray-400 uppercase font-bold">Info</div>
                   <div className="text-lg font-bold text-gray-900">
                     {beforeCounts.info} <span className="text-gray-300">→</span> {afterCounts.info}
                   </div>
@@ -322,9 +322,9 @@ export const AutoFixProPanel: React.FC<Props> = ({
                   </div>
                 ))}
                 {isRunning && steps.length > 0 && (
-                  <div className="flex items-center gap-3 p-2 rounded-lg bg-indigo-50 border border-indigo-100 animate-pulse">
-                    <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                    <div className="text-xs text-indigo-700 font-bold">Running next step...</div>
+                  <div className="flex items-center gap-3 p-2 rounded-lg bg-red-50 border border-red-100 animate-pulse">
+                    <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="text-xs text-red-700 font-bold">Running next step...</div>
                   </div>
                 )}
               </div>

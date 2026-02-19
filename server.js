@@ -22,6 +22,17 @@ const debugLog = (msg) => {
 
 debugLog('Server starting with relaxed security...');
 
+// Check Ghostscript presence
+const { exec } = require('child_process');
+const GS_CMD_LOG = process.env.GS_PATH || (process.platform === 'win32' ? 'gswin64c' : 'gs');
+exec(`${GS_CMD_LOG} --version`, (err, stdout) => {
+  if (err) {
+    console.error(`[GS-CHECK] Ghostscript NOT found (${GS_CMD_LOG}). Conversion routes will fail.`);
+  } else {
+    console.log(`[GS-CHECK] Ghostscript found: ${stdout.trim()}`);
+  }
+});
+
 const app = express();
 const port = Number.parseInt(process.env.PORT || '8080', 10);
 
@@ -62,9 +73,29 @@ app.use('/api/convert', (req, res, next) => {
   next();
 }, pdfRouter);
 
-app.use('/api/*path', (req, res) => {
+app.all('/api/*', (req, res) => {
   console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
-  res.status(404).json({ error: `Route not found: ${req.originalUrl}` });
+  res.status(404).json({
+    error: `Route not found: ${req.originalUrl}`,
+    method: req.method,
+    path: req.path
+  });
+});
+
+// -------- Global Error Handler --------
+app.use((err, req, res, next) => {
+  console.error(`[SERVER-ERROR] ${req.method} ${req.url}:`, err);
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const statusCode = err.status || err.statusCode || 500;
+  res.status(statusCode).json({
+    error: err.message || 'Internal Server Error',
+    code: err.code || 'UNKNOWN_ERROR',
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
 });
 
 // -------- Static Files --------

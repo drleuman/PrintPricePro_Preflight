@@ -1,0 +1,56 @@
+node : C:\Users\KIKE\Desktop
+\PrintPricePro_Preflight-mas
+ter FEB 17\PrintPricePro_Pre
+flight-master\server\routes\
+pdf.js:503
+En l?nea: 1 Car?cter: 1
++ node -e "require('./server
+/routes/pdf')" 2>&1 | 
+Out-File -Encoding as ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          
+    : NotSpecified: (C:\Us  
+  ers\KIKE\D...utes\pdf.j   
+ s:503:String) [], Remot    
+eException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+function 
+normalizeProfile(p) {
+^
+
+SyntaxError: Identifier 
+'normalizeProfile' has 
+already been declared
+    at wrapSafe (node:intern
+al/modules/cjs/loader:1692:1
+8)
+    at Module._compile (node
+:internal/modules/cjs/loader
+:1735:20)
+    at Object..js (node:inte
+rnal/modules/cjs/loader:1893
+:10)
+    at Module.load (node:int
+ernal/modules/cjs/loader:148
+1:32)
+    at Module._load (node:in
+ternal/modules/cjs/loader:13
+00:12)
+    at 
+TracingChannel.traceSync (no
+de:diagnostics_channel:328:1
+4)
+    at wrapModuleLoad (node:
+internal/modules/cjs/loader:
+245:24)
+    at Module.require (node:
+internal/modules/cjs/loader:
+1504:12)
+    at require (node:interna
+l/modules/helpers:152:16)
+    at [eval]:1:1
+
+Node.js v24.12.0

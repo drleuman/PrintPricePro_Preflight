@@ -4,11 +4,11 @@
 
 :root {
   /* Colores principales */
-  --color-primary: #2563eb;
-  --color-primary-dark: #1d4ed8;
-  --color-error: #dc2626;
+  --color-primary: #dc0000;
+  --color-primary-dark: #b90000;
+  --color-error: #dc0000;
   --color-warning: #d97706;
-  --color-info: #2563eb;
+  --color-info: #dc0000;
 
   /* Colores neutros */
   --color-white: #ffffff;
@@ -26,7 +26,7 @@
   /* Colores de fondo para severidades */
   --color-error-bg: #fef2f2;
   --color-warning-bg: #fffbeb;
-  --color-info-bg: #f0f9ff;
+  --color-info-bg: #fef2f2;
 
   /* Espaciado */
   --spacing-xs: 0.25rem;
@@ -595,8 +595,21 @@ div[role="button"]:focus:not(:focus-visible),
 }
 
 .bg-primary-50 {
-  background-color: #eff6ff;
+  background-color: #fef2f2;
 }
+
+.bg-red-600 {
+  background-color: #dc0000;
+}
+
+.bg-red-500 {
+  background-color: #ef4444;
+}
+
+.bg-red-400 {
+  background-color: #f87171;
+}
+
 
 .border {
   border-width: 1px;
@@ -639,8 +652,17 @@ div[role="button"]:focus:not(:focus-visible),
   border-color: #10b981;
 }
 
+.border-red-400 {
+  border-color: #f87171;
+}
+
+.border-red-600 {
+  border-color: #dc0000;
+}
+
+
 .border-primary-200 {
-  border-color: #bfdbfe;
+  border-color: #fecaca;
 }
 
 .border-primary-600 {
@@ -745,8 +767,17 @@ div[role="button"]:focus:not(:focus-visible),
 }
 
 .text-red-600 {
-  color: var(--color-error);
+  color: #dc0000;
 }
+
+.text-red-700 {
+  color: #b91c1c;
+}
+
+.text-red-100 {
+  color: #fee2e2;
+}
+
 
 .text-amber-600 {
   color: var(--color-warning);
@@ -1756,5 +1787,5 @@ div[role="button"]:focus-visible,
   opacity: 0.9;
   font-size: 13px;
 }
- 
- 
+
+   

@@ -30,6 +30,10 @@ export const ISSUE_CATEGORY = {
   FORM_FIELDS: 'form_fields',
   MULTIMEDIA: 'multimedia',
   LAYERS: 'layers',
+  PRODUCTION_GEOMETRY: 'production_geometry',
+  SUBSTRATE: 'substrate',
+  INK_SAVING: 'ink_saving',
+  PRINT_EDITION_INTENT: 'print_edition_intent',
   OTHER: 'other',
 } as const;
 
@@ -55,6 +59,10 @@ export const ISSUE_CATEGORY_LABELS: Record<IssueCategory, string> = {
   [ISSUE_CATEGORY.FORM_FIELDS]: 'Form fields',
   [ISSUE_CATEGORY.MULTIMEDIA]: 'Multimedia',
   [ISSUE_CATEGORY.LAYERS]: 'Layers / OCG',
+  [ISSUE_CATEGORY.PRODUCTION_GEOMETRY]: 'Production Geometry',
+  [ISSUE_CATEGORY.SUBSTRATE]: 'Paper & Physics',
+  [ISSUE_CATEGORY.INK_SAVING]: 'Ink Saving & Efficiency',
+  [ISSUE_CATEGORY.PRINT_EDITION_INTENT]: 'Print Edition Intent',
   [ISSUE_CATEGORY.OTHER]: 'Other',
 };
 
@@ -118,6 +126,25 @@ export interface PreflightResult {
     fileSize: number;
     pageCount: number;
   };
+  productionReport?: {
+    spine?: any;
+    imposition?: any;
+    substrate?: any;
+    inkOptimization?: {
+      score: number;
+      inkUsageIndex: number;
+      costCategory: 'LOW' | 'MEDIUM' | 'HIGH';
+      opportunities: string[];
+      totalCoverageAvg: number;
+    };
+    editionIntent?: {
+      intent: 'OFFSET' | 'DIGITAL' | 'MIXED';
+      confidence: number;
+      offsetScore: number;
+      digitalScore: number;
+      recommendation: string;
+    };
+  };
 }
 
 /**
@@ -137,6 +164,13 @@ export type PreflightWorkerCommand =
     type: 'analyze';
     fileMeta: FileMeta;
     buffer: ArrayBuffer;
+    config?: {
+      paperType?: 'coated' | 'uncoated';
+      paperGsm?: number;
+      trimWidthMm?: number;
+      trimHeightMm?: number;
+      bleedMm?: number;
+    };
   }
   | {
     type: 'convertToGrayscale';
