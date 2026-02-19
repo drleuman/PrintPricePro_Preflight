@@ -386,10 +386,19 @@ async function addBleed(
     const tx = ((1 - s) * width) / 2;
     const ty = ((1 - s) * height) / 2;
 
-    page.prependOperators(
-      pushGraphicsState(),
-      concatTransformationMatrix(s, 0, 0, s, tx, ty)
-    );
+    // Safe prepending of operators for RIP-style scaling
+    if (typeof (page as any).prependOperators === 'function') {
+      page.prependOperators(
+        pushGraphicsState(),
+        concatTransformationMatrix(s, 0, 0, s, tx, ty)
+      );
+    } else {
+      console.warn('prependOperators not found on PDFPage, falling back to pushOperators (ordering may differ)');
+      page.pushOperators(
+        pushGraphicsState(),
+        concatTransformationMatrix(s, 0, 0, s, tx, ty)
+      );
+    }
     page.pushOperators(popGraphicsState());
 
     page.setTrimBox(0, 0, width, height);

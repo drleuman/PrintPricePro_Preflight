@@ -291,7 +291,50 @@ async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmati
 // Export for cleanup service if needed
 router.uploadDir = uploadDir;
 
-// -------- Routes --------
+// -------- Preview Routes --------
+router.post('/preview/pages', upload.single('file'), async (req, res) => {
+    console.log('[PDF-ROUTER] POST /preview/pages hit');
+    const inputPath = req.file?.path;
+    if (!inputPath) return res.status(400).json({ error: 'Missing file' });
+
+    const tmpDir = fs.mkdtempSync(path.join(uploadDir, 'preview-'));
+    const imgPattern = path.join(tmpDir, 'page-%03d.png');
+
+    try {
+        await runGs([
+            '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
+            '-sDEVICE=png16m',
+            '-r150',
+            '-dUseCropBox',
+            '-o', imgPattern,
+            inputPath
+        ]);
+
+        const files = fs.readdirSync(tmpDir)
+            .filter(f => /^page-\d+\.png$/i.test(f))
+            .sort();
+
+        const pages = files.map(f => {
+            const filePath = path.join(tmpDir, f);
+            const data = fs.readFileSync(filePath);
+            return `data:image/png;base64,${data.toString('base64')}`;
+        });
+
+        res.json({ ok: true, pageCount: pages.length, pages });
+    } catch (err) {
+        console.error('Preview generation failed:', err);
+        res.status(500).json({ error: 'Preview generation failed', details: err.message });
+    } finally {
+        safeUnlink(inputPath);
+        safeRmDir(tmpDir);
+    }
+});
+
+// Handle HEAD/GET for monitoring or accidental hits
+router.head('/preview/pages', (req, res) => res.status(200).end());
+router.get('/preview/pages', (req, res) => res.status(405).json({ error: 'Method Not Allowed', message: 'Use POST with a file' }));
+
+// -------- Business Routes --------
 
 router.post('/grayscale', upload.single('file'), async (req, res) => {
     const inputPath = req.file && req.file.path;
@@ -461,12 +504,7 @@ function safeJsonParse(str) {
     try { return JSON.parse(str); } catch (e) { return null; }
 }
 
-function normalizeProfile(p) {
-    const v = String(p || '').trim().toLowerCase();
-    if (!v) return 'fogra39';
-    if (v === 'iso coated v2' || v === 'iso_coated_v2' || v === 'iso-coated-v2' || v === 'coatedfogra39' || v === 'fogra39') return 'fogra39';
-    return v;
-}
+
 
 function extractIssuesFromPayload(payload) {
     // payload can be a PreflightResult or { issues: Issue[] }
@@ -486,208 +524,18 @@ function shouldFlattenFromIssues(issues) {
     });
 }
 
-async function addBleedCanvasPdf(inputPath, outPath, bleedMm) {
-    const bleedPt = mmToPt(bleedMm || 3);
-    const bytes = fs.readFileSync(inputPath);
-    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
 
-    const pages = doc.getPages();
-    for (let i = 0; i < pages.length; i++) {
-        const p = pages[i];
-        const { width, height } = p.getSize(); // native size
-
-        // Calculate Scale-to-Bleed (Industrial V3)
-        const sx = (width + (bleedPt * 2)) / width;
-        const sy = (height + (bleedPt * 2)) / height;
-        const scale = Math.max(sx, sy);
-
-        // RIP-style Matrix Translation & Scaling
-        const tx = ((1 - scale) * width) / 2;
-        const ty = ((1 - scale) * height) / 2;
-
-        // Apply transformation matrix to the page content stream:
-        // Translate(-W/2, -H/2) -> Scale(s, s) -> Translate(W/2, H/2)
-        // This is non-destructive and preserves transparency/overprint
-        p.prependOperators(
-            pushGraphicsState(),
-            concatTransformationMatrix(scale, 0, 0, scale, tx, ty)
-        );
-        p.pushOperators(popGraphicsState());
-
-        // Set technical boxes (RIP-style)
-        // TrimBox = original page size
-        p.setTrimBox(0, 0, width, height);
-
-        // BleedBox, MediaBox, CropBox = expanded by bleedPt
-        const newX = -bleedPt;
-        const newY = -bleedPt;
-        const newW = width + 2 * bleedPt;
-        const newH = height + 2 * bleedPt;
-
-        p.setBleedBox(newX, newY, newW, newH);
-        p.setMediaBox(newX, newY, newW, newH);
-        p.setCropBox(newX, newY, newW, newH);
-    }
-    const outBytes = await doc.save();
-    fs.writeFileSync(outPath, outBytes);
-}
 
 /**
  * Step 3: GS with OutputIntent hardening (PDF/X style)
  * Added options.finalizeOnly to allow embedding metadata without destructive color rewrite.
  */
-async function gsConvertColor(inputPath, outPath, profile, options = { finalizeOnly: false }) {
-    const prof = normalizeProfile(profile);
-    const profilesDir = path.join(__dirname, '../icc-profiles');
-    const map = {
-        'fogra39': 'CoatedFOGRA39.icc',
-        'iso_coated_v2': 'CoatedFOGRA39.icc', // Alias
-        'gracol': 'GRACoL2006_Coated1v2.icc',
-        'swop': 'USWebCoatedSWOP.icc'
-    };
-    const infoMap = {
-        'fogra39': 'ISO Coated v2 (FOGRA39)',
-        'gracol': 'GRACoL 2006',
-        'swop': 'U.S. Web Coated (SWOP) v2'
-    };
-    const condMap = {
-        'fogra39': 'FOGRA39',
-        'gracol': 'GRACoL',
-        'swop': 'SWOP'
-    };
 
-    const fileName = map[prof] || `${prof}.icc`;
-    const profilePath = path.join(profilesDir, fileName);
-    const info = infoMap[prof] || prof;
-    const cond = condMap[prof] || prof;
 
-    const args = [
-        '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
-        '-sDEVICE=pdfwrite',
-        '-dCompatibilityLevel=1.5',
-        '-dPDFSETTINGS=/prepress',
-        '-dDetectDuplicateImages=true',
-        '-dEmbedAllFonts=true',
-        '-dSubsetFonts=true',
-        '-dCompressFonts=true',
-        '-dNOPLATFONTS',
-        '-dAutoRotatePages=/None',
-        '-dDownsampleMonoImages=false',
-        '-dDownsampleGrayImages=false',
-        '-dDownsampleColorImages=false',
-        '-dPreserveOverprintSettings=true',
-        '-dBlackText=true',
-    ];
 
-    if (!options.finalizeOnly) {
-        args.push(
-            '-dUseCIEColor=true',
-            '-sColorConversionStrategy=CMYK',
-            '-dProcessColorModel=/DeviceCMYK',
-            '-dOverrideICC=true',
-            '-dRenderIntent=1' // Relative Colorimetric
-        );
-    }
 
-    let psPath = null;
-    if (fs.existsSync(profilePath)) {
-        args.push(`-sOutputICCProfile=${profilePath}`);
-        args.push(`-sDefaultCMYKProfile=${profilePath}`);
-        args.push('-dPDFX');
 
-        // Phase 3: Enforce OutputIntent for PDF/X recognition
-        try {
-            psPath = path.join(uploadDir, `pdfx_def_${Date.now()}.ps`);
 
-            // Helper to escape PostScript strings
-            const psEscape = (s) => String(s || '')
-                .replace(/\\/g, '\\\\')
-                .replace(/\(/g, '\\(')
-                .replace(/\)/g, '\\)')
-                .replace(/\r/g, '')
-                .replace(/\n/g, ' ');
-
-            const escapedProfilePath = psEscape(profilePath.replace(/\\/g, '/'));
-            const psInfo = psEscape(info);
-            const psCond = psEscape(cond);
-
-            const psContent = `
-[ /_objdef {icc_file} /type /stream /OBJ pdfmark
-[ {icc_file} << /N 4 >> /PUT pdfmark
-[ {icc_file} (${escapedProfilePath}) (r) file /PUT pdfmark
-
-[ /_objdef {intent} /type /dict /OBJ pdfmark
-[ {intent} <<
-  /Type /OutputIntent
-  /S /GTS_PDFX
-  /OutputCondition (${psCond})
-  /OutputConditionIdentifier (${psCond})
-  /RegistryName (http://www.color.org)
-  /Info (${psInfo})
-  /DestOutputProfile {icc_file}
->> /PUT pdfmark
-
-[ {Catalog} << /OutputIntents [ {intent} ] >> /PUT pdfmark
-`;
-            fs.writeFileSync(psPath, psContent);
-        } catch (err) {
-            console.warn('Failed to generate PDF/X definition:', err.message);
-        }
-    }
-
-    // Bulletproof ordering: all flags first, then -o, then metadata .ps, then input.pdf
-    args.push('-o', outPath);
-    if (psPath) args.push('-f', psPath);
-    args.push('-f', inputPath);
-
-    try {
-        await runGs(args);
-
-        // Verification phase: deterministic check for OutputIntent
-        try {
-            const outBytes = fs.readFileSync(outPath);
-            const doc = await PDFDocument.load(outBytes, { ignoreEncryption: true });
-            const catalog = doc.catalog;
-            const oi = catalog.get(PDFName.of('OutputIntents'));
-
-            let verified = false;
-            let identifier = null;
-            let intentCount = 0;
-
-            if (oi) {
-                const oiArray = doc.context.lookup(oi);
-                if (oiArray instanceof PDFArray) {
-                    intentCount = oiArray.size();
-                    for (let i = 0; i < intentCount; i++) {
-                        const intent = doc.context.lookup(oiArray.get(i));
-                        if (intent instanceof PDFDict) {
-                            const s = intent.get(PDFName.of('S'));
-                            const ident = intent.get(PDFName.of('OutputConditionIdentifier'));
-                            if (s?.toString() === '/GTS_PDFX') {
-                                verified = true;
-                                if (ident) {
-                                    const currentId = ident.toString().replace(/^\(|\)$/g, '');
-                                    // If we haven't found a match yet, or this is an exact match for what we expected
-                                    if (!identifier || currentId === cond) {
-                                        identifier = currentId;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            return { verified, identifier, expectedCond: cond, intentCount, gsMode: options.finalizeOnly ? 'finalize_only' : 'full_convert' };
-        } catch (vErr) {
-            console.warn('Post-conversion verification failed:', vErr.message);
-            return { verified: false, identifier: null, expectedCond: cond, intentCount: 0, gsMode: options.finalizeOnly ? 'finalize_only' : 'full_convert' };
-        }
-    } catch (e) {
-        throw new Error(`GS Error: ${e.message}. Args: ${args.join(' ')}`);
-    } finally {
-        if (psPath && fs.existsSync(psPath)) fs.unlinkSync(psPath);
-    }
-}
 
 async function gsGrayscale(inputPath, outPath) {
     await runGs([
@@ -710,24 +558,7 @@ async function gsGrayscale(inputPath, outPath) {
     ]);
 }
 
-async function gsFlattenTransparency(inputPath, outPath) {
-    // NOTE: Flattening to PDF 1.3 is the only reliable way with GS to flatten,
-    // but it WILL rasterize anything under transparent objects.
-    // If the goal is strict vector fonts, we might want to skip this or use higher resolution.
-    await runGs([
-        '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
-        '-sDEVICE=pdfwrite',
-        '-dCompatibilityLevel=1.3',
-        '-dPDFSETTINGS=/prepress',
-        '-dEmbedAllFonts=true',
-        '-dSubsetFonts=true',
-        '-dCompressFonts=true',
-        '-dNOPLATFONTS',
-        '-r600', // Higher resolution for the rasterized parts
-        '-o', outPath,
-        inputPath
-    ]);
-}
+
 
 async function gsConvertToPdfX(inputPath, outPath, profilePath) {
     // PDF/X-4 configuration (simplified for GS)
@@ -753,51 +584,7 @@ async function gsConvertToPdfX(inputPath, outPath, profilePath) {
     await runGs(args);
 }
 
-async function rebuildAtDpi(inputPath, outPath, dpi) {
-    const tmpDir = fs.mkdtempSync(path.join(uploadDir, 'rebuild-'));
-    const imgPattern = path.join(tmpDir, 'page-%03d.png');
 
-    try {
-        await runGs([
-            '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
-            '-sDEVICE=png16m',
-            `-r${dpi}`,
-            '-o', imgPattern,
-            inputPath,
-        ]);
-
-        const imgs = fs
-            .readdirSync(tmpDir)
-            .filter((f) => /^page-\d+\.png$/i.test(f))
-            .sort()
-            .map((f) => path.join(tmpDir, f));
-
-        if (!imgs.length) {
-            throw new Error('No raster images generated.');
-        }
-
-        const doc = await PDFDocument.create();
-
-        // Convert pixel dimensions -> PDF points preserving physical size:
-        // pt = px * 72 / dpi
-        const pxToPt = (px) => (px * 72) / dpi;
-
-        for (const imgPath of imgs) {
-            const pngBytes = fs.readFileSync(imgPath);
-            const png = await doc.embedPng(pngBytes);
-
-            const wPt = pxToPt(png.width);
-            const hPt = pxToPt(png.height);
-
-            const page = doc.addPage([wPt, hPt]);
-            page.drawImage(png, { x: 0, y: 0, width: wPt, height: hPt });
-        }
-        const outBytes = await doc.save();
-        fs.writeFileSync(outPath, outBytes);
-    } finally {
-        safeRmDir(tmpDir);
-    }
-}
 
 async function executeAutofixWorkflow(inputPath, originalFilename, options, issues, tmpPathsRegistry) {
     // --- Phase 4.1: Hard Limits & Input Detection ---
@@ -1388,48 +1175,7 @@ router.post('/autofix', upload.single('file'), async (req, res) => {
     }
 });
 
-router.post('/preview/pages', upload.single('file'), async (req, res) => {
-    const inputPath = req.file?.path;
-    if (!inputPath) return res.status(400).json({ error: 'Missing file' });
 
-    const tmpDir = fs.mkdtempSync(path.join(uploadDir, 'preview-'));
-    const imgPattern = path.join(tmpDir, 'page-%03d.png');
-
-    try {
-        // Ghostscript command for high-quality CMYK-aware preview
-        // png16m supports millions of colors, r150 is specified resolution
-        await runGs([
-            '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
-            '-sDEVICE=png16m',
-            '-r150',
-            '-dUseCropBox',
-            '-o', imgPattern,
-            inputPath
-        ]);
-
-        const files = fs.readdirSync(tmpDir)
-            .filter(f => /^page-\d+\.png$/i.test(f))
-            .sort();
-
-        const pages = files.map(f => {
-            const filePath = path.join(tmpDir, f);
-            const data = fs.readFileSync(filePath);
-            return `data:image/png;base64,${data.toString('base64')}`;
-        });
-
-        res.json({
-            ok: true,
-            pageCount: pages.length,
-            pages: pages
-        });
-    } catch (err) {
-        console.error('Preview generation failed:', err);
-        res.status(500).json({ error: 'Preview generation failed', details: err.message });
-    } finally {
-        safeUnlink(inputPath);
-        safeRmDir(tmpDir);
-    }
-});
 
 // --- LDM JOB STATUS ENDPOINT ---
 router.get('/job/status/:id', async (req, res) => {

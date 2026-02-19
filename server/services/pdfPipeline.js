@@ -194,26 +194,57 @@ async function rebuildAtDpi(input, output, dpi = 300) {
 /**
  * Adds 3mm bleed using pdf-lib (Industrial V3 Scale-to-Bleed)
  */
-async function addBleedCanvasPdf(input, output, bleedMm = 3) {
-    const bytes = fs.readFileSync(input);
-    const doc = await PDFDocument.load(bytes);
-    const bleedPt = (bleedMm * 72) / 25.4;
+/**
+ * Adds 3mm bleed using pdf-lib (Industrial V3 Scale-to-Bleed)
+ */
+async function addBleedCanvasPdf(inputPath, outPath, bleedMm = 3) {
+    const bleedPt = (Number(bleedMm) || 3) * 72 / 25.4;
+    const bytes = fs.readFileSync(inputPath);
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
 
     const pages = doc.getPages();
-    for (const page of pages) {
-        const { width, height } = page.getSize();
+    for (let i = 0; i < pages.length; i++) {
+        const p = pages[i];
+        const { width, height } = p.getSize(); // native size
 
-        // Update boxes
-        page.setTrimBox(0, 0, width, height);
-        page.setSize(width + (bleedPt * 2), height + (bleedPt * 2));
-        page.setBleedBox(0, 0, width + (bleedPt * 2), height + (bleedPt * 2));
+        // Calculate Scale-to-Bleed (Industrial V3)
+        const sx = (width + (bleedPt * 2)) / width;
+        const sy = (height + (bleedPt * 2)) / height;
+        const scale = Math.max(sx, sy);
 
-        // Center content
-        page.translateContent(bleedPt, bleedPt);
+        // RIP-style Matrix Translation & Scaling
+        const tx = ((1 - scale) * width) / 2;
+        const ty = ((1 - scale) * height) / 2;
+
+        // Apply transformation matrix to the page content stream:
+        if (typeof p.prependOperators === 'function') {
+            p.prependOperators(
+                pushGraphicsState(),
+                concatTransformationMatrix(scale, 0, 0, scale, tx, ty)
+            );
+        } else {
+            console.warn('prependOperators not found on PDFPage (pipeline), falling back to pushOperators');
+            p.pushOperators(
+                pushGraphicsState(),
+                concatTransformationMatrix(scale, 0, 0, scale, tx, ty)
+            );
+        }
+        p.pushOperators(popGraphicsState());
+
+        // Set technical boxes (RIP-style)
+        const newW = width + (bleedPt * 2);
+        const newH = height + (bleedPt * 2);
+        const newX = -bleedPt;
+        const newY = -bleedPt;
+
+        p.setTrimBox(0, 0, width, height);
+        p.setBleedBox(newX, newY, newW, newH);
+        p.setMediaBox(newX, newY, newW, newH);
+        p.setCropBox(newX, newY, newW, newH);
     }
 
     const outBytes = await doc.save();
-    fs.writeFileSync(output, outBytes);
+    fs.writeFileSync(outPath, outBytes);
 }
 
 module.exports = {

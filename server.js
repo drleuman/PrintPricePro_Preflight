@@ -56,7 +56,11 @@ app.use((req, _res, next) => {
 
 // -------- Routes --------
 app.use('/api-proxy', proxyRouter);
-app.use('/api/convert', pdfRouter);
+console.log('Mounting /api/convert routes...');
+app.use('/api/convert', (req, res, next) => {
+  console.log(`[ROUTE-DEBUG] ${req.method} ${req.url}`);
+  next();
+}, pdfRouter);
 
 app.use('/api/*path', (req, res) => {
   console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
