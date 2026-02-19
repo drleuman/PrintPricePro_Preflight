@@ -114,6 +114,8 @@ export const es = {
   cmykProfile: 'Perfil CMYK:',
   genericCMYK: 'CMYK Genérico',
   coatedFogra39: 'Coated FOGRA39 (ISO 12647-2:2004)',
+  coatedFogra51: 'ISO Coated v3 (FOGRA51) - Estándar Moderno',
+  uncoatedFogra52: 'PSO Uncoated v3 (FOGRA52)',
   gracol2006: 'GRACoL 2006 (Coated #1)',
   swop2006: 'SWOP 2006 (Coated #3)',
   uncoatedFogra29: 'Uncoated FOGRA29',

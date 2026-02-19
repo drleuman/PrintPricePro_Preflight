@@ -182,7 +182,7 @@ export default function App() {
 
       autoFixServer(nextFile, {
         target: 'cmyk',
-        profile: options.profile || 'iso_coated_v2',
+        profile: options.profile || 'iso_coated_v3',
         bleedMm: 0, // Already handled by worker
         forceCmyk: true,
         forceBleed: false, // SKIP server bleed
@@ -458,7 +458,7 @@ export default function App() {
     try {
       const { blob, report, jobId, ldm } = await autoFixServer(file, {
         target: options?.forceCmyk ? 'cmyk' : 'none',
-        profile: 'iso_coated_v2',
+        profile: 'iso_coated_v3',
         bleedMm: options?.forceBleed ? (options?.bleedMm || 3) : 0,
         dpiPreferred: 300,
         dpiMin: 150,
@@ -657,7 +657,7 @@ export default function App() {
       // Set up orchestration state
       magicFixStepRef.current = {
         active: true,
-        options: { profile: 'iso_coated_v2' }
+        options: { profile: 'iso_coated_v3' }
       };
 
       // Trigger worker first

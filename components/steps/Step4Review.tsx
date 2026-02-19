@@ -126,7 +126,7 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                     <div className="spec-row">
                                         <span className="spec-label">Color Profile</span>
                                         <span className="spec-value spec-value--highlight">
-                                            {autoFixReport?.prepress_summary?.output_profile || 'ISO Coated v2 (FOGRA39)'}
+                                            {autoFixReport?.prepress_summary?.output_profile || 'ISO Coated v3 (FOGRA51)'}
                                         </span>
                                     </div>
                                     <div className="spec-row">
@@ -177,7 +177,7 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                     `Engine Version: ${summary?.engine_version || '2.4.0'}\n` +
                                     `Date: ${new Date().toISOString()}\n\n` +
                                     `Result: ${(summary?.risk_level || 'UNKNOWN').toUpperCase()}\n` +
-                                    `Profile: ${summary?.output_profile || 'ISO Coated v2 (FOGRA39)'}\n` +
+                                    `Profile: ${summary?.output_profile || 'ISO Coated v3 (FOGRA51)'}\n` +
                                     `Structure: Verified (GTS_PDFX)\n` +
                                     `Mode: ${summary?.gs_mode || 'AutoFix Pro'}\n` +
                                     `CMYK Conversion: ${summary?.conversion_bypassed ? 'Bypassed' : 'Applied'}\n` +
@@ -420,7 +420,7 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                         </div>
                                         <div className="flex justify-between border-b border-gray-800/50 pb-1.5">
                                             <span className="text-gray-500">{t('labelOutputIntent')}</span>
-                                            <span className="text-red-400 font-bold">{autoFixReport?.policy?.icc || 'ISO Coated v2 (FOGRA39)'}</span>
+                                            <span className="text-red-400 font-bold">{autoFixReport?.policy?.icc || 'ISO Coated v3 (FOGRA51)'}</span>
                                         </div>
                                         <div className="flex justify-between border-b border-gray-800/50 pb-1.5">
                                             <span className="text-gray-500">{t('labelStructure')}</span>
@@ -458,7 +458,7 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                             <span className="text-gray-500">{t('spotLabelDetected')}</span>
                                             <span className={autoFixReport?.prepress_summary?.spot_summary?.risk === 'blocking' ? 'text-red-400 font-bold' : (autoFixReport?.prepress_summary?.spot_summary?.risk === 'attention' ? 'text-amber-400 font-bold' : 'text-green-400')}>
                                                 {autoFixReport?.prepress_summary?.spot_summary?.spots_detected
-                                                    ? `${autoFixReport.prepress_summary.spot_summary.spot_count} (${autoFixReport.prepress_summary.spot_summary.spot_names.slice(0, 3).join(', ')}${autoFixReport.prepress_summary.spot_summary.spot_count > 3 ? '...' : ''})`
+                                                    ? `${autoFixReport?.prepress_summary?.spot_summary?.spot_count} (${autoFixReport?.prepress_summary?.spot_summary?.spot_names?.slice(0, 3).join(', ')}${autoFixReport?.prepress_summary?.spot_summary?.spot_count > 3 ? '...' : ''})`
                                                     : t('spotStatusNone')}
                                             </span>
                                         </div>
@@ -621,16 +621,16 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                 )}
 
                                 {autoFixReport?.prepress_summary?.spot_summary?.spots_detected && (
-                                    <div className={autoFixReport.prepress_summary.spot_summary.risk === 'blocking' ? "flex gap-4 p-4 bg-red-50 rounded-2xl border border-red-100" : "flex gap-4 p-4 bg-amber-50 rounded-2xl border border-amber-100"}>
-                                        <div className={autoFixReport.prepress_summary.spot_summary.risk === 'blocking' ? "text-red-500 shrink-0" : "text-amber-500 shrink-0"}>
-                                            {autoFixReport.prepress_summary.spot_summary.risk === 'blocking' ? '🚫' : '⚠️'}
+                                    <div className={autoFixReport?.prepress_summary?.spot_summary?.risk === 'blocking' ? "flex gap-4 p-4 bg-red-50 rounded-2xl border border-red-100" : "flex gap-4 p-4 bg-amber-50 rounded-2xl border border-amber-100"}>
+                                        <div className={autoFixReport?.prepress_summary?.spot_summary?.risk === 'blocking' ? "text-red-500 shrink-0" : "text-amber-500 shrink-0"}>
+                                            {autoFixReport?.prepress_summary?.spot_summary?.risk === 'blocking' ? '🚫' : '⚠️'}
                                         </div>
                                         <div className="flex flex-col gap-1">
-                                            <p className={`text-xs font-bold leading-relaxed ${autoFixReport.prepress_summary.spot_summary.risk === 'blocking' ? 'text-red-800' : 'text-amber-800'}`}>
-                                                {t('spotLabelPolicy')} {autoFixReport.prepress_summary.spot_summary.policy === 'OFFSET_CMYK_STRICT' ? t('spotPolicyStrict') : t('spotPolicyConvert')}
+                                            <p className={`text-xs font-bold leading-relaxed ${autoFixReport?.prepress_summary?.spot_summary?.risk === 'blocking' ? 'text-red-800' : 'text-amber-800'}`}>
+                                                {t('spotLabelPolicy')} {autoFixReport?.prepress_summary?.spot_summary?.policy === 'OFFSET_CMYK_STRICT' ? t('spotPolicyStrict') : t('spotPolicyConvert')}
                                             </p>
-                                            <p className={`text-xs font-medium leading-relaxed ${autoFixReport.prepress_summary.spot_summary.risk === 'blocking' ? 'text-red-700' : 'text-amber-700'}`}>
-                                                {autoFixReport.prepress_summary.spot_summary.non_whitelisted_spots.length > 0 ? t('spotWarnNonWhitelist') : t('spotWarnWhitelistOnly')}
+                                            <p className={`text-xs font-medium leading-relaxed ${autoFixReport?.prepress_summary?.spot_summary?.risk === 'blocking' ? 'text-red-700' : 'text-amber-700'}`}>
+                                                {autoFixReport?.prepress_summary?.spot_summary?.non_whitelisted_spots?.length > 0 ? t('spotWarnNonWhitelist') : t('spotWarnWhitelistOnly')}
                                             </p>
                                         </div>
                                     </div>

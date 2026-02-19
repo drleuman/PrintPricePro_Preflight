@@ -84,7 +84,7 @@ export function usePdfTools() {
         file: File,
         opts?: {
             target?: 'cmyk' | 'gray';
-            profile?: string; // default: iso_coated_v2 (FOGRA39)
+            profile?: string; // default: iso_coated_v3 (FOGRA51)
             bleedMm?: number; // default: 3
             dpiPreferred?: number; // default: 300
             dpiMin?: number; // default: 150
@@ -103,7 +103,7 @@ export function usePdfTools() {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('target', opts?.target || 'cmyk');
-            formData.append('profile', opts?.profile || 'iso_coated_v2');
+            formData.append('profile', opts?.profile || 'iso_coated_v3');
             formData.append('bleedMm', String(opts?.bleedMm ?? 3));
             formData.append('dpiPreferred', String(opts?.dpiPreferred ?? 300));
             formData.append('dpiMin', String(opts?.dpiMin ?? 150));

@@ -625,7 +625,8 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
 
     const report = {
         policy: {
-            icc: options.profile === 'fogra39' ? "ISO Coated v2 (FOGRA39)" : options.profile,
+            icc: options.profile === 'fogra39' || options.profile === 'iso_coated_v2' ? "ISO Coated v2 (FOGRA39)" :
+                options.profile === 'iso_coated_v3' ? "ISO Coated v3 (FOGRA51)" : options.profile,
             bleed_mm: options.bleedMm,
             min_dpi: options.dpiMin,
             preferred_dpi: options.dpiPreferred
@@ -635,7 +636,8 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
             engine_version: "2.4.0-stable",
             risk_level: "green",
             tac_summary: null,
-            output_profile: options.profile === 'fogra39' ? "ISO Coated v2 (FOGRA39)" : options.profile,
+            output_profile: options.profile === 'fogra39' || options.profile === 'iso_coated_v2' ? "ISO Coated v2 (FOGRA39)" :
+                options.profile === 'iso_coated_v3' ? "ISO Coated v3 (FOGRA51)" : options.profile,
             source_profile_detected: sourceOI.identifier || "none",
             source_outputintent_present: sourceOI.present,
             source_outputintent_identifier: sourceOI.identifier,
