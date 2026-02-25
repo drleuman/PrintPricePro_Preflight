@@ -1346,13 +1346,15 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
             (err.message?.includes('TIMEOUT') ? 'TIMEOUT' :
                 err.message?.includes('GS Error') ? 'GS_FAILED' : 'UNKNOWN_ERROR');
 
+        res.setHeader('X-PPP-Autofix-Error-Code', errorCode);
+        res.setHeader('X-PPP-Autofix-Reason', String(err.message || 'unknown').slice(0, 200));
+
         return res.status(500).json({
             ok: false,
-            error: 'AutoFix failed',
-            error_code: errorCode,
+            error: errorCode,
             step: failedStep,
             message: err.message,
-            details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+            details: err.stack,
             stderr: err.stderr || undefined
         });
     } finally {
