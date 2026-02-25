@@ -1439,11 +1439,17 @@ router.get('/ping', (req, res) => res.json({ ok: true, msg: 'pong', timestamp: n
 
 router.get('/health', async (req, res) => {
     const { exec } = require('child_process');
-    const checkBin = (cmd) => new Promise(r => exec(`${cmd} --version`, (err) => r(!err)));
+    const checkBin = (bin) => new Promise(r => exec(`command -v ${bin}`, (err) => r(!err)));
 
     const gsOk = await checkBin(process.env.GS_PATH || (process.platform === 'win32' ? 'gswin64c' : 'gs'));
     const qpdfOk = await checkBin('qpdf');
-    const pdfinfoOk = await new Promise(r => exec(`pdfinfo -v`, (err) => r(!err)));
+    const pdfinfoOk = await checkBin('pdfinfo');
+    const pdffontsOk = await checkBin('pdffonts');
+    const pdfimagesOk = await checkBin('pdfimages');
+
+    const iccDir = path.join(__dirname, '..', 'icc-profiles');
+    const srgbOk = fs.existsSync(path.join(iccDir, 'srgb.icc'));
+    const cmykOk = fs.existsSync(path.join(iccDir, 'PSO_Coated_v3.icc'));
 
     res.json({
         ok: true,
@@ -1453,7 +1459,16 @@ router.get('/health', async (req, res) => {
         system: {
             ghostscript: gsOk,
             qpdf: qpdfOk,
-            poppler: pdfinfoOk
+            poppler: pdfinfoOk && pdffontsOk && pdfimagesOk,
+            details: {
+                pdfinfo: pdfinfoOk,
+                pdffonts: pdffontsOk,
+                pdfimages: pdfimagesOk
+            }
+        },
+        icc_profiles: {
+            srgb: srgbOk,
+            cmyk: cmykOk
         },
         memory: process.memoryUsage(),
         uptime: process.uptime()
