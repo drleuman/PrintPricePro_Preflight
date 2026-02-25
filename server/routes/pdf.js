@@ -18,6 +18,7 @@ const {
     addBleedCanvasPdf
 } = require('../services/pdfPipeline');
 const apiKeyMiddleware = require('../middleware/apiKey');
+const { pdfUploadWafCheck, quarantineFile } = require('../security/pdfUploadWaf');
 
 const sanitizeFilename = (s) => String(s || '').replace(/[^a-zA-Z0-9._-]/g, '_');
 
@@ -267,15 +268,44 @@ async function ensurePdfFile(inputPath) {
     return { ok: true };
 }
 
-// Middleware: ensure uploaded file exists and has PDF signature.
+// Middleware: ensure uploaded file exists, has PDF signature, and passes WAF security checks.
 async function ensurePdfMiddleware(req, res, next) {
-    const inputPath = req.file?.path;
-    const v = await ensurePdfFile(inputPath);
-    if (!v.ok) {
-        try { if (inputPath) await safeUnlink(inputPath); } catch (_) { }
-        if (v.code === 'MISSING_ON_DISK') return res.status(400).json({ error: 'Uploaded file missing on disk (upload failed)' });
-        return res.status(400).json({ error: 'File is not a valid PDF' });
+    const file = req.file;
+    if (!file || !file.path) {
+        return res.status(400).json({ error: 'Missing uploaded file' });
     }
+
+    const decision = await pdfUploadWafCheck({
+        filePath: file.path,
+        originalName: file.originalname,
+    });
+
+    // Audit log (non-sensitive metadata)
+    console.log('[PDF_WAF]', JSON.stringify({
+        ok: decision.ok,
+        reason: decision.reason || "OK",
+        severity: decision.severity,
+        sha256: decision.sha256,
+        size: decision.size,
+        meta: decision.meta,
+    }));
+
+    if (!decision.ok) {
+        const QUAR = process.env.PDF_QUARANTINE_DIR || path.join(process.cwd(), 'uploads-quarantine');
+        const qPath = quarantineFile(file.path, QUAR, decision.safeName, decision.sha256);
+
+        return res.status(415).json({
+            ok: false,
+            rejected: true,
+            severity: decision.severity,
+            reason: decision.reason,
+            detail: decision.detail,
+            sha256: decision.sha256,
+            quarantinePath: qPath,
+            message: 'File rejected by security policy'
+        });
+    }
+
     return next();
 }
 /**
