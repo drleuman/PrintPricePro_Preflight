@@ -1,8 +1,9 @@
 /// <reference lib="webworker" />
 
 import * as pdfjsLib from 'pdfjs-dist';
-// All getDocument() calls in this worker use disableWorker:true,
-// so no workerSrc is needed here.
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 import {
   PDFDocument,

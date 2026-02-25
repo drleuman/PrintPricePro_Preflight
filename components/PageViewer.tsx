@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
-// Use Vite-compatible worker loading for production stability
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-(pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfWorker;
 import { Issue, Bbox, FileMeta, HeatmapData } from '../types';
 import { ChevronLeftIcon, ChevronRightIcon, FireIcon } from '@heroicons/react/24/outline'; // FireIcon for Heatmap
 import { t } from '../i18n';
-
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 // Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 interface PageViewerProps {
   file: File | null;
