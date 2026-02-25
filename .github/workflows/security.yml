@@ -1,0 +1,40 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          cd server && npm ci
+          cd .. && npm ci || true
+
+      - name: NPM Audit
+        run: |
+          cd server && npm audit --omit=dev || true
+          cd .. && npm audit --omit=dev || true
+
+      - name: Supply Chain Scan
+        run: node scripts/security-scan-node-modules.mjs --root . --out security-reports
+
+      - name: Secret Leak Scan
+        run: |
+          # Scan for common patterns of secrets (excluding the scripts themselves)
+          if grep -R "API_KEY\|SECRET\|TOKEN\|BEGIN PRIVATE KEY" -n . --exclude-dir=scripts --exclude-dir=.github --exclude=SECURITY_PATCHES.diff --exclude=SECRETS_EXPOSURE_REPORT.md ; then
+            echo "Potential secrets found in source code!"
+            exit 1
+          fi
+
+      - name: Upload Security Check
+        run: |
+          if grep -R "multer(" -n server ; then
+            echo "Upload handler present - ensure validation is active in server/routes/pdf.js"
+          fi

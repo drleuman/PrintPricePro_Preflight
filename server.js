@@ -33,6 +33,8 @@ exec(`${GS_CMD_LOG} --version`, (err, stdout) => {
   }
 });
 
+const helmet = require('helmet');
+
 const app = express();
 const port = Number.parseInt(process.env.PORT || '8080', 10);
 
@@ -42,22 +44,47 @@ if (pdfRouter.uploadDir) {
 
 app.set('trust proxy', 1);
 
-// Super permissive CORS for debugging
+// Security Headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "img-src": ["'self'", "data:", "https:"],
+      "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://unpkg.com"],
+      "connect-src": ["'self'", "https://generativelanguage.googleapis.com"]
+    },
+  },
+}));
+
+// Restricted CORS
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:8080',
+  'https://preflight.printprice.pro',
+  'https://print-price-pro-preflight.vercel.app'
+];
+
 app.use(cors({
-  origin: '*',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-PPP-Autofix-Report'],
-  exposedHeaders: ['Content-Disposition', 'X-PPP-Autofix-Report', 'Content-Length']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-PPP-Autofix-Report', 'x-ppp-api-key'],
+  exposedHeaders: ['Content-Disposition', 'X-PPP-Autofix-Report', 'Content-Length'],
+  credentials: true
 }));
 
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('X-Accel-Buffering', 'no'); // Global disable for PDF streaming
   next();
 });
 
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+app.use(express.json({ limit: '10mb' })); // Reduced from 100mb
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request Logger
 app.use((req, _res, next) => {

@@ -19,6 +19,8 @@ const {
 } = require('../services/pdfPipeline');
 const apiKeyMiddleware = require('../middleware/apiKey');
 
+const sanitizeFilename = (s) => String(s || '').replace(/[^a-zA-Z0-9._-]/g, '_');
+
 function execCmd(cmd, args, opts = {}) {
     const timeoutMs = opts.timeoutMs ?? 60000; // Increased timeout for larger docs
     return new Promise((resolve) => {
@@ -232,11 +234,7 @@ const upload = multer({
         const isPdfName = name.endsWith('.pdf');
         const mt = String(file.mimetype || '').toLowerCase();
 
-        const allowed =
-            mt === 'application/pdf' ||
-            mt === 'application/octet-stream' ||
-            mt === '' ||
-            isPdfName;
+        const allowed = mt === 'application/pdf' || (mt === 'application/octet-stream' && isPdfName);
 
         if (allowed) return cb(null, true);
         return cb(new Error('Invalid file type. Only PDF files are allowed.'), false);
@@ -260,7 +258,7 @@ async function ensurePdfFile(inputPath) {
             await fh.close();
             if (head !== '%PDF-') return { ok: false, code: 'INVALID_SIGNATURE' };
         } catch (e) {
-            try { await fh.close(); } catch (_) {}
+            try { await fh.close(); } catch (_) { }
             return { ok: false, code: 'READ_ERROR', message: e.message };
         }
     } catch (e) {
@@ -452,8 +450,8 @@ router.get('/preview/pages', (req, res) => res.status(405).json({ error: 'Method
 
 router.post('/grayscale', upload.single('file'), apiKeyMiddleware, ensurePdfMiddleware, async (req, res) => {
     const inputPath = req.file && req.file.path;
-
-    const baseName = path.basename(req.file.originalname || 'document.pdf').replace(/\.pdf$/i, '');
+    const original = sanitizeFilename(req.file.originalname || 'document.pdf');
+    const baseName = original.replace(/\.pdf$/i, '');
     const outName = `${baseName}_bw.pdf`;
     const outPath = path.join(uploadDir, `${Date.now()}_out_bw.pdf`);
 
@@ -490,8 +488,8 @@ router.post('/convert-color', upload.single('file'), apiKeyMiddleware, ensurePdf
     const inputPath = req.file && req.file.path;
 
     const profile = (req.body.profile || 'cmyk').toLowerCase();
-
-    const baseName = path.basename(req.file.originalname || 'document.pdf').replace(/\.pdf$/i, '');
+    const original = sanitizeFilename(req.file.originalname || 'document.pdf');
+    const baseName = original.replace(/\.pdf$/i, '');
     const outName = `${baseName}_${profile}.pdf`;
     const outPath = path.join(uploadDir, `${Date.now()}_out_${profile}.pdf`);
 
@@ -516,7 +514,8 @@ router.post('/rebuild-150dpi', upload.single('file'), apiKeyMiddleware, ensurePd
     const requested = Number((req.query && req.query.dpi) || 150);
     const dpi = Number.isFinite(requested) ? Math.min(600, Math.max(72, requested)) : 150;
 
-    const baseName = path.basename(req.file.originalname || 'document.pdf').replace(/\.pdf$/i, '');
+    const original = sanitizeFilename(req.file.originalname || 'document.pdf');
+    const baseName = original.replace(/\.pdf$/i, '');
     const outName = `${baseName}_rebuild_${dpi}dpi.pdf`;
     const outPath = path.join(uploadDir, `${Date.now()}_out_rebuild_${dpi}.pdf`);
 

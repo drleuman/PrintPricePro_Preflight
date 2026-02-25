@@ -131,10 +131,12 @@ async function gsConvertColor(input, output, profile, opts = {}) {
     }
 
     // Generate dynamic pdfx_def.ps to avoid missing file errors
-    const psEscape = (s) => String(s || '').replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)').replace(/\r/g, '').replace(/\n/g, ' ');
+    const psEscape = (s) => String(s || '').replace(/[\\()]/g, '\\$&').replace(/[\r\n]/g, ' ');
+    const sanitizeFilename = (s) => String(s || '').replace(/[^a-zA-Z0-9._-]/g, '_');
+
     const psContent = `
 %!PS
-[ /Title (${psEscape(path.basename(input))}) /DOCINFO pdfmark
+[ /Title (${psEscape(sanitizeFilename(path.basename(input)))}) /DOCINFO pdfmark
 [/Predictor 0 /OutputConditionIdentifier (${psEscape(cfg.cond)}) /DestOutputProfile (${psEscape(finalIccPath.replace(/\\/g, '/'))}) /OutputCondition (${psEscape(cfg.info)}) /Info (${psEscape(cfg.info)}) /RegistryName (http://www.color.org) /S /GTS_PDFX /DefaultRGB [ /DeviceRGB ] /DefaultCMYK [ /DeviceCMYK ] /OutputIntent { << /Type /OutputIntent /S /GTS_PDFX /OutputConditionIdentifier (${psEscape(cfg.cond)}) /OutputCondition (${psEscape(cfg.info)}) /RegistryName (http://www.color.org) /Info (${psEscape(cfg.info)}) /DestOutputProfile { ( ${psEscape(finalIccPath.replace(/\\/g, '/'))} ) (r) file } >> } [ /DeviceCMYK ] pdfmark
 `.trim();
 
