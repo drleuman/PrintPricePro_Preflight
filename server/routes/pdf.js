@@ -377,7 +377,7 @@ async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmati
                 }
 
                 const w = parseInt(wMatch[1]);
-                const h = parseInt(hMatch[2]);
+                const h = parseInt(hMatch[1]);
                 const bodySize = w * h * 4;
                 if (buf.length < headerEnd + 7 + bodySize) break;
 
