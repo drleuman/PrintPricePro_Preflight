@@ -52,7 +52,7 @@ if (typeof self !== 'undefined' && !self.document) {
   };
 }
 
-(pdfjsLib as any).GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+(pdfjsLib as any).GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
 type AnalyzeCmd = {
   type: 'analyze';
