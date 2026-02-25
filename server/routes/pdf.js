@@ -1443,7 +1443,7 @@ router.get('/health', async (req, res) => {
 
     const gsOk = await checkBin(process.env.GS_PATH || (process.platform === 'win32' ? 'gswin64c' : 'gs'));
     const qpdfOk = await checkBin('qpdf');
-    const pdfinfoOk = await checkBin('pdfinfo');
+    const pdfinfoOk = await new Promise(r => exec(`pdfinfo -v`, (err) => r(!err)));
 
     res.json({
         ok: true,
