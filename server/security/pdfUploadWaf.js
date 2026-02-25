@@ -4,10 +4,13 @@ const crypto = require("crypto");
 const { spawn } = require("child_process");
 
 function sha256File(fp) {
-    const h = crypto.createHash("sha256");
-    const s = fs.readFileSync(fp);
-    h.update(s);
-    return h.digest("hex");
+    return new Promise((resolve, reject) => {
+        const hash = crypto.createHash('sha256');
+        const stream = fs.createReadStream(fp);
+        stream.on('data', (data) => hash.update(data));
+        stream.on('end', () => resolve(hash.digest('hex')));
+        stream.on('error', (err) => reject(err));
+    });
 }
 
 function readHead(fp, n = 4096) {
@@ -130,7 +133,7 @@ async function pdfUploadWafCheck({
 
     const size = fileSize(filePath);
     const base = safeBasename(originalName);
-    const hash = sha256File(filePath);
+    const hash = await sha256File(filePath);
 
     // 1) Size gate
     if (size > cfg.maxBytes) {

@@ -464,8 +464,18 @@ router.post('/preview/pages', upload.single('file'), ensurePdfMiddleware, async 
 
         res.json({ ok: true, pageCount: total, pages, truncated: total > pages.length });
     } catch (err) {
-        console.error('Preview generation failed:', err);
-        res.status(500).json({ error: 'Preview generation failed', details: err.message });
+        const gsPath = process.env.GS_PATH || (process.platform === 'win32' ? 'gswin64c' : 'gs');
+        console.error('[PDF-PREVIEW] Generation failed:', {
+            error: err.message,
+            gsPath,
+            input: inputPath ? path.basename(inputPath) : 'none',
+            stack: err.stack
+        });
+        res.status(500).json({
+            error: 'Preview generation failed',
+            details: err.message,
+            code: err.code || 'UNKNOWN'
+        });
     } finally {
         safeUnlink(inputPath);
         if (tmpDir) safeRmDir(tmpDir);
@@ -1321,7 +1331,8 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
             error: 'AutoFix failed',
             error_code: errorCode,
             step: failedStep,
-            details: err.message,
+            message: err.message,
+            details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
             stderr: err.stderr || undefined
         });
     } finally {
