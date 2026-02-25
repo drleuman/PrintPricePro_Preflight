@@ -1,8 +1,8 @@
 /// <reference lib="webworker" />
 
 import * as pdfjsLib from 'pdfjs-dist';
-// Use Vite-compatible worker loading for production stability
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+// All getDocument() calls in this worker use disableWorker:true,
+// so no workerSrc is needed here.
 
 import {
   PDFDocument,
@@ -52,7 +52,7 @@ if (typeof self !== 'undefined' && !self.document) {
   };
 }
 
-(pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfWorker;
+// workerSrc intentionally omitted: all getDocument() calls use disableWorker:true
 
 type AnalyzeCmd = {
   type: 'analyze';
