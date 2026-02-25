@@ -4,6 +4,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const crypto = require('crypto');
+const { safeMoveSync } = require('../utils/fileUtil');
 const { PDFDocument, PDFName, PDFArray, PDFDict, pushGraphicsState, popGraphicsState, concatTransformationMatrix } = require('pdf-lib');
 const { runGs, sendPdfAndCleanup, safeUnlink, safeRmDir } = require('../services/ghostscript');
 const { spawn } = require('child_process');
@@ -1204,7 +1205,7 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
         const jobPath = JobManager.getOriginalPath(job.id);
 
         // Move file to job directory
-        fs.renameSync(inputPath, jobPath);
+        safeMoveSync(inputPath, jobPath);
 
         // Streaming SHA256 calculation (post-upload but before backgrounding)
         const hash = crypto.createHash('sha256');

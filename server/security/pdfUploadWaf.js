@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { spawn } = require("child_process");
+const { safeMoveSync } = require("../utils/fileUtil");
 
 function sha256File(fp) {
     return new Promise((resolve, reject) => {
@@ -247,7 +248,7 @@ async function pdfUploadWafCheck({
 
 function quarantineFile(filePath, quarantineDir, safeName, sha256) {
     const dst = path.join(quarantineDir, `${Date.now()}_${sha256}_${safeName}`);
-    fs.renameSync(filePath, dst);
+    safeMoveSync(filePath, dst);
     return dst;
 }
 

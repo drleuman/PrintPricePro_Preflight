@@ -20,6 +20,15 @@ const debugLog = (msg) => {
   console.log(`[${new Date().toISOString()}] ${msg}`);
 };
 
+// Global Process Guards to prevent 502 Gateway errors on unexpected crashes
+process.on('uncaughtException', (err) => {
+  console.error('[CRITICAL] Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CRITICAL] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 debugLog('Server starting with relaxed security...');
 
 // Check Ghostscript presence
