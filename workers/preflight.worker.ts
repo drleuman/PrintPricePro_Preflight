@@ -1,8 +1,9 @@
 /// <reference lib="webworker" />
 
 import * as pdfjsLib from 'pdfjs-dist';
-// @ts-ignore
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+// Use fixed worker path to avoid cache issues after deployments
+// import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
 import {
   PDFDocument,
   PDFName,
@@ -51,7 +52,7 @@ if (typeof self !== 'undefined' && !self.document) {
   };
 }
 
-(pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfWorker;
+(pdfjsLib as any).GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 type AnalyzeCmd = {
   type: 'analyze';
