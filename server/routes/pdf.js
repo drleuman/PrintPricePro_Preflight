@@ -279,43 +279,53 @@ async function ensurePdfFile(inputPath) {
 
 // Middleware: ensure uploaded file exists, has PDF signature, and passes WAF security checks.
 async function ensurePdfMiddleware(req, res, next) {
-    const file = req.file;
-    if (!file || !file.path) {
-        return res.status(400).json({ error: 'Missing uploaded file' });
-    }
+    try {
+        const file = req.file;
+        if (!file || !file.path) {
+            return res.status(400).json({ error: 'Missing uploaded file' });
+        }
 
-    const decision = await pdfUploadWafCheck({
-        filePath: file.path,
-        originalName: file.originalname,
-    });
-
-    // Audit log (non-sensitive metadata)
-    console.log('[PDF_WAF]', JSON.stringify({
-        ok: decision.ok,
-        reason: decision.reason || "OK",
-        severity: decision.severity,
-        sha256: decision.sha256,
-        size: decision.size,
-        meta: decision.meta,
-    }));
-
-    if (!decision.ok) {
-        const QUAR = process.env.PDF_QUARANTINE_DIR || path.join(process.cwd(), 'uploads-quarantine');
-        const qPath = quarantineFile(file.path, QUAR, decision.safeName, decision.sha256);
-
-        return res.status(415).json({
-            ok: false,
-            rejected: true,
-            severity: decision.severity,
-            reason: decision.reason,
-            detail: decision.detail,
-            sha256: decision.sha256,
-            quarantinePath: qPath,
-            message: 'File rejected by security policy'
+        const decision = await pdfUploadWafCheck({
+            filePath: file.path,
+            originalName: file.originalname,
         });
-    }
 
-    return next();
+        // Audit log (non-sensitive metadata)
+        console.log('[PDF_WAF]', JSON.stringify({
+            ok: decision.ok,
+            reason: decision.reason || "OK",
+            severity: decision.severity,
+            sha256: decision.sha256,
+            size: decision.size,
+            meta: decision.meta,
+        }));
+
+        if (!decision.ok) {
+            const QUAR = process.env.PDF_QUARANTINE_DIR || path.join(process.cwd(), 'uploads-quarantine');
+            const qPath = quarantineFile(file.path, QUAR, decision.safeName, decision.sha256);
+
+            return res.status(415).json({
+                ok: false,
+                rejected: true,
+                severity: decision.severity,
+                reason: decision.reason,
+                detail: decision.detail,
+                sha256: decision.sha256,
+                quarantinePath: qPath,
+                message: 'File rejected by security policy'
+            });
+        }
+
+        next();
+    } catch (err) {
+        console.error('[PDF-ROUTER] ensurePdfMiddleware error:', err);
+        if (!res.headersSent) {
+            res.status(500).json({
+                error: 'Security validation failed',
+                message: 'An internal error occurred during file validation.'
+            });
+        }
+    }
 }
 /**
  * Scans a PDF for Total Ink Coverage (TAC) peaks.
