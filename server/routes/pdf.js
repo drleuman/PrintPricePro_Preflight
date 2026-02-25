@@ -219,7 +219,16 @@ const router = express.Router();
 
 // Setup upload (make upload dir configurable for Windows/AV issues)
 const uploadDir = process.env.PPP_UPLOAD_DIR || path.join(os.tmpdir(), 'ppp-preflight');
-try { fs.mkdirSync(uploadDir, { recursive: true }); } catch (e) { }
+try {
+    fs.mkdirSync(uploadDir, { recursive: true });
+    // Verify write permissions at startup to avoid 500/502 errors later
+    const testFile = path.join(uploadDir, `.test_write_${Date.now()}`);
+    fs.writeFileSync(testFile, 'ready');
+    fs.unlinkSync(testFile);
+    console.log(`[PDF-ROUTER] Upload directory ready and writable: ${uploadDir}`);
+} catch (e) {
+    console.error(`[PDF-ROUTER] CRITICAL ERROR: Upload directory ${uploadDir} is NOT writable:`, e.message);
+}
 
 const upload = multer({
     storage: multer.diskStorage({

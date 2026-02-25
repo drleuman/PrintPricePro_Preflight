@@ -51,7 +51,8 @@ app.use(helmet({
       ...helmet.contentSecurityPolicy.getDefaultDirectives(),
       "img-src": ["'self'", "data:", "https:"],
       "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://unpkg.com"],
-      "connect-src": ["'self'", "https://generativelanguage.googleapis.com"]
+      "connect-src": ["'self'", "https://generativelanguage.googleapis.com"],
+      "worker-src": ["'self'", "blob:", "data:"]
     },
   },
 }));
