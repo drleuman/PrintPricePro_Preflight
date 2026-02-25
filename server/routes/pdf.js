@@ -1434,5 +1434,31 @@ router.get('/download-job/:jobId', async (req, res) => {
     res.download(finalPath, `${job.original_name.replace(/\.pdf$/i, '')}_fixed_ldm.pdf`);
 });
 
+// --- DIAGNOSTIC ROUTES ---
+router.get('/ping', (req, res) => res.json({ ok: true, msg: 'pong', timestamp: new Date() }));
+
+router.get('/health', async (req, res) => {
+    const { exec } = require('child_process');
+    const checkBin = (cmd) => new Promise(r => exec(`${cmd} --version`, (err) => r(!err)));
+
+    const gsOk = await checkBin(process.env.GS_PATH || (process.platform === 'win32' ? 'gswin64c' : 'gs'));
+    const qpdfOk = await checkBin('qpdf');
+    const pdfinfoOk = await checkBin('pdfinfo');
+
+    res.json({
+        ok: true,
+        env: process.env.NODE_ENV,
+        uploadDir,
+        writable: fs.existsSync(uploadDir),
+        system: {
+            ghostscript: gsOk,
+            qpdf: qpdfOk,
+            poppler: pdfinfoOk
+        },
+        memory: process.memoryUsage(),
+        uptime: process.uptime()
+    });
+});
+
 module.exports = router;
 
