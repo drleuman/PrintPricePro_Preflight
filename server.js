@@ -165,7 +165,15 @@ app.get(/^\/(?!api-proxy\/|api\/).*/, (req, res) => {
 
 // -------- Server & WebSocket --------
 const server = app.listen(port, '0.0.0.0', () => {
-  console.log(`Server listening on :${port}`);
+  console.log(`[SERVER-START] OK: Listening on 0.0.0.0:${port}`);
+  console.log(`[SERVER-START] Upload context: ${pdfRouter.uploadDir || 'Not set'}`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[CRITICAL] Port ${port} is already in use. App cannot start.`);
+  } else {
+    console.error(`[CRITICAL] Server failed to start:`, err);
+  }
+  process.exit(1);
 });
 
 server.timeout = 600000; // 10 minutes
