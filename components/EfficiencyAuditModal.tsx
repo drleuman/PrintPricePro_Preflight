@@ -8,7 +8,7 @@ type ModelInfo = { name: string; supportedGenerationMethods?: string[] };
 const API_VER = 'v1';
 
 async function pickAvailableModel(): Promise<string> {
-  const res = await fetch(`/api-proxy/${API_VER}/models?pageSize=200`);
+  const res = await fetch(`/api/gemini-proxy/${API_VER}/models?pageSize=200`);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
   const data = await res.json();
   const list: ModelInfo[] = Array.isArray(data?.models) ? data.models : [];
@@ -73,7 +73,7 @@ Keep it brief, use bullet points.`;
       const model = await pickAvailableModel();
       if (!model) throw new Error('No Gemini model with generateContent available in this project.');
 
-      const res = await fetch(`/api-proxy/${API_VER}/models/${encodeURIComponent(model)}:generateContent`, {
+      const res = await fetch(`/api/gemini-proxy/${API_VER}/models/${encodeURIComponent(model)}:generateContent`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),

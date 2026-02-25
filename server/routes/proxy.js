@@ -158,7 +158,7 @@ function handleWsUpgrade(wss, request, socket, head) {
             // But here we need to know the mount point prefix to strip it.
             // For simplicity, we'll assume /api-proxy is the prefix, or standard logic:
             // In logical flow: pathname is /api-proxy/v1beta/....
-            const targetPathSegment = pathname.replace(/^\/api-proxy/, '');
+            const targetPathSegment = pathname.replace(/^\/api\/gemini-proxy/, '');
             const clientQuery = new URLSearchParams(requestUrl.search);
             clientQuery.set('key', apiKey);
 

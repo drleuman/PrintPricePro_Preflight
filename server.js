@@ -114,7 +114,7 @@ app.use((req, _res, next) => {
 });
 
 // -------- Routes --------
-app.use('/api-proxy', proxyRouter);
+app.use('/api/gemini-proxy', proxyRouter);
 console.log('Mounting /api/convert routes...');
 app.use('/api/convert', (req, res, next) => {
   console.log(`[ROUTE-DEBUG] ${req.method} ${req.url}`);
@@ -165,7 +165,7 @@ app.use(
 
 app.get('/healthz', (_req, res) => res.status(200).send('ok'));
 
-app.get(/^\/(?!api-proxy\/|api\/).*/, (req, res) => {
+app.get(/^\/(?!api\/).*/, (req, res) => {
   const indexPath = path.join(staticPath, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
@@ -192,7 +192,7 @@ server.timeout = 600000; // 10 minutes
 const wss = new WebSocket.Server({ noServer: true });
 server.on('upgrade', (request, socket, head) => {
   const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
-  if (pathname.startsWith('/api-proxy')) {
+  if (pathname.startsWith('/api/gemini-proxy')) {
     handleWsUpgrade(wss, request, socket, head);
   } else {
     socket.destroy();

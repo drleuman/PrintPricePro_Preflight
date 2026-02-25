@@ -1367,6 +1367,75 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
 
 
 
+// --- SERVER-SIDE PAGE PREVIEW ENDPOINT (for reliable CMYK visualization) ---
+router.post('/preview/pages', upload.single('file'), ensurePdfMiddleware, async (req, res) => {
+    const inputPath = req.file?.path;
+    if (!inputPath) return res.status(400).json({ error: 'Missing file' });
+
+    try {
+        const { runGs } = require('../services/pdfPipeline');
+        const { execSync } = require('child_process');
+
+        // Get page count using pdfinfo or gs
+        let pageCount = 0;
+        try {
+            const gsOut = execSync(
+                `${process.env.GS_PATH || (process.platform === 'win32' ? 'gswin64c' : 'gs')} -dNODISPLAY -dNOSAFER -q -c "(" "${inputPath}" ") (r) file runpdfbegin pdfpagecount = quit"`,
+                { timeout: 10000 }
+            ).toString().trim();
+            pageCount = parseInt(gsOut) || 0;
+        } catch (e) {
+            console.warn('[preview/pages] Could not get page count via gs, defaulting to 1:', e.message);
+            pageCount = 1;
+        }
+
+        if (pageCount < 1) pageCount = 1;
+        const MAX_PAGES = 20; // Safety cap to avoid very long processing
+        const pagesToRender = Math.min(pageCount, MAX_PAGES);
+
+        const pages = [];
+        const previewDir = path.join(uploadDir, `preview_${path.basename(inputPath, '.pdf')}_${Date.now()}`);
+        fs.mkdirSync(previewDir, { recursive: true });
+
+        for (let i = 1; i <= pagesToRender; i++) {
+            const outPath = path.join(previewDir, `page_${i}.png`);
+            try {
+                await runGs([
+                    '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
+                    '-sDEVICE=png16m',
+                    '-r96',  // 96dpi for preview (not print quality)
+                    '-dUseCropBox',
+                    `-dFirstPage=${i}`,
+                    `-dLastPage=${i}`,
+                    '-o', outPath,
+                    inputPath
+                ]);
+
+                if (fs.existsSync(outPath)) {
+                    const buf = fs.readFileSync(outPath);
+                    pages.push(`data:image/png;base64,${buf.toString('base64')}`);
+                    fs.unlinkSync(outPath);
+                } else {
+                    pages.push(null);
+                }
+            } catch (pageErr) {
+                console.warn(`[preview/pages] Page ${i} render failed:`, pageErr.message);
+                pages.push(null);
+            }
+        }
+
+        // Cleanup
+        try { fs.rmdirSync(previewDir); } catch { /* ignore */ }
+        await safeUnlink(inputPath);
+
+        return res.json({ ok: true, pages, pageCount });
+    } catch (err) {
+        console.error('[preview/pages] Error:', err);
+        await safeUnlink(inputPath);
+        return res.status(500).json({ error: 'Preview generation failed', message: err.message });
+    }
+});
+
 // --- LDM JOB STATUS ENDPOINT ---
 router.get('/job/status/:id', async (req, res) => {
     const job = await JobManager.getJob(req.params.id);

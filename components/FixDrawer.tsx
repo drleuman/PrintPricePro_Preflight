@@ -46,7 +46,7 @@ const aiCache: Record<string, { explain?: string; efficiency?: string }> = {};
 async function pickAvailableModel(): Promise<string> {
   if (CACHED_MODEL_NAME) return CACHED_MODEL_NAME;
 
-  const res = await fetch(`/api-proxy/${API_VER}/models?pageSize=200`);
+  const res = await fetch(`/api/gemini-proxy/${API_VER}/models?pageSize=200`);
   if (!res.ok) {
     throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
   }
@@ -98,7 +98,7 @@ async function generateWithGemini(prompt: string): Promise<string> {
   const model = await pickAvailableModel();
 
   const res = await fetch(
-    `/api-proxy/${API_VER}/models/${encodeURIComponent(
+    `/api/gemini-proxy/${API_VER}/models/${encodeURIComponent(
       model
     )}:generateContent`,
     {
@@ -270,11 +270,12 @@ export const FixDrawer: React.FC<Props> = ({
   const hint = getIssueHint(issue);
 
   // Determine which fix buttons to show based on issue type
-  const isColorSpaceIssue = issue.category === 'color-space' ||
+  const isColorSpaceIssue = issue.category === 'color' ||
+    issue.category === 'images' ||
     issue.id?.includes('rgb') ||
     issue.id?.includes('color') ||
-    (issue as any).message?.toLowerCase().includes('rgb') ||
-    (issue as any).message?.toLowerCase().includes('color space');
+    issue.message?.toLowerCase().includes('rgb') ||
+    issue.message?.toLowerCase().includes('color space');
 
   const isResolutionIssue = issue.category === 'images' ||
     issue.id?.includes('resolution') ||
@@ -414,13 +415,13 @@ export const FixDrawer: React.FC<Props> = ({
           </div>
         )}
 
-        {issue.hint && (
+        {(issue as any).hint && (
           <div className="bg-gray-50 border border-dashed border-gray-200 rounded-lg px-3 py-2">
             <p className="text-xs font-medium text-gray-500 mb-1">
               {t('engineHint') || t('suggestedFix') || 'Engine Hint'}
             </p>
             <p className="text-sm text-gray-700 whitespace-pre-line">
-              {issue.hint}
+              {(issue as any).hint}
             </p>
           </div>
         )}

@@ -12,7 +12,7 @@ type ModelInfo = { name: string; supportedGenerationMethods?: string[] };
 const API_VER = 'v1';
 
 async function pickAvailableModel(): Promise<string> {
-  const res = await fetch(`/api-proxy/${API_VER}/models?pageSize=200`);
+  const res = await fetch(`/api/gemini-proxy/${API_VER}/models?pageSize=200`);
   if (!res.ok) {
     throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
   }
@@ -111,7 +111,7 @@ Provide a concise report with a "Visual Score" (0-10) and bullet points for impr
         '(no explicit message provided)';
       const issueDetails =
         (issue as any).details ||
-        issue.description ||
+        (issue as any).description ||
         '(no extra details provided)';
 
       return `
@@ -206,7 +206,7 @@ Deliver your answer in sections:
       }
 
       const res = await fetch(
-        `/api-proxy/${API_VER}/models/${encodeURIComponent(
+        `/api/gemini-proxy/${API_VER}/models/${encodeURIComponent(
           model
         )}:generateContent`,
         {

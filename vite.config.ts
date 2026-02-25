@@ -12,12 +12,8 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: 'http://localhost:8080',
           changeOrigin: true,
+          ws: true, // also handles /api/gemini-proxy WebSocket upgrades
         },
-        '/api-proxy': {
-          target: 'http://localhost:8080',
-          changeOrigin: true,
-          ws: true,
-        }
       }
     },
     plugins: [react()],
