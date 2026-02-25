@@ -61,11 +61,18 @@ function runCmd(bin, args, timeoutMs = 8000) {
 
 function hasBin(bin) {
     const isWin = process.platform === 'win32';
-    const cmd = isWin ? 'where' : 'command -v';
-    const binCheck = spawn(isWin ? 'cmd' : 'sh', [isWin ? '/c' : '-lc', `${cmd} ${bin}`], { shell: false });
-    return new Promise((resolve) => {
-        binCheck.on("close", (code) => resolve(code === 0));
-    });
+    if (isWin) {
+        return new Promise((resolve) => {
+            const check = spawn('cmd', ['/c', `where ${bin}`], { shell: false });
+            check.on("close", (code) => resolve(code === 0));
+        });
+    } else {
+        return new Promise((resolve) => {
+            // Use 'which' or 'command -v' directly without shell wrapper for speed
+            const check = spawn('which', [bin], { shell: false });
+            check.on("close", (code) => resolve(code === 0));
+        });
+    }
 }
 
 // Heuristic token scan (first 8MB)
@@ -220,17 +227,19 @@ async function pdfUploadWafCheck({
 
     if (canQpdf) {
         const r = await runCmd("qpdf", ["--check", filePath], 8000);
-        // qpdf returns non-zero on structural issues
+        // qpdf returns non-zero on structural issues. 
+        // In production, we log this but do NOT block (ok: true) to avoid 415 on minor warnings.
         if (r.code !== 0) {
             return {
-                ok: false,
+                ok: true,
                 severity: "MEDIUM",
-                reason: "QPDF_STRUCTURAL_ISSUES",
+                reason: "QPDF_STRUCTURAL_WARNINGS",
                 detail: (r.err || r.out || "").slice(0, 4000),
                 sha256: hash,
                 safeName: base,
                 size,
-                meta: { pages },
+                meta: { pages, qpdf_code: r.code },
+                warning: true
             };
         }
     }
