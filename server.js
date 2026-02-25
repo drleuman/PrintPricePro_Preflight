@@ -29,6 +29,17 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('[CRITICAL] Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
+debugLog('Server starting environment diagnostic...');
+try {
+  const os = require('os');
+  debugLog(`OS: ${os.platform()} ${os.release()} (${os.arch()})`);
+  debugLog(`Memory: ${Math.round(os.freemem() / 1024 / 1024)}MB free of ${Math.round(os.totalmem() / 1024 / 1024)}MB`);
+  debugLog(`CPU Load: ${os.loadavg().join(', ')}`);
+  debugLog(`Uptime: ${Math.round(os.uptime() / 60)} mins`);
+} catch (e) {
+  console.error('Diagnostic error:', e.message);
+}
+
 debugLog('Server starting with relaxed security...');
 
 // Check Ghostscript presence
