@@ -2,7 +2,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const { PDFDocument, PDFName, PDFArray, PDFDict } = require('pdf-lib');
+const { PDFDocument, PDFName, PDFArray, PDFDict, pushGraphicsState, concatTransformationMatrix, popGraphicsState } = require('pdf-lib');
 const { runGs } = require('./ghostscript');
 const { getPdfInfoGS } = require('../utils/pdfInfo');
 
