@@ -1033,7 +1033,7 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
                     report.prepress_summary.rewritten_by_gs = true;
                     report.prepress_summary.outputintent = v.verified;
                     report.prepress_summary.outputintent_valid = v.verified;
-                    report.prepress_summary.outputintent_count = v.intentCount;
+                    report.prepress_summary.outputintent_count = v.verified ? 1 : 0;
                     report.prepress_summary.outputintent_identifier = v.identifier;
                     report.prepress_summary.matches_requested_profile = (v.identifier === v.expectedCond);
                     stepOk = true;
