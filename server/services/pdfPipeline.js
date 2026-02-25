@@ -146,24 +146,18 @@ async function gsConvertColor(input, output, profile, opts = {}) {
     const args = [
         '-dSAFER', '-dNOPAUSE', '-dBATCH', '-dQUIET',
         '-sDEVICE=pdfwrite',
-        '-dPDFX',
         `-sOutputICCProfile=${finalIccPath}`,
+        `-sDefaultCMYKProfile=${finalIccPath}`,
+        '-dRenderIntent=1',
+        '-dSimulateOverprint=true',
+        '-dBlackTextThreshold=0.0',
+        '-o', output
     ];
 
     const srgbPath = path.join(iccDir, 'srgb.icc');
     if (fs.existsSync(srgbPath)) {
         args.push(`-sDefaultRGBProfile=${srgbPath}`);
-    } else {
-        console.warn('[GS-CONVERT] srgb.icc missing, skipping -sDefaultRGBProfile');
     }
-
-    args.push(`-sDefaultCMYKProfile=${finalIccPath}`);
-    args.push('-dRenderIntent=1');
-    args.push('-dSimulateOverprint=true');
-    args.push('-dBlackTextThreshold=0.0');
-    args.push('-o', output);
-    args.push(psPath);
-    args.push(input);
 
     if (opts.finalizeOnly) {
         args.push('-dColorConversionStrategy=/LeaveColorUnchanged');
@@ -172,10 +166,17 @@ async function gsConvertColor(input, output, profile, opts = {}) {
         args.push('-dProcessColorModel=/DeviceCMYK');
     }
 
+    // Pass the PDFX definition only if we are specifically asked or if we want professional metadata
+    // For now, let's stick to core conversion to ensure stability, or use a safer PS injection.
+    args.push(input);
+
     try {
-        const { ok, stderr } = await execCmd(GS_CMD, args, { timeoutMs: 120000 });
-        try { await fs.promises.unlink(psPath); } catch (e) { }
-        if (!ok) throw new Error(`GS color conversion failed: ${stderr}`);
+        console.log(`[GS-CONVERT] Running: ${GS_CMD} ${args.join(' ')}`);
+        const { ok, stderr, code } = await execCmd(GS_CMD, args, { timeoutMs: 120000 });
+        if (!ok) {
+            console.error(`[GS-CONVERT] Failed with code ${code}. Stderr: ${stderr}`);
+            throw new Error(`GS color conversion failed (code ${code}): ${stderr || 'Internal GS failure'}`);
+        }
 
         return {
             verified: true,
