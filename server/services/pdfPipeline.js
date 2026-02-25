@@ -99,7 +99,7 @@ async function gsConvertColor(input, output, profile, opts = {}) {
             cond: 'FOGRA51'
         },
         'iso_uncoated_v3': {
-            icc: 'PSO_Uncoated_v3.icc',
+            icc: 'PSOuncoated_v3_FOGRA52.icc',
             info: 'PSO Uncoated v3 (FOGRA52)',
             cond: 'FOGRA52'
         },
@@ -148,15 +148,22 @@ async function gsConvertColor(input, output, profile, opts = {}) {
         '-sDEVICE=pdfwrite',
         '-dPDFX',
         `-sOutputICCProfile=${finalIccPath}`,
-        `-sDefaultRGBProfile=${path.join(iccDir, 'srgb.icc')}`,
-        `-sDefaultCMYKProfile=${finalIccPath}`,
-        '-dRenderIntent=1',
-        '-dSimulateOverprint=true',
-        '-dBlackTextThreshold=0.0',
-        '-o', output,
-        psPath,
-        input
     ];
+
+    const srgbPath = path.join(iccDir, 'srgb.icc');
+    if (fs.existsSync(srgbPath)) {
+        args.push(`-sDefaultRGBProfile=${srgbPath}`);
+    } else {
+        console.warn('[GS-CONVERT] srgb.icc missing, skipping -sDefaultRGBProfile');
+    }
+
+    args.push(`-sDefaultCMYKProfile=${finalIccPath}`);
+    args.push('-dRenderIntent=1');
+    args.push('-dSimulateOverprint=true');
+    args.push('-dBlackTextThreshold=0.0');
+    args.push('-o', output);
+    args.push(psPath);
+    args.push(input);
 
     if (opts.finalizeOnly) {
         args.push('-dColorConversionStrategy=/LeaveColorUnchanged');
