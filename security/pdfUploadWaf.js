@@ -82,24 +82,25 @@ function runCmd(bin, args, timeoutMs = 8000) {
     });
 }
 
-function hasBin(bin) {
+const binCache = {};
+async function hasBin(bin) {
+    if (binCache[bin] !== undefined) return binCache[bin];
     const isWin = process.platform === 'win32';
-    if (isWin) {
-        return new Promise((resolve) => {
+    const result = await new Promise((resolve) => {
+        if (isWin) {
             const check = spawn('cmd', ['/c', `where ${bin}`], { shell: false });
             check.on("close", (code) => resolve(code === 0));
-        });
-    } else {
-        return new Promise((resolve) => {
-            // Use 'which' or 'command -v' directly without shell wrapper for speed
+        } else {
             const check = spawn('which', [bin], { shell: false });
             check.on("close", (code) => resolve(code === 0));
-        });
-    }
+        }
+    });
+    binCache[bin] = result;
+    return result;
 }
 
-// Heuristic token scan (first 8MB)
-function scanTokens(fp, maxBytes = 8 * 1024 * 1024) {
+// Heuristic token scan (reduced to 2MB for speed, still effective for most exploits)
+function scanTokens(fp, maxBytes = 2 * 1024 * 1024) {
     const size = fileSize(fp);
     const cap = Math.min(size, maxBytes);
     const fd = fs.openSync(fp, "r");

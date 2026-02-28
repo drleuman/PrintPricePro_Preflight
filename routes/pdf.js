@@ -282,19 +282,23 @@ async function ensurePdfFile(inputPath) {
 
 // Middleware: ensure uploaded file exists, has PDF signature, and passes WAF security checks.
 async function ensurePdfMiddleware(req, res, next) {
+    const reqId = req.id || 'internal';
+    const tStart = Date.now();
     try {
         const file = req.file;
         if (!file || !file.path) {
             return res.status(400).json({ error: 'Missing uploaded file' });
         }
 
+        console.log(`[PDF-WAF][${reqId}] Starting security check for ${file.originalname} (${file.size} bytes)`);
         const decision = await pdfUploadWafCheck({
             filePath: file.path,
             originalName: file.originalname,
         });
+        const tEnd = Date.now();
 
         // Audit log (non-sensitive metadata)
-        console.log('[PDF_WAF]', JSON.stringify({
+        console.log(`[PDF_WAF][${reqId}] Decision in ${tEnd - tStart}ms:`, JSON.stringify({
             ok: decision.ok,
             reason: decision.reason || "OK",
             severity: decision.severity,
@@ -1235,15 +1239,20 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
     const fileSize = req.file?.size || 0;
 
     // --- LARGE DOCUMENT MODE (LDM) DETECTION ---
+    const forceLDM = String(req.body.forceJob || '0') === '1';
     let pageCount = 0;
-    try {
-        const info = await getPdfInfoGS(inputPath);
-        pageCount = info.pageCount;
-    } catch (e) {
-        console.warn('Fast page count failed, falling back to 0', e.message);
+
+    // Only call GS if we don't already know it's LDM from size or force flag
+    if (!forceLDM && fileSize <= 20 * 1024 * 1024) {
+        try {
+            const info = await getPdfInfoGS(inputPath);
+            pageCount = info.pageCount;
+        } catch (e) {
+            console.warn('Fast page count failed, falling back to 0', e.message);
+        }
     }
 
-    const isLDM = fileSize > 20 * 1024 * 1024 || pageCount > 50 || String(req.body.forceJob || '0') === '1';
+    const isLDM = forceLDM || fileSize > 20 * 1024 * 1024 || pageCount > 50;
     console.log(`[PDF-ROUTER][${reqId}] LDM Check: fileSize=${fileSize}, pageCount=${pageCount}, forceJob=${req.body.forceJob} => isLDM=${isLDM}`);
 
     if (isLDM) {
