@@ -6,7 +6,9 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { safeMoveSync } = require('../utils-server/fileUtil');
 const { PDFDocument, PDFName, PDFArray, PDFDict, pushGraphicsState, popGraphicsState, concatTransformationMatrix } = require('pdf-lib');
-const { runGs, sendPdfAndCleanup, safeUnlink, safeRmDir } = require('../services/ghostscript');
+const { runGs, safeUnlink, safeRmDir, sendPdfAndCleanup, resolveGsCmd } = require('../services/ghostscript');
+// Use the standard GS cmd resolution
+const GS_CMD = resolveGsCmd();
 const { spawn } = require('child_process');
 const JobManager = require('../services/jobManager');
 const JobProcessor = require('../services/jobProcessor');

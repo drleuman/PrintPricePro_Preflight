@@ -161,6 +161,7 @@ async function sendPdfAndCleanup(res, filePath, downloadName, cleanupFn) {
 
 module.exports = {
     runGs,
+    resolveGsCmd,
     safeUnlink,
     safeRmDir,
     sendPdfAndCleanup,

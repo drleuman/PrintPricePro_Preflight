@@ -3,11 +3,11 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { PDFDocument, PDFName, PDFArray, PDFDict, pushGraphicsState, concatTransformationMatrix, popGraphicsState } = require('pdf-lib');
-const { runGs, acquireGsSlot, releaseGsSlot } = require('./ghostscript');
+const { runGs, acquireGsSlot, releaseGsSlot, resolveGsCmd } = require('./ghostscript');
 const { getPdfInfoGS } = require('../utils-server/pdfInfo');
 
-// Use env for GS path
-const GS_CMD = process.env.GS_PATH || (process.platform === 'win32' ? 'gswin64c' : 'gs');
+// Use consistent GS resolution
+const GS_CMD = resolveGsCmd();
 
 /**
  * Normalizes profile name to internal keys
@@ -176,6 +176,8 @@ async function gsConvertColor(input, output, profile, opts = {}) {
         const { ok, stderr, code } = await execCmd(GS_CMD, args, { timeoutMs: 120000 });
         if (!ok) {
             console.error(`[GS-CONVERT] Failed with code ${code}. Stderr: ${stderr}`);
+            // If code is not null, it means GS exited with an error. 
+            // We include the stderr in the error message for better diagnostics.
             throw new Error(`GS color conversion failed (code ${code}): ${stderr || 'Internal GS failure'}`);
         }
 
