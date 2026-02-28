@@ -208,12 +208,10 @@ export const LoaderOverlay: React.FC<Props> = ({
             <div style={{
               position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
               width: '230px', height: '230px', borderRadius: '40px',
-              backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+              backgroundColor: 'transparent',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               padding: '25px', textAlign: 'center', overflow: 'hidden'
             }}>
-              <div style={{ marginBottom: '15px', fontSize: '36px' }} className="float-icon">✨</div>
 
               <div style={{ height: '70px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                 <div key={currentStep.key} style={{ animation: 'slideFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}>
@@ -290,12 +288,6 @@ export const LoaderOverlay: React.FC<Props> = ({
           0% { transform: translateX(-100%); }
           100% { transform: translateX(100%); }
         }
-        @keyframes float-icon {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-        .float-icon { animation: float-icon 3s ease-in-out infinite; }
-        
         @keyframes tip-fade {
           0% { opacity: 0; filter: blur(5px); }
           10%, 90% { opacity: 1; filter: blur(0); }
