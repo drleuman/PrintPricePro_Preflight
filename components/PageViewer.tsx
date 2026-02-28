@@ -336,12 +336,16 @@ export const PageViewer: React.FC<PageViewerProps> = ({
 
         {/* The PDF Stage (constrained box) */}
         <div className="relative w-full h-full flex items-center justify-center overflow-auto custom-scrollbar">
-          <div className="relative shadow-2xl border border-gray-200 bg-white">
+          <div
+            id="pdf-stage"
+            className="relative shadow-2xl border border-gray-200 bg-white inline-block"
+            style={{ minWidth: '100px', minHeight: '100px' }}
+          >
             {/* The PDF.js Canvas */}
             {!ldmMode && (
               <canvas
                 ref={canvasRef}
-                className="block max-w-full h-auto"
+                className="block max-w-[90vw] max-h-[80vh] h-auto w-auto"
                 style={{
                   zIndex: 1,
                   display: previewPages?.[currentPage - 1] ? 'none' : 'block'
@@ -365,7 +369,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
                 src={`/api/convert/preview/${ldmJobId}/${currentPage}`}
                 key={`ldm-${ldmJobId}-${currentPage}`}
                 alt={`LDM Page ${currentPage}`}
-                className="block max-w-full h-auto"
+                className="block max-w-[90vw] max-h-[80vh] h-auto w-auto"
                 style={{ position: 'relative', zIndex: 1, minHeight: '400px', backgroundColor: '#f3f4f6' }}
               />
             )}

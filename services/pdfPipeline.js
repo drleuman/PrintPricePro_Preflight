@@ -167,6 +167,8 @@ async function gsConvertColor(input, output, profile, opts = {}) {
     const args = [
         '-dSAFER', '-dNOPAUSE', '-dBATCH', '-dQUIET',
         '-sDEVICE=pdfwrite',
+        '-dNumRenderingThreads=4', // Optimization for multi-core servers
+        '-dMaxBitmap=500000000', // Allow more memory for rasterization if needed
         `-sOutputICCProfile=${finalIccPath}`,
         `-sDefaultCMYKProfile=${finalIccPath}`,
         '-dRenderIntent=1',
@@ -243,6 +245,7 @@ async function rebuildAtDpi(input, output, dpi = 300) {
     const args = [
         '-dSAFER', '-dNOPAUSE', '-dBATCH', '-dQUIET',
         '-sDEVICE=pdfwrite',
+        '-dNumRenderingThreads=4',
         `-dPDFSETTINGS=/prepress`,
         `-r${dpi}`,
         '-o', output,

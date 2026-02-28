@@ -220,7 +220,13 @@ export default function App() {
         setProcessMessage(null);
         setProcessStage(undefined);
         magicFixStepRef.current = null;
-        alert(`Magic Fix Stage 2 failed: ${e.message}\nSwitching to manual mode.`);
+
+        const is502 = e.message?.includes('502') || e.status === 502;
+        const mainMsg = is502
+          ? 'Stage 2/2 Failed (HTTP 502): The server took too long to process. Please ensure Nginx proxy_read_timeout is set to 600s in Plesk.'
+          : `Magic Fix Stage 2 failed: ${e.message}`;
+
+        alert(`${mainMsg}\n\nSwitching to manual mode.`);
         setAppMode('manual');
         setCurrentStep(2);
       });
