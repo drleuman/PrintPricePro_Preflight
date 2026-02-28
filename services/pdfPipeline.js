@@ -45,14 +45,32 @@ async function execCmd(cmd, args, opts = {}) {
         let err = '';
         let outTruncated = false;
         let errTruncated = false;
-        let killed = false;
+        let finished = false;
+
+        const cleanup = () => {
+            if (finished) return;
+            finished = true;
+            clearTimeout(t);
+        };
 
         const t = setTimeout(() => {
-            killed = true;
+            if (finished) return;
+            console.warn(`[EXEC-TIMEOUT] Killing process ${cmd} after ${timeoutMs}ms`);
+            cleanup();
             try { p.kill('SIGKILL'); } catch (e) { }
+            resolve({
+                ok: false,
+                code: null,
+                stdout: out,
+                stderr: `${err}\nExecution timed out after ${timeoutMs}ms`,
+                killed: true,
+                stdout_truncated: outTruncated,
+                stderr_truncated: errTruncated
+            });
         }, timeoutMs);
 
         p.stdout.on('data', (d) => {
+            if (finished) return;
             if (!outTruncated) {
                 const chunk = d.toString('utf8');
                 const space = maxOut - out.length;
@@ -63,6 +81,7 @@ async function execCmd(cmd, args, opts = {}) {
         });
 
         p.stderr.on('data', (d) => {
+            if (finished) return;
             if (!errTruncated) {
                 const chunk = d.toString('utf8');
                 const space = maxOut - err.length;
@@ -73,13 +92,15 @@ async function execCmd(cmd, args, opts = {}) {
         });
 
         p.on('error', (e) => {
-            clearTimeout(t);
-            resolve({ ok: false, code: -1, stdout: out, stderr: `${err}\nSpawn error: ${e.message}`, killed, stdout_truncated: outTruncated, stderr_truncated: errTruncated });
+            if (finished) return;
+            cleanup();
+            resolve({ ok: false, code: -1, stdout: out, stderr: `${err}\nSpawn error: ${e.message}`, killed: false, stdout_truncated: outTruncated, stderr_truncated: errTruncated });
         });
 
         p.on('close', (code) => {
-            clearTimeout(t);
-            resolve({ ok: (code === 0 || code === null) && !killed, code, stdout: out, stderr: err, killed, stdout_truncated: outTruncated, stderr_truncated: errTruncated });
+            if (finished) return;
+            cleanup();
+            resolve({ ok: (code === 0 || code === null), code, stdout: out, stderr: err, killed: false, stdout_truncated: outTruncated, stderr_truncated: errTruncated });
         });
     });
 }
@@ -173,7 +194,7 @@ async function gsConvertColor(input, output, profile, opts = {}) {
     try {
         await acquireGsSlot();
         console.log(`[GS-CONVERT] Running: ${GS_CMD} ${args.join(' ')}`);
-        const { ok, stderr, code } = await execCmd(GS_CMD, args, { timeoutMs: 120000 });
+        const { ok, stderr, code } = await execCmd(GS_CMD, args, { timeoutMs: 240000 });
         if (!ok) {
             console.error(`[GS-CONVERT] Failed with code ${code}. Stderr: ${stderr}`);
             // If code is not null, it means GS exited with an error. 
@@ -208,7 +229,7 @@ async function gsFlattenTransparency(input, output) {
     ];
     await acquireGsSlot();
     try {
-        const { ok, stderr } = await execCmd(GS_CMD, args, { timeoutMs: 120000 });
+        const { ok, stderr } = await execCmd(GS_CMD, args, { timeoutMs: 240000 });
         if (!ok) throw new Error(`GS flattening failed: ${stderr}`);
     } finally {
         releaseGsSlot();
@@ -229,7 +250,7 @@ async function rebuildAtDpi(input, output, dpi = 300) {
     ];
     await acquireGsSlot();
     try {
-        const { ok, stderr } = await execCmd(GS_CMD, args, { timeoutMs: 300000 });
+        const { ok, stderr } = await execCmd(GS_CMD, args, { timeoutMs: 240000 });
         if (!ok) throw new Error(`GS rebuild failed: ${stderr}`);
     } finally {
         releaseGsSlot();

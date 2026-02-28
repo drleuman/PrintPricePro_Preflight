@@ -335,13 +335,8 @@ async function ensurePdfMiddleware(req, res, next) {
  * Uses Ghostscript pamcmyk device to extract raw separation data.
  */
 async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmation = false) {
-    // Use same GS resolution as ghostscript.js (probes common paths)
-    const GS_PATHS = ['/usr/bin/gs', '/usr/local/bin/gs', '/usr/bin/ghostscript'];
-    let gsCmd = process.env.GS_PATH;
-    if (!gsCmd && process.platform !== 'win32') {
-        for (const p of GS_PATHS) { if (require('fs').existsSync(p)) { gsCmd = p; break; } }
-    }
-    gsCmd = gsCmd || (process.platform === 'win32' ? 'gswin64c' : 'gs');
+    // Use centralized GS resolution
+    const gsCmd = resolveGsCmd();
 
     const limitMap = {
         'iso_coated_v3': 300,
@@ -350,12 +345,20 @@ async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmati
         'swop': 300
     };
     const limit = limitMap[requestedProfile] || 300;
-    const dpi = isConfirmation ? 150 : 72;
+    const dpi = isConfirmation ? 120 : 72; // Slightly lower confirmation DPI for speed
 
     const args = [
         '-dSAFER', '-dNOPAUSE', '-dBATCH', '-dQUIET',
         '-sDEVICE=pamcmyk',
         `-r${dpi}`,
+        // Optimization: Downsample images to speed up TAC scan significantly 
+        // without losing much accuracy for ink coverage peaks.
+        '-dDownsampleColorImages=true',
+        '-dDownsampleGrayImages=true',
+        '-dDownsampleMonoImages=true',
+        '-dColorImageResolution=36',
+        '-dGrayImageResolution=36',
+        '-dMonoImageResolution=36',
         '-o', '-',
         pdfPath
     ];
@@ -366,10 +369,19 @@ async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmati
         let worstPage = 1;
         let currentPage = 0;
         let pagesExceeding = [];
+        let killed = false;
+
+        const timeoutMs = 60000; // 60s hard limit for TAC scan
+        const timer = setTimeout(() => {
+            console.warn(`[SCAN-TAC] Timeout reached (${timeoutMs}ms) for ${path.basename(pdfPath)}`);
+            killed = true;
+            try { proc.kill('SIGKILL'); } catch (e) { }
+        }, timeoutMs);
 
         let buf = Buffer.alloc(0);
 
         proc.stdout.on('data', (chunk) => {
+            if (killed) return;
             buf = Buffer.concat([buf, chunk]);
             while (buf.length > 0) {
                 const headerEnd = buf.indexOf('ENDHDR\n');
@@ -393,16 +405,13 @@ async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmati
                 let hotspotPixelCount = 0;
                 const body = buf.slice(headerEnd + 7, headerEnd + 7 + bodySize);
 
-                // Sample pixels
-                const step = isConfirmation ? 4 : 16; // Finer scan in confirmation pass
+                const step = isConfirmation ? 4 : 16;
                 for (let i = 0; i < body.length; i += step) {
                     const tac = Math.round(((body[i] + body[i + 1] + body[i + 2] + body[i + 3]) / 255) * 100);
                     if (tac > pageMaxTac) pageMaxTac = tac;
                     if (tac > limit) hotspotPixelCount++;
                 }
 
-                // Minimum Area Logic: ignore microscopic hotspots (e.g. registration dots)
-                // 0.5mm² at 72dpi ≈ 4 pixels. at 150dpi ≈ 18 pixels.
                 const minPixels = dpi === 72 ? 4 : 18;
                 const significantPeak = pageMaxTac > limit && hotspotPixelCount >= minPixels;
 
@@ -418,8 +427,12 @@ async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmati
             }
         });
 
-        proc.on('close', async () => {
-            // Near-limit logic: if peak is within 5% of limit at 72dpi, trigger high-res pass
+        proc.on('close', async (code) => {
+            clearTimeout(timer);
+            if (killed) {
+                return resolve({ max_tac: 0, limit, worst_page: 0, pages_exceeding: [], risk: "timeout" });
+            }
+
             if (!isConfirmation && maxTacTotal > (limit * 0.95) && maxTacTotal <= (limit + 10)) {
                 const confirmed = await scanTac(pdfPath, requestedProfile, hasSpots, true);
                 return resolve({ ...confirmed, confirmation_pass: true });
@@ -442,6 +455,7 @@ async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmati
         });
 
         proc.on('error', (err) => {
+            clearTimeout(timer);
             console.error('GS TAC Scan Process Error:', err);
             resolve({ max_tac: 0, limit, worst_page: 0, pages_exceeding: [], risk: "unknown" });
         });
@@ -988,8 +1002,20 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
     let currentPath = inputPath;
     // tmpPathsRegistry is passed in
 
+    const GLOBAL_TIMEOUT_MS = 300000; // 5 minute total guard
+    const startTimeOverall = Date.now();
+
     for (const planStep of report.fix_plan) {
         if (!planStep.enabled) continue;
+
+        // Global watchdog check
+        const elapsedSoFar = Date.now() - startTimeOverall;
+        if (elapsedSoFar > GLOBAL_TIMEOUT_MS) {
+            const err = new Error(`AutoFix pipeline exceeded global limit of ${GLOBAL_TIMEOUT_MS / 1000}s`);
+            err.error_code = 'GLOBAL_TIMEOUT';
+            err.step = planStep.action;
+            throw err;
+        }
 
         const stepIndex = report.applied.length + 1;
         // Unique name: autofix-TIMESTAMP-INDEX-ACTION-RANDOM.pdf
