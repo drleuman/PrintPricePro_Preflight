@@ -1218,68 +1218,73 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
     const isLDM = fileSize > 80 * 1024 * 1024 || pageCount > 150;
 
     if (isLDM) {
-        const job = await JobManager.createJob(originalFilename);
-        const jobPath = JobManager.getOriginalPath(job.id);
-
-        // Move file to job directory
-        safeMoveSync(inputPath, jobPath);
-
-        // Streaming SHA256 calculation (post-upload but before backgrounding)
-        const hash = crypto.createHash('sha256');
-        const stream = fs.createReadStream(jobPath);
-        const shaTimeout = Number(process.env.PPP_SHA_TIMEOUT_MS) || 120000; // 2 minutes default
         try {
-            await new Promise((resolve, reject) => {
-                const to = setTimeout(() => {
-                    try { stream.destroy(); } catch (_) { }
-                    reject(new Error('SHA_TIMEOUT'));
-                }, shaTimeout);
-                stream.on('data', (d) => hash.update(d));
-                stream.on('end', () => { clearTimeout(to); resolve(); });
-                stream.on('error', (e) => { clearTimeout(to); reject(e); });
+            const job = await JobManager.createJob(originalFilename);
+            const jobPath = JobManager.getOriginalPath(job.id);
+
+            // Move file to job directory
+            safeMoveSync(inputPath, jobPath);
+
+            // Streaming SHA256 calculation (post-upload but before backgrounding)
+            const hash = crypto.createHash('sha256');
+            const stream = fs.createReadStream(jobPath);
+            const shaTimeout = Number(process.env.PPP_SHA_TIMEOUT_MS) || 120000;
+            try {
+                await new Promise((resolve, reject) => {
+                    const to = setTimeout(() => {
+                        try { stream.destroy(); } catch (_) { }
+                        reject(new Error('SHA_TIMEOUT'));
+                    }, shaTimeout);
+                    stream.on('data', (d) => hash.update(d));
+                    stream.on('end', () => { clearTimeout(to); resolve(); });
+                    stream.on('error', (e) => { clearTimeout(to); reject(e); });
+                });
+            } catch (e) {
+                console.error('SHA calculation failed for LDM job:', e);
+                await JobManager.updateJob(job.id, { status: 'FAILED', error: e.message });
+                return res.status(500).json({ ok: false, error: 'SHA calculation failed', details: e.message });
+            }
+            const sha256 = hash.digest('hex');
+
+            await JobManager.updateJob(job.id, {
+                large_mode: true,
+                status: 'QUEUED',
+                file_path_original: jobPath,
+                file_sha256: sha256,
+                file_size_bytes: fileSize,
+                page_count: pageCount
             });
-        } catch (e) {
-            console.error('SHA calculation failed for LDM job:', e);
-            await JobManager.updateJob(job.id, { status: 'FAILED', error: e.message });
-            return res.status(500).json({ ok: false, error: 'SHA calculation failed', details: e.message });
+
+            // Trigger background processing
+            const options = {
+                target: String(req.body.target || 'cmyk').toLowerCase(),
+                profile: normalizeProfile(req.body.profile || 'iso_coated_v3'),
+                bleedMm: Number(req.body.bleedMm ?? 3) || 3,
+                dpiPreferred: Number(req.body.dpiPreferred ?? 300) || 300,
+                dpiMin: Number(req.body.dpiMin ?? 150) || 150,
+                safeOnly: String(req.body.safeOnly || '1') === '1',
+                aggressive: String(req.body.aggressive || '0') === '1',
+                forceRebuild: String(req.body.forceRebuild || '0') === '1',
+                forceBleed: String(req.body.forceBleed || '1') === '1',
+                forceCmyk: String(req.body.forceCmyk || '1') === '1',
+                flatten: String(req.body.flatten || '0') === '1',
+                strictVector: String(req.body.strictVector || '1') === '1',
+            };
+
+            // Enqueue first task: SPLIT
+            await JobManager.enqueueTask(job.id, 'SPLIT', options);
+
+            return res.json({
+                ok: true,
+                jobId: job.id,
+                status: 'QUEUED',
+                largeDocumentMode: true,
+                message: 'Your large document has been enqueued for background processing.'
+            });
+        } catch (ldmError) {
+            // DB or job manager unavailable — fall through to synchronous processing
+            console.warn(`[AUTOFIX][${reqId}] LDM unavailable (${ldmError.message}), falling back to normal mode for ${pageCount}-page document.`);
         }
-        const sha256 = hash.digest('hex');
-
-        await JobManager.updateJob(job.id, {
-            large_mode: true,
-            status: 'QUEUED',
-            file_path_original: jobPath,
-            file_sha256: sha256,
-            file_size_bytes: fileSize,
-            page_count: pageCount
-        });
-
-        // Trigger background processing
-        const options = {
-            target: String(req.body.target || 'cmyk').toLowerCase(),
-            profile: normalizeProfile(req.body.profile || 'iso_coated_v3'),
-            bleedMm: Number(req.body.bleedMm ?? 3) || 3,
-            dpiPreferred: Number(req.body.dpiPreferred ?? 300) || 300,
-            dpiMin: Number(req.body.dpiMin ?? 150) || 150,
-            safeOnly: String(req.body.safeOnly || '1') === '1',
-            aggressive: String(req.body.aggressive || '0') === '1',
-            forceRebuild: String(req.body.forceRebuild || '0') === '1',
-            forceBleed: String(req.body.forceBleed || '1') === '1',
-            forceCmyk: String(req.body.forceCmyk || '1') === '1',
-            flatten: String(req.body.flatten || '0') === '1',
-            strictVector: String(req.body.strictVector || '1') === '1',
-        };
-
-        // Enqueue first task: SPLIT
-        await JobManager.enqueueTask(job.id, 'SPLIT', options);
-
-        return res.json({
-            ok: true,
-            jobId: job.id,
-            status: 'QUEUED',
-            largeDocumentMode: true,
-            message: 'Your large document has been enqueued for background processing.'
-        });
     }
 
     // --- NORMAL MODE (CONTINUE AS BEFORE) ---
