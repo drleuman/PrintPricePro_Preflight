@@ -229,7 +229,7 @@ app.get(['/metrics', '/api/metrics'], (_req, res) => {
   });
 });
 
-app.all('/api/:path(*)', (req, res) => {
+app.all('/api/*path', (req, res) => {
   console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     error: `Route not found: ${req.originalUrl}`,
