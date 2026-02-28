@@ -145,37 +145,33 @@ const readyHandler = async (_req, res) => {
   const { promisify } = require('util');
   const execFileAsync = promisify(execFile);
 
-  const status = {
+  const response = {
     status: 'ok',
     version: require('./package.json').version || '1.0.0',
-    details: {
-      ghostscript: { ok: false, message: 'checking' },
-      uploadDir: { ok: false, path: pdfRouter.uploadDir, writable: false }
-    },
-    timestamp: new Date().toISOString()
+    ghostscript: { installed: false, version: null },
+    uploadDirWritable: false,
+    time: new Date().toISOString()
   };
 
   try {
     const gsCmd = process.env.GS_PATH || (process.platform === 'win32' ? 'gswin64c' : 'gs');
     const { stdout } = await execFileAsync(gsCmd, ['--version'], { timeout: 3000 });
-    status.details.ghostscript = { ok: true, version: stdout.trim() };
+    response.ghostscript = { installed: true, version: stdout.trim() };
   } catch (err) {
-    status.status = 'error';
-    status.details.ghostscript = { ok: false, message: err.message };
+    response.status = 'error';
+    response.ghostscript.message = err.message;
   }
 
   try {
     if (pdfRouter.uploadDir) {
       fs.accessSync(pdfRouter.uploadDir, fs.constants.W_OK);
-      status.details.uploadDir.ok = true;
-      status.details.uploadDir.writable = true;
+      response.uploadDirWritable = true;
     }
   } catch (err) {
-    status.status = 'error';
-    status.details.uploadDir.message = err.message;
+    response.status = 'error';
   }
 
-  res.status(status.status === 'ok' ? 200 : 503).json(status);
+  res.status(response.status === 'ok' ? 200 : 503).json(response);
 };
 
 // -------- Diagnostic Routes (BEFORE catch-all) --------
