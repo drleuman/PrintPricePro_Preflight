@@ -4,7 +4,6 @@ import {
     MagnifyingGlassIcon,
     WrenchScrewdriverIcon,
     CheckCircleIcon,
-    BanknotesIcon
 } from '@heroicons/react/24/outline';
 import { CheckIcon } from '@heroicons/react/20/solid';
 
@@ -25,65 +24,110 @@ const getStepIcon = (stepNumber: number) => {
         case 2: return MagnifyingGlassIcon;
         case 3: return WrenchScrewdriverIcon;
         case 4: return CheckCircleIcon;
-        case 5: return BanknotesIcon;
         default: return DocumentTextIcon;
     }
-}
+};
 
 export const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
+    const progressPct = ((currentStep - 1) / (steps.length - 1)) * 100;
+
     return (
-        <div className="w-full mb-8 px-6 py-8 bg-white/70 backdrop-blur-xl rounded-[2rem] border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.04)]">
-            <div className="max-w-4xl mx-auto flex items-center justify-between relative">
-                {/* Background Progress Track */}
-                <div className="absolute top-7 left-0 w-full h-[2px] bg-gray-100 -z-10" />
+        <div style={{
+            width: '100%',
+            marginBottom: '2rem',
+            padding: '2rem 1.5rem',
+            background: 'rgba(255,255,255,0.70)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: '2rem',
+            border: '1px solid rgba(255,255,255,0.5)',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.04)',
+        }}>
+            <div style={{
+                maxWidth: '56rem',
+                margin: '0 auto',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                position: 'relative',
+            }}>
+                {/* Background track */}
+                <div style={{
+                    position: 'absolute', top: '1.75rem', left: 0,
+                    width: '100%', height: '2px',
+                    background: '#f3f4f6', zIndex: 0,
+                }} />
+                {/* Active progress line */}
+                <div style={{
+                    position: 'absolute', top: '1.75rem', left: 0,
+                    width: `${progressPct}%`, height: '2px',
+                    background: '#dc2626',
+                    transition: 'width 0.7s ease-in-out', zIndex: 0,
+                }} />
 
-                {/* Active Progress Line */}
-                <div
-                    className="absolute top-7 left-0 h-[2px] bg-red-600 transition-all duration-700 ease-in-out -z-10"
-                    style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
-                />
-
-                {steps.map((step, index) => {
+                {steps.map((step) => {
                     const StepIcon = getStepIcon(step.number);
                     const isCompleted = currentStep > step.number;
                     const isActive = currentStep === step.number;
                     const isPending = currentStep < step.number;
 
-                    return (
-                        <div key={step.number} className="flex flex-col items-center relative group">
-                            {/* Step Indicator */}
-                            <div className={`
-                                w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500
-                                ${isCompleted ? 'bg-green-500 text-white shadow-lg shadow-green-200' :
-                                    isActive ? 'bg-red-600 text-white shadow-xl shadow-red-200 scale-110 -translate-y-1' :
-                                        'bg-white text-gray-400 border-2 border-gray-100'}
-                            `}>
-                                {isCompleted ? (
-                                    <CheckIcon className="w-8 h-8 animate-in zoom-in duration-300" />
-                                ) : (
-                                    <StepIcon className={`w-7 h-7 ${isActive ? 'animate-pulse' : ''}`} />
-                                )}
+                    const bubbleStyle: React.CSSProperties = {
+                        position: 'relative',
+                        width: '3.5rem', height: '3.5rem',
+                        borderRadius: '1rem',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        zIndex: 1,
+                        transition: 'all 0.5s',
+                        flexShrink: 0,
+                        ...(isCompleted ? {
+                            background: '#22c55e', color: '#fff',
+                            boxShadow: '0 8px 20px rgba(34,197,94,0.3)',
+                        } : isActive ? {
+                            background: '#dc2626', color: '#fff',
+                            boxShadow: '0 8px 24px rgba(220,38,38,0.35)',
+                            transform: 'scale(1.10) translateY(-4px)',
+                        } : {
+                            background: '#fff', color: '#9ca3af',
+                            border: '2px solid #f3f4f6',
+                        }),
+                    };
 
-                                {/* Small Number Badge (Only when pending) */}
+                    return (
+                        <div key={step.number} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                            <div style={bubbleStyle}>
+                                {isCompleted ? (
+                                    <CheckIcon style={{ width: '2rem', height: '2rem' }} />
+                                ) : (
+                                    <StepIcon style={{ width: '1.75rem', height: '1.75rem' }} />
+                                )}
                                 {isPending && (
-                                    <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gray-100 text-[10px] font-black flex items-center justify-center border-2 border-white text-gray-400">
+                                    <div style={{
+                                        position: 'absolute', top: '-4px', right: '-4px',
+                                        width: '1.25rem', height: '1.25rem',
+                                        borderRadius: '50%', background: '#f3f4f6',
+                                        fontSize: '10px', fontWeight: 900,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        border: '2px solid #fff', color: '#9ca3af',
+                                    }}>
                                         {step.number}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Label */}
-                            <div className="mt-4 text-center">
-                                <div className={`
-                                    text-[10px] font-black uppercase tracking-widest mb-1 transition-colors duration-300
-                                    ${isActive ? 'text-red-600' : isCompleted ? 'text-green-600' : 'text-gray-400'}
-                                `}>
+                            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                                <div style={{
+                                    fontSize: '10px', fontWeight: 900,
+                                    textTransform: 'uppercase', letterSpacing: '0.1em',
+                                    marginBottom: '2px',
+                                    color: isActive ? '#dc2626' : isCompleted ? '#16a34a' : '#9ca3af',
+                                    transition: 'color 0.3s',
+                                }}>
                                     Step 0{step.number}
                                 </div>
-                                <div className={`
-                                    text-sm font-bold tracking-tight transition-colors duration-300
-                                    ${isActive ? 'text-gray-900' : 'text-gray-400'}
-                                `}>
+                                <div style={{
+                                    fontSize: '0.875rem', fontWeight: 700,
+                                    color: isActive ? '#111827' : '#9ca3af',
+                                    transition: 'color 0.3s',
+                                }}>
                                     {step.title}
                                 </div>
                             </div>
