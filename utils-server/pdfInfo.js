@@ -28,11 +28,22 @@ async function getPdfInfoGS(pdfPath) {
         const proc = spawn(gsCmd, args);
         let out = '';
         let err = '';
+        let finished = false;
 
-        proc.stdout.on('data', (d) => out += d.toString());
-        proc.stderr.on('data', (d) => err += d.toString());
+        const t = setTimeout(() => {
+            if (finished) return;
+            finished = true;
+            try { proc.kill('SIGKILL'); } catch (e) { }
+            reject(new Error('GS info timeout (30s)'));
+        }, 30000);
+
+        proc.stdout.on('data', (d) => { if (!finished) out += d.toString(); });
+        proc.stderr.on('data', (d) => { if (!finished) err += d.toString(); });
 
         proc.on('close', (code) => {
+            if (finished) return;
+            finished = true;
+            clearTimeout(t);
             if (code === 0) {
                 const pageCount = parseInt(out.trim(), 10);
                 resolve({ pageCount });

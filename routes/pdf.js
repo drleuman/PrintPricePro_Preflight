@@ -1243,7 +1243,7 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
         console.warn('Fast page count failed, falling back to 0', e.message);
     }
 
-    const isLDM = fileSize > 80 * 1024 * 1024 || pageCount > 150;
+    const isLDM = fileSize > 20 * 1024 * 1024 || pageCount > 50 || String(req.body.forceJob || '0') === '1';
 
     if (isLDM) {
         try {

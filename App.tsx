@@ -187,13 +187,35 @@ export default function App() {
         forceCmyk: true,
         forceBleed: false, // SKIP server bleed
         strictVector: true, // Re-enable for final stage
-        dpiPreferred: 300
-      }).then(({ blob: finalBlob, report }) => {
+        dpiPreferred: 300,
+        forceJob: '1' // Force backgrounding for Stage 2 to avoid 502s
+      }).then(async ({ blob: finalBlob, report, jobId, ldm }) => {
+        let actualBlob = finalBlob;
+        let actualReport = report;
+
+        if (ldm && jobId) {
+          setLdmActive(true);
+          setLdmJobId(jobId);
+          setLdmStatus('Stage 2: Processing professional color conversion...');
+
+          try {
+            await pollJob(jobId, (p) => setLdmProgress(p));
+            const res = await fetch(`/api/convert/job/status/${jobId}`);
+            const jobData = await res.json();
+            const fileRes = await fetch(`/api/convert/download-job/${jobId}`);
+            actualBlob = await fileRes.blob();
+            actualReport = jobData.report;
+            setLdmActive(false);
+          } catch (pollErr: any) {
+            throw new Error(`LDM Stage 2 failed: ${pollErr.message}`);
+          }
+        }
+
         const originalName = file?.name.replace(/\.pdf$/i, '') || 'document';
         const newName = `${originalName}_Magic_Fix.pdf`;
-        const finalFile = new File([finalBlob], newName, { type: 'application/pdf' });
+        const finalFile = new File([actualBlob], newName, { type: 'application/pdf' });
 
-        setAutoFixReport(report || null);
+        setAutoFixReport(actualReport || null);
         updateFileState(finalFile, { name: nextFile.name, size: finalFile.size, type: 'application/pdf' });
         downloadAndRemember(finalBlob, newName, false);
 

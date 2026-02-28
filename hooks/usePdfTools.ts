@@ -96,6 +96,7 @@ export function usePdfTools() {
             flatten?: boolean;
             safeOnly?: boolean;
             strictVector?: boolean;
+            forceJob?: string;
         }
     ): Promise<{ blob: Blob; report?: any; jobId?: string; ldm?: boolean }> => {
         setIsServerRunning(true);
@@ -116,6 +117,7 @@ export function usePdfTools() {
             if (opts?.safeOnly === false) formData.append('safeOnly', '0');
             if (opts?.strictVector === false) formData.append('strictVector', '0');
             else formData.append('strictVector', '1');
+            if (opts?.forceJob) formData.append('forceJob', opts.forceJob);
 
             const res = await fetch('/api/convert/autofix', {
                 method: 'POST',
