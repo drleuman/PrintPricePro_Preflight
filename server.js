@@ -10,6 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const WebSocket = require('ws');
 const cors = require('cors');
+const helmet = require('helmet');
 
 const { router: proxyRouter, handleWsUpgrade } = require('./server/routes/proxy');
 const pdfRouter = require('./server/routes/pdf');
