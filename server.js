@@ -264,45 +264,48 @@ app.get(/^\/(?!api\/).*/, (req, res) => {
 });
 
 // -------- Server & WebSocket --------
-const server = app.listen(port, '0.0.0.0', () => {
-  console.log(`[SERVER-START] OK: Listening on 0.0.0.0:${port}`);
-  console.log(`[SERVER-START] Upload context: ${pdfRouter.uploadDir || 'Not set'}`);
-}).on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`[CRITICAL] Port ${port} is already in use. App cannot start.`);
-  } else {
-    console.error(`[CRITICAL] Server failed to start:`, err);
-  }
-  process.exit(1);
-});
-
-server.timeout = 600000; // 10 minutes
-
-const wss = new WebSocket.Server({ noServer: true });
-server.on('upgrade', (request, socket, head) => {
-  const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
-  if (pathname.startsWith('/api/gemini-proxy')) {
-    handleWsUpgrade(wss, request, socket, head);
-  } else {
-    socket.destroy();
-  }
-});
-
-// -------- Clean Shutdown (Release Port) --------
-const shutdown = (signal) => {
-  console.log(`[SERVER-SHUTDOWN] Received ${signal}. Releasing port and closing...`);
-  server.close(() => {
-    console.log('[SERVER-SHUTDOWN] Port released. Process exit.');
-    process.exit(0);
-  });
-  // Force exit after 10s if stuck
-  setTimeout(() => {
-    console.error('[SERVER-SHUTDOWN] Forced exit after timeout.');
+if (require.main === module) {
+  const server = app.listen(port, '0.0.0.0', () => {
+    console.log(`[SERVER-START] OK: Listening on 0.0.0.0:${port}`);
+    console.log(`[SERVER-START] Upload context: ${pdfRouter.uploadDir || 'Not set'}`);
+  }).on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[CRITICAL] Port ${port} is already in use. App cannot start.`);
+    } else {
+      console.error(`[CRITICAL] Server failed to start:`, err);
+    }
     process.exit(1);
-  }, 10000);
-};
+  });
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+  server.timeout = 600000; // 10 minutes
+
+  const wss = new WebSocket.Server({ noServer: true });
+  server.on('upgrade', (request, socket, head) => {
+    const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
+    if (pathname.startsWith('/api/gemini-proxy')) {
+      handleWsUpgrade(wss, request, socket, head);
+    } else {
+      socket.destroy();
+    }
+  });
+
+  // -------- Clean Shutdown (Release Port) --------
+  const shutdown = (signal) => {
+    console.log(`[SERVER-SHUTDOWN] Received ${signal}. Releasing port and closing...`);
+    server.close(() => {
+      console.log('[SERVER-SHUTDOWN] Port released. Process exit.');
+      process.exit(0);
+    });
+    // Force exit after 10s if stuck
+    setTimeout(() => {
+      console.error('[SERVER-SHUTDOWN] Forced exit after timeout.');
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+}
 
 module.exports = app;
+
