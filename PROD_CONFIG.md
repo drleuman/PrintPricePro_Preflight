@@ -3,22 +3,20 @@
 To resolve **502 Bad Gateway** errors and **PDF.js Worker MIME type** issues in production, apply the following configurations to your reverse proxy (Nginx/Plesk).
 
 ## 1. Fix PDF.js Worker MIME Type (CRITICAL)
-The browser rejects `.mjs` files if served with `application/octet-stream`. Because Nginx serves assets before Express, we MUST fix this in Nginx.
+Nginx often serves assets directly from `/assets/`. If `.mjs` is served as `application/octet-stream`, the worker fails.
 
-**Variant A: Add to `server` block (Recommended)**
+**Replace your `/assets/` block in Plesk with this (or add it if missing):**
 ```nginx
-types {
-  application/javascript  js mjs;
-}
-```
+# --- Static assets (Vite) including .mjs fix ---
+location ^~ /assets/ {
+    expires 30d;
+    add_header Cache-Control "public, max-age=2592000, immutable";
+    
+    # Force correct MIME for .mjs ES module workers
+    types { application/javascript  js mjs; }
+    default_type application/javascript;
 
-**Variant B: Location override (Surgical)**
-Use this if you cannot edit the global `types` block in Plesk:
-```nginx
-location ~* \.mjs$ {
-  add_header Content-Type application/javascript;
-  default_type application/javascript;
-  try_files $uri =404;
+    try_files $uri =404;
 }
 ```
 
@@ -59,7 +57,7 @@ The API now supports both prefixed and root health checks.
 **Test via curl:**
 ```bash
 # 1. MIME check (Expect: application/javascript)
-curl -I https://preflight.printprice.pro/assets/pdf.worker.min-*.mjs
+curl -I https://preflight.printprice.pro/assets/pdf.worker.min-yatZIOMy.mjs
 
 # 2. API Readiness (Expect: 200 OK)
 curl -i https://preflight.printprice.pro/api/ready

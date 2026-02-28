@@ -140,32 +140,8 @@ app.use(
   })
 );
 
+// -------- Diagnostic Routes (BEFORE catch-all) --------
 app.get(['/healthz', '/api/healthz'], (_req, res) => res.status(200).send('ok'));
-
-app.all('/api/*', (req, res) => {
-  console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
-  res.status(404).json({
-    error: `Route not found: ${req.originalUrl}`,
-    method: req.method,
-    path: req.path
-  });
-});
-
-// -------- Global Error Handler --------
-app.use((err, req, res, next) => {
-  console.error(`[SERVER-ERROR] ${req.method} ${req.url}:`, err);
-
-  if (res.headersSent) {
-    return next(err);
-  }
-
-  const statusCode = err.status || err.statusCode || 500;
-  res.status(statusCode).json({
-    error: err.message || 'Internal Server Error',
-    code: err.code || 'UNKNOWN_ERROR',
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-  });
-});
 
 app.get(['/ready', '/api/ready'], async (_req, res) => {
   const { execFile } = require('child_process');
@@ -217,6 +193,31 @@ app.get(['/metrics', '/api/metrics'], (_req, res) => {
     cpu: process.cpuUsage(),
     version: require('./package.json').version || '1.0.0',
     timestamp: new Date().toISOString()
+  });
+});
+
+app.all('/api/*', (req, res) => {
+  console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({
+    error: `Route not found: ${req.originalUrl}`,
+    method: req.method,
+    path: req.path
+  });
+});
+
+// -------- Global Error Handler --------
+app.use((err, req, res, next) => {
+  console.error(`[SERVER-ERROR] ${req.method} ${req.url}:`, err);
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const statusCode = err.status || err.statusCode || 500;
+  res.status(statusCode).json({
+    error: err.message || 'Internal Server Error',
+    code: err.code || 'UNKNOWN_ERROR',
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
 
