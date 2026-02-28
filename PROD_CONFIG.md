@@ -2,59 +2,74 @@
 
 To resolve **502 Bad Gateway** errors and **PDF.js Worker MIME type** issues in production, apply the following configurations to your reverse proxy (Nginx/Plesk).
 
-## 1. Fix 502 Bad Gateway (Timeouts)
-Ghostscript can take over 60 seconds to process high-resolution or multi-page PDFs. The default Nginx timeout is often too low.
+## 1. Fix PDF.js Worker MIME Type (CRITICAL)
+The browser rejects `.mjs` files if served with `application/octet-stream`. Because Nginx serves assets before Express, we MUST fix this in Nginx.
 
-**Add these lines to your Nginx `server` block (or `location /api/` block):**
-
-```nginx
-# Increase timeouts for long-running PDF processing
-proxy_read_timeout 300s;
-proxy_send_timeout 300s;
-proxy_connect_timeout 75s;
-send_timeout 300s;
-
-# Disable buffering for large PDF streams
-proxy_buffering off;
-proxy_request_buffering off;
-
-# Increase max upload size (e.g., 512MB)
-client_max_body_size 512m;
-```
-
-## 2. Fix PDF.js Worker MIME Type
-The browser rejects `.mjs` files if served with `application/octet-stream`. We must ensure they are served as `application/javascript`.
-
-**Update the `http` or `server` block in Nginx:**
-
+**Variant A: Add to `server` block (Recommended)**
 ```nginx
 types {
-    application/javascript js mjs;
-    text/css css;
-}
-
-# OR specifically for the assets folder:
-location /assets/ {
-    root /path/to/your/dist;
-    include mime.types;
-    types {
-        application/javascript mjs;
-    }
+  application/javascript  js mjs;
 }
 ```
 
-## 3. Verify Configurations
-After applying changes, reload Nginx:
-```bash
-nginx -t
-service nginx reload
+**Variant B: Location override (Surgical)**
+Use this if you cannot edit the global `types` block in Plesk:
+```nginx
+location ~* \.mjs$ {
+  add_header Content-Type application/javascript;
+  default_type application/javascript;
+  try_files $uri =404;
+}
 ```
 
-**Test with curl:**
+---
+
+## 2. Fix 502 Bad Gateway (Timeouts)
+Ghostscript can take several minutes for heavy PDFs.
+
+**Add these inside your `location /api/` block:**
+```nginx
+location /api/ {
+  proxy_pass http://127.0.0.1:8080;
+  proxy_http_version 1.1;
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+
+  # Increase timeouts for long-running PDF processing
+  proxy_read_timeout 300s;
+  proxy_send_timeout 300s;
+  proxy_connect_timeout 30s;
+  send_timeout 300s;
+
+  # Disable buffering for large PDF streams
+  proxy_buffering off;
+  proxy_request_buffering off;
+
+  client_max_body_size 512m;
+}
+```
+
+---
+
+## 3. Verify Routing & Health
+The API now supports both prefixed and root health checks.
+
+**Test via curl:**
 ```bash
-# Check MIME type
+# 1. MIME check (Expect: application/javascript)
 curl -I https://preflight.printprice.pro/assets/pdf.worker.min-*.mjs
 
-# Check API health
+# 2. API Readiness (Expect: 200 OK)
+curl -i https://preflight.printprice.pro/api/ready
 curl -i https://preflight.printprice.pro/ready
+
+# 3. Health check (Expect: 200 OK)
+curl -i https://preflight.printprice.pro/api/healthz
 ```
+
+## 4. Applying in Plesk
+1. Go to **Apache & Nginx Settings**.
+2. Add the snippets to **Additional nginx directives**.
+3. Click OK to reload Nginx.

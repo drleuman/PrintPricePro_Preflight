@@ -140,7 +140,7 @@ app.use(
   })
 );
 
-app.get('/healthz', (_req, res) => res.status(200).send('ok'));
+app.get(['/healthz', '/api/healthz'], (_req, res) => res.status(200).send('ok'));
 
 app.all('/api/*', (req, res) => {
   console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
@@ -167,7 +167,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.get('/ready', async (_req, res) => {
+app.get(['/ready', '/api/ready'], async (_req, res) => {
   const { execFile } = require('child_process');
   const { promisify } = require('util');
   const execFileAsync = promisify(execFile);
@@ -204,7 +204,7 @@ app.get('/ready', async (_req, res) => {
   res.status(status.status === 'ok' ? 200 : 503).json(status);
 });
 
-app.get('/metrics', (_req, res) => {
+app.get(['/metrics', '/api/metrics'], (_req, res) => {
   const usage = process.memoryUsage();
   res.json({
     uptime: process.uptime(),
