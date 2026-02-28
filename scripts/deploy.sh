@@ -27,8 +27,8 @@ git reset --hard origin/main
 echo "  HEAD: $(git log -1 --oneline)"
 
 # ── 2. Dependencies ──────────────────────────────────────────
-echo "▶ [2/6] Installing dependencies (npm ci)..."
-npm ci --omit=dev --prefer-offline 2>&1 | tail -3
+echo "▶ [2/6] Installing dependencies (npm ci — full, for build)..."
+npm ci 2>&1 | grep -E "added|removed|audit|error" | head -5
 
 # ── 3. Frontend build ────────────────────────────────────────
 if [[ "$SKIP_BUILD" != "--skip-build" ]]; then
