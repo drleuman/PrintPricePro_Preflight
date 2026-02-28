@@ -82,13 +82,21 @@ export const PageViewer: React.FC<PageViewerProps> = ({
       fileReader.onload = async () => {
         const typedArray = new Uint8Array(fileReader.result as ArrayBuffer);
         try {
-          const loadingTask = pdfjsLib.getDocument({ data: typedArray });
+          const loadingTask = pdfjsLib.getDocument({
+            data: typedArray,
+            // Ensure we use the worker even if it's served as a module
+            isEvalSupported: false,
+          });
           const pdf = await loadingTask.promise;
           pdfRef.current = pdf;
           onNumPagesChange(pdf.numPages);
           onPageChange(1);
-        } catch (error) {
-          console.error("Error loading PDF:", error);
+        } catch (error: any) {
+          console.error("[PDF-LOAD-ERROR]", error);
+          // Detect worker failure (often MIME mismatch in production)
+          if (error.message?.includes('worker') || error.message?.includes('MIME')) {
+            console.error("Critical: PDF.js worker failed to initialize. Check PROD_CONFIG.md for MIME type settings.");
+          }
           onNumPagesChange(0);
         }
       };

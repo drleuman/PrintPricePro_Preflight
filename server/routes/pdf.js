@@ -446,7 +446,8 @@ router.uploadDir = uploadDir;
 
 // -------- Preview Routes --------
 router.post('/preview/pages', upload.single('file'), ensurePdfMiddleware, async (req, res) => {
-    console.log('[PDF-ROUTER] POST /preview/pages hit');
+    const reqId = req.id || 'internal';
+    console.log(`[PDF-ROUTER][${reqId}] POST /preview/pages hit`);
     const inputPath = req.file?.path;
 
     let tmpDir = null;
@@ -1193,6 +1194,8 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
 }
 
 router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddleware, async (req, res) => {
+    const reqId = req.id || 'internal';
+    console.log(`[PDF-ROUTER][${reqId}] POST /autofix hit`);
     const inputPath = req.file?.path;
 
     const originalFilename = req.file?.originalname || 'document.pdf';
@@ -1301,7 +1304,7 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
 
     const tStart = Date.now();
     try {
-        const { report, finalPath } = await executeAutofixWorkflow(inputPath, originalFilename, options, issues, tempPathsToCleanup);
+        const { report, finalPath } = await executeAutofixWorkflow(inputPath, originalFilename, { ...options, reqId }, issues, tempPathsToCleanup);
         finalPathToCleanup = finalPath;
 
         const tElapsed = Date.now() - tStart;

@@ -128,13 +128,13 @@ app.use(
   express.static(staticPath, {
     setHeaders(res, filePath) {
       const ext = path.extname(filePath).toLowerCase();
-      // Force correct MIME types for ESM modules
+      // Force correct MIME types for ESM modules and workers
       if (ext === '.js' || ext === '.mjs') {
         res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
       } else if (ext === '.css') {
         res.setHeader('Content-Type', 'text/css; charset=utf-8');
       }
-      // Critical for preventing "Strict MIME type checking" errors
+      // Critical for preventing "Strict MIME type checking" errors in the browser
       res.setHeader('X-Content-Type-Options', 'nosniff');
     },
   })

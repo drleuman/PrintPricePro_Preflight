@@ -39,12 +39,15 @@ async function runGs(args, options = {}) {
     const customPath = process.env.GS_PATH;
     const gsCmd = customPath || (process.platform === 'win32' ? 'gswin64c' : 'gs');
 
+    const reqId = options.reqId || 'internal';
     try {
+        console.log(`[GS-START][${reqId}] ${gsCmd} ${args.join(' ').slice(0, 200)}...`);
         await execFileAsync(gsCmd, args, {
             maxBuffer: 1024 * 1024 * 50,
             timeout: 120000,
             ...options
         }); // 120s timeout
+        console.log(`[GS-DONE][${reqId}]`);
     } catch (e) {
         if (e.name === 'AbortError') {
             console.log('[GS-ABORT] Ghostscript process aborted');
