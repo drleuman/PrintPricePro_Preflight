@@ -27,6 +27,34 @@ function releaseGsSlot() {
     }
 }
 
+// GS binary resolution — probe common paths if GS_PATH not set
+const GS_COMMON_PATHS = [
+    '/usr/bin/gs',
+    '/usr/local/bin/gs',
+    '/opt/homebrew/bin/gs',
+    '/usr/bin/ghostscript',
+];
+let _resolvedGsCmd = null;
+function resolveGsCmd() {
+    if (_resolvedGsCmd) return _resolvedGsCmd;
+    if (process.env.GS_PATH) {
+        _resolvedGsCmd = process.env.GS_PATH;
+        console.log(`[GS] Using GS_PATH from env: ${_resolvedGsCmd}`);
+        return _resolvedGsCmd;
+    }
+    if (process.platform === 'win32') { _resolvedGsCmd = 'gswin64c'; return _resolvedGsCmd; }
+    for (const p of GS_COMMON_PATHS) {
+        if (fs.existsSync(p)) {
+            _resolvedGsCmd = p;
+            console.log(`[GS] Auto-discovered Ghostscript at: ${p}`);
+            return _resolvedGsCmd;
+        }
+    }
+    _resolvedGsCmd = 'gs';
+    console.warn('[GS] gs not found in common paths, falling back to "gs". Set GS_PATH in .env if this fails.');
+    return _resolvedGsCmd;
+}
+
 /**
  * Executes Ghostscript with the provided arguments.
  * @param {string[]} args - Array of command line arguments for gs.
@@ -34,11 +62,7 @@ function releaseGsSlot() {
  */
 async function runGs(args, options = {}) {
     await acquireGsSlot();
-
-    // Priority: 1. GS_PATH env var, 2. OS-specific default
-    const customPath = process.env.GS_PATH;
-    const gsCmd = customPath || (process.platform === 'win32' ? 'gswin64c' : 'gs');
-
+    const gsCmd = resolveGsCmd();
     const reqId = options.reqId || 'internal';
     try {
         console.log(`[GS-START][${reqId}] ${gsCmd} ${args.join(' ').slice(0, 200)}...`);
