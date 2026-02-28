@@ -316,74 +316,76 @@ export const PageViewer: React.FC<PageViewerProps> = ({
         )}
       </div>
 
-      <div className="pdf-viewer-container relative">
+      <div className="pdf-viewer-container relative w-full h-[70vh] min-h-[500px] bg-gray-50/50 rounded-2xl border border-gray-100 shadow-inner overflow-hidden flex flex-col items-center justify-center p-8">
         {previewLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-20 backdrop-blur-sm rounded-lg">
-            <div className="flex flex-col items-center gap-3">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-              <p className="text-sm font-medium text-blue-800">Generating High-Quality Preview...</p>
+          <div className="absolute inset-0 flex items-center justify-center bg-white/90 z-20 backdrop-blur-md rounded-2xl">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-red-600 border-t-transparent"></div>
+              <p className="text-sm font-black text-red-600 uppercase tracking-widest">Optimizing Preview...</p>
             </div>
           </div>
         )}
 
-        {/* The PDF.js Canvas (fallback or base for overlays) */}
-        {!ldmMode && (
-          <canvas
-            ref={canvasRef}
-            className="shadow-lg border border-gray-300 max-w-full h-auto block"
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              display: previewPages?.[currentPage - 1] ? 'none' : 'block'
-            }}
-          />
-        )}
-
-        {/* The Server-side PNG (high-quality CMYK + Transparency) */}
-        {previewPages?.[currentPage - 1] && !ldmMode && (
-          <img
-            src={previewPages[currentPage - 1]}
-            alt={`Page ${currentPage}`}
-            className="shadow-lg border border-gray-300 max-w-full h-auto block"
-            style={{ position: 'relative', zIndex: 1 }}
-          />
-        )}
-
-        {/* LDM On-demand Page Preview */}
-        {ldmMode && ldmJobId && (
-          <img
-            src={`/api/convert/preview/${ldmJobId}/${currentPage}`}
-            key={`ldm-${ldmJobId}-${currentPage}`}
-            alt={`LDM Page ${currentPage}`}
-            className="shadow-lg border border-gray-300 max-w-full h-auto block"
-            style={{ position: 'relative', zIndex: 1, minHeight: '400px', backgroundColor: '#f3f4f6' }}
-            onLoad={(e) => {
-              // Ensure we inform parent about page dimensions if needed
-            }}
-          />
-        )}
-
-        {showHeatmap && (
-          <>
-            {isHeatmapLoading && (
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/50 text-white px-3 py-1 rounded" style={{ zIndex: 20 }}>
-                {t('analyzingInk')}
-              </div>
+        {/* The PDF Stage (constrained box) */}
+        <div className="relative w-full h-full flex items-center justify-center overflow-auto custom-scrollbar">
+          <div className="relative shadow-2xl border border-gray-200 bg-white">
+            {/* The PDF.js Canvas */}
+            {!ldmMode && (
+              <canvas
+                ref={canvasRef}
+                className="block max-w-full h-auto"
+                style={{
+                  zIndex: 1,
+                  display: previewPages?.[currentPage - 1] ? 'none' : 'block'
+                }}
+              />
             )}
-            <canvas
-              ref={heatmapLayerRef}
-              className="absolute top-0 left-0 pointer-events-none"
-              style={{ zIndex: 10, opacity: 0.6, mixBlendMode: 'multiply', width: '100%', height: '100%' }}
-            />
-          </>
-        )}
+
+            {/* The Server-side PNG */}
+            {previewPages?.[currentPage - 1] && !ldmMode && (
+              <img
+                src={previewPages[currentPage - 1]}
+                alt={`Page ${currentPage}`}
+                className="block max-w-full h-auto"
+                style={{ position: 'relative', zIndex: 1 }}
+              />
+            )}
+
+            {/* LDM On-demand Page Preview */}
+            {ldmMode && ldmJobId && (
+              <img
+                src={`/api/convert/preview/${ldmJobId}/${currentPage}`}
+                key={`ldm-${ldmJobId}-${currentPage}`}
+                alt={`LDM Page ${currentPage}`}
+                className="block max-w-full h-auto"
+                style={{ position: 'relative', zIndex: 1, minHeight: '400px', backgroundColor: '#f3f4f6' }}
+              />
+            )}
+
+            {showHeatmap && (
+              <>
+                {isHeatmapLoading && (
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest z-30 shadow-2xl">
+                    {t('analyzingInk')}
+                  </div>
+                )}
+                <canvas
+                  ref={heatmapLayerRef}
+                  className="absolute top-0 left-0 pointer-events-none"
+                  style={{ zIndex: 10, opacity: 0.6, mixBlendMode: 'multiply', width: '100%', height: '100%' }}
+                />
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {showHeatmap && (
-        <div className="mt-2 text-xs text-gray-500 flex gap-4 items-center">
-          <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500"></span> {'<'}280%</div>
-          <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-yellow-400"></span> 280-300%</div>
-          <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500"></span> {'>'}300%</div>
+        <div className="mt-6 p-4 bg-white rounded-xl border border-gray-100 shadow-sm flex gap-6 items-center animate-in slide-in-from-bottom duration-500">
+          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">TAC Map Legend</span>
+          <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-green-500 shadow-sm shadow-green-200"></span> <span className="text-[11px] font-bold text-gray-600">{'<'}280%</span></div>
+          <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-yellow-400 shadow-sm shadow-yellow-200"></span> <span className="text-[11px] font-bold text-gray-600">280-300%</span></div>
+          <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500 shadow-sm shadow-red-200"></span> <span className="text-[11px] font-bold text-gray-600">{'>'}300%</span></div>
         </div>
       )}
     </div>

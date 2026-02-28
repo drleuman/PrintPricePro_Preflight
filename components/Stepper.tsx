@@ -6,6 +6,7 @@ import {
     CheckCircleIcon,
     BanknotesIcon
 } from '@heroicons/react/24/outline';
+import { CheckIcon } from '@heroicons/react/20/solid';
 
 interface Step {
     number: number;
@@ -31,152 +32,65 @@ const getStepIcon = (stepNumber: number) => {
 
 export const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
     return (
-        <div style={{
-            marginBottom: '20px',
-            padding: '24px 30px',
-            background: 'rgba(255, 255, 255, 0.7)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            borderRadius: '40px',
-            border: '1px solid rgba(255, 255, 255, 0.5)',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.05)',
-            width: '100%'
-        }}>
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                maxWidth: '1000px',
-                margin: '0 auto',
-                position: 'relative'
-            }}>
+        <div className="w-full mb-8 px-6 py-8 bg-white/70 backdrop-blur-xl rounded-[2rem] border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.04)]">
+            <div className="max-w-4xl mx-auto flex items-center justify-between relative">
+                {/* Background Progress Track */}
+                <div className="absolute top-7 left-0 w-full h-[2px] bg-gray-100 -z-10" />
+
+                {/* Active Progress Line */}
+                <div
+                    className="absolute top-7 left-0 h-[2px] bg-red-600 transition-all duration-700 ease-in-out -z-10"
+                    style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+                />
+
                 {steps.map((step, index) => {
                     const StepIcon = getStepIcon(step.number);
                     const isCompleted = currentStep > step.number;
                     const isActive = currentStep === step.number;
+                    const isPending = currentStep < step.number;
 
                     return (
-                        <React.Fragment key={step.number}>
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                flex: 1,
-                                position: 'relative',
-                                zIndex: 2
-                            }}>
-                                {/* Circle */}
-                                <div style={{
-                                    width: '70px',
-                                    height: '70px',
-                                    borderRadius: '24px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                                    marginBottom: '15px',
-                                    position: 'relative',
-                                    background: isCompleted
-                                        ? 'linear-gradient(135deg, #10b981, #059669)'
-                                        : isActive
-                                            ? 'linear-gradient(135deg, #dc0000, #b90000)'
-                                            : '#fff',
-                                    color: (isCompleted || isActive) ? '#fff' : '#d1d5db',
-                                    border: (isCompleted || isActive) ? 'none' : '2px solid #f3f4f6',
-                                    boxShadow: isActive ? '0 15px 30px rgba(220, 0, 0, 0.3)' : 'none',
-                                    transform: isActive ? 'scale(1.1) translateY(-5px)' : 'scale(1)'
-                                }}>
-                                    {isActive && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            inset: '-4px',
-                                            borderRadius: '28px',
-                                            border: '2px solid #dc0000',
-                                            opacity: 0.3
-                                        }} />
-                                    )}
-                                    {isCompleted ? (
-                                        <CheckCircleIcon style={{ width: '36px', height: '36px' }} />
-                                    ) : (
-                                        <StepIcon style={{ width: '30px', height: '30px' }} />
-                                    )}
+                        <div key={step.number} className="flex flex-col items-center relative group">
+                            {/* Step Indicator */}
+                            <div className={`
+                                w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500
+                                ${isCompleted ? 'bg-green-500 text-white shadow-lg shadow-green-200' :
+                                    isActive ? 'bg-red-600 text-white shadow-xl shadow-red-200 scale-110 -translate-y-1' :
+                                        'bg-white text-gray-400 border-2 border-gray-100'}
+                            `}>
+                                {isCompleted ? (
+                                    <CheckIcon className="w-8 h-8 animate-in zoom-in duration-300" />
+                                ) : (
+                                    <StepIcon className={`w-7 h-7 ${isActive ? 'animate-pulse' : ''}`} />
+                                )}
 
-                                    {/* Small Number Badge */}
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '-8px',
-                                        right: '-8px',
-                                        width: '24px',
-                                        height: '24px',
-                                        borderRadius: '50%',
-                                        background: isActive ? '#ef4444' : isCompleted ? '#10b981' : '#f3f4f6',
-                                        color: (isActive || isCompleted) ? '#fff' : '#9ca3af',
-                                        fontSize: '11px',
-                                        fontWeight: 900,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        border: '3px solid #fff',
-                                        boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-                                    }}>
+                                {/* Small Number Badge (Only when pending) */}
+                                {isPending && (
+                                    <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gray-100 text-[10px] font-black flex items-center justify-center border-2 border-white text-gray-400">
                                         {step.number}
                                     </div>
-                                </div>
-
-                                {/* Label */}
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{
-                                        fontSize: '10px',
-                                        fontWeight: 800,
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '1px',
-                                        marginBottom: '4px',
-                                        color: isActive ? '#dc0000' : isCompleted ? '#10b981' : '#9ca3af'
-                                    }}>
-                                        Step 0{step.number}
-                                    </div>
-                                    <div style={{
-                                        fontSize: '14px',
-                                        fontWeight: 800,
-                                        color: isActive ? '#111827' : '#9ca3af',
-                                        letterSpacing: '-0.3px'
-                                    }}>
-                                        {step.title}
-                                    </div>
-                                </div>
+                                )}
                             </div>
 
-                            {/* Line between steps */}
-                            {index < steps.length - 1 && (
-                                <div style={{
-                                    flex: 0.5,
-                                    height: '4px',
-                                    background: isCompleted ? '#10b981' : '#f3f4f6',
-                                    margin: '0 10px',
-                                    borderRadius: '2px',
-                                    position: 'relative',
-                                    top: '-20px'
-                                }}>
-                                    {isCompleted && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            inset: 0,
-                                            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-                                            animation: 'shimmer 2s infinite linear'
-                                        }} />
-                                    )}
+                            {/* Label */}
+                            <div className="mt-4 text-center">
+                                <div className={`
+                                    text-[10px] font-black uppercase tracking-widest mb-1 transition-colors duration-300
+                                    ${isActive ? 'text-red-600' : isCompleted ? 'text-green-600' : 'text-gray-400'}
+                                `}>
+                                    Step 0{step.number}
                                 </div>
-                            )}
-                        </React.Fragment>
+                                <div className={`
+                                    text-sm font-bold tracking-tight transition-colors duration-300
+                                    ${isActive ? 'text-gray-900' : 'text-gray-400'}
+                                `}>
+                                    {step.title}
+                                </div>
+                            </div>
+                        </div>
                     );
                 })}
             </div>
-            <style>{`
-                @keyframes shimmer {
-                    from { transform: translateX(-100%); }
-                    to { transform: translateX(100%); }
-                }
-            `}</style>
         </div>
     );
 };
