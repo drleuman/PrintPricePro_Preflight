@@ -44,16 +44,16 @@ export const Step2Analysis: React.FC<Step2AnalysisProps> = ({
 
     return (
         <div className="step step--analysis">
-            <div className="step__header">
-                <h2 className="step__title">
+            <div className="step__header mb-4 py-2 text-center">
+                <h2 className="text-xl font-black text-gray-900 tracking-tight">
                     {isRunning ? 'Analyzing Your PDF...' : 'Analysis Complete'}
                 </h2>
-                <p className="step__description">
+                <p className="text-xs text-gray-500 font-medium">
                     {isRunning
-                        ? 'Please wait while we check your document for print readiness'
+                        ? 'Checking document for print readiness...'
                         : hasIssues
-                            ? 'We found some items that need attention'
-                            : 'Great! Your PDF looks good'}
+                            ? 'Review the items that need attention below'
+                            : 'Your PDF is perfect for printing'}
                 </p>
             </div>
 
@@ -85,22 +85,22 @@ export const Step2Analysis: React.FC<Step2AnalysisProps> = ({
                 ) : null}
             </div>
 
-            <div className="step__actions">
-                <button className="btn btn--secondary" onClick={onBack}>
+            <div className="step__actions sticky bottom-0 bg-white/80 backdrop-blur-md p-4 border-t border-gray-100 mt-6 z-20 flex justify-between items-center rounded-t-2xl shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+                <button className="btn btn--secondary btn--sm" onClick={onBack}>
                     ← Back
                 </button>
                 {result && (
-                    <>
+                    <div className="flex gap-4">
                         {hasIssues ? (
-                            <button className="btn btn--primary btn--large" onClick={onNext}>
+                            <button className="btn btn--primary btn--large px-10 py-3 shadow-xl shadow-red-900/10" onClick={onNext}>
                                 Fix Issues →
                             </button>
                         ) : (
-                            <button className="btn btn--primary btn--large" onClick={onSkipToReview}>
+                            <button className="btn btn--primary btn--large px-10 py-3 shadow-xl shadow-red-900/10" onClick={onSkipToReview}>
                                 Continue to Review →
                             </button>
                         )}
-                    </>
+                    </div>
                 )}
             </div>
         </div>

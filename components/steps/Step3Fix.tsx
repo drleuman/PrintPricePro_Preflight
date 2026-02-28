@@ -193,10 +193,10 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
                     </div>
                 </div>
             )}
-            <div className="step__header">
-                <h2 className="step__title">Fix Issues</h2>
-                <p className="step__description">
-                    Review and fix the {issuesCount} issue{issuesCount !== 1 ? 's' : ''} found in your PDF
+            <div className="step__header mb-4 py-2">
+                <h2 className="text-xl font-black text-gray-900 tracking-tight">Fix Issues</h2>
+                <p className="text-xs text-gray-500 font-medium">
+                    Review and fix {issuesCount} issue{issuesCount !== 1 ? 's' : ''}
                 </p>
             </div>
 
@@ -242,21 +242,20 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
                 </div>
             </div>
 
-            <div className="step__actions">
-                <button
-                    className="btn btn--primary flex items-center gap-2"
-                    onClick={() => onAutoFix(autoFixOptions)}
-                    disabled={!file || isRunning}
-                >
-                    <Icon.Sparkles className="h-4 w-4" />
-                    {isRunning ? 'Running AutoFix...' : 'Run AutoFix Agent (PRO)'}
-                </button>
-                <button className="btn btn--secondary flex items-center gap-2" onClick={onBack}>
-                    <Icon.ArrowLeft className="h-4 w-4" /> Back to Analysis
-                </button>
-                <button className="btn btn--primary btn--large flex items-center gap-2" onClick={onNext}>
-                    Continue to Review <Icon.ArrowRight className="h-4 w-4" />
-                </button>
+            <div className="step__actions sticky bottom-0 bg-white/80 backdrop-blur-md p-4 border-t border-gray-100 mt-6 z-20 flex justify-between items-center rounded-t-2xl shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+                <div className="flex gap-3">
+                    <button className="btn btn--secondary btn--sm flex items-center gap-2" onClick={onBack}>
+                        <Icon.ArrowLeft className="h-4 w-4" /> Back
+                    </button>
+                </div>
+                <div className="flex gap-4 items-center">
+                    <button
+                        className="btn btn--primary btn--large px-10 py-3 shadow-xl shadow-red-900/10 flex items-center gap-2"
+                        onClick={onNext}
+                    >
+                        Continue to Review <Icon.ArrowRight className="h-4 w-4" />
+                    </button>
+                </div>
             </div>
 
             <FixDrawer

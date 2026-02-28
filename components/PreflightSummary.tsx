@@ -152,14 +152,14 @@ export const PreflightSummary: React.FC<Props> = ({
   return (
     <section className="space-y-4">
       {/* Overall Score card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-4 sm:px-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-2">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:px-5">
+        <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
           {t('issuesSummary')}
         </h2>
 
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="ppp-score-circle">
+          <div className="flex items-start gap-3">
+            <div className="ppp-score-circle w-14 h-14 text-xl shrink-0">
               {hasPdf && score !== null ? score : '–'}
             </div>
             <div className="space-y-1">
@@ -202,12 +202,12 @@ export const PreflightSummary: React.FC<Props> = ({
       </div>
 
       {/* Issue Categories Dashboard */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-4 sm:px-6 space-y-3">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-900">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:px-5 space-y-2">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-widest">
             {t('issueCategories')}
           </h3>
-          <div className="text-xs text-gray-500">
+          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
             {categories.reduce((sum, cat) => sum + cat.errors + cat.warnings + cat.info, 0)} total issues
           </div>
         </div>
