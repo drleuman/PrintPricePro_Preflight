@@ -3,7 +3,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const { query } = require('./db');
 const JobManager = require('./jobManager');
-const { getPdfInfoGS } = require('../utils/pdfInfo');
+const { getPdfInfoGS } = require('../utils-server/pdfInfo');
 const { gsConvertColor, gsFlattenTransparency, rebuildAtDpi, addBleedCanvasPdf } = require('./pdfPipeline');
 
 class JobProcessor {
