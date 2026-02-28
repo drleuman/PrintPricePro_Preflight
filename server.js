@@ -111,17 +111,36 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' })); // Reduced from 100mb
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Request Logger
-app.use((req, _res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+// -------- Production Guards --------
+// 1) Reject oversized uploads early (before multer reads body)
+const MAX_UPLOAD_BYTES = Number(process.env.PPP_MAX_UPLOAD_BYTES || 100 * 1024 * 1024);
+app.use((req, res, next) => {
+  const len = Number(req.headers['content-length'] || 0);
+  if (len && len > MAX_UPLOAD_BYTES) {
+    return res.status(413).json({ error: 'Payload too large', maxBytes: MAX_UPLOAD_BYTES });
+  }
   next();
 });
 
+// 2) Response timeout — kill hung connections (Ghostscript safety net)
+app.use((req, res, next) => {
+  res.setTimeout(610_000, () => {
+    if (!res.headersSent) res.status(504).json({ error: 'Request timeout' });
+  });
+  next();
+});
+
+// 3) Per-endpoint rate limits
+const diagnosticLimiter = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false });
+const convertLimiter = rateLimit({ windowMs: 60_000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many conversion requests, try again in a minute.' } });
+
 // -------- Routes --------
 app.use('/api/gemini-proxy', apiKeyMiddleware, proxyRouter);
+app.use(['/ready', '/api/ready', '/healthz', '/api/healthz', '/version', '/api/version', '/metrics', '/api/metrics'], diagnosticLimiter);
+app.use('/api/convert', convertLimiter);
 console.log('Mounting /api/convert routes...');
 app.use('/api/convert', (req, res, next) => {
-  console.log(`[ROUTE-DEBUG] ${req.method} ${req.url}`);
+  console.log(`[ROUTE-DEBUG][${req.id || '-'}] ${req.method} ${req.url}`);
   next();
 }, pdfRouter);
 

@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { PDFDocument, PDFName, PDFArray, PDFDict, pushGraphicsState, concatTransformationMatrix, popGraphicsState } = require('pdf-lib');
-const { runGs } = require('./ghostscript');
+const { runGs, acquireGsSlot, releaseGsSlot } = require('./ghostscript');
 const { getPdfInfoGS } = require('../utils-server/pdfInfo');
 
 // Use env for GS path
@@ -171,6 +171,7 @@ async function gsConvertColor(input, output, profile, opts = {}) {
     args.push(input);
 
     try {
+        await acquireGsSlot();
         console.log(`[GS-CONVERT] Running: ${GS_CMD} ${args.join(' ')}`);
         const { ok, stderr, code } = await execCmd(GS_CMD, args, { timeoutMs: 120000 });
         if (!ok) {
@@ -187,6 +188,8 @@ async function gsConvertColor(input, output, profile, opts = {}) {
     } catch (e) {
         try { await fs.promises.unlink(psPath); } catch (e2) { }
         throw e;
+    } finally {
+        releaseGsSlot();
     }
 }
 
@@ -197,12 +200,17 @@ async function gsFlattenTransparency(input, output) {
     const args = [
         '-dSAFER', '-dNOPAUSE', '-dBATCH', '-dQUIET',
         '-sDEVICE=pdfwrite',
-        '-dCompatibilityLevel=1.3', // Forces flattening
+        '-dCompatibilityLevel=1.3',
         '-o', output,
         input
     ];
-    const { ok, stderr } = await execCmd(GS_CMD, args, { timeoutMs: 120000 });
-    if (!ok) throw new Error(`GS flattening failed: ${stderr}`);
+    await acquireGsSlot();
+    try {
+        const { ok, stderr } = await execCmd(GS_CMD, args, { timeoutMs: 120000 });
+        if (!ok) throw new Error(`GS flattening failed: ${stderr}`);
+    } finally {
+        releaseGsSlot();
+    }
 }
 
 /**
@@ -217,8 +225,13 @@ async function rebuildAtDpi(input, output, dpi = 300) {
         '-o', output,
         input
     ];
-    const { ok, stderr } = await execCmd(GS_CMD, args, { timeoutMs: 300000 });
-    if (!ok) throw new Error(`GS rebuild failed: ${stderr}`);
+    await acquireGsSlot();
+    try {
+        const { ok, stderr } = await execCmd(GS_CMD, args, { timeoutMs: 300000 });
+        if (!ok) throw new Error(`GS rebuild failed: ${stderr}`);
+    } finally {
+        releaseGsSlot();
+    }
 }
 
 /**

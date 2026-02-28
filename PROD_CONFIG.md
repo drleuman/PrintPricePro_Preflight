@@ -1,6 +1,16 @@
-# Production Configuration Guide (Nginx / Proxy)
+# Production Configuration Guide (Nginx / Plesk)
 
-To resolve **502 Bad Gateway** errors and **PDF.js Worker MIME type** issues in production, apply the following configurations to your reverse proxy (Nginx/Plesk).
+To resolve **502 Bad Gateway**, **PDF.js Worker MIME type**, and **streaming timeout** issues, apply the following configuration to your reverse proxy (Nginx/Plesk).
+
+> Add all blocks to **"Additional nginx directives"** in Plesk **Apache & Nginx Settings**.
+
+## 0. WebSocket Upgrade Map (add once, at the top)
+```nginx
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+```
 
 ## 1. Fix PDF.js Worker MIME Type (CRITICAL)
 Nginx often serves assets directly. If `.mjs` is served as `application/octet-stream`, the worker fails.

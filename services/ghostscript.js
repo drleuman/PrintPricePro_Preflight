@@ -139,5 +139,7 @@ module.exports = {
     runGs,
     safeUnlink,
     safeRmDir,
-    sendPdfAndCleanup
+    sendPdfAndCleanup,
+    acquireGsSlot,
+    releaseGsSlot
 };
