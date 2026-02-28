@@ -12,10 +12,10 @@ const WebSocket = require('ws');
 const cors = require('cors');
 const helmet = require('helmet');
 
-const { router: proxyRouter, handleWsUpgrade } = require('./server/routes/proxy');
-const pdfRouter = require('./server/routes/pdf');
-const { startCleanupTask } = require('./server/services/cleanup');
-const apiKeyMiddleware = require('./server/middleware/apiKey');
+const { router: proxyRouter, handleWsUpgrade } = require('./routes/proxy');
+const pdfRouter = require('./routes/pdf');
+const { startCleanupTask } = require('./services/cleanup');
+const apiKeyMiddleware = require('./middleware/apiKey');
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
 const pino = require('pino-http')({
@@ -195,7 +195,7 @@ app.get(['/metrics', '/api/metrics'], (_req, res) => {
   });
 });
 
-app.all('/api/*', (req, res) => {
+app.all('/api/:path(*)', (req, res) => {
   console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     error: `Route not found: ${req.originalUrl}`,

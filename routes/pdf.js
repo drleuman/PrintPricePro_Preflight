@@ -4,13 +4,13 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const crypto = require('crypto');
-const { safeMoveSync } = require('../utils/fileUtil');
+const { safeMoveSync } = require('../utils-server/fileUtil');
 const { PDFDocument, PDFName, PDFArray, PDFDict, pushGraphicsState, popGraphicsState, concatTransformationMatrix } = require('pdf-lib');
 const { runGs, sendPdfAndCleanup, safeUnlink, safeRmDir } = require('../services/ghostscript');
 const { spawn } = require('child_process');
 const JobManager = require('../services/jobManager');
 const JobProcessor = require('../services/jobProcessor');
-const { getPdfInfoGS, getPdfGeometryGS } = require('../utils/pdfInfo');
+const { getPdfInfoGS, getPdfGeometryGS } = require('../utils-server/pdfInfo');
 const {
     normalizeProfile,
     gsConvertColor,

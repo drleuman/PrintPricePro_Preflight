@@ -4,7 +4,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { PDFDocument, PDFName, PDFArray, PDFDict, pushGraphicsState, concatTransformationMatrix, popGraphicsState } = require('pdf-lib');
 const { runGs } = require('./ghostscript');
-const { getPdfInfoGS } = require('../utils/pdfInfo');
+const { getPdfInfoGS } = require('../utils-server/pdfInfo');
 
 // Use env for GS path
 const GS_CMD = process.env.GS_PATH || (process.platform === 'win32' ? 'gswin64c' : 'gs');
