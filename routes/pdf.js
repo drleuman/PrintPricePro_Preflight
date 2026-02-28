@@ -1236,11 +1236,18 @@ async function executeAutofixWorkflow(inputPath, originalFilename, options, issu
 
 router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddleware, async (req, res) => {
     const reqId = req.id || 'internal';
-    console.log(`[PDF-ROUTER][${reqId}] POST /autofix hit`);
     const inputPath = req.file?.path;
-
     const originalFilename = req.file?.originalname || 'document.pdf';
     const fileSize = req.file?.size || 0;
+
+    console.log(`[PDF-ROUTER][${reqId}] POST /autofix hit`);
+    console.log(`[PDF-ROUTER][${reqId}] File metadata: path=${inputPath}, name=${originalFilename}, size=${fileSize}`);
+    console.log(`[PDF-ROUTER][${reqId}] Request body keys:`, Object.keys(req.body || {}));
+
+    if (!inputPath) {
+        console.error(`[PDF-ROUTER][${reqId}] ERROR: Multer did not provide a file path.`);
+        return res.status(400).json({ error: 'No file received' });
+    }
 
     // --- LARGE DOCUMENT MODE (LDM) DETECTION ---
     const forceLDM = String(req.body.forceJob || '0') === '1';
@@ -1249,24 +1256,30 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
     // Only call GS if we don't already know it's LDM from size or force flag
     if (!forceLDM && fileSize <= 20 * 1024 * 1024) {
         try {
+            console.log(`[PDF-ROUTER][${reqId}] LDM Check: Running GS for page count...`);
             const info = await getPdfInfoGS(inputPath);
             pageCount = info.pageCount;
+            console.log(`[PDF-ROUTER][${reqId}] LDM Check: GS Page Count = ${pageCount}`);
         } catch (e) {
-            console.warn('Fast page count failed, falling back to 0', e.message);
+            console.warn(`[PDF-ROUTER][${reqId}] LDM Check: Fast page count failed, falling back to 0: ${e.message}`);
         }
     }
 
     const isLDM = forceLDM || fileSize > 20 * 1024 * 1024 || pageCount > 50;
-    console.log(`[PDF-ROUTER][${reqId}] LDM Check: fileSize=${fileSize}, pageCount=${pageCount}, forceJob=${req.body.forceJob} => isLDM=${isLDM}`);
+    console.log(`[PDF-ROUTER][${reqId}] LDM Decision: isLDM=${isLDM} (force=${forceLDM}, size=${fileSize}, pgs=${pageCount})`);
 
     if (isLDM) {
+        console.log(`[PDF-ROUTER][${reqId}] LDM FLOW: Starting...`);
         try {
+            console.log(`[PDF-ROUTER][${reqId}] LDM FLOW: Creating DB job...`);
             const job = await JobManager.createJob(originalFilename);
             const jobPath = JobManager.getOriginalPath(job.id);
+            console.log(`[PDF-ROUTER][${reqId}] LDM FLOW: Job ${job.id} created. Path: ${jobPath}`);
 
             // Move file to job directory
+            console.log(`[PDF-ROUTER][${reqId}] LDM FLOW: Moving file to job dir...`);
             safeMoveSync(inputPath, jobPath);
-            console.log(`[PDF-ROUTER][${reqId}] File moved to job directory: ${jobPath}`);
+            console.log(`[PDF-ROUTER][${reqId}] LDM FLOW: File moved successfully.`);
 
             await JobManager.updateJob(job.id, {
                 large_mode: true,
@@ -1276,8 +1289,9 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
                 file_size_bytes: fileSize,
                 page_count: pageCount
             });
+            console.log(`[PDF-ROUTER][${reqId}] LDM FLOW: Job updated to QUEUED.`);
 
-            // Trigger background processing
+            // Enqueue first task: SPLIT
             const options = {
                 target: String(req.body.target || 'cmyk').toLowerCase(),
                 profile: normalizeProfile(req.body.profile || 'iso_coated_v3'),
@@ -1293,8 +1307,9 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
                 strictVector: String(req.body.strictVector || '1') === '1',
             };
 
-            // Enqueue first task: SPLIT
+            console.log(`[PDF-ROUTER][${reqId}] LDM FLOW: Enqueueing SPLIT task...`);
             await JobManager.enqueueTask(job.id, 'SPLIT', options);
+            console.log(`[PDF-ROUTER][${reqId}] LDM FLOW: Task enqueued. Sending final 200 JSON.`);
 
             return res.json({
                 ok: true,
