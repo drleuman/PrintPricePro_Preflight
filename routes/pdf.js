@@ -1244,6 +1244,7 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
     }
 
     const isLDM = fileSize > 20 * 1024 * 1024 || pageCount > 50 || String(req.body.forceJob || '0') === '1';
+    console.log(`[PDF-ROUTER][${reqId}] LDM Check: fileSize=${fileSize}, pageCount=${pageCount}, forceJob=${req.body.forceJob} => isLDM=${isLDM}`);
 
     if (isLDM) {
         try {
@@ -1252,33 +1253,13 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
 
             // Move file to job directory
             safeMoveSync(inputPath, jobPath);
-
-            // Streaming SHA256 calculation (post-upload but before backgrounding)
-            const hash = crypto.createHash('sha256');
-            const stream = fs.createReadStream(jobPath);
-            const shaTimeout = Number(process.env.PPP_SHA_TIMEOUT_MS) || 120000;
-            try {
-                await new Promise((resolve, reject) => {
-                    const to = setTimeout(() => {
-                        try { stream.destroy(); } catch (_) { }
-                        reject(new Error('SHA_TIMEOUT'));
-                    }, shaTimeout);
-                    stream.on('data', (d) => hash.update(d));
-                    stream.on('end', () => { clearTimeout(to); resolve(); });
-                    stream.on('error', (e) => { clearTimeout(to); reject(e); });
-                });
-            } catch (e) {
-                console.error('SHA calculation failed for LDM job:', e);
-                await JobManager.updateJob(job.id, { status: 'FAILED', error: e.message });
-                return res.status(500).json({ ok: false, error: 'SHA calculation failed', details: e.message });
-            }
-            const sha256 = hash.digest('hex');
+            console.log(`[PDF-ROUTER][${reqId}] File moved to job directory: ${jobPath}`);
 
             await JobManager.updateJob(job.id, {
                 large_mode: true,
                 status: 'QUEUED',
                 file_path_original: jobPath,
-                file_sha256: sha256,
+                file_sha256: 'pending',
                 file_size_bytes: fileSize,
                 page_count: pageCount
             });

@@ -65,6 +65,20 @@ class JobProcessor {
     static async handleSplit(jobId, payload) {
         await JobManager.updateJob(jobId, { status: 'ANALYZING', stage: 'Splitting document' });
         const original = JobManager.getOriginalPath(jobId);
+
+        // Calculate SHA256 in background if pending
+        const job = await JobManager.getJob(jobId);
+        if (!job.file_sha256 || job.file_sha256 === 'pending') {
+            const hash = require('crypto').createHash('sha256');
+            const stream = fs.createReadStream(original);
+            const sha256 = await new Promise((resolve, reject) => {
+                stream.on('data', d => hash.update(d));
+                stream.on('end', () => resolve(hash.digest('hex')));
+                stream.on('error', reject);
+            });
+            await JobManager.updateJob(jobId, { file_sha256: sha256 });
+        }
+
         const info = await getPdfInfoGS(original);
 
         const jobDir = JobManager.getJobDir(jobId);

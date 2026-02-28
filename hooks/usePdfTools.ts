@@ -102,7 +102,6 @@ export function usePdfTools() {
         setIsServerRunning(true);
         try {
             const formData = new FormData();
-            formData.append('file', file);
             formData.append('target', opts?.target || 'cmyk');
             formData.append('profile', opts?.profile || 'iso_coated_v3');
             formData.append('bleedMm', String(opts?.bleedMm ?? 3));
@@ -118,6 +117,9 @@ export function usePdfTools() {
             if (opts?.strictVector === false) formData.append('strictVector', '0');
             else formData.append('strictVector', '1');
             if (opts?.forceJob) formData.append('forceJob', opts.forceJob);
+
+            // Append file LAST for better Multer compatibility
+            formData.append('file', file);
 
             const res = await fetch('/api/convert/autofix', {
                 method: 'POST',
