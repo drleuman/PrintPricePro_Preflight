@@ -17,8 +17,13 @@ try {
     pool.query('SELECT NOW()').then(() => {
         console.log('[DB-READY] Connected to PostgreSQL');
     }).catch(err => {
-        console.error('[DB-ERROR] Connection failed at startup:', err.message);
-        console.warn('[DB-WARN] The app will continue running but database-dependent features will fail.');
+        console.error('[DB-ERROR] PostgreSQL connection failed:', {
+            message: err.message,
+            code: err.code,
+            detail: err.detail,
+            hint: err.hint
+        });
+        console.warn('[DB-WARN] The app will continue running but database-dependent features (LDM, jobs) will fail.');
     });
 
 } catch (e) {

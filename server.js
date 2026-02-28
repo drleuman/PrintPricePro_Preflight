@@ -288,4 +288,21 @@ server.on('upgrade', (request, socket, head) => {
   }
 });
 
+// -------- Clean Shutdown (Release Port) --------
+const shutdown = (signal) => {
+  console.log(`[SERVER-SHUTDOWN] Received ${signal}. Releasing port and closing...`);
+  server.close(() => {
+    console.log('[SERVER-SHUTDOWN] Port released. Process exit.');
+    process.exit(0);
+  });
+  // Force exit after 10s if stuck
+  setTimeout(() => {
+    console.error('[SERVER-SHUTDOWN] Forced exit after timeout.');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
 module.exports = app;
