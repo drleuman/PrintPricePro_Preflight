@@ -333,8 +333,13 @@ async function ensurePdfMiddleware(req, res, next) {
  * Uses Ghostscript pamcmyk device to extract raw separation data.
  */
 async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmation = false) {
-    const customPath = process.env.GS_PATH;
-    const gsCmd = customPath || (process.platform === 'win32' ? 'gswin64c' : 'gs');
+    // Use same GS resolution as ghostscript.js (probes common paths)
+    const GS_PATHS = ['/usr/bin/gs', '/usr/local/bin/gs', '/usr/bin/ghostscript'];
+    let gsCmd = process.env.GS_PATH;
+    if (!gsCmd && process.platform !== 'win32') {
+        for (const p of GS_PATHS) { if (require('fs').existsSync(p)) { gsCmd = p; break; } }
+    }
+    gsCmd = gsCmd || (process.platform === 'win32' ? 'gswin64c' : 'gs');
 
     const limitMap = {
         'iso_coated_v3': 300,

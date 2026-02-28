@@ -132,7 +132,7 @@ async function pdfUploadWafCheck({
         maxObjects: Number(process.env.PDF_MAX_OBJECTS || 20000),
         maxStreams: Number(process.env.PDF_MAX_STREAMS || 20000),
         rejectTokens: (process.env.PDF_REJECT_TOKENS ||
-            "/JavaScript,/OpenAction").split(",").map(s => s.trim()).filter(Boolean),
+            "/JavaScript").split(",").map(s => s.trim()).filter(Boolean),
         quarantineDir: process.env.PDF_QUARANTINE_DIR || path.join(process.cwd(), "uploads-quarantine"),
         ...config,
     };

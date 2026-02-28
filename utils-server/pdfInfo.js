@@ -1,8 +1,20 @@
 const { spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
+
+const GS_COMMON_PATHS = ['/usr/bin/gs', '/usr/local/bin/gs', '/usr/bin/ghostscript'];
+let _gsCmd = null;
+function resolveGs() {
+    if (_gsCmd) return _gsCmd;
+    if (process.env.GS_PATH) { _gsCmd = process.env.GS_PATH; return _gsCmd; }
+    if (process.platform === 'win32') { _gsCmd = 'gswin64c'; return _gsCmd; }
+    for (const p of GS_COMMON_PATHS) { if (fs.existsSync(p)) { _gsCmd = p; return _gsCmd; } }
+    _gsCmd = 'gs';
+    return _gsCmd;
+}
 
 async function getPdfInfoGS(pdfPath) {
-    const gsCmd = process.env.GS_PATH || (process.platform === 'win32' ? 'gswin64c' : 'gs');
+    const gsCmd = resolveGs();
 
     // Command to get page count and some basic info
     // We use -dNODISPLAY and a small PS snippet
@@ -33,7 +45,7 @@ async function getPdfInfoGS(pdfPath) {
 
 // Another GS command to get MediaBox/TrimBox of the first page
 async function getPdfGeometryGS(pdfPath) {
-    const gsCmd = process.env.GS_PATH || (process.platform === 'win32' ? 'gswin64c' : 'gs');
+    const gsCmd = resolveGs();
 
     const args = [
         '-dSAFER', '-dNOPAUSE', '-dBATCH', '-dQUIET',
