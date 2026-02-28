@@ -88,6 +88,7 @@ export const IssuesPanel: React.FC<Props> = ({
     let warning = 0;
     let info = 0;
     for (const it of issues) {
+      if (!it) continue;
       const s = getSeverity(it);
       if (s === 'error') error++;
       else if (s === 'warning') warning++;
@@ -98,7 +99,7 @@ export const IssuesPanel: React.FC<Props> = ({
 
   const filtered = useMemo(() => {
     if (tab === 'all') return issues;
-    return issues.filter((it) => getSeverity(it) === tab);
+    return issues.filter((it) => it && getSeverity(it) === tab);
   }, [issues, tab]);
 
   // Se remueve grouped para usar filtered directamente con FixedSizeList

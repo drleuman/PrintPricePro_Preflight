@@ -114,7 +114,8 @@ export const PreflightSummary: React.FC<Props> = ({
     }
 
     for (const iss of issues) {
-      const catKey = iss.category && buckets[iss.category] ? iss.category : keys[0] || 'images';
+      if (!iss) continue;
+      const catKey = (iss.category && buckets[iss.category]) ? iss.category : keys[0] || 'images';
       const sev = String(iss.severity || '').toLowerCase();
       const bucket = buckets[catKey];
 

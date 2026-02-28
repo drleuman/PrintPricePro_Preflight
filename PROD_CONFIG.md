@@ -56,11 +56,11 @@ location /api/ {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
 
-    # Timeouts for Ghostscript (up to 5 mins)
-    proxy_read_timeout 300s;
-    proxy_send_timeout 300s;
-    proxy_connect_timeout 30s;
-    send_timeout 300s;
+    # Timeouts for Ghostscript (up to 10 mins)
+    proxy_read_timeout 600s;
+    proxy_send_timeout 600s;
+    proxy_connect_timeout 60s;
+    send_timeout 600s;
 
     # Disable buffering for large streams
     proxy_buffering off;

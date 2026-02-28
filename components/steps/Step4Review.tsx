@@ -66,7 +66,9 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
     const displayFile = showBeforeAfter === 'before' && originalFile ? originalFile : file;
 
     // Determine status
-    const isReadyForPrint = !hasIssues || hasBeenProcessed;
+    // Only ready if we have a result AND it has zero issues. 
+    // If result is null, we are NOT ready (still analyzing or failed).
+    const isReadyForPrint = !!result && issuesCount === 0;
     const statusIcon = isReadyForPrint ? '✅' : '⚠️';
     const statusTitle = appMode === 'ai'
         ? 'AI Magic Applied! ✨'
@@ -230,7 +232,7 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                 const spot = summary?.spot_summary;
                                 const bleedApplied = autoFixReport?.applied?.some(a => a.action === 'add_bleed_canvas');
 
-                                const content = `PREPRESS COMPLIANCE REPORT\n` +
+                                let content = `PREPRESS COMPLIANCE REPORT\n` +
                                     `==========================\n` +
                                     `Certificate ID: ${summary?.certificate_id || 'PENDING'}\n` +
                                     `Date: ${new Date().toISOString()}\n\n` +
@@ -241,6 +243,15 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                     `Spots: ${spot?.spot_count ?? 0}\n\n` +
                                     `Bleed Method: ${bleedApplied ? 'Centered Scaling' : 'Verified'}\n` +
                                     `Production Imposition Score: ${result?.productionReport?.imposition?.score || 100}/100`;
+
+                                if (result?.issues && result.issues.length > 0) {
+                                    content += `\n\nISSUES FOUND:\n`;
+                                    for (const iss of result.issues) {
+                                        if (!iss) continue;
+                                        const sev = String(iss.severity || '').toLowerCase();
+                                        content += `- [${sev.toUpperCase()}] ${iss.message || 'Unknown issue'}\n`;
+                                    }
+                                }
 
                                 const blob = new Blob([content], { type: 'text/plain' });
                                 const url = URL.createObjectURL(blob);
