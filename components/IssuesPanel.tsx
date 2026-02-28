@@ -132,14 +132,14 @@ export const IssuesPanel: React.FC<Props> = ({
 
     const sev = getSeverity(iss);
     const sevLabel = severityLabel(sev);
-    const categoryLabel = ISSUE_CATEGORY_LABELS[iss.category as keyof typeof ISSUE_CATEGORY_LABELS] || iss.category || t('other');
-    const sevColorClass = SEVERITY_COLORS[iss.severity] || ''; // Clase de color basada en la severidad
+    const categoryLabel = (iss.category && ISSUE_CATEGORY_LABELS[iss.category as keyof typeof ISSUE_CATEGORY_LABELS]) || iss.category || t('other');
+    const sevColorClass = (iss.severity && SEVERITY_COLORS[iss.severity]) || '';
 
     return (
       <div style={style} className="px-3 border-b border-gray-100 last:border-b-0 flex items-center">
         <button
           type="button"
-          onClick={() => onSelectIssue(iss)}
+          onClick={() => iss && onSelectIssue(iss)}
           className={`w-full text-left ppp-issues-row ppp-issues-row--${sev} py-2 px-2`}
         >
           <div className="flex items-start justify-between gap-2">

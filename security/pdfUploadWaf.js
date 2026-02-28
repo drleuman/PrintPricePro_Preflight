@@ -6,7 +6,30 @@ const { safeMoveSync } = require("../utils-server/fileUtil");
 
 function sha256File(fp) {
     return new Promise((resolve, reject) => {
+        const stats = fs.statSync(fp);
         const hash = crypto.createHash('sha256');
+
+        // Optimization: For files > 10MB, use a "fast hash" of first and last chunks 
+        // to prevent 502 timeouts during WAF check. The full hash is calculated 
+        // later by the background worker if needed.
+        if (stats.size > 10 * 1024 * 1024) {
+            try {
+                const fd = fs.openSync(fp, 'r');
+                const headBuf = Buffer.alloc(5 * 1024 * 1024);
+                const tailBuf = Buffer.alloc(5 * 1024 * 1024);
+
+                fs.readSync(fd, headBuf, 0, headBuf.length, 0);
+                fs.readSync(fd, tailBuf, 0, tailBuf.length, Math.max(0, stats.size - tailBuf.length));
+                fs.closeSync(fd);
+
+                hash.update(headBuf);
+                hash.update(tailBuf);
+                return resolve(`fast-${hash.digest('hex')}`);
+            } catch (e) {
+                console.warn('[WAF] Fast hash failed, falling back to full stream', e.message);
+            }
+        }
+
         const stream = fs.createReadStream(fp);
         stream.on('data', (data) => hash.update(data));
         stream.on('end', () => resolve(hash.digest('hex')));

@@ -705,7 +705,11 @@ export default function App() {
 
   const onPageChange = useCallback((p: number) => setCurrentPage(p), []);
 
-  const openIssue = useCallback((issue: Issue) => {
+  const openIssue = useCallback((issue: Issue | null) => {
+    if (!issue) {
+      setSelectedIssue(null);
+      return;
+    }
     setSelectedIssue(issue);
     if (typeof issue.page === 'number' && issue.page > 0) {
       setCurrentPage(issue.page);
