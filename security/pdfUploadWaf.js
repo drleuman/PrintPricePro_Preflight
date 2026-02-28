@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { spawn } = require("child_process");
-const { safeMoveSync } = require("../utils/fileUtil");
+const { safeMoveSync } = require("../utils-server/fileUtil");
 
 function sha256File(fp) {
     return new Promise((resolve, reject) => {
