@@ -113,7 +113,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // -------- Production Guards --------
 // 1) Reject oversized uploads early (before multer reads body)
-const MAX_UPLOAD_BYTES = Number(process.env.PPP_MAX_UPLOAD_BYTES || 100 * 1024 * 1024);
+const MAX_UPLOAD_BYTES = Number(process.env.PPP_MAX_UPLOAD_BYTES || 500 * 1024 * 1024);
 app.use((req, res, next) => {
   const len = Number(req.headers['content-length'] || 0);
   if (len && len > MAX_UPLOAD_BYTES) {
