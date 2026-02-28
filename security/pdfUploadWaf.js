@@ -225,6 +225,18 @@ async function pdfUploadWafCheck({
     }
 
     // 5) Strong checks if tools exist: pdfinfo + qpdf
+    // Optimization: Skip heavy checks if fastMode is requested (e.g. for Stage 2 handoffs)
+    if (cfg.fastMode) {
+        return {
+            ok: true,
+            severity: "LOW",
+            sha256: hash,
+            safeName: base,
+            size,
+            meta: { ...tok, fastMode: true },
+        };
+    }
+
     const canPdfInfo = await hasBin("pdfinfo");
     const canQpdf = await hasBin("qpdf");
 

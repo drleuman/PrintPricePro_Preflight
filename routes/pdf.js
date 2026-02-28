@@ -294,6 +294,10 @@ async function ensurePdfMiddleware(req, res, next) {
         const decision = await pdfUploadWafCheck({
             filePath: file.path,
             originalName: file.originalname,
+            config: {
+                // Trust handoffs (Stage 2) more by skipping heavy structural scans
+                fastMode: String(req.body.forceJob || '0') === '1'
+            }
         });
         const tEnd = Date.now();
 

@@ -245,7 +245,7 @@ export default function App() {
 
         const is502 = e.message?.includes('502') || e.status === 502;
         const mainMsg = is502
-          ? 'Stage 2/2 Failed (HTTP 502): The server took too long to process. Please ensure Nginx proxy_read_timeout is set to 600s in Plesk.'
+          ? 'Error 502 (Bad Gateway) during Stage 2: Your Nginx/Plesk server is likely buffering the large file upload and timing out. ACTION REQUIRED: In Plesk "Additional nginx directives", add: proxy_request_buffering off; client_body_timeout 600s; client_max_body_size 500M;'
           : `Magic Fix Stage 2 failed: ${e.message}`;
 
         alert(`${mainMsg}\n\nSwitching to manual mode.`);
