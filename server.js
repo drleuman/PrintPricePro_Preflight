@@ -140,10 +140,7 @@ app.use(
   })
 );
 
-// -------- Diagnostic Routes (BEFORE catch-all) --------
-app.get(['/healthz', '/api/healthz'], (_req, res) => res.status(200).send('ok'));
-
-app.get(['/ready', '/api/ready'], async (_req, res) => {
+const readyHandler = async (_req, res) => {
   const { execFile } = require('child_process');
   const { promisify } = require('util');
   const execFileAsync = promisify(execFile);
@@ -153,7 +150,7 @@ app.get(['/ready', '/api/ready'], async (_req, res) => {
     version: require('./package.json').version || '1.0.0',
     details: {
       ghostscript: { ok: false, message: 'checking' },
-      uploadDir: { ok: false, path: pdfRouter.uploadDir }
+      uploadDir: { ok: false, path: pdfRouter.uploadDir, writable: false }
     },
     timestamp: new Date().toISOString()
   };
@@ -171,6 +168,7 @@ app.get(['/ready', '/api/ready'], async (_req, res) => {
     if (pdfRouter.uploadDir) {
       fs.accessSync(pdfRouter.uploadDir, fs.constants.W_OK);
       status.details.uploadDir.ok = true;
+      status.details.uploadDir.writable = true;
     }
   } catch (err) {
     status.status = 'error';
@@ -178,7 +176,11 @@ app.get(['/ready', '/api/ready'], async (_req, res) => {
   }
 
   res.status(status.status === 'ok' ? 200 : 503).json(status);
-});
+};
+
+// -------- Diagnostic Routes (BEFORE catch-all) --------
+app.get(['/healthz', '/api/healthz'], (_req, res) => res.status(200).send('ok'));
+app.get(['/ready', '/api/ready'], readyHandler);
 
 app.get(['/metrics', '/api/metrics'], (_req, res) => {
   const usage = process.memoryUsage();
