@@ -379,23 +379,23 @@ export const PageViewer: React.FC<PageViewerProps> = ({
                 )}
                 <canvas
                   ref={heatmapLayerRef}
-                  className="absolute top-0 left-0 pointer-events-none"
-                  style={{ zIndex: 10, opacity: 0.6, mixBlendMode: 'multiply', width: '100%', height: '100%' }}
+                  className="absolute top-0 left-0 pointer-events-none w-full h-full"
+                  style={{ zIndex: 10, opacity: 0.6, mixBlendMode: 'multiply' }}
                 />
+
+                {/* Integrated Legend inside the PDF stage */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 p-3 bg-white/90 backdrop-blur-md rounded-2xl border border-gray-100 shadow-xl flex gap-4 items-center z-30 animate-in slide-in-from-bottom-2 duration-300 scale-90">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">TAC Legend</span>
+                  <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500"></span> <span className="text-[10px] font-bold text-gray-600">{'<'}280%</span></div>
+                  <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400"></span> <span className="text-[10px] font-bold text-gray-600">280-300%</span></div>
+                  <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> <span className="text-[10px] font-bold text-gray-600">{'>'}300%</span></div>
+                </div>
               </>
             )}
           </div>
         </div>
       </div>
 
-      {showHeatmap && (
-        <div className="mt-6 p-4 bg-white rounded-xl border border-gray-100 shadow-sm flex gap-6 items-center animate-in slide-in-from-bottom duration-500">
-          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">TAC Map Legend</span>
-          <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-green-500 shadow-sm shadow-green-200"></span> <span className="text-[11px] font-bold text-gray-600">{'<'}280%</span></div>
-          <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-yellow-400 shadow-sm shadow-yellow-200"></span> <span className="text-[11px] font-bold text-gray-600">280-300%</span></div>
-          <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500 shadow-sm shadow-red-200"></span> <span className="text-[11px] font-bold text-gray-600">{'>'}300%</span></div>
-        </div>
-      )}
     </div>
   );
 };
