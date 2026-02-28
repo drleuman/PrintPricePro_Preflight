@@ -11,6 +11,7 @@ const fs = require('fs');
 const WebSocket = require('ws');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
 
 const { router: proxyRouter, handleWsUpgrade } = require('./routes/proxy');
 const pdfRouter = require('./routes/pdf');
@@ -58,6 +59,9 @@ if (pdfRouter.uploadDir) {
 app.use(pino);
 
 app.set('trust proxy', 1);
+
+// Compression for large JSON/PDF responses
+app.use(compression());
 
 // Security Headers
 app.use(helmet({
@@ -178,6 +182,17 @@ const readyHandler = async (_req, res) => {
 // -------- Diagnostic Routes (BEFORE catch-all) --------
 app.get(['/healthz', '/api/healthz'], (_req, res) => res.status(200).send('ok'));
 app.get(['/ready', '/api/ready'], readyHandler);
+
+app.get(['/version', '/api/version'], (_req, res) => {
+  const pkg = require('./package.json');
+  res.json({
+    version: pkg.version || '1.0.0',
+    commit: process.env.GIT_COMMIT || 'unknown',
+    node: process.version,
+    env: process.env.NODE_ENV || 'production',
+    uptime: Math.round(process.uptime())
+  });
+});
 
 app.get(['/metrics', '/api/metrics'], (_req, res) => {
   const usage = process.memoryUsage();
