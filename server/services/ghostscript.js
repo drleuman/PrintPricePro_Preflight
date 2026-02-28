@@ -5,28 +5,67 @@ const execFileAsync = promisify(execFile);
 const unlinkAsync = promisify(fs.unlink);
 const rmdirAsync = promisify(fs.rmdir);
 
+// Concurrency control: prevent GS from overwhelming the CPU
+const MAX_CONCURRENT_GS = parseInt(process.env.PPP_MAX_GS_CONCURRENCY || '4', 10);
+let activeGsCount = 0;
+const gsQueue = [];
+
+async function acquireGsSlot() {
+    if (activeGsCount < MAX_CONCURRENT_GS) {
+        activeGsCount++;
+        return;
+    }
+    return new Promise(resolve => gsQueue.push(resolve));
+}
+
+function releaseGsSlot() {
+    activeGsCount--;
+    if (gsQueue.length > 0) {
+        activeGsCount++;
+        const next = gsQueue.shift();
+        next();
+    }
+}
+
 /**
  * Executes Ghostscript with the provided arguments.
  * @param {string[]} args - Array of command line arguments for gs.
+ * @param {object} [options] - Optional exec options (e.g., signal).
  */
-async function runGs(args) {
+async function runGs(args, options = {}) {
+    await acquireGsSlot();
+
     // Priority: 1. GS_PATH env var, 2. OS-specific default
     const customPath = process.env.GS_PATH;
     const gsCmd = customPath || (process.platform === 'win32' ? 'gswin64c' : 'gs');
 
     try {
-        await execFileAsync(gsCmd, args, { maxBuffer: 1024 * 1024 * 50 }); // 50MB buffer
+        await execFileAsync(gsCmd, args, {
+            maxBuffer: 1024 * 1024 * 50,
+            timeout: 120000,
+            ...options
+        }); // 120s timeout
     } catch (e) {
+        if (e.name === 'AbortError') {
+            console.log('[GS-ABORT] Ghostscript process aborted');
+            throw e;
+        }
         // Fallback for Windows if gswin64c fails
         if (!customPath && process.platform === 'win32' && e.code === 'ENOENT') {
             try {
-                await execFileAsync('gs', args, { maxBuffer: 1024 * 1024 * 50 });
+                await execFileAsync('gs', args, {
+                    maxBuffer: 1024 * 1024 * 50,
+                    timeout: 120000,
+                    ...options
+                });
             } catch (e2) {
                 throw e2;
             }
         } else {
             throw e;
         }
+    } finally {
+        releaseGsSlot();
     }
 }
 

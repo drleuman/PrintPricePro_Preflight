@@ -515,6 +515,9 @@ router.post('/grayscale', upload.single('file'), apiKeyMiddleware, ensurePdfMidd
     const outName = `${baseName}_bw.pdf`;
     const outPath = path.join(uploadDir, `${Date.now()}_out_bw.pdf`);
 
+    const controller = new AbortController();
+    req.on('close', () => controller.abort());
+
     try {
         await runGs([
             '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
@@ -530,17 +533,19 @@ router.post('/grayscale', upload.single('file'), apiKeyMiddleware, ensurePdfMidd
             '-dNOPLATFONTS',
             `-sOutputFile=${outPath}`,
             inputPath,
-        ]);
+        ], { signal: controller.signal });
 
         sendPdfAndCleanup(res, outPath, outName, () => {
-            safeUnlink(inputPath);
             safeUnlink(outPath);
         });
     } catch (err) {
-        console.error('grayscale conversion failed:', err);
+        if (err.name !== 'AbortError') {
+            console.error('grayscale conversion failed:', err);
+            safeUnlink(outPath);
+            if (!res.headersSent) res.status(500).json({ error: 'Grayscale conversion failed' });
+        }
+    } finally {
         safeUnlink(inputPath);
-        safeUnlink(outPath);
-        res.status(500).json({ error: 'Grayscale conversion failed' });
     }
 });
 
@@ -553,18 +558,23 @@ router.post('/convert-color', upload.single('file'), apiKeyMiddleware, ensurePdf
     const outName = `${baseName}_${profile}.pdf`;
     const outPath = path.join(uploadDir, `${Date.now()}_out_${profile}.pdf`);
 
+    const controller = new AbortController();
+    req.on('close', () => controller.abort());
+
     try {
-        await gsConvertColor(inputPath, outPath, profile);
+        await gsConvertColor(inputPath, outPath, profile, { signal: controller.signal });
 
         sendPdfAndCleanup(res, outPath, outName, () => {
-            safeUnlink(inputPath);
             safeUnlink(outPath);
         });
     } catch (err) {
-        console.error('Color conversion failed:', err);
+        if (err.name !== 'AbortError') {
+            console.error('Color conversion failed:', err);
+            safeUnlink(outPath);
+            if (!res.headersSent) res.status(500).json({ error: 'Color conversion failed', details: err.message });
+        }
+    } finally {
         safeUnlink(inputPath);
-        safeUnlink(outPath);
-        res.status(500).json({ error: 'Color conversion failed', details: err.message });
     }
 });
 
@@ -579,20 +589,23 @@ router.post('/rebuild-150dpi', upload.single('file'), apiKeyMiddleware, ensurePd
     const outName = `${baseName}_rebuild_${dpi}dpi.pdf`;
     const outPath = path.join(uploadDir, `${Date.now()}_out_rebuild_${dpi}.pdf`);
 
+    const controller = new AbortController();
+    req.on('close', () => controller.abort());
+
     // Render pages to images and rebuild a fresh PDF.
     let tmpDir = null;
     try {
         tmpDir = await fs.promises.mkdtemp(path.join(uploadDir, 'rebuild_'));
         const imgPattern = path.join(tmpDir, 'page-%03d.png');
 
-        // 1) Rasterize PDF -> PNG (Ghostscript sí puede hacer esto)
+        // 1) Rasterize PDF -> PNG
         await runGs([
             '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
             '-sDEVICE=png16m',
             `-r${dpi}`,
             '-o', imgPattern,
             inputPath,
-        ]);
+        ], { signal: controller.signal });
 
         const imgs = (await fs.promises.readdir(tmpDir))
             .filter((f) => /^page-\d+\.png$/i.test(f))
@@ -625,26 +638,22 @@ router.post('/rebuild-150dpi', upload.single('file'), apiKeyMiddleware, ensurePd
         await fs.promises.writeFile(outPath, pdfBytes);
 
         sendPdfAndCleanup(res, outPath, outName, () => {
-            safeUnlink(inputPath);
             safeUnlink(outPath);
-            if (tmpDir) safeRmDir(tmpDir);
         });
     } catch (err) {
-        console.error('rebuild dpi failed:', err);
-        console.error('Error details:', {
-            message: err.message,
-            stack: err.stack,
-            inputPath,
-            outPath,
-            tmpDir
-        });
+        if (err.name !== 'AbortError') {
+            console.error('rebuild dpi failed:', err);
+            safeUnlink(outPath);
+            if (!res.headersSent) {
+                res.status(500).json({
+                    error: 'Rebuild failed',
+                    details: process.env.NODE_ENV === 'development' ? err.message : undefined
+                });
+            }
+        }
+    } finally {
         safeUnlink(inputPath);
-        safeUnlink(outPath);
-        safeRmDir(tmpDir);
-        res.status(500).json({
-            error: 'Rebuild failed',
-            details: process.env.NODE_ENV === 'development' ? err.message : undefined
-        });
+        if (tmpDir) safeRmDir(tmpDir);
     }
 });
 

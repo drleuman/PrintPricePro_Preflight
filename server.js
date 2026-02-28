@@ -14,6 +14,13 @@ const cors = require('cors');
 const { router: proxyRouter, handleWsUpgrade } = require('./server/routes/proxy');
 const pdfRouter = require('./server/routes/pdf');
 const { startCleanupTask } = require('./server/services/cleanup');
+const apiKeyMiddleware = require('./server/middleware/apiKey');
+const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
+const pino = require('pino-http')({
+  genReqId: (req) => req.headers['x-request-id'] || crypto.randomUUID(),
+  transport: process.env.NODE_ENV === 'development' ? { target: 'pino-pretty' } : undefined
+});
 
 // Simple logger without file-system writes to avoid PM2 watch-loop crashes
 const debugLog = (msg) => {
@@ -40,21 +47,6 @@ try {
   console.error('Diagnostic error:', e.message);
 }
 
-debugLog('Server starting with relaxed security...');
-
-// Check Ghostscript presence
-const { exec } = require('child_process');
-const GS_CMD_LOG = process.env.GS_PATH || (process.platform === 'win32' ? 'gswin64c' : 'gs');
-exec(`${GS_CMD_LOG} --version`, (err, stdout) => {
-  if (err) {
-    console.error(`[GS-CHECK] Ghostscript NOT found (${GS_CMD_LOG}). Conversion routes will fail.`);
-  } else {
-    console.log(`[GS-CHECK] Ghostscript found: ${stdout.trim()}`);
-  }
-});
-
-const helmet = require('helmet');
-
 const app = express();
 const port = Number.parseInt(process.env.PORT || '8080', 10);
 
@@ -62,17 +54,24 @@ if (pdfRouter.uploadDir) {
   startCleanupTask(pdfRouter.uploadDir);
 }
 
+app.use(pino);
+
 app.set('trust proxy', 1);
 
 // Security Headers
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-      "img-src": ["'self'", "data:", "https:"],
-      "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://unpkg.com"],
-      "connect-src": ["'self'", "https://generativelanguage.googleapis.com"],
-      "worker-src": ["'self'", "blob:", "data:"]
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      connectSrc: ["'self'", "https://generativelanguage.googleapis.com", "wss:", "ws:"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      fontSrc: ["'self'"],
+      workerSrc: ["'self'", "blob:", "data:"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
     },
   },
 }));
@@ -114,7 +113,7 @@ app.use((req, _res, next) => {
 });
 
 // -------- Routes --------
-app.use('/api/gemini-proxy', proxyRouter);
+app.use('/api/gemini-proxy', apiKeyMiddleware, proxyRouter);
 console.log('Mounting /api/convert routes...');
 app.use('/api/convert', (req, res, next) => {
   console.log(`[ROUTE-DEBUG] ${req.method} ${req.url}`);
@@ -164,6 +163,59 @@ app.use(
 );
 
 app.get('/healthz', (_req, res) => res.status(200).send('ok'));
+
+app.get('/ready', async (_req, res) => {
+  const { execFile } = require('child_process');
+  const { promisify } = require('util');
+  const execFileAsync = promisify(execFile);
+
+  const status = {
+    status: 'ok',
+    version: require('./package.json').version || '1.0.0',
+    details: {
+      ghostscript: { ok: false, message: 'checking' },
+      uploadDir: { ok: false, path: pdfRouter.uploadDir }
+    },
+    timestamp: new Date().toISOString()
+  };
+
+  try {
+    const gsCmd = process.env.GS_PATH || (process.platform === 'win32' ? 'gswin64c' : 'gs');
+    const { stdout } = await execFileAsync(gsCmd, ['--version'], { timeout: 3000 });
+    status.details.ghostscript = { ok: true, version: stdout.trim() };
+  } catch (err) {
+    status.status = 'error';
+    status.details.ghostscript = { ok: false, message: err.message };
+  }
+
+  try {
+    if (pdfRouter.uploadDir) {
+      fs.accessSync(pdfRouter.uploadDir, fs.constants.W_OK);
+      status.details.uploadDir.ok = true;
+    }
+  } catch (err) {
+    status.status = 'error';
+    status.details.uploadDir.message = err.message;
+  }
+
+  res.status(status.status === 'ok' ? 200 : 503).json(status);
+});
+
+app.get('/metrics', (_req, res) => {
+  const usage = process.memoryUsage();
+  res.json({
+    uptime: process.uptime(),
+    memory: {
+      rss: Math.round(usage.rss / 1024 / 1024) + 'MB',
+      heapTotal: Math.round(usage.heapTotal / 1024 / 1024) + 'MB',
+      heapUsed: Math.round(usage.heapUsed / 1024 / 1024) + 'MB',
+      external: Math.round(usage.external / 1024 / 1024) + 'MB',
+    },
+    cpu: process.cpuUsage(),
+    version: require('./package.json').version || '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
 
 app.get(/^\/(?!api\/).*/, (req, res) => {
   const indexPath = path.join(staticPath, 'index.html');
