@@ -135,27 +135,25 @@ export const IssuesPanel: React.FC<Props> = ({
     const sevColorClass = SEVERITY_COLORS[iss.severity] || ''; // Clase de color basada en la severidad
 
     return (
-      <div style={style} className="px-3 py-1 border-b border-gray-200 last:border-b-0">
+      <div style={style} className="px-3 border-b border-gray-100 last:border-b-0 flex items-center">
         <button
           type="button"
           onClick={() => onSelectIssue(iss)}
-          className={`w-full text-left ppp-issues-row ppp-issues-row--${sev} !py-1 !px-2`}
+          className={`w-full text-left ppp-issues-row ppp-issues-row--${sev} py-2 px-2`}
         >
-          <div className="ppp-issues-row-main flex items-center justify-between !gap-0">
-            <div className="flex flex-col min-w-0 flex-1">
-              <span className={`text-[10px] uppercase tracking-wider font-bold ${sevColorClass.split(' ')[0]} ${sevColorClass.split(' ')[1].replace('100', '200')}`}>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-col min-w-0 flex-1 gap-0.5">
+              <span className={`text-[9px] uppercase tracking-wider font-black ${sevColorClass.split(' ')[0]} ${(sevColorClass.split(' ')[1] || '').replace('100', '200')}`}>
                 {sevLabel}
               </span>
-              <span className="ppp-issues-row-title text-xs font-semibold text-gray-800 truncate">
+              <span className="ppp-issues-row-title text-xs font-semibold text-gray-800 line-clamp-2 leading-tight">
                 {iss.message || iss.title || iss.description || 'Issue'}
               </span>
+              <span className="text-[10px] text-gray-400 leading-none">{categoryLabel}</span>
             </div>
-            <span className="ppp-issues-row-page text-[10px] text-gray-500 ml-2 whitespace-nowrap">
+            <span className="ppp-issues-row-page text-[10px] text-gray-400 whitespace-nowrap shrink-0 mt-0.5">
               {t('page')} {iss.page ?? '—'}
             </span>
-          </div>
-          <div className="text-[10px] text-gray-400 mt-0.5 leading-none">
-            {categoryLabel}
           </div>
         </button>
       </div>
@@ -420,10 +418,10 @@ export const IssuesPanel: React.FC<Props> = ({
 
         {counts.total > 0 && (
           <FixedSizeList
-            height={580} // Altura fija razonable para el panel lateral
+            height={560}
             width="100%"
             itemCount={filtered.length}
-            itemSize={62} // Más compacto
+            itemSize={76}
             className="ppp-issues-list-virtualizada"
           >
             {Row}
