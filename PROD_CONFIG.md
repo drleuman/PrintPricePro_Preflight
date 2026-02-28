@@ -1,72 +1,93 @@
 # Production Configuration Guide (Nginx / Plesk)
 
-To resolve **502 Bad Gateway**, **PDF.js Worker MIME type**, and **streaming timeout** issues, apply the following configuration to your reverse proxy (Nginx/Plesk).
+To resolve **502 Bad Gateway**, **PDF.js Worker MIME type**, and **streaming timeout** issues, apply the following configuration into your Plesk **"Additional nginx directives"** box.
 
-> Add all blocks to **"Additional nginx directives"** in Plesk **Apache & Nginx Settings**.
+## Optimized Nginx Config (v2.0)
 
-## 0. WebSocket Upgrade Map (add once, at the top)
 ```nginx
-map $http_upgrade $connection_upgrade {
-    default upgrade;
-    ''      close;
-}
-```
+# =========================================================
+# PrintPrice Preflight - Optimized Nginx Config (v2.0)
+# =========================================================
 
-## 1. Fix PDF.js Worker MIME Type (CRITICAL)
-Nginx often serves assets directly. If `.mjs` is served as `application/octet-stream`, the worker fails.
-
-**A) Surgical Fix (Add to Plesk "Additional nginx directives"):**
-```nginx
+# 1. MIME Fix para PDF.js worker
 location ~* ^/assets/.*\.mjs$ {
     default_type application/javascript;
     add_header Content-Type application/javascript always;
     try_files $uri =404;
 }
-```
 
-**B) Global Fix (Recommended for SysAdmins):**
-Add `mjs` to your global `/etc/nginx/mime.types` file:
-```nginx
-application/javascript js mjs;
-```
-
----
-
-## 2. Fix Readiness Endpoint & 502 Timeouts
-Ensure the diagnostics endpoint is reachable and Nginx doesn't timeout during heavy PDF processing.
-
-**Add these to Plesk "Additional nginx directives":**
-```nginx
-# Handle the /ready endpoint explicitly
-location = /ready {
-    proxy_pass http://127.0.0.1:8080;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
+# 2. Caché de assets estáticos
+location ^~ /assets/ {
+    expires 30d;
+    add_header Cache-Control "public, max-age=2592000, immutable";
+    try_files $uri =404;
 }
 
-# Configure /api/ with extended timeouts
-location /api/ {
+# 3. Endpoints de Diagnóstico (vía Node)
+location = /ready {
+    proxy_read_timeout 600s;
     proxy_pass http://127.0.0.1:8080;
     proxy_http_version 1.1;
+    proxy_set_header Host $host;
+}
+
+location = /healthz {
+    proxy_read_timeout 600s;
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+}
+
+# 4. API Reverse Proxy (DISEÑO INDUSTRIAL)
+location /api/ {
+    proxy_read_timeout     600s;
+    proxy_connect_timeout  60s;
+    proxy_send_timeout     600s;
+
+    # NUEVO: Evita timeout DURANTE la subida del archivo
+    client_body_timeout    600s;
+
+    # AJUSTADO: Aumentado a 500MB para PDFs pesados
+    client_max_body_size   500M;
+
+    # CRÍTICO: Streaming directo para evitar 502 y lag
+    proxy_request_buffering off;
+    proxy_buffering off;
+
+    # Evita que Nginx intercepte errores de Node
+    proxy_intercept_errors off;
+
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Request-Id $request_id;
+
+    # Asegura que el streaming no se bufferiza
+    proxy_set_header X-Accel-Buffering no;
+}
+
+# 5. Websocket Upgrade (Gemini Proxy)
+location ^~ /api/gemini-proxy/ {
+    proxy_read_timeout 600s;
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 600s;
+
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
 
-    # Timeouts for Ghostscript (up to 10 mins)
-    proxy_read_timeout 600s;
-    proxy_send_timeout 600s;
-    proxy_connect_timeout 60s;
-    send_timeout 600s;
-
-    # Disable buffering for large streams
-    proxy_buffering off;
-    proxy_request_buffering off;
-
-    client_max_body_size 512m;
+    # Protocol Upgrade
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header X-Request-Id $request_id;
 }
 ```
 
