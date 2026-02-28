@@ -120,6 +120,28 @@ app.use('/api/convert', (req, res, next) => {
   next();
 }, pdfRouter);
 
+// -------- Static Files --------
+const staticPath = path.resolve(__dirname, 'dist');
+debugLog(`Serving static files from: ${staticPath}`);
+
+app.use(
+  express.static(staticPath, {
+    setHeaders(res, filePath) {
+      const ext = path.extname(filePath).toLowerCase();
+      // Force correct MIME types for ESM modules
+      if (ext === '.js' || ext === '.mjs') {
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      } else if (ext === '.css') {
+        res.setHeader('Content-Type', 'text/css; charset=utf-8');
+      }
+      // Critical for preventing "Strict MIME type checking" errors
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+    },
+  })
+);
+
+app.get('/healthz', (_req, res) => res.status(200).send('ok'));
+
 app.all('/api/*', (req, res) => {
   console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
@@ -144,28 +166,6 @@ app.use((err, req, res, next) => {
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
-
-// -------- Static Files --------
-const staticPath = path.resolve(__dirname, 'dist');
-debugLog(`Serving static files from: ${staticPath}`);
-
-app.use(
-  express.static(staticPath, {
-    setHeaders(res, filePath) {
-      const ext = path.extname(filePath).toLowerCase();
-      // Force correct MIME types for ESM modules
-      if (ext === '.js' || ext === '.mjs') {
-        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-      } else if (ext === '.css') {
-        res.setHeader('Content-Type', 'text/css; charset=utf-8');
-      }
-      // Critical for preventing "Strict MIME type checking" errors
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-    },
-  })
-);
-
-app.get('/healthz', (_req, res) => res.status(200).send('ok'));
 
 app.get('/ready', async (_req, res) => {
   const { execFile } = require('child_process');

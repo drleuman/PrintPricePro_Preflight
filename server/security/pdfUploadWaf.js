@@ -127,12 +127,12 @@ async function pdfUploadWafCheck({
     config,
 }) {
     const cfg = {
-        maxBytes: Number(process.env.PDF_MAX_BYTES || 50 * 1024 * 1024),
+        maxBytes: Number(process.env.PDF_MAX_BYTES || 200 * 1024 * 1024),
         maxPages: Number(process.env.PDF_MAX_PAGES || 1200),
         maxObjects: Number(process.env.PDF_MAX_OBJECTS || 20000),
         maxStreams: Number(process.env.PDF_MAX_STREAMS || 20000),
         rejectTokens: (process.env.PDF_REJECT_TOKENS ||
-            "/JavaScript,/OpenAction,/Launch,/AA").split(",").map(s => s.trim()).filter(Boolean),
+            "/JavaScript,/OpenAction").split(",").map(s => s.trim()).filter(Boolean),
         quarantineDir: process.env.PDF_QUARANTINE_DIR || path.join(process.cwd(), "uploads-quarantine"),
         ...config,
     };

@@ -313,7 +313,7 @@ async function ensurePdfMiddleware(req, res, next) {
                 detail: decision.detail,
                 sha256: decision.sha256,
                 quarantinePath: qPath,
-                message: 'File rejected by security policy'
+                message: `File rejected by security policy: ${decision.reason} (${decision.detail})`
             });
         }
 
