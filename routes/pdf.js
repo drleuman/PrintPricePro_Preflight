@@ -25,6 +25,36 @@ const { pdfUploadWafCheck, quarantineFile } = require('../security/pdfUploadWaf'
 
 const sanitizeFilename = (s) => String(s || '').replace(/[^a-zA-Z0-9._-]/g, '_');
 
+function sanitizeReportForHeader(report) {
+    if (!report) return {};
+    const sanitized = JSON.parse(JSON.stringify(report));
+
+    // Aggressively remove massive arrays/objects that scale with PDF page count
+    // to prevent Nginx "502 Bad Gateway" (Header Too Large error)
+    if (sanitized.prepress_summary?.tac_summary) delete sanitized.prepress_summary.tac_summary.pages_exceeding;
+    if (sanitized.prepress_summary?.spot_summary) {
+        delete sanitized.prepress_summary.spot_summary.spot_names;
+        delete sanitized.prepress_summary.spot_summary.non_whitelisted_spots;
+    }
+    if (sanitized.prepress_summary?.overprint_summary) {
+        delete sanitized.prepress_summary.overprint_summary.components;
+    }
+
+    // Strip raw tools output completely
+    if (sanitized.quality_checks?.input) {
+        delete sanitized.quality_checks.input.tools;
+        delete sanitized.quality_checks.input.large_images_per_page;
+        delete sanitized.quality_checks.input.images_per_page;
+    }
+    if (sanitized.quality_checks?.output) {
+        delete sanitized.quality_checks.output.tools;
+        delete sanitized.quality_checks.output.large_images_per_page;
+        delete sanitized.quality_checks.output.images_per_page;
+    }
+
+    return sanitized;
+}
+
 function execCmd(cmd, args, opts = {}) {
     const timeoutMs = opts.timeoutMs ?? 60000; // Increased timeout for larger docs
     return new Promise((resolve) => {
@@ -1355,7 +1385,8 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
         finalPathToCleanup = finalPath;
 
         const tElapsed = Date.now() - tStart;
-        const json = Buffer.from(JSON.stringify(report), 'utf8').toString('base64');
+        const sanitizedReport = sanitizeReportForHeader(report);
+        const json = Buffer.from(JSON.stringify(sanitizedReport), 'utf8').toString('base64');
         res.setHeader('X-PPP-Autofix-Report', json);
         res.setHeader('X-PPP-Autofix-ElapsedMs', tElapsed.toString());
 
@@ -1389,7 +1420,7 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
         // Handle specific rasterization blocking error
         if (err.message === 'OUTPUT_RASTERIZED_BLOCKED') {
             const blockedReport = err.report;
-            const reportJson = Buffer.from(JSON.stringify(blockedReport || {}), 'utf8').toString('base64');
+            const reportJson = Buffer.from(JSON.stringify(sanitizeReportForHeader(blockedReport)), 'utf8').toString('base64');
             res.setHeader('X-PPP-Autofix-Report', reportJson);
             return res.status(422).json({
                 ok: false,
