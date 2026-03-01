@@ -29,27 +29,33 @@ function sanitizeReportForHeader(report) {
     if (!report) return {};
     const sanitized = JSON.parse(JSON.stringify(report));
 
-    // Aggressively remove massive arrays/objects that scale with PDF page count
-    // to prevent Nginx "502 Bad Gateway" (Header Too Large error)
-    if (sanitized.prepress_summary?.tac_summary) delete sanitized.prepress_summary.tac_summary.pages_exceeding;
-    if (sanitized.prepress_summary?.spot_summary) {
-        delete sanitized.prepress_summary.spot_summary.spot_names;
-        delete sanitized.prepress_summary.spot_summary.non_whitelisted_spots;
-    }
-    if (sanitized.prepress_summary?.overprint_summary) {
-        delete sanitized.prepress_summary.overprint_summary.components;
+    // NGINX HAS A 4KB HEADER LIMIT (default proxy_buffer_size).
+    // We must aggressively delete EVERYTHING the frontend does not STRICTLY need to display the "Fix Successful" page.
+    // The frontend only needs `prepress_summary` (basic stats), `policy`, and `applied` (to show what was fixed)
+
+    delete sanitized.quality_checks;
+    delete sanitized.fix_plan;
+    delete sanitized.warnings;
+    delete sanitized.debug_files;
+
+    if (sanitized.prepress_summary) {
+        if (sanitized.prepress_summary.tac_summary) delete sanitized.prepress_summary.tac_summary.pages_exceeding;
+        if (sanitized.prepress_summary.spot_summary) {
+            delete sanitized.prepress_summary.spot_summary.spot_names;
+            delete sanitized.prepress_summary.spot_summary.non_whitelisted_spots;
+            delete sanitized.prepress_summary.spot_summary.whitelisted_spots;
+        }
+        if (sanitized.prepress_summary.overprint_summary) {
+            delete sanitized.prepress_summary.overprint_summary.components;
+        }
     }
 
-    // Strip raw tools output completely
-    if (sanitized.quality_checks?.input) {
-        delete sanitized.quality_checks.input.tools;
-        delete sanitized.quality_checks.input.large_images_per_page;
-        delete sanitized.quality_checks.input.images_per_page;
-    }
-    if (sanitized.quality_checks?.output) {
-        delete sanitized.quality_checks.output.tools;
-        delete sanitized.quality_checks.output.large_images_per_page;
-        delete sanitized.quality_checks.output.images_per_page;
+    // Shrink applied array to just action names
+    if (Array.isArray(sanitized.applied)) {
+        sanitized.applied = sanitized.applied.map(a => ({
+            action: a.action,
+            ok: a.ok
+        }));
     }
 
     return sanitized;
