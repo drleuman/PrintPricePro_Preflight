@@ -1445,18 +1445,6 @@ async function analyzePdf(
         'If you intended to print in grayscale, please review your color settings.',
       bbox: { x: 0, y: 0, width: 1, height: 1 },
     });
-  } else {
-    issues.push({
-      id: 'no-explicit-color-ops',
-      page: 1,
-      category: ISSUE_CATEGORY.COLOR,
-      severity: Severity.INFO,
-      message: 'No explicit RGB color operators detected in sampled pages.',
-      details:
-        'The engine did not detect operators that set RGB colors. ' +
-        'This suggests a grayscale / black-only interior, which is good for economical book printing.',
-      bbox: { x: 0, y: 0, width: 1, height: 1 },
-    });
   }
 
   // Transparencias
@@ -1559,45 +1547,7 @@ async function analyzePdf(
     }
   }
 
-  // Texto demasiado pequeño (legibilidad)
-  if (tinyTextChunks > 0) {
-    const minRounded = isFinite(minFontPt) ? Math.round(minFontPt * 10) / 10 : null;
-
-    issues.push({
-      id: 'text-too-small',
-      page: firstTinyTextPage || minFontPage || 1,
-      category: ISSUE_CATEGORY.FONTS,
-      severity: Severity.WARNING,
-      message: 'Very small text detected (below 6 pt).',
-      details:
-        `The preflight detected ${tinyTextChunks} text runs with a size below 6 pt on sampled pages. ` +
-        (minRounded
-          ? `The smallest estimated text size is around ${minRounded} pt (page ${firstTinyTextPage ?? minFontPage
-          }). `
-          : '') +
-        'Text below 6 pt is usually too small for comfortable reading in offset printing; ' +
-        'consider increasing font size for body text and critical information.',
-      bbox: { x: 0, y: 0, width: 1, height: 1 },
-    });
-  } else if (smallTextChunks > 0) {
-    const minRounded = isFinite(minFontPt) ? Math.round(minFontPt * 10) / 10 : null;
-
-    issues.push({
-      id: 'text-small',
-      page: firstSmallTextPage || minFontPage || 1,
-      category: ISSUE_CATEGORY.FONTS,
-      severity: Severity.INFO,
-      message: 'Small text detected (around 6–8 pt).',
-      details:
-        `The preflight detected ${smallTextChunks} text runs between approximately 6 and 8 pt. ` +
-        (minRounded
-          ? `The smallest estimated text size is around ${minRounded} pt (page ${firstSmallTextPage ?? minFontPage
-          }). `
-          : '') +
-        'This size can work for footnotes or legal text, but may be too small for long reading or low-contrast combinations.',
-      bbox: { x: 0, y: 0, width: 1, height: 1 },
-    });
-  }
+  // Text size checks removed per client feedback
 
   // --------- PACK TODOS: color avanzado + trazos ---------
 
