@@ -296,13 +296,22 @@ async function addBleedCanvasPdf(inputPath, outPath, bleedMm = 3) {
         } else {
             // Robust fallback for older builds: manually insert into content streams array
             try {
-                const contents = p.node.get(PDFName.of('Contents'));
+                let contents = p.node.get(PDFName.of('Contents'));
+                let actualContents = contents;
+
+                // If it's a reference, we must resolve it to check its true type, 
+                // but we might want to keep the reference or just unwrap it.
+                // Normally it's safe to directly reference the streams in a new array.
+                if (doc.context.lookup(contents) instanceof PDFArray) {
+                    actualContents = doc.context.lookup(contents);
+                }
+
                 const newStream = doc.context.register(
                     doc.context.flateStream(ops.map(o => o.toString()).join(' '))
                 );
 
-                if (contents instanceof PDFArray) {
-                    p.node.set(PDFName.of('Contents'), doc.context.obj([newStream, ...contents.asArray()]));
+                if (actualContents instanceof PDFArray) {
+                    p.node.set(PDFName.of('Contents'), doc.context.obj([newStream, ...actualContents.asArray()]));
                 } else if (contents) {
                     p.node.set(PDFName.of('Contents'), doc.context.obj([newStream, contents]));
                 } else {
