@@ -217,7 +217,7 @@ export default function App() {
 
         setAutoFixReport(actualReport || null);
         updateFileState(finalFile, { name: nextFile.name, size: finalFile.size, type: 'application/pdf' });
-        downloadAndRemember(finalBlob, newName, false);
+        downloadAndRemember(actualBlob, newName, false);
 
         setProcessMessage('AI Wizard: Performing final quality check...');
         setProcessStage('verify');
