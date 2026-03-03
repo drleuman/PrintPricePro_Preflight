@@ -301,8 +301,8 @@ async function addBleedCanvasPdf(inputPath, outPath, bleedMm = 3) {
                     doc.context.flateStream(ops.map(o => o.toString()).join(' '))
                 );
 
-                if (Array.isArray(contents)) {
-                    p.node.set(PDFName.of('Contents'), doc.context.obj([newStream, ...contents]));
+                if (contents instanceof PDFArray) {
+                    p.node.set(PDFName.of('Contents'), doc.context.obj([newStream, ...contents.asArray()]));
                 } else if (contents) {
                     p.node.set(PDFName.of('Contents'), doc.context.obj([newStream, contents]));
                 } else {
