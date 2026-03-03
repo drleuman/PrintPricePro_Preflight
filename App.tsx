@@ -203,6 +203,10 @@ export default function App() {
             const res = await fetch(`/api/convert/job/status/${jobId}`);
             const jobData = await res.json();
             const fileRes = await fetch(`/api/convert/download-job/${jobId}`);
+            if (!fileRes.ok) {
+              const errData = await fileRes.json().catch(() => ({}));
+              throw new Error(errData.error || `Download failed: HTTP ${fileRes.status}`);
+            }
             actualBlob = await fileRes.blob();
             actualReport = jobData.report;
             setLdmActive(false);
@@ -512,6 +516,10 @@ export default function App() {
           // For now let's assume certified status means we can proceed
           // We'll need a way to get the final blob
           const fileRes = await fetch(`/api/convert/download-job/${jobId}`);
+          if (!fileRes.ok) {
+            const errData = await fileRes.json().catch(() => ({}));
+            throw new Error(errData.error || `Download failed: HTTP ${fileRes.status}`);
+          }
           const finalBlob = await fileRes.blob();
 
           const suffix = '_autofix_ldm.pdf';
