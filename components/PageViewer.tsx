@@ -335,10 +335,10 @@ export const PageViewer: React.FC<PageViewerProps> = ({
         )}
 
         {/* The PDF Stage (constrained box) */}
-        <div className="relative w-full h-full flex items-center justify-center overflow-auto custom-scrollbar">
+        <div className="relative w-full h-full flex overflow-auto custom-scrollbar p-4">
           <div
             id="pdf-stage"
-            className="relative shadow-2xl border border-gray-200 bg-white inline-block"
+            className="relative shadow-2xl border border-gray-200 bg-white inline-block m-auto"
             style={{ minWidth: '100px', minHeight: '100px' }}
           >
             {/* The PDF.js Canvas */}
