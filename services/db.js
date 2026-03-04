@@ -1,29 +1,25 @@
-const { Pool } = require('pg');
+const mysql = require('mysql2/promise');
 
 let pool;
 try {
-    pool = new Pool({
-        connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/preflight',
-        max: 20,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 2000,
+    pool = mysql.createPool({
+        uri: process.env.DATABASE_URL || 'mysql://Kike:L8YwOuq0i4$v&dql@localhost:3306/preflight_',
+        waitForConnections: true,
+        connectionLimit: 20,
+        queueLimit: 0,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 0
     });
 
-    pool.on('error', (err) => {
-        console.error('[DB-POOL] Unexpected error on idle client:', err.message);
-    });
-
-    // Test connection at startup without crashing the process
-    pool.query('SELECT NOW()').then(() => {
-        console.log('[DB-READY] Connected to PostgreSQL');
+    pool.getConnection().then((conn) => {
+        console.log('[DB-READY] Connected to MySQL');
+        conn.release();
     }).catch(err => {
-        console.error('[DB-ERROR] PostgreSQL connection failed:', {
+        console.error('[DB-ERROR] MySQL connection failed:', {
             message: err.message,
-            code: err.code,
-            detail: err.detail,
-            hint: err.hint
+            code: err.code
         });
-        console.warn('[DB-WARN] The app will continue running but database-dependent features (LDM, jobs) will fail.');
+        console.warn('[DB-WARN] The app will continue running but database-dependent features will fail.');
     });
 
 } catch (e) {
@@ -31,6 +27,11 @@ try {
 }
 
 module.exports = {
-    query: (text, params) => pool ? pool.query(text, params) : Promise.reject(new Error('DB not initialized')),
+    query: async (text, params) => {
+        if (!pool) return Promise.reject(new Error('DB not initialized'));
+        const mysqlQuery = text.replace(/\$\d+/g, '?');
+        const [rows] = await pool.query(mysqlQuery, params);
+        return { rows };
+    },
     pool,
 };

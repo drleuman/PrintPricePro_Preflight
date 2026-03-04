@@ -27,6 +27,8 @@ const pino = require('pino-http')({
 const { checkAllDependencies } = require('./services/dependencyChecker');
 const { initSchema } = require('./services/dbSchema');
 
+initSchema(); // Auto-create tables for V2 MySQL
+
 // Initialize V2 Workers (BE-005)
 if (process.env.NODE_ENV !== 'test') {
   require('./workers/v2-worker');

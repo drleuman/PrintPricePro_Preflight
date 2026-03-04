@@ -21,11 +21,10 @@ class JobManager {
         const sql = `
             INSERT INTO jobs (id, status, original_name, priority, requested_profile)
             VALUES ($1, $2, $3, $4, $5)
-            RETURNING *
         `;
         const values = [jobId, 'UPLOADED', originalName, options.priority || 0, options.profile || 'iso_coated_v2'];
-        const res = await query(sql, values);
-        return res.rows[0];
+        await query(sql, values);
+        return { id: jobId, status: 'UPLOADED', original_name: originalName, priority: options.priority || 0, requested_profile: options.profile || 'iso_coated_v2' };
     }
 
     static async updateJob(jobId, updates) {
@@ -33,13 +32,12 @@ class JobManager {
         if (keys.length === 0) return;
 
         const setClause = keys.map((key, i) => {
-            if (key === 'report_json') return `${key} = $${i + 2}::jsonb`;
             return `${key} = $${i + 2}`;
         }).join(', ');
-        const sql = `UPDATE jobs SET ${setClause}, updated_at = NOW() WHERE id = $1 RETURNING *`;
+        const sql = `UPDATE jobs SET ${setClause}, updated_at = NOW() WHERE id = $1`;
         const values = [jobId, ...Object.values(updates).map(v => typeof v === 'object' ? JSON.stringify(v) : v)];
-        const res = await query(sql, values);
-        return res.rows[0];
+        await query(sql, values);
+        return { id: jobId, ...updates };
     }
 
     static async getJob(jobId) {
@@ -51,10 +49,9 @@ class JobManager {
         const sql = `
             INSERT INTO job_tasks (job_id, task_type, payload_json, page_no)
             VALUES ($1, $2, $3, $4)
-            RETURNING *
         `;
         const res = await query(sql, [jobId, taskType, JSON.stringify(payload), pageNo]);
-        return res.rows[0];
+        return { id: res.insertId, job_id: jobId, task_type: taskType, payload_json: payload, page_no: pageNo };
     }
 
     static getOriginalPath(jobId) {

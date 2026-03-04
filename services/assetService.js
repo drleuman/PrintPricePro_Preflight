@@ -38,12 +38,19 @@ class AssetService {
         const sql = `
             INSERT INTO assets (id, tenant_id, filename, storage_path, sha256, size, mime_type)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING *
         `;
         const values = [id, tenantId, filename, storagePath, sha256, size, 'application/pdf'];
 
-        const result = await db.query(sql, values);
-        return result.rows[0];
+        await db.query(sql, values);
+        return {
+            id,
+            tenant_id: tenantId,
+            filename,
+            storage_path: storagePath,
+            sha256,
+            size,
+            mime_type: 'application/pdf'
+        };
     }
 
     /**

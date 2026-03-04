@@ -1,101 +1,94 @@
 const db = require('./db');
 
-const SCHEMA_SQL = `
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Table: assets
-CREATE TABLE IF NOT EXISTS assets (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL DEFAULT 'default',
+const SCHEMA_QUERIES = [
+    `CREATE TABLE IF NOT EXISTS assets (
+    id VARCHAR(36) PRIMARY KEY,
+    tenant_id VARCHAR(255) NOT NULL DEFAULT 'default',
     filename TEXT NOT NULL,
     storage_path TEXT NOT NULL,
-    sha256 TEXT,
-    mime_type TEXT DEFAULT 'application/pdf',
+    sha256 VARCHAR(64),
+    mime_type VARCHAR(100) DEFAULT 'application/pdf',
     size BIGINT,
-    metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Table: jobs
-CREATE TABLE IF NOT EXISTS jobs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL DEFAULT 'default',
-    asset_id UUID REFERENCES assets(id) ON DELETE CASCADE,
-    type TEXT NOT NULL CHECK (type IN ('PREFLIGHT', 'AUTOFIX', 'ARTIFACT')),
-    status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED')),
+    metadata JSON,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);`,
+    `CREATE TABLE IF NOT EXISTS jobs (
+    id VARCHAR(36) PRIMARY KEY,
+    tenant_id VARCHAR(255) NOT NULL DEFAULT 'default',
+    asset_id VARCHAR(36),
+    type VARCHAR(50) DEFAULT 'LEGACY',
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
     priority INTEGER DEFAULT 0,
-    worker_id TEXT,
+    worker_id VARCHAR(255),
     progress INTEGER DEFAULT 0,
-    error JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Index for job polling/queueing
-CREATE INDEX IF NOT EXISTS idx_jobs_status_priority ON jobs(status, priority DESC, created_at ASC) WHERE status = 'PENDING';
-
--- Table: reports
-CREATE TABLE IF NOT EXISTS reports (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    job_id UUID REFERENCES jobs(id) ON DELETE CASCADE,
-    asset_id UUID REFERENCES assets(id) ON DELETE CASCADE,
-    version TEXT DEFAULT 'v2',
+    error JSON,
+    original_name TEXT,
+    requested_profile VARCHAR(100),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE
+);`,
+    `CREATE TABLE IF NOT EXISTS job_tasks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    job_id VARCHAR(36) NOT NULL,
+    task_type VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    payload_json JSON,
+    page_no INTEGER,
+    run_after DATETIME,
+    locked_by VARCHAR(255),
+    locked_at DATETIME,
+    started_at DATETIME,
+    attempts INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+);`,
+    `CREATE TABLE IF NOT EXISTS reports (
+    id VARCHAR(36) PRIMARY KEY,
+    job_id VARCHAR(36),
+    asset_id VARCHAR(36),
+    version VARCHAR(20) DEFAULT 'v2',
     summary TEXT,
-    findings JSONB NOT NULL DEFAULT '[]',
-    data JSONB,
-    delta JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Table: metrics
-CREATE TABLE IF NOT EXISTS metrics (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    job_id UUID REFERENCES jobs(id) ON DELETE CASCADE,
-    tenant_id TEXT NOT NULL DEFAULT 'default',
-    policy_slug TEXT NOT NULL,
+    findings JSON,
+    data JSON,
+    delta JSON,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
+    FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE
+);`,
+    `CREATE TABLE IF NOT EXISTS metrics (
+    id VARCHAR(36) PRIMARY KEY,
+    job_id VARCHAR(36),
+    tenant_id VARCHAR(255) NOT NULL DEFAULT 'default',
+    policy_slug VARCHAR(255) NOT NULL,
     success BOOLEAN NOT NULL,
     processing_ms BIGINT NOT NULL,
     file_size_bytes BIGINT,
     page_count INTEGER,
     delta_score INTEGER,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Trigger for jobs updated_at
-DROP TRIGGER IF EXISTS update_jobs_updated_at ON jobs;
-CREATE TRIGGER update_jobs_updated_at
-    BEFORE UPDATE ON jobs
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-`;
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+);`
+];
 
 /**
  * Initializes the database schema.
  */
 async function initSchema() {
     try {
-        console.log('[DB-SCHEMA] Initializing V2 tables...');
-        await db.query(SCHEMA_SQL);
-        console.log('[DB-SCHEMA] V2 tables initialized successfully.');
+        console.log('[DB-SCHEMA] Initializing V2 MySQL tables...');
+        for (const query of SCHEMA_QUERIES) {
+            await db.query(query);
+        }
+        console.log('[DB-SCHEMA] V2 MySQL tables initialized successfully.');
         return true;
     } catch (err) {
         console.error('[DB-SCHEMA] Initialization failed:', err.message);
-        // We don't crash the server here, as db.js already warns about failing features.
         return false;
     }
 }
 
 module.exports = {
     initSchema,
-    SCHEMA_SQL
+    SCHEMA_QUERIES
 };
