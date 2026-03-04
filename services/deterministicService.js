@@ -4,7 +4,7 @@ const heuristicService = require('./heuristicService');
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
-const { PDFDocument } = require('pdf-lib');
+const { PDFDocument, PDFName } = require('pdf-lib');
 
 class DeterministicService {
     /**
@@ -17,7 +17,7 @@ class DeterministicService {
         const pdfBytes = fs.readFileSync(filePath);
         const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
         const catalog = pdfDoc.catalog;
-        const hasOutputIntent = catalog.has(PDFDocument.PDFName.of('OutputIntents'));
+        const hasOutputIntent = catalog.has(PDFName.of('OutputIntents'));
 
         const results = {
             info: await this.getPdfInfo(filePath),
