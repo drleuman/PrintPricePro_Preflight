@@ -722,7 +722,7 @@ export default function App() {
     setProcessMessage('Igniting V2 Advanced Engine...');
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('pdf', file);
 
       const res = await fetch('/api/v2/preflight/analyze', {
         method: 'POST',

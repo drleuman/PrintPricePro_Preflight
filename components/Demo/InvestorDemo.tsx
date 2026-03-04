@@ -81,8 +81,9 @@ export function InvestorDemo({ onBack, onJobComplete }: InvestorDemoProps) {
         if (!file) return;
         setUploading(true);
         const fd = new FormData();
-        fd.append('file', file);
-        fd.append('policy', selectedPolicy);
+        fd.append('pdf', file);
+        const selectedProfile = selectedPolicy; // Assuming selectedProfile should be derived from selectedPolicy
+        fd.append('policy', selectedProfile);
 
         try {
             const res = await fetch('/api/v2/preflight/analyze', { method: 'POST', body: fd });
