@@ -84,7 +84,7 @@ async function runJob(filePath) {
             filename,
             status: 'FAILED',
             duration: Date.now() - start,
-            error: err.response?.data?.error || err.message,
+            error: err.response?.data ? JSON.stringify(err.response.data) : err.message,
             code: err.response?.status
         };
     }
