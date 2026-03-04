@@ -53,7 +53,7 @@ async function pollJob(jobId) {
             const status = (res.data.status || '').toLowerCase();
             const result = res.data.result;
             if (status === 'completed' || status === 'done') return { ok: true, status, result };
-            if (status === 'failed' || status === 'error' || status === 'canceled') return { ok: false, status, result };
+            if (status === 'failed' || status === 'error' || status === 'canceled') return { ok: false, status, result, error: res.data.error || result };
         } catch (e) {
             // continue polling
         }
@@ -77,7 +77,7 @@ async function runJob(filePath) {
             status: result.ok ? 'SUCCESS' : 'FAILED',
             duration,
             jobStatus: result.status,
-            error: result.ok ? null : result.status
+            error: result.ok ? null : (result.error ? JSON.stringify(result.error) : result.status)
         };
     } catch (err) {
         return {
