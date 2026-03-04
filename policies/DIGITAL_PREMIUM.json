@@ -1,0 +1,56 @@
+{
+    "slug": "DIGITAL_PREMIUM",
+    "name": "Digital Premium Color",
+    "description": "Premium digital printing for color books and high-quality marketing materials. CMYK strongly preferred. Higher resolution standards.",
+    "category": "digital",
+    "tier": "professional",
+    "color": {
+        "mode": "cmyk",
+        "icc_profile": "PSO_Coated_v3.icc",
+        "convert_rgb": true,
+        "tac_limit": 320,
+        "allow_spot_colors": true,
+        "spot_color_whitelist": [
+            "CutContour",
+            "Varnish"
+        ],
+        "require_output_intent": false,
+        "flatten_transparency": true,
+        "render_intent": 1
+    },
+    "document": {
+        "bleed_mm_required": 3,
+        "min_resolution_dpi": 200,
+        "max_pages": 600,
+        "max_file_mb": 500,
+        "max_spot_colors": 2,
+        "allowed_pdf_versions": [
+            "1.3",
+            "1.4",
+            "1.5",
+            "1.6",
+            "1.7"
+        ]
+    },
+    "processing": {
+        "job_timeout_ms": 300000,
+        "gs_concurrency": 2,
+        "dpi_rebuild": 300
+    },
+    "autofix": {
+        "actions": [
+            "convert_cmyk",
+            "flatten_transparency",
+            "add_bleed"
+        ],
+        "allow_lossy": false
+    },
+    "checks": {
+        "error_on_rgb": false,
+        "error_on_missing_bleed": true,
+        "error_on_tac_exceeded": true,
+        "warn_on_low_resolution": true,
+        "warn_on_spot_colors": false,
+        "warn_on_type3_fonts": true
+    }
+}

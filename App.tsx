@@ -6,7 +6,9 @@ import { Step3Fix } from './components/steps/Step3Fix';
 import { Step4Review } from './components/steps/Step4Review';
 import { LoaderOverlay } from './components/LoaderOverlay';
 import { AIAuditModal } from './components/AIAuditModal';
+import { V2ReportViewer } from './components/V2ReportViewer';
 import { useLocale, Locale } from './i18n';
+import { InvestorDemo } from './components/Demo/InvestorDemo';
 
 import { t } from './i18n';
 import {
@@ -69,6 +71,9 @@ export default function App() {
   // Preview State (Server-side GS PNGs)
   const [previewPages, setPreviewPages] = useState<string[] | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+
+  // V2 Engine State
+  const [v2JobId, setV2JobId] = useState<string | null>(null);
 
   // UI / Loader
   const [processMessage, setProcessMessage] = useState<string | null>(null);
@@ -711,6 +716,31 @@ export default function App() {
     }
   }, [file, fileMeta, autoFixServer, updateFileState, downloadAndRemember, runAnalysis]);
 
+  const startV2Preflight = useCallback(async () => {
+    if (!file) return;
+    setProcessMessage('Igniting V2 Advanced Engine...');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/v2/preflight', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      if (data.jobId) {
+        setV2JobId(data.jobId);
+      } else {
+        throw new Error(data.error || 'Failed to start V2 job');
+      }
+    } catch (err: any) {
+      alert(`V2 Engine failed: ${err.message}`);
+    } finally {
+      setProcessMessage(null);
+    }
+  }, [file]);
+
   const onPageChange = useCallback((p: number) => setCurrentPage(p), []);
 
   const openIssue = useCallback((issue: Issue | null) => {
@@ -766,7 +796,19 @@ export default function App() {
         zIndex: 0, transform: 'translate(-30%, 30%)'
       }} />
 
-      <div style={{ position: 'absolute', top: '24px', right: '32px', zIndex: 50 }}>
+      <div style={{ position: 'absolute', top: '24px', right: '32px', zIndex: 50, display: 'flex', gap: '12px', alignItems: 'center' }}>
+        {appMode !== 'demo' && !v2JobId && (
+          <button
+            onClick={() => setAppMode('demo')}
+            style={{
+              background: '#111827', color: 'white', border: 'none', borderRadius: '16px', fontSize: '12px',
+              fontWeight: 700, padding: '10px 16px', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              transition: 'transform 0.1s'
+            }}
+          >
+            🚀 Investor Demo
+          </button>
+        )}
         <select
           value={currentLocale}
           onChange={(e) => setLocale(e.target.value as Locale)}
@@ -782,6 +824,7 @@ export default function App() {
         </select>
       </div>
 
+
       <LoaderOverlay isOpen={!!processMessage || isWorkerRunning} message={processMessage || 'Processing...'} stageKey={processStage} />
 
       <main style={{
@@ -792,116 +835,131 @@ export default function App() {
         position: 'relative',
         zIndex: 10
       }}>
-        <Stepper currentStep={currentStep} steps={WORKFLOW_STEPS} />
+        {v2JobId ? (
+          <V2ReportViewer jobId={v2JobId} onClose={() => setV2JobId(null)} />
+        ) : appMode === 'demo' ? (
+          <InvestorDemo
+            onBack={() => setAppMode(null)}
+            onJobComplete={(id) => {
+              setAppMode(null);
+              setV2JobId(id);
+            }}
+          />
+        ) : (
+          <>
+            <Stepper currentStep={currentStep} steps={WORKFLOW_STEPS} />
 
-        <div style={{ marginTop: '16px' }}>
-          {currentStep === 1 && (
-            <Step1Upload
-              file={file}
-              fileMeta={fileMeta}
-              onFileSelect={onFileSelect}
-              onNext={(mode) => {
-                setAppMode(mode);
-                if (mode === 'ai') {
-                  runMagicAiFix();
-                } else {
-                  setCurrentStep(2);
-                }
-              }}
-            />
-          )}
+            <div style={{ marginTop: '16px' }}>
+              {currentStep === 1 && (
+                <Step1Upload
+                  file={file}
+                  fileMeta={fileMeta}
+                  onFileSelect={onFileSelect}
+                  onNext={(mode) => {
+                    setAppMode(mode);
+                    if (mode === 'ai') {
+                      runMagicAiFix();
+                    } else {
+                      setCurrentStep(2);
+                    }
+                  }}
+                />
+              )}
 
-          {currentStep === 2 && (
-            <Step2Analysis
-              file={file}
-              fileMeta={fileMeta}
-              result={result}
-              autoFixBefore={autoFixBefore}
-              autoFixAfter={autoFixAfter}
-              autoFixReport={autoFixReport}
-              autoFixRunId={autoFixRunId}
-              isRunning={isRunning}
-              onRunAnalysis={runPreflight}
-              onNext={() => setCurrentStep(3)}
-              onSkipToReview={() => setCurrentStep(4)}
-              onBack={() => setCurrentStep(1)}
-            />
-          )}
+              {currentStep === 2 && (
+                <Step2Analysis
+                  file={file}
+                  fileMeta={fileMeta}
+                  result={result}
+                  autoFixBefore={autoFixBefore}
+                  autoFixAfter={autoFixAfter}
+                  autoFixReport={autoFixReport}
+                  autoFixRunId={autoFixRunId}
+                  isRunning={isRunning}
+                  onRunAnalysis={runPreflight}
+                  onRunV2Analysis={startV2Preflight}
+                  onNext={() => setCurrentStep(3)}
+                  onSkipToReview={() => setCurrentStep(4)}
+                  onBack={() => setCurrentStep(1)}
+                />
+              )}
 
-          {currentStep === 3 && (
-            <Step3Fix
-              file={file}
-              fileMeta={fileMeta}
-              result={result}
-              autoFixBefore={autoFixBefore}
-              autoFixAfter={autoFixAfter}
-              autoFixReport={autoFixReport}
-              autoFixRunId={autoFixRunId}
-              compareEnabled={compareEnabled}
-              numPages={numPages}
-              currentPage={currentPage}
-              selectedIssue={selectedIssue}
-              heatmapData={heatmapData}
-              isHeatmapLoading={heatmapLoading}
-              isRunning={isRunning}
-              selectedProfile={selectedProfile}
-              onPageChange={onPageChange}
-              onNumPagesChange={setNumPages}
-              onSelectIssue={openIssue}
-              onRunAnalysis={runPreflight}
-              onRunHeatmap={() => file && fileMeta && handleRunHeatmap(file, fileMeta, currentPage)}
-              onRunVisualCheck={handleRunVisualCheck}
-              onFixBleed={handleFixBleed}
-              onConvertGrayscale={convertToGrayscale}
-              onConvertCMYK={convertColors}
-              onRebuildPdf={upscaleLowResImages}
-              onAutoFix={autoFixPdf}
-              onToggleCompare={setCompareEnabled}
-              onProfileChange={setSelectedProfile}
-              onOpenAIAudit={handleOpenAIAudit}
-              onOpenEfficiency={handleOpenEfficiencyTips}
-              onNext={() => setCurrentStep(4)}
-              onBack={() => setCurrentStep(2)}
-              serverAvailable={serverAvailable}
-              previewPages={previewPages}
-              previewLoading={previewLoading}
-              ldmActive={ldmActive}
-              ldmProgress={ldmProgress}
-              ldmStatus={ldmStatus}
-              ldmMode={ldmMode}
-              ldmJobId={ldmJobId}
-            />
-          )}
+              {currentStep === 3 && (
+                <Step3Fix
+                  file={file}
+                  fileMeta={fileMeta}
+                  result={result}
+                  autoFixBefore={autoFixBefore}
+                  autoFixAfter={autoFixAfter}
+                  autoFixReport={autoFixReport}
+                  autoFixRunId={autoFixRunId}
+                  compareEnabled={compareEnabled}
+                  numPages={numPages}
+                  currentPage={currentPage}
+                  selectedIssue={selectedIssue}
+                  heatmapData={heatmapData}
+                  isHeatmapLoading={heatmapLoading}
+                  isRunning={isRunning}
+                  selectedProfile={selectedProfile}
+                  onPageChange={onPageChange}
+                  onNumPagesChange={setNumPages}
+                  onSelectIssue={openIssue}
+                  onRunAnalysis={runPreflight}
+                  onRunHeatmap={() => file && fileMeta && handleRunHeatmap(file, fileMeta, currentPage)}
+                  onRunVisualCheck={handleRunVisualCheck}
+                  onFixBleed={handleFixBleed}
+                  onConvertGrayscale={convertToGrayscale}
+                  onConvertCMYK={convertColors}
+                  onRebuildPdf={upscaleLowResImages}
+                  onAutoFix={autoFixPdf}
+                  onToggleCompare={setCompareEnabled}
+                  onProfileChange={setSelectedProfile}
+                  onOpenAIAudit={handleOpenAIAudit}
+                  onOpenEfficiency={handleOpenEfficiencyTips}
+                  onNext={() => setCurrentStep(4)}
+                  onBack={() => setCurrentStep(2)}
+                  serverAvailable={serverAvailable}
+                  previewPages={previewPages}
+                  previewLoading={previewLoading}
+                  ldmActive={ldmActive}
+                  ldmProgress={ldmProgress}
+                  ldmStatus={ldmStatus}
+                  ldmMode={ldmMode}
+                  ldmJobId={ldmJobId}
+                />
+              )}
 
-          {currentStep === 4 && (
-            <Step4Review
-              file={file}
-              fileMeta={fileMeta}
-              result={result}
-              numPages={numPages}
-              currentPage={currentPage}
-              lastPdfUrl={lastPdfUrl}
-              lastPdfName={lastPdfName}
-              isRunning={isRunning}
-              onPageChange={onPageChange}
-              onNumPagesChange={setNumPages}
-              onConvertGrayscale={convertToGrayscale}
-              onConvertColors={convertColors}
-              onRebuildPdf={upscaleLowResImages}
-              onMakeBooklet={makeBooklet}
-              onStartOver={handleStartOver}
-              onBack={() => setCurrentStep(3)}
-              appMode={appMode}
-              heatmapData={heatmapData}
-              isHeatmapLoading={heatmapLoading}
-              onRunHeatmap={() => file && fileMeta && handleRunHeatmap(file, fileMeta, currentPage)}
-              originalFile={originalFile}
-              autoFixReport={autoFixReport}
-              previewPages={previewPages}
-              previewLoading={previewLoading}
-            />
-          )}
-        </div>
+              {currentStep === 4 && (
+                <Step4Review
+                  file={file}
+                  fileMeta={fileMeta}
+                  result={result}
+                  numPages={numPages}
+                  currentPage={currentPage}
+                  lastPdfUrl={lastPdfUrl}
+                  lastPdfName={lastPdfName}
+                  isRunning={isRunning}
+                  onPageChange={onPageChange}
+                  onNumPagesChange={setNumPages}
+                  onConvertGrayscale={convertToGrayscale}
+                  onConvertColors={convertColors}
+                  onRebuildPdf={upscaleLowResImages}
+                  onMakeBooklet={makeBooklet}
+                  onStartOver={handleStartOver}
+                  onBack={() => setCurrentStep(3)}
+                  appMode={appMode}
+                  heatmapData={heatmapData}
+                  isHeatmapLoading={heatmapLoading}
+                  onRunHeatmap={() => file && fileMeta && handleRunHeatmap(file, fileMeta, currentPage)}
+                  originalFile={originalFile}
+                  autoFixReport={autoFixReport}
+                  previewPages={previewPages}
+                  previewLoading={previewLoading}
+                />
+              )}
+            </div>
+          </>
+        )}
       </main>
 
       <AIAuditModal

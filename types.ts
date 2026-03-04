@@ -110,7 +110,7 @@ export interface CategorySummary {
   info: number;
 }
 
-export type AppMode = 'manual' | 'ai' | null;
+export type AppMode = 'manual' | 'ai' | 'demo' | null;
 
 /**
  * The overall result of a PDF preflight analysis.

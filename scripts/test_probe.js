@@ -12,7 +12,7 @@ async function run() {
     const bytes = await pdfDoc.save();
     fs.writeFileSync(pdfPath, bytes);
 
-    const workerScript = path.join(__dirname, '..', 'server', 'workers', 'pdf_probe.js');
+    const workerScript = path.join(__dirname, '..', 'workers', 'pdf_probe.js');
     const nodeExe = process.execPath || 'node';
     const args = [`--max-old-space-size=128`, workerScript, pdfPath];
 

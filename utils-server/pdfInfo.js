@@ -25,7 +25,20 @@ async function getPdfInfoGS(pdfPath) {
     ];
 
     return new Promise((resolve, reject) => {
-        const proc = spawn(gsCmd, args);
+        let proc;
+        try {
+            proc = spawn(gsCmd, args);
+        } catch (e) {
+            return reject(new Error(`GS spawn failed synchronously: ${e.message}`));
+        }
+
+        proc.on('error', (err) => {
+            if (finished) return;
+            finished = true;
+            clearTimeout(t);
+            reject(new Error(`GS spawn failed: ${err.message}`));
+        });
+
         let out = '';
         let err = '';
         let finished = false;
@@ -65,7 +78,15 @@ async function getPdfGeometryGS(pdfPath) {
     ];
 
     return new Promise((resolve, reject) => {
-        const proc = spawn(gsCmd, args);
+        let proc;
+        try {
+            proc = spawn(gsCmd, args);
+        } catch (e) {
+            return reject(new Error(`GS spawn failed synchronously: ${e.message}`));
+        }
+
+        proc.on('error', (err) => reject(new Error(`GS spawn failed: ${err.message}`)));
+
         let out = '';
         proc.stdout.on('data', (d) => out += d.toString());
         proc.on('close', (code) => {

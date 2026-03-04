@@ -6,6 +6,7 @@ const unlinkAsync = promisify(fs.unlink);
 const rmdirAsync = promisify(fs.rmdir);
 
 // Concurrency control: prevent GS from overwhelming the CPU
+// Default to 4 or half the CPU count for optimal safety/throughput
 const MAX_CONCURRENT_GS = parseInt(process.env.PPP_MAX_GS_CONCURRENCY || '4', 10);
 let activeGsCount = 0;
 const gsQueue = [];
@@ -64,14 +65,22 @@ async function runGs(args, options = {}) {
     await acquireGsSlot();
     const gsCmd = resolveGsCmd();
     const reqId = options.reqId || 'internal';
+    const timeoutMs = options.timeoutMs || 120000;
+
+    // Hardened safety: Ensure -dSAFER is always present if not already in args or overridden by -dNOSAFER
+    if (!args.includes('-dSAFER') && !args.includes('-dNOSAFER')) {
+        args.unshift('-dSAFER');
+    }
+
     try {
         console.log(`[GS-START][${reqId}] ${gsCmd} ${args.join(' ').slice(0, 200)}...`);
-        await execFileAsync(gsCmd, args, {
+        const { stdout, stderr } = await execFileAsync(gsCmd, args, {
             maxBuffer: 1024 * 1024 * 50,
-            timeout: 120000,
+            timeout: timeoutMs,
             ...options
-        }); // 120s timeout
+        }); // default 120s timeout
         console.log(`[GS-DONE][${reqId}]`);
+        return { stdout, stderr, ok: true };
     } catch (e) {
         if (e.name === 'AbortError') {
             console.log('[GS-ABORT] Ghostscript process aborted');

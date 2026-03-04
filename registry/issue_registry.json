@@ -1,0 +1,138 @@
+{
+    "non-standard-size": {
+        "title": "Non-standard page size",
+        "type": "deterministic",
+        "severity": "warning",
+        "user_message": "The page size of this document does not match standard print dimensions.",
+        "tags": [
+            "geometry"
+        ],
+        "fix": null
+    },
+    "fonts-not-embedded": {
+        "title": "Fonts not embedded",
+        "type": "deterministic",
+        "severity": "error",
+        "user_message": "Some fonts are not saved inside the PDF. This may cause text to look different when printed.",
+        "tags": [
+            "fonts",
+            "compliance"
+        ],
+        "fix": null
+    },
+    "type3-fonts-present": {
+        "title": "Type 3 fonts detected",
+        "type": "deterministic",
+        "severity": "warning",
+        "user_message": "This document contains Type 3 (bitmap) fonts, which can result in lower print quality for text.",
+        "tags": [
+            "fonts"
+        ],
+        "fix": null
+    },
+    "rgb-only-content": {
+        "title": "Web colors detected",
+        "type": "deterministic",
+        "severity": "error",
+        "user_message": "This file uses RGB (screen) colors. We recommend converting them to CMYK for accurate printing.",
+        "tags": [
+            "color"
+        ],
+        "fix": "convert_cmyk"
+    },
+    "missing-bleed-info": {
+        "title": "Missing BleedBox",
+        "type": "deterministic",
+        "severity": "warning",
+        "user_message": "This PDF is missing a BleedBox definition, which is required for professional trimming.",
+        "tags": [
+            "geometry"
+        ],
+        "fix": "add_bleed"
+    },
+    "spot-color-detected": {
+        "title": "Spot colors detected",
+        "type": "deterministic",
+        "severity": "info",
+        "user_message": "We found spot colors (like Pantone) in this document. Ensure your printer supports them or convert them to CMYK.",
+        "tags": [
+            "color",
+            "ink"
+        ],
+        "fix": null
+    },
+    "missing-output-intent": {
+        "title": "Missing OutputIntent",
+        "type": "deterministic",
+        "severity": "warning",
+        "user_message": "This PDF doesn't have a professional OutputIntent (ICC profile) attached. Color accuracy may vary.",
+        "tags": [
+            "color",
+            "compliance"
+        ],
+        "fix": "convert_cmyk"
+    },
+    "low-resolution-images": {
+        "title": "Low resolution images",
+        "type": "heuristic",
+        "severity": "warning",
+        "user_message": "Some images in this file are low resolution (below 150 DPI). They might look blurry when printed.",
+        "tags": [
+            "images",
+            "quality"
+        ],
+        "fix": null
+    },
+    "text-outline-risk": {
+        "title": "Text as outlines",
+        "type": "heuristic",
+        "severity": "info",
+        "user_message": "Text in this document has been converted to shapes. It is safe for printing but cannot be edited easily.",
+        "tags": [
+            "fonts",
+            "editability"
+        ],
+        "fix": null
+    },
+    "long-form-intent": {
+        "title": "Book/Catalog detected",
+        "type": "heuristic",
+        "severity": "info",
+        "user_message": "Document structure indicates a book or multi-page catalog.",
+        "tags": [
+            "layout"
+        ],
+        "fix": null
+    },
+    "brochure-intent": {
+        "title": "Brochure layout detected",
+        "type": "heuristic",
+        "severity": "info",
+        "user_message": "Document structure is consistent with a brochure or booklet.",
+        "tags": [
+            "layout"
+        ],
+        "fix": null
+    },
+    "ink-heavy-bg-1": {
+        "title": "Heavy ink background",
+        "type": "heuristic",
+        "severity": "warning",
+        "user_message": "Our AI estimates this background uses high ink levels, which may cause smudging or drying issues.",
+        "tags": [
+            "ink",
+            "risk"
+        ],
+        "fix": null
+    },
+    "print-edition-intent": {
+        "title": "Print intent detected",
+        "type": "heuristic",
+        "severity": "info",
+        "user_message": "We've detected this document is intended for a book/magazine layout.",
+        "tags": [
+            "layout"
+        ],
+        "fix": null
+    }
+}

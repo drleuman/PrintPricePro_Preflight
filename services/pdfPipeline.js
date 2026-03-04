@@ -144,9 +144,11 @@ async function gsConvertColor(input, output, profile, opts = {}) {
 
     const iccPath = path.join(iccDir, cfg.icc);
 
-    // Fallback logic for transitioning without having all binary files yet
+    // Override ICC path with explicit policy-provided path
     let finalIccPath = iccPath;
-    if (!fs.existsSync(iccPath) && prof === 'iso_coated_v3') {
+    if (opts.policyIccPath && fs.existsSync(opts.policyIccPath)) {
+        finalIccPath = opts.policyIccPath;
+    } else if (!fs.existsSync(iccPath) && prof === 'iso_coated_v3') {
         const legacyPath = path.join(iccDir, 'CoatedFOGRA39.icc');
         if (fs.existsSync(legacyPath)) finalIccPath = legacyPath;
     }
@@ -155,6 +157,8 @@ async function gsConvertColor(input, output, profile, opts = {}) {
     const psEscape = (s) => String(s || '').replace(/[\\()]/g, '\\$&').replace(/[\r\n]/g, ' ');
     const sanitizeFilename = (s) => String(s || '').replace(/[^a-zA-Z0-9._-]/g, '_');
 
+    // Temporarily disabled PDF/X definition for debugging core conversion stability
+    /*
     const psContent = `
 %!PS
 [ /Title (${psEscape(sanitizeFilename(path.basename(input)))}) /DOCINFO pdfmark
@@ -163,23 +167,26 @@ async function gsConvertColor(input, output, profile, opts = {}) {
 
     const psPath = path.join(path.dirname(output), `pdfx_def_${Date.now()}.ps`);
     await fs.promises.writeFile(psPath, psContent);
+    */
 
     const args = [
-        '-dSAFER', '-dNOPAUSE', '-dBATCH', '-dQUIET',
+        '-dNOSAFER', `--permit-file-read=${path.dirname(finalIccPath)}`,
+        '-dNOPAUSE', '-dBATCH', '-dQUIET',
         '-sDEVICE=pdfwrite',
         '-dNumRenderingThreads=4', // Optimization for multi-core servers
         '-dMaxBitmap=500000000', // Allow more memory for rasterization if needed
-        `-sOutputICCProfile=${finalIccPath}`,
-        `-sDefaultCMYKProfile=${finalIccPath}`,
+        `-sOutputICCProfile=${finalIccPath.replace(/\\/g, '/')}`,
+        `-sDefaultCMYKProfile=${finalIccPath.replace(/\\/g, '/')}`,
         '-dRenderIntent=1',
         '-dSimulateOverprint=true',
         '-dBlackTextThreshold=0.0',
-        '-o', output
+        '-o', output.replace(/\\/g, '/'),
     ];
 
     const srgbPath = path.join(iccDir, 'srgb.icc');
     if (fs.existsSync(srgbPath)) {
         args.push(`-sDefaultRGBProfile=${srgbPath}`);
+        args.push('--permit-file-read=' + path.dirname(srgbPath));
     }
 
     if (opts.finalizeOnly) {
@@ -189,19 +196,15 @@ async function gsConvertColor(input, output, profile, opts = {}) {
         args.push('-dProcessColorModel=/DeviceCMYK');
     }
 
-    // Pass the PDFX definition only if we are specifically asked or if we want professional metadata
-    // For now, let's stick to core conversion to ensure stability, or use a safer PS injection.
-    args.push(input);
+    // Input file must be last in the args list
+    args.push(input.replace(/\\/g, '/'));
 
     try {
-        await acquireGsSlot();
         console.log(`[GS-CONVERT] Running: ${GS_CMD} ${args.join(' ')}`);
-        const { ok, stderr, code } = await execCmd(GS_CMD, args, { timeoutMs: 240000 });
+        const { ok, stderr } = await runGs(args, { timeoutMs: 240000 });
         if (!ok) {
-            console.error(`[GS-CONVERT] Failed with code ${code}. Stderr: ${stderr}`);
-            // If code is not null, it means GS exited with an error. 
-            // We include the stderr in the error message for better diagnostics.
-            throw new Error(`GS color conversion failed (code ${code}): ${stderr || 'Internal GS failure'}`);
+            console.error(`[GS-CONVERT] Failed. Stderr: ${stderr}`);
+            throw new Error(`GS color conversion failed: ${stderr || 'Internal GS failure'}`);
         }
 
         return {
@@ -211,7 +214,7 @@ async function gsConvertColor(input, output, profile, opts = {}) {
             gsMode: opts.finalizeOnly ? 'finalize' : 'convert'
         };
     } catch (e) {
-        try { await fs.promises.unlink(psPath); } catch (e2) { }
+        // try { await fs.promises.unlink(psPath); } catch (e2) { }
         throw e;
     } finally {
         releaseGsSlot();
@@ -229,13 +232,8 @@ async function gsFlattenTransparency(input, output) {
         '-o', output,
         input
     ];
-    await acquireGsSlot();
-    try {
-        const { ok, stderr } = await execCmd(GS_CMD, args, { timeoutMs: 240000 });
-        if (!ok) throw new Error(`GS flattening failed: ${stderr}`);
-    } finally {
-        releaseGsSlot();
-    }
+    const { ok, stderr } = await runGs(args, { timeoutMs: 240000 });
+    if (!ok) throw new Error(`GS flattening failed: ${stderr}`);
 }
 
 /**
@@ -251,13 +249,8 @@ async function rebuildAtDpi(input, output, dpi = 300) {
         '-o', output,
         input
     ];
-    await acquireGsSlot();
-    try {
-        const { ok, stderr } = await execCmd(GS_CMD, args, { timeoutMs: 240000 });
-        if (!ok) throw new Error(`GS rebuild failed: ${stderr}`);
-    } finally {
-        releaseGsSlot();
-    }
+    const { ok, stderr } = await runGs(args, { timeoutMs: 240000 });
+    if (!ok) throw new Error(`GS rebuild failed: ${stderr}`);
 }
 
 /**

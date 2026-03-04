@@ -8,6 +8,7 @@ interface Step2AnalysisProps {
     result: PreflightResult | null;
     isRunning: boolean;
     onRunAnalysis: () => void;
+    onRunV2Analysis: () => void;
     onNext: () => void;
     onSkipToReview: () => void;
     onBack: () => void;
@@ -23,6 +24,7 @@ export const Step2Analysis: React.FC<Step2AnalysisProps> = ({
     result,
     isRunning,
     onRunAnalysis,
+    onRunV2Analysis,
     onNext,
     onSkipToReview,
     onBack,
@@ -89,19 +91,28 @@ export const Step2Analysis: React.FC<Step2AnalysisProps> = ({
                 <button className="btn btn--secondary btn--sm" onClick={onBack}>
                     ← Back
                 </button>
-                {result && (
-                    <div className="flex gap-4">
-                        {hasIssues ? (
-                            <button className="btn btn--primary btn--large px-10 py-3 shadow-xl shadow-red-900/10" onClick={onNext}>
-                                Fix Issues →
-                            </button>
-                        ) : (
-                            <button className="btn btn--primary btn--large px-10 py-3 shadow-xl shadow-red-900/10" onClick={onSkipToReview}>
-                                Continue to Review →
-                            </button>
-                        )}
-                    </div>
-                )}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                        className="btn btn--secondary btn--sm"
+                        onClick={onRunV2Analysis}
+                        style={{ background: '#0b0c10', color: '#64ffda', border: '1px solid #64ffda' }}
+                    >
+                        🚀 Ignite V2 Engine
+                    </button>
+                    {result && (
+                        <div className="flex gap-4">
+                            {hasIssues ? (
+                                <button className="btn btn--primary btn--large px-10 py-3 shadow-xl shadow-red-900/10" onClick={onNext}>
+                                    Fix Issues →
+                                </button>
+                            ) : (
+                                <button className="btn btn--primary btn--large px-10 py-3 shadow-xl shadow-red-900/10" onClick={onSkipToReview}>
+                                    Continue to Review →
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

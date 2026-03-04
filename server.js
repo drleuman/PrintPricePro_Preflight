@@ -15,6 +15,7 @@ const compression = require('compression');
 
 const { router: proxyRouter, handleWsUpgrade } = require('./routes/proxy');
 const pdfRouter = require('./routes/pdf');
+const preflightV2Router = require('./routes/preflightV2');
 const { startCleanupTask } = require('./services/cleanup');
 const apiKeyMiddleware = require('./middleware/apiKey');
 const rateLimit = require('express-rate-limit');
@@ -23,6 +24,13 @@ const pino = require('pino-http')({
   genReqId: (req) => req.headers['x-request-id'] || crypto.randomUUID(),
   transport: process.env.NODE_ENV === 'development' ? { target: 'pino-pretty' } : undefined
 });
+const { checkAllDependencies } = require('./services/dependencyChecker');
+const { initSchema } = require('./services/dbSchema');
+
+// Initialize V2 Workers (BE-005)
+if (process.env.NODE_ENV !== 'test') {
+  require('./workers/v2-worker');
+}
 
 // Simple logger without file-system writes to avoid PM2 watch-loop crashes
 const debugLog = (msg) => {
@@ -54,6 +62,12 @@ const port = Number.parseInt(process.env.PORT || '8080', 10);
 
 if (pdfRouter.uploadDir) {
   startCleanupTask(pdfRouter.uploadDir);
+}
+
+// Ensure V2 Temporary Upload Dir
+const v2TempDir = path.join(__dirname, 'uploads-v2-temp');
+if (!fs.existsSync(v2TempDir)) {
+  fs.mkdirSync(v2TempDir, { recursive: true });
 }
 
 app.use(pino);
@@ -132,17 +146,21 @@ app.use((req, res, next) => {
 
 // 3) Per-endpoint rate limits
 const diagnosticLimiter = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false });
-const convertLimiter = rateLimit({ windowMs: 60_000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many conversion requests, try again in a minute.' } });
+const convertLimiter = rateLimit({ windowMs: 60_000, max: 5000, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many conversion requests, try again in a minute.' } });
 
 // -------- Routes --------
 app.use('/api/gemini-proxy', apiKeyMiddleware, proxyRouter);
-app.use(['/ready', '/api/ready', '/healthz', '/api/healthz', '/version', '/api/version', '/metrics', '/api/metrics'], diagnosticLimiter);
+app.use(['/ready', '/api/ready', '/healthz', '/api/healthz', '/version', '/api/version', '/metrics', '/api/metrics', '/health/deps', '/api/health/deps'], diagnosticLimiter);
 app.use('/api/convert', convertLimiter);
 console.log('Mounting /api/convert routes...');
 app.use('/api/convert', (req, res, next) => {
   console.log(`[ROUTE-DEBUG][${req.id || '-'}] ${req.method} ${req.url}`);
   next();
 }, pdfRouter);
+
+// V2 Asynchronous Routes
+debugLog('Mounting /api/v2/preflight routes...');
+app.use('/api/v2/preflight', preflightV2Router);
 
 // -------- Static Files --------
 const staticPath = path.resolve(__dirname, 'dist');
@@ -165,26 +183,15 @@ app.use(
 );
 
 const readyHandler = async (_req, res) => {
-  const { execFile } = require('child_process');
-  const { promisify } = require('util');
-  const execFileAsync = promisify(execFile);
+  const { ok, deps } = checkAllDependencies();
 
   const response = {
-    status: 'ok',
+    status: ok ? 'ok' : 'error',
     version: require('./package.json').version || '1.0.0',
-    ghostscript: { installed: false, version: null },
+    dependencies: deps,
     uploadDirWritable: false,
     time: new Date().toISOString()
   };
-
-  try {
-    const gsCmd = process.env.GS_PATH || (process.platform === 'win32' ? 'gswin64c' : 'gs');
-    const { stdout } = await execFileAsync(gsCmd, ['--version'], { timeout: 3000 });
-    response.ghostscript = { installed: true, version: stdout.trim() };
-  } catch (err) {
-    response.status = 'error';
-    response.ghostscript.message = err.message;
-  }
 
   try {
     if (pdfRouter.uploadDir) {
@@ -198,9 +205,15 @@ const readyHandler = async (_req, res) => {
   res.status(response.status === 'ok' ? 200 : 503).json(response);
 };
 
+const healthDepsHandler = (_req, res) => {
+  const result = checkAllDependencies();
+  res.status(result.ok ? 200 : 503).json(result);
+};
+
 // -------- Diagnostic Routes (BEFORE catch-all) --------
 app.get(['/healthz', '/api/healthz'], (_req, res) => res.status(200).send('ok'));
 app.get(['/ready', '/api/ready'], readyHandler);
+app.get(['/health/deps', '/api/health/deps'], healthDepsHandler);
 
 app.get(['/version', '/api/version'], (_req, res) => {
   const pkg = require('./package.json');
@@ -267,9 +280,32 @@ app.get(/^\/(?!api\/).*/, (req, res) => {
 if (!global.__SERVER_STARTED) {
   global.__SERVER_STARTED = true;
 
+  // Run Startup Dependency Check (BE-001)
+  debugLog('Verifying system dependencies core before listening...');
+  const { ok, deps } = checkAllDependencies();
+  if (!ok) {
+    console.error('[CRITICAL] Missing hard dependencies! Server cannot start safely.');
+    console.error(JSON.stringify(deps, null, 2));
+    // In production, we exit. In dev, we might log and continue but here we enforce stability.
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    } else {
+      console.warn('[WARNING] Continuing in DEV mode despite missing dependencies. AutoFix WILL fail.');
+    }
+  } else {
+    debugLog('Dependencies verified: OK');
+  }
+
+  // Initialize DB Schema (BE-003)
+  initSchema().catch(err => {
+    console.error('[DB-SCHEMA-INIT-ERROR]', err);
+  });
+
   const server = app.listen(port, '0.0.0.0', () => {
     console.log(`[SERVER-START] OK: Listening on 0.0.0.0:${port}`);
     console.log(`[SERVER-START] Upload context: ${pdfRouter.uploadDir || 'Not set'}`);
+    console.log(`[SERVER-START] Security Limits: Max Upload = ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)}MB`);
+    console.log(`[SERVER-START] Resource Limits: GS Concurrency = ${process.env.PPP_MAX_GS_CONCURRENCY || '4'}, Workers = ${process.env.PPP_MAX_WORKERS || '4'}`);
   }).on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
       console.error(`[CRITICAL] Port ${port} is already in use. App cannot start.`);

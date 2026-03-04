@@ -6,7 +6,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { safeMoveSync } = require('../utils-server/fileUtil');
 const { PDFDocument, PDFName, PDFArray, PDFDict, pushGraphicsState, popGraphicsState, concatTransformationMatrix } = require('pdf-lib');
-const { runGs, safeUnlink, safeRmDir, sendPdfAndCleanup, resolveGsCmd } = require('../services/ghostscript');
+const { runGs, safeUnlink, safeRmDir, sendPdfAndCleanup, resolveGsCmd, acquireGsSlot, releaseGsSlot } = require('../services/ghostscript');
 // Use the standard GS cmd resolution
 const GS_CMD = resolveGsCmd();
 const { spawn } = require('child_process');
@@ -22,6 +22,8 @@ const {
 } = require('../services/pdfPipeline');
 const apiKeyMiddleware = require('../middleware/apiKey');
 const { pdfUploadWafCheck, quarantineFile } = require('../security/pdfUploadWaf');
+const { loadPolicy, resolveIccPath, validateAgainstPolicy, getAutoFixActions } = require('../services/policyEngine');
+const db = require('../services/db');
 
 const sanitizeFilename = (s) => String(s || '').replace(/[^a-zA-Z0-9._-]/g, '_');
 
@@ -391,6 +393,7 @@ async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmati
     const limit = limitMap[requestedProfile] || 300;
     const dpi = isConfirmation ? 120 : 72; // Slightly lower confirmation DPI for speed
 
+    // Ensure -dSAFER is first.
     const args = [
         '-dSAFER', '-dNOPAUSE', '-dBATCH', '-dQUIET',
         '-sDEVICE=pamcmyk',
@@ -407,7 +410,8 @@ async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmati
         pdfPath
     ];
 
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
+        await acquireGsSlot();
         const proc = spawn(gsCmd, args);
         let maxTacTotal = 0;
         let worstPage = 1;
@@ -473,6 +477,7 @@ async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmati
 
         proc.on('close', async (code) => {
             clearTimeout(timer);
+            releaseGsSlot();
             if (killed) {
                 return resolve({ max_tac: 0, limit, worst_page: 0, pages_exceeding: [], risk: "timeout" });
             }
@@ -500,6 +505,7 @@ async function scanTac(pdfPath, requestedProfile, hasSpots = false, isConfirmati
 
         proc.on('error', (err) => {
             clearTimeout(timer);
+            releaseGsSlot();
             console.error('GS TAC Scan Process Error:', err);
             resolve({ max_tac: 0, limit, worst_page: 0, pages_exceeding: [], risk: "unknown" });
         });
@@ -523,7 +529,7 @@ router.post('/preview/pages', upload.single('file'), ensurePdfMiddleware, async 
         const imgPattern = path.join(tmpDir, 'page-%03d.png');
 
         await runGs([
-            '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
+            '-dNOPAUSE', '-dBATCH', '-dQUIET',
             '-sDEVICE=png16m',
             '-r150',
             '-dUseCropBox',
@@ -586,7 +592,7 @@ router.post('/grayscale', upload.single('file'), apiKeyMiddleware, ensurePdfMidd
 
     try {
         await runGs([
-            '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
+            '-dNOPAUSE', '-dBATCH', '-dQUIET',
             '-sDEVICE=pdfwrite',
             '-dCompatibilityLevel=1.4',
             '-dPDFSETTINGS=/prepress',
@@ -666,7 +672,7 @@ router.post('/rebuild-150dpi', upload.single('file'), apiKeyMiddleware, ensurePd
 
         // 1) Rasterize PDF -> PNG
         await runGs([
-            '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dQUIET',
+            '-dNOPAUSE', '-dBATCH', '-dQUIET',
             '-sDEVICE=png16m',
             `-r${dpi}`,
             '-o', imgPattern,
@@ -1360,22 +1366,41 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
         }
     }
 
+    // --- POLICY RESOLUTION ---
+    const policySlug = req.body.policy || 'OFFSET_CMYK_STRICT';
+    const policy = loadPolicy(policySlug);
+    const policyIccPath = resolveIccPath(policy);
+    const fileSizeMb = fileSize / (1024 * 1024);
+    console.log(`[PDF-ROUTER][${reqId}] Policy: ${policy.slug} | ICC: ${policyIccPath || 'default'}`);
+
+    // -- Early guardrail checks --
+    if (policy.document?.max_file_mb && fileSizeMb > policy.document.max_file_mb) {
+        return res.status(400).json({
+            ok: false, error: 'POLICY_VIOLATION',
+            rule: 'max_file_mb',
+            message: `File size ${fileSizeMb.toFixed(1)}MB exceeds policy limit of ${policy.document.max_file_mb}MB for "${policy.name}"`
+        });
+    }
+
     // --- NORMAL MODE (CONTINUE AS BEFORE) ---
     const options = {
         target: String(req.body.target || 'cmyk').toLowerCase(),
         profile: normalizeProfile(req.body.profile || 'iso_coated_v3'),
-        bleedMm: Number(req.body.bleedMm ?? 3) || 3,
-        dpiPreferred: Number(req.body.dpiPreferred ?? 300) || 300,
+        bleedMm: Number(req.body.bleedMm ?? policy.document?.bleed_mm_required ?? 3) || 3,
+        dpiPreferred: Number(req.body.dpiPreferred ?? policy.document?.min_resolution_dpi ?? 300) || 300,
         dpiMin: Number(req.body.dpiMin ?? 150) || 150,
         safeOnly: String(req.body.safeOnly || '1') === '1',
         aggressive: String(req.body.aggressive || '0') === '1',
         forceRebuild: String(req.body.forceRebuild || '0') === '1',
         forceBleed: String(req.body.forceBleed || '1') === '1',
-        forceCmyk: String(req.body.forceCmyk || '1') === '1',
-        flatten: String(req.body.flatten || '0') === '1',
+        forceCmyk: policy.color?.convert_rgb ?? (String(req.body.forceCmyk || '1') === '1'),
+        flatten: policy.color?.flatten_transparency ?? (String(req.body.flatten || '0') === '1'),
         strictVector: String(req.body.strictVector || '1') === '1',
         allowRasterRebuild: String(req.body.allowRasterRebuild || '0') === '1',
         allowRasterOutput: String(req.body.allowRasterOutput || '0') === '1',
+        policySlug: policy.slug,
+        policyIccPath,
+        policyName: policy.name,
     };
 
     const payload = req.body.issues ? safeJsonParse(req.body.issues) : null;
@@ -1407,6 +1432,21 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
 
         const baseName = path.basename(originalFilename).replace(/\.pdf$/i, '');
 
+        // Log Telemetry for sync route
+        const deltaScore = report.revisions ? report.revisions.length : 0;
+        db.query(`
+            INSERT INTO metrics (tenant_id, policy_slug, success, processing_ms, file_size_bytes, page_count, delta_score)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `, [
+            req.body.tenant_id || 'default_sync',
+            policy.slug,
+            true,
+            tElapsed,
+            fileSize || 0,
+            report.pages || 0,
+            deltaScore
+        ]).catch(err => console.error('[METRICS-SYNC] Failed to log success:', err.message));
+
         deliveredPdf = true;
         return sendPdfAndCleanup(res, finalPath, `${baseName}_fixed.pdf`, async () => {
             await safeUnlink(inputPath);
@@ -1414,14 +1454,34 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
         });
     } catch (err) {
         const tElapsed = Date.now() - tStart;
-        console.error('autofix orchestrator failed:', err);
+        console.error(`[AUTOFIX-FAILED][${reqId}] Orchestrator failed for ${originalFilename}:`, {
+            message: err.message,
+            code: err.error_code || err.code,
+            step: err.step || 'unknown',
+            stack: err.stack,
+            stderr: err.stderr
+        });
+
+        // Log Telemetry for sync route failure
+        db.query(`
+            INSERT INTO metrics (tenant_id, policy_slug, success, processing_ms, file_size_bytes, page_count, delta_score)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `, [
+            req.body.tenant_id || 'default_sync',
+            policy.slug,
+            false,
+            tElapsed,
+            fileSize || 0,
+            0,
+            0
+        ]).catch(() => { });
 
         res.setHeader('X-PPP-Autofix-ElapsedMs', tElapsed.toString());
 
         // Phase 0: Instrument Failure Step
         const failedStep = err.step || 'unknown';
         res.setHeader('X-PPP-Autofix-Step-Failed', failedStep);
-        res.setHeader('X-PPP-Autofix-Reason', err.message || 'unknown');
+        res.setHeader('X-PPP-Autofix-Reason', String(err.message || 'unknown').slice(0, 200).replace(/\r|\n/g, ' '));
 
         // Handle specific rasterization blocking error
         if (err.message === 'OUTPUT_RASTERIZED_BLOCKED') {
@@ -1443,7 +1503,7 @@ router.post('/autofix', upload.single('file'), apiKeyMiddleware, ensurePdfMiddle
                 err.message?.includes('GS Error') ? 'GS_FAILED' : 'UNKNOWN_ERROR');
 
         res.setHeader('X-PPP-Autofix-Error-Code', errorCode);
-        res.setHeader('X-PPP-Autofix-Reason', String(err.message || 'unknown').slice(0, 200));
+        res.setHeader('X-PPP-Autofix-Reason', String(err.message || 'unknown').slice(0, 200).replace(/\r|\n/g, ' '));
 
         return res.status(500).json({
             ok: false,
