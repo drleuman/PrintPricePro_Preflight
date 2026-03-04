@@ -50,9 +50,10 @@ async function pollJob(jobId) {
                 headers: { 'x-ppp-api-key': 'demo-key-123' },
                 timeout: 10000
             });
-            const { status, result } = res.data;
+            const status = (res.data.status || '').toLowerCase();
+            const result = res.data.result;
             if (status === 'completed' || status === 'done') return { ok: true, status, result };
-            if (status === 'failed' || status === 'error') return { ok: false, status, result };
+            if (status === 'failed' || status === 'error' || status === 'canceled') return { ok: false, status, result };
         } catch (e) {
             // continue polling
         }
@@ -66,6 +67,8 @@ async function runJob(filePath) {
     try {
         const jobId = await enqueueJob(filePath);
         if (!jobId) return { filename, status: 'FAILED', error: 'No job_id returned', duration: Date.now() - start };
+
+        console.log(`[V2-SOAK] Enqueued ${filename} -> Job ID: ${jobId}`);
 
         const result = await pollJob(jobId);
         const duration = Date.now() - start;
