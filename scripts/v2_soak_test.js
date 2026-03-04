@@ -17,7 +17,7 @@ const axios = require('axios');
 const FormData = require('form-data');
 
 const API_BASE = process.env.API_URL || 'http://localhost:8080';
-const ENQUEUE_URL = `${API_BASE}/api/v2/preflight`;
+const ENQUEUE_URL = `${API_BASE}/api/v2/preflight/analyze`;
 const JOB_STATUS_URL = (id) => `${API_BASE}/api/v2/preflight/jobs/${id}`;
 const STRESS_DIR = path.join(__dirname, '..', 'stress_test_pdfs');
 const CONCURRENCY = parseInt(process.env.STRESS_CONCURRENCY || '10');
