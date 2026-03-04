@@ -32,10 +32,10 @@ router.post('/analyze', upload.single('pdf'), async (req, res) => {
             policy: req.body.policy || 'OFFSET_CMYK_STRICT'
         });
 
-        // Insert job record into Postgres
+        // Insert job record into Postgres/MySQL
         await db.query(`
             INSERT INTO jobs (id, tenant_id, asset_id, type, status)
-            VALUES ($1, $2, $3, $4, $5)
+            VALUES (?, ?, ?, ?, ?)
         `, [job.id, tenantId, asset.id, 'PREFLIGHT', 'PENDING']);
 
         res.status(202).json({
@@ -92,7 +92,7 @@ router.post('/autofix', async (req, res) => {
  */
 router.get('/jobs/:id', async (req, res) => {
     try {
-        const result = await db.query('SELECT * FROM jobs WHERE id = $1', [req.params.id]);
+        const result = await db.query('SELECT * FROM jobs WHERE id = ?', [req.params.id]);
         const jobRecord = result.rows[0];
 
         if (!jobRecord) {
@@ -106,7 +106,7 @@ router.get('/jobs/:id', async (req, res) => {
         let report = null;
         let delta = null;
         if (jobRecord.status === 'COMPLETED') {
-            const reportResult = await db.query('SELECT data, delta FROM reports WHERE job_id = $1', [jobRecord.id]);
+            const reportResult = await db.query('SELECT data, delta FROM reports WHERE job_id = ?', [jobRecord.id]);
             if (reportResult.rows[0]) {
                 report = reportResult.rows[0].data;
                 delta = reportResult.rows[0].delta;

@@ -57,7 +57,7 @@ class AssetService {
      * Retrieves an asset by ID.
      */
     async getAsset(id) {
-        const result = await db.query('SELECT * FROM assets WHERE id = $1', [id]);
+        const result = await db.query('SELECT * FROM assets WHERE id = ?', [id]);
         return result.rows[0];
     }
 

@@ -13,8 +13,8 @@ const deltaService = require('../services/deltaService');
 async function updateJobStatus(jobId, status, progress = 0, error = null) {
     await db.query(`
         UPDATE jobs 
-        SET status = $1, progress = $2, error = $3, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $4
+        SET status = ?, progress = ?, error = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
     `, [status, progress, error ? JSON.stringify(error) : null, jobId]);
 }
 
@@ -42,7 +42,7 @@ const v2Worker = new Worker('preflight-v2', async (job) => {
         // Save report to DB
         await db.query(`
             INSERT INTO reports (job_id, asset_id, summary, findings, version, data)
-            VALUES ($1, $2, $3, $4, 'v2', $5)
+            VALUES (?, ?, ?, ?, 'v2', ?)
         `, [job.id, asset_id, 'Standard V2 Deterministic Analysis', JSON.stringify(report.findings), JSON.stringify(report)]);
 
         await updateJobStatus(job.id, 'COMPLETED', 100);
@@ -72,7 +72,7 @@ const autofixWorker = new Worker('autofix-v2', async (job) => {
         if (!originalAsset) throw new Error('Asset not found');
 
         // 1. Fetch the "Before" report
-        const beforeResult = await db.query('SELECT data FROM reports WHERE asset_id = $1 AND version = \'v2\' ORDER BY created_at DESC LIMIT 1', [asset_id]);
+        const beforeResult = await db.query('SELECT data FROM reports WHERE asset_id = ? AND version = \'v2\' ORDER BY created_at DESC LIMIT 1', [asset_id]);
         const beforeReport = beforeResult.rows[0]?.data;
         if (!beforeReport) throw new Error('Original preflight report not found for deltas');
 
@@ -123,7 +123,7 @@ const autofixWorker = new Worker('autofix-v2', async (job) => {
         // 6. Save final report with delta
         await db.query(`
             INSERT INTO reports (job_id, asset_id, summary, findings, version, data, delta)
-            VALUES ($1, $2, $3, $4, 'v2', $5, $6)
+            VALUES (?, ?, ?, ?, 'v2', ?, ?)
         `, [
             job.id,
             fixedAsset.id,
@@ -137,7 +137,7 @@ const autofixWorker = new Worker('autofix-v2', async (job) => {
         const processing_ms = Date.now() - tStart;
         await db.query(`
             INSERT INTO metrics (job_id, tenant_id, policy_slug, success, processing_ms, file_size_bytes, page_count, delta_score)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `, [job.id, tenant_id, policy || 'OFFSET_CMYK_STRICT', true, processing_ms, originalAsset.size || 0, afterReport.summary?.pages || 0, delta.fixed_count || 0]);
 
         await updateJobStatus(job.id, 'COMPLETED', 100);
@@ -147,7 +147,7 @@ const autofixWorker = new Worker('autofix-v2', async (job) => {
         // Best effort to log failure telemetry
         db.query(`
             INSERT INTO metrics (job_id, tenant_id, policy_slug, success, processing_ms, file_size_bytes, page_count, delta_score)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `, [job.id, tenant_id, policy || 'OFFSET_CMYK_STRICT', false, processing_ms, 0, 0, 0]).catch(() => { });
 
         console.error(`[AUTOFIX-WORKER][${job.id}] Failed:`, err);

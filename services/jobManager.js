@@ -41,7 +41,7 @@ class JobManager {
     }
 
     static async getJob(jobId) {
-        const res = await query('SELECT * FROM jobs WHERE id = $1', [jobId]);
+        const res = await query('SELECT * FROM jobs WHERE id = ?', [jobId]);
         return res.rows[0];
     }
 
@@ -59,8 +59,8 @@ class JobManager {
     }
 
     static async cancelJob(jobId) {
-        await query("UPDATE jobs SET status = 'CANCELED' WHERE id = $1", [jobId]);
-        await query("UPDATE job_tasks SET status = 'CANCELED' WHERE job_id = $1 AND status = 'PENDING'", [jobId]);
+        await query("UPDATE jobs SET status = 'CANCELED' WHERE id = ?", [jobId]);
+        await query("UPDATE job_tasks SET status = 'CANCELED' WHERE job_id = ? AND status = 'PENDING'", [jobId]);
     }
 }
 

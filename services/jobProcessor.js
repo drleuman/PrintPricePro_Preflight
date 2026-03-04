@@ -33,9 +33,9 @@ class JobProcessor {
             // Success
             await query(`
                 UPDATE job_tasks 
-                SET status = 'DONE', finished_at = NOW(), duration_ms = $2 
-                WHERE id = $1
-            `, [id, Date.now() - startTime]);
+                SET status = 'DONE', finished_at = NOW(), duration_ms = ? 
+                WHERE id = ?
+            `, [Date.now() - startTime, id]);
 
             // Potential trigger for next phase
             if (task_type === 'SPLIT' || task_type === 'PAGE_PROCESS') {
@@ -50,11 +50,11 @@ class JobProcessor {
                 UPDATE job_tasks
                 SET
                   status = CASE WHEN attempts >= max_attempts THEN 'FAILED' ELSE 'RETRY_WAIT' END,
-                  run_after = CASE WHEN attempts >= max_attempts THEN NULL ELSE NOW() + (INTERVAL '1 second' * $2) END,
-                  last_error = $3,
+                  run_after = CASE WHEN attempts >= max_attempts THEN NULL ELSE NOW() + INTERVAL ? SECOND END,
+                  last_error = ?,
                   finished_at = NOW()
-                WHERE id = $1
-            `, [id, backoffSec, err.message]);
+                WHERE id = ?
+            `, [backoffSec, err.message, id]);
 
             if (task.attempts >= (task.max_attempts || 3)) {
                 await JobManager.updateJob(job_id, { status: 'FAILED', error_message: err.message });
@@ -224,7 +224,7 @@ class JobProcessor {
         const res = await query(`
             SELECT status, COUNT(*) as count 
             FROM job_tasks 
-            WHERE job_id = $1 AND task_type = 'PAGE_PROCESS'
+            WHERE job_id = ? AND task_type = 'PAGE_PROCESS'
             GROUP BY status
         `, [jobId]);
 
@@ -239,7 +239,7 @@ class JobProcessor {
             if (done === total) {
                 // All pages processed, move to MERGE
                 // Ensure we don't enqueue multiple merges (indempotency check)
-                const mergeExists = await query("SELECT id FROM job_tasks WHERE job_id = $1 AND task_type = 'MERGE'", [jobId]);
+                const mergeExists = await query("SELECT id FROM job_tasks WHERE job_id = ? AND task_type = 'MERGE'", [jobId]);
                 if (mergeExists.rows.length === 0) {
                     await JobManager.enqueueTask(jobId, 'MERGE', {});
                 }
