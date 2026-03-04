@@ -27,7 +27,7 @@ const JOB_TIMEOUT_MS = 120000;
 
 async function enqueueJob(filePath) {
     const form = new FormData();
-    form.append('file', fs.createReadStream(filePath));
+    form.append('pdf', fs.createReadStream(filePath));
     form.append('policy', 'OFFSET_CMYK_STRICT');
 
     const res = await axios.post(ENQUEUE_URL, form, {

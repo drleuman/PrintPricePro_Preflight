@@ -2,14 +2,14 @@ const { Queue, ConnectionOptions } = require('bullmq');
 const Redis = require('ioredis');
 
 // Redis connection configuration
-const redisConfig = {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379', 10),
-    password: process.env.REDIS_PASSWORD || undefined,
-    maxRetriesPerRequest: null, // Critical for BullMQ
-};
-
-const connection = new Redis(redisConfig);
+const connection = process.env.REDIS_URL
+    ? new Redis(process.env.REDIS_URL, { maxRetriesPerRequest: null })
+    : new Redis({
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        password: process.env.REDIS_PASSWORD || undefined,
+        maxRetriesPerRequest: null, // Critical for BullMQ
+    });
 
 connection.on('error', (err) => {
     console.error('[REDIS-ERROR]', err.message);
