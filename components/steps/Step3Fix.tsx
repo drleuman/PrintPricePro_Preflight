@@ -193,11 +193,14 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
                     </div>
                 </div>
             )}
-            <div className="step__header mb-4 py-2">
-                <h2 className="text-xl font-black text-gray-900 tracking-tight">Fix Issues</h2>
-                <p className="text-xs text-gray-500 font-medium">
-                    Review and fix {issuesCount} issue{issuesCount !== 1 ? 's' : ''}
-                </p>
+            {/* Header omitted on desktop to save space (since Stepper already says it), but keep visually hidden or small */}
+            <div className="step__header mb-2 py-1 flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-100 px-4">
+                <div className="flex items-baseline gap-2">
+                    <h2 className="text-sm font-black text-gray-900 tracking-tight">Fix Issues</h2>
+                    <p className="text-[10px] text-gray-500 font-medium">
+                        {issuesCount} issue{issuesCount !== 1 ? 's' : ''} remaining
+                    </p>
+                </div>
             </div>
 
             <div className="step__content step__content--split">

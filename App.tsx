@@ -9,6 +9,7 @@ import { AIAuditModal } from './components/AIAuditModal';
 import { V2ReportViewer } from './components/V2ReportViewer';
 import { useLocale, Locale } from './i18n';
 import { InvestorDemo } from './components/Demo/InvestorDemo';
+import { RocketLaunchIcon } from '@heroicons/react/24/outline';
 
 import { t } from './i18n';
 import {
@@ -22,10 +23,10 @@ import { usePreflightWorker } from './hooks/usePreflightWorker';
 import { usePdfTools } from './hooks/usePdfTools';
 
 const WORKFLOW_STEPS = [
-  { number: 1, title: 'Upload PDF', icon: '📄' },
-  { number: 2, title: 'Analysis', icon: '🔍' },
-  { number: 3, title: 'Fix Issues', icon: '🛠️' },
-  { number: 4, title: 'Review', icon: '✅' },
+  { number: 1, title: 'Upload PDF', icon: 'document' },
+  { number: 2, title: 'Analysis', icon: 'search' },
+  { number: 3, title: 'Fix Issues', icon: 'wrench' },
+  { number: 4, title: 'Review', icon: 'check' },
 ];
 
 export default function App() {
@@ -723,7 +724,7 @@ export default function App() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch('/api/v2/preflight', {
+      const res = await fetch('/api/v2/preflight/analyze', {
         method: 'POST',
         body: formData
       });
@@ -803,10 +804,10 @@ export default function App() {
             style={{
               background: '#111827', color: 'white', border: 'none', borderRadius: '16px', fontSize: '12px',
               fontWeight: 700, padding: '10px 16px', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-              transition: 'transform 0.1s'
+              transition: 'transform 0.1s', display: 'flex', alignItems: 'center', gap: '6px'
             }}
           >
-            🚀 Investor Demo
+            <RocketLaunchIcon className="w-4 h-4" /> Investor Demo
           </button>
         )}
         <select

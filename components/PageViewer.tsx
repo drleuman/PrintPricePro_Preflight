@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Issue, Bbox, FileMeta, HeatmapData } from '../types';
-import { ChevronLeftIcon, ChevronRightIcon, FireIcon } from '@heroicons/react/24/outline'; // FireIcon for Heatmap
+import { ChevronLeftIcon, ChevronRightIcon, FireIcon, EyeIcon } from '@heroicons/react/24/outline'; // FireIcon for Heatmap
 import { t } from '../i18n';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -318,7 +318,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
             className="p-2 rounded-lg flex items-center gap-2 bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 transition-colors"
             title="AI Visual Quality Check"
           >
-            <span className="text-lg">👁️</span>
+            <EyeIcon className="w-5 h-5" />
             <span className="text-sm font-medium">AI Visual Check</span>
           </button>
         )}

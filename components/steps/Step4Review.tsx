@@ -2,6 +2,7 @@ import { t } from '../../i18n';
 import React, { useState } from 'react';
 import { PreflightResult, FileMeta } from '../../types';
 import { PageViewer } from '../PageViewer';
+import { SparklesIcon, ArrowPathIcon, PaintBrushIcon, RocketLaunchIcon, BookOpenIcon, ArrowDownTrayIcon, Square3Stack3DIcon, BeakerIcon } from '@heroicons/react/24/outline';
 
 interface Step4ReviewProps {
     file: File | null;
@@ -69,9 +70,8 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
     // Only ready if we have a result AND it has zero issues. 
     // If result is null, we are NOT ready (still analyzing or failed).
     const isReadyForPrint = !!result && issuesCount === 0;
-    const statusIcon = isReadyForPrint ? '✅' : '⚠️';
     const statusTitle = appMode === 'ai'
-        ? 'AI Magic Applied! ✨'
+        ? <span className="flex items-center gap-2">AI Magic Applied! <SparklesIcon className="w-6 h-6 text-amber-400" /></span>
         : isReadyForPrint
             ? 'Ready for Print!'
             : 'Review Required';
@@ -284,10 +284,10 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
 
                         <div className="space-y-3">
                             {[
-                                { icon: '🔘', text: 'To Grayscale', action: onConvertGrayscale, color: 'bg-gray-100' },
-                                { icon: '🎨', text: 'To CMYK', action: onConvertColors, color: 'bg-amber-50' },
-                                { icon: '🚀', text: 'Rebuild High-Res', action: onRebuildPdf, color: 'bg-blue-50', badge: '300DPI' },
-                                { icon: '📖', text: 'Make Booklet', action: onMakeBooklet, color: 'bg-purple-50' }
+                                { icon: <ArrowPathIcon className="w-5 h-5" />, text: 'To Grayscale', action: onConvertGrayscale, color: 'bg-gray-100' },
+                                { icon: <PaintBrushIcon className="w-5 h-5" />, text: 'To CMYK', action: onConvertColors, color: 'bg-amber-50' },
+                                { icon: <RocketLaunchIcon className="w-5 h-5" />, text: 'Rebuild High-Res', action: onRebuildPdf, color: 'bg-blue-50', badge: '300DPI' },
+                                { icon: <BookOpenIcon className="w-5 h-5" />, text: 'Make Booklet', action: onMakeBooklet, color: 'bg-purple-50' }
                             ].map((tool, idx) => (
                                 <button
                                     key={idx}
@@ -371,14 +371,14 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                     ← Back
                                 </button>
                             )}
-                            <button className="px-10 py-5 text-xs font-black uppercase tracking-[0.2em] text-red-600 hover:bg-red-50 rounded-2xl transition-all" onClick={onStartOver}>
-                                🔄 Start Over
+                            <button className="px-10 py-5 text-xs font-black uppercase tracking-[0.2em] text-red-600 hover:bg-red-50 rounded-2xl transition-all flex items-center gap-2" onClick={onStartOver}>
+                                <ArrowPathIcon className="w-4 h-4" /> Start Over
                             </button>
                         </div>
 
                         {!lastPdfUrl && (
-                            <button className="px-12 py-5 bg-gray-100 text-gray-300 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] cursor-not-allowed" disabled>
-                                ⬇️ Download Original
+                            <button className="px-12 py-5 bg-gray-100 text-gray-300 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] cursor-not-allowed flex items-center gap-2" disabled>
+                                <ArrowDownTrayIcon className="w-4 h-4" /> Download Original
                             </button>
                         )}
                     </div>
@@ -439,14 +439,14 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                 <div className="space-y-4">
                                     {[
                                         {
-                                            title: 'Production Geometry', icon: '📐', rows: [
+                                            title: 'Production Geometry', icon: <Square3Stack3DIcon className="w-4 h-4" />, rows: [
                                                 { l: 'Spine Class', v: result?.productionReport?.spine?.classification || 'OK' },
                                                 { l: 'Expected', v: `${result?.productionReport?.spine?.expectedSpineMm || 0}mm` },
                                                 { l: 'Detected', v: `${result?.productionReport?.spine?.detectedSpineMm || 0}mm` }
                                             ]
                                         },
                                         {
-                                            title: 'Ink & Efficiency', icon: '💧', rows: [
+                                            title: 'Ink & Efficiency', icon: <BeakerIcon className="w-4 h-4" />, rows: [
                                                 { l: 'Cost Class', v: result?.productionReport?.inkOptimization?.costCategory || 'LOW' },
                                                 { l: 'Avg Coverage', v: `${result?.productionReport?.inkOptimization?.totalCoverageAvg?.toFixed(1) || 0}%` }
                                             ]

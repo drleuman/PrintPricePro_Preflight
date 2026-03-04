@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FileMeta } from '../../types';
+import { SparklesIcon, DocumentTextIcon, Cog6ToothIcon, RocketLaunchIcon, XCircleIcon, CheckCircleIcon, CpuChipIcon } from '@heroicons/react/24/outline';
 
 interface InvestorDemoProps {
     onBack: () => void;
@@ -84,7 +85,7 @@ export function InvestorDemo({ onBack, onJobComplete }: InvestorDemoProps) {
         fd.append('policy', selectedPolicy);
 
         try {
-            const res = await fetch('/api/v2/preflight', { method: 'POST', body: fd });
+            const res = await fetch('/api/v2/preflight/analyze', { method: 'POST', body: fd });
             const data = await res.json();
             if (data.ok && data.job_id) {
                 setJobId(data.job_id);
@@ -116,8 +117,8 @@ export function InvestorDemo({ onBack, onJobComplete }: InvestorDemoProps) {
         }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <h2 style={{ margin: 0, fontSize: '28px', color: '#111827', letterSpacing: '-0.5px' }}>
-                        ✨ Investor Demo Mode
+                    <h2 style={{ margin: 0, fontSize: '28px', color: '#111827', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <SparklesIcon className="w-8 h-8 text-blue-600" /> Investor Demo Mode
                     </h2>
                     <p style={{ margin: '8px 0 0 0', color: '#4B5563', fontSize: '15px' }}>
                         Experience the power of the PrintPricePro V2 AutoFix Engine with Policy Enforcement.
@@ -154,7 +155,7 @@ export function InvestorDemo({ onBack, onJobComplete }: InvestorDemoProps) {
                         }}
                     >
                         <input type="file" onChange={handleChange} style={{ display: 'none' }} ref={fileInputRef} accept="application/pdf" />
-                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📄</div>
+                        <div style={{ marginBottom: '16px' }}><DocumentTextIcon className="w-12 h-12 text-gray-400 mx-auto" /></div>
                         {file ? (
                             <div>
                                 <b style={{ color: '#111827' }}>{file.name}</b>
@@ -172,7 +173,7 @@ export function InvestorDemo({ onBack, onJobComplete }: InvestorDemoProps) {
                         background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '16px', padding: '24px',
                         display: 'flex', flexDirection: 'column', gap: '16px'
                     }}>
-                        <h3 style={{ margin: 0, fontSize: '16px', color: '#111827' }}>⚙️ Print Policy</h3>
+                        <h3 style={{ margin: 0, fontSize: '16px', color: '#111827', display: 'flex', alignItems: 'center', gap: '6px' }}><Cog6ToothIcon className="w-5 h-5 text-gray-500" /> Print Policy</h3>
                         <p style={{ margin: 0, fontSize: '13px', color: '#6B7280' }}>
                             Select the target machine rules. The AI will conform the PDF to these exact limits.
                         </p>
@@ -197,10 +198,11 @@ export function InvestorDemo({ onBack, onJobComplete }: InvestorDemoProps) {
                                 style={{
                                     width: '100%', padding: '14px', borderRadius: '8px', background: !file ? '#D1D5DB' : '#111827',
                                     color: '#fff', border: 'none', fontWeight: 600, fontSize: '15px', cursor: !file ? 'not-allowed' : 'pointer',
-                                    transition: 'background 0.2s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                    transition: 'background 0.2s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                                 }}
                             >
-                                Run AI AutoFix 🚀
+                                <RocketLaunchIcon className="w-5 h-5" /> Run AI AutoFix
                             </button>
                         </div>
                     </div>
@@ -210,10 +212,10 @@ export function InvestorDemo({ onBack, onJobComplete }: InvestorDemoProps) {
             {(uploading || jobId) && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '16px', padding: '32px', textAlign: 'center' }}>
-                        <h3 style={{ margin: '0 0 16px 0', fontSize: '20px', color: '#111827' }}>
-                            {status === 'FAILED' ? '❌ Processing Failed' :
-                                status === 'COMPLETED' ? '✅ Optimization Complete' :
-                                    '🧠 Engine Processing...'}
+                        <h3 style={{ margin: '0 0 16px 0', fontSize: '20px', color: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                            {status === 'FAILED' ? <><XCircleIcon className="w-6 h-6 text-red-500" /> Processing Failed</> :
+                                status === 'COMPLETED' ? <><CheckCircleIcon className="w-6 h-6 text-emerald-500" /> Optimization Complete</> :
+                                    <><CpuChipIcon className="w-6 h-6 text-blue-500 animate-pulse" /> Engine Processing...</>}
                         </h3>
 
                         <div style={{ width: '100%', height: '12px', background: '#E5E7EB', borderRadius: '6px', overflow: 'hidden', marginBottom: '16px' }}>
