@@ -18,16 +18,16 @@ import {
 type Range = "24h" | "7d" | "30d";
 
 const KpiCard = ({ title, value, sub, Icon, colorClass }: { title: string; value: string; sub?: string; Icon: any; colorClass: string }) => (
-    <div className="glass rounded-2xl p-5 border border-white hover-slide">
-        <div className="flex items-start justify-between">
-            <div className={`p-2 rounded-xl ${colorClass} bg-opacity-10`}>
-                <Icon className={`w-5 h-5 ${colorClass.replace('bg-', 'text-')}`} />
-            </div>
-            {sub && <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{sub}</span>}
+    <div className="glass rounded-xl p-3.5 border border-white hover-slide flex items-center gap-4">
+        <div className={`p-2.5 rounded-lg ${colorClass} bg-opacity-10 shrink-0`}>
+            <Icon className={`w-5 h-5 ${colorClass.replace('bg-', 'text-')}`} />
         </div>
-        <div className="mt-4">
-            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">{title}</div>
-            <div className="text-2xl font-black text-slate-900 tracking-tight">{value}</div>
+        <div className="min-w-0">
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5 truncate">{title}</div>
+            <div className="flex items-baseline gap-2">
+                <div className="text-xl font-black text-slate-900 tracking-tight">{value}</div>
+                {sub && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">{sub}</span>}
+            </div>
         </div>
     </div>
 );
@@ -58,13 +58,13 @@ export const OverviewTab: React.FC<{ range: Range; refreshMs?: number }> = ({ ra
     const d = o.data;
 
     return (
-        <div className="space-y-8 animate-slide-fade">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="space-y-6 animate-slide-fade">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                 <KpiCard Icon={Square3Stack3DIcon} colorClass="bg-blue-600" title={t("admin.kpi.totalJobs" as any)} value={String(d.totalJobs)} />
                 <KpiCard Icon={CheckBadgeIcon} colorClass="bg-emerald-600" title={t("admin.kpi.successRate" as any)} value={`${d.successRate.toFixed(1)}%`} />
                 <KpiCard Icon={BoltIcon} colorClass="bg-amber-600" title={t("admin.kpi.avgLatency" as any)} value={`${d.avgLatencyMs} ms`} />
                 <KpiCard Icon={ArrowTrendingUpIcon} colorClass="bg-indigo-600" title={t("admin.kpi.deltaRate" as any)} value={`${d.deltaImprovementRate.toFixed(1)}%`} />
-                <KpiCard Icon={BanknotesIcon} colorClass="bg-violet-600" title={t("admin.kpi.costProxy" as any)} value={`${d.costProxy.toFixed(0)} s`} sub="Estimated" />
+                <KpiCard Icon={BanknotesIcon} colorClass="bg-violet-600" title={t("admin.kpi.costProxy" as any)} value={`${d.costProxy.toFixed(0)} s`} sub="Est." />
                 <KpiCard Icon={ScaleIcon} colorClass="bg-pink-600" title={t("admin.kpi.p95Latency" as any)} value={d.p95LatencyMs ? `${d.p95LatencyMs} ms` : t("common.na" as any)} />
                 <KpiCard Icon={QueueListIcon} colorClass="bg-orange-600" title={t("admin.kpi.queueBacklog" as any)} value={String(d.queueBacklog || 0)} />
                 <KpiCard Icon={ClockIcon} colorClass="bg-cyan-600" title={t("admin.kpi.oldestAge" as any)} value={`${d.oldestAgeSeconds || 0} s`} />

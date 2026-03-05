@@ -59,7 +59,7 @@ export const AdminDashboard: React.FC = () => {
     if (!isAuthorized) {
         return (
             <div className="min-h-screen premium-gradient flex items-center justify-center p-6">
-                <div className="max-w-md w-full glass rounded-3xl p-10 border border-white shadow-2xl animate-slide-fade">
+                <div className="max-w-3xl w-full glass rounded-3xl p-10 border border-white shadow-2xl animate-slide-fade">
                     <div className="flex flex-col items-center text-center gap-6">
                         <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-xl shadow-primary/20">
                             <ShieldCheckIcon className="w-8 h-8 text-white" />
