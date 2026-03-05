@@ -15,7 +15,11 @@ import {
     ExclamationCircleIcon,
     CheckBadgeIcon,
     ArrowPathIcon,
-    InformationCircleIcon
+    InformationCircleIcon,
+    FingerPrintIcon,
+    BoltIcon,
+    ShieldCheckIcon,
+    WrenchScrewdriverIcon
 } from "@heroicons/react/24/outline";
 
 export const JobsTab: React.FC<{ refreshMs?: number }> = ({ refreshMs = 0 }) => {
@@ -98,11 +102,36 @@ export const JobsTab: React.FC<{ refreshMs?: number }> = ({ refreshMs = 0 }) => 
                         <table className="w-full text-sm text-left border-collapse">
                             <thead className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-white">
                                 <tr>
-                                    <th className="py-4 px-6">Transaction</th>
-                                    <th className="py-4 px-6">Tenant</th>
-                                    <th className="py-4 px-6">Process</th>
-                                    <th className="py-4 px-6">Status</th>
-                                    <th className="py-4 px-6">Pulse</th>
+                                    <th className="py-4 px-6">
+                                        <div className="flex items-center gap-2">
+                                            <QueueListIcon className="w-3.5 h-3.5" />
+                                            <span>Transaction</span>
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6">
+                                        <div className="flex items-center gap-2">
+                                            <FingerPrintIcon className="w-3.5 h-3.5" />
+                                            <span>Tenant</span>
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6">
+                                        <div className="flex items-center gap-2">
+                                            <WrenchScrewdriverIcon className="w-3.5 h-3.5" />
+                                            <span>Process</span>
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6">
+                                        <div className="flex items-center gap-2">
+                                            <ShieldCheckIcon className="w-3.5 h-3.5" />
+                                            <span>Status</span>
+                                        </div>
+                                    </th>
+                                    <th className="py-4 px-6">
+                                        <div className="flex items-center gap-2">
+                                            <BoltIcon className="w-3.5 h-3.5" />
+                                            <span>Pulse</span>
+                                        </div>
+                                    </th>
                                     <th className="py-4 px-6 text-right">Activity</th>
                                 </tr>
                             </thead>

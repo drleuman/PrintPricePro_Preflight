@@ -9,7 +9,8 @@ import {
     ClockIcon,
     FingerPrintIcon,
     DocumentTextIcon,
-    GlobeAltIcon
+    GlobeAltIcon,
+    BoltIcon
 } from "@heroicons/react/24/outline";
 
 export const AuditTab: React.FC<{ refreshMs?: number }> = ({ refreshMs = 0 }) => {
@@ -53,11 +54,34 @@ export const AuditTab: React.FC<{ refreshMs?: number }> = ({ refreshMs = 0 }) =>
                     <table className="w-full text-sm text-left border-collapse">
                         <thead className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-white">
                             <tr>
-                                <th className="py-4 px-6">Timestamp</th>
-                                <th className="py-4 px-6">Source</th>
-                                <th className="py-4 px-6">Operation</th>
-                                <th className="py-4 px-6">Policy</th>
-                                <th className="py-4 px-6">Endpoint</th>
+                                <th className="py-4 px-6 flex items-center gap-2">
+                                    <ClockIcon className="w-3.5 h-3.5" />
+                                    <span>Timestamp</span>
+                                </th>
+                                <th className="py-4 px-6">
+                                    <div className="flex items-center gap-2">
+                                        <FingerPrintIcon className="w-3.5 h-3.5" />
+                                        <span>Source</span>
+                                    </div>
+                                </th>
+                                <th className="py-4 px-6">
+                                    <div className="flex items-center gap-2">
+                                        <BoltIcon className="w-3.5 h-3.5" />
+                                        <span>Operation</span>
+                                    </div>
+                                </th>
+                                <th className="py-4 px-6">
+                                    <div className="flex items-center gap-2">
+                                        <ShieldCheckIcon className="w-3.5 h-3.5" />
+                                        <span>Policy</span>
+                                    </div>
+                                </th>
+                                <th className="py-4 px-6">
+                                    <div className="flex items-center gap-2">
+                                        <GlobeAltIcon className="w-3.5 h-3.5" />
+                                        <span>Endpoint</span>
+                                    </div>
+                                </th>
                                 <th className="py-4 px-6 text-right">Job Ref</th>
                             </tr>
                         </thead>

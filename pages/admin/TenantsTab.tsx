@@ -8,7 +8,9 @@ import {
     ClockIcon,
     ChatBubbleBottomCenterTextIcon,
     CircleStackIcon,
-    GlobeAltIcon
+    GlobeAltIcon,
+    BoltIcon,
+    CheckBadgeIcon
 } from "@heroicons/react/24/outline";
 
 type Range = "24h" | "7d" | "30d";
@@ -41,10 +43,28 @@ export const TenantsTab: React.FC<{ range: Range; refreshMs?: number }> = ({ ran
                 <table className="w-full text-sm text-left">
                     <thead className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100">
                         <tr>
-                            <th className="py-4 px-6">{t("admin.tenants.tenant" as any)}</th>
-                            <th className="py-4 px-6">{t("admin.tenants.total" as any)}</th>
-                            <th className="py-4 px-6">{t("admin.tenants.success" as any)}</th>
-                            <th className="py-4 px-6">{t("admin.tenants.latency" as any)}</th>
+                            <th className="py-4 px-6 flex items-center gap-2">
+                                <GlobeAltIcon className="w-3.5 h-3.5" />
+                                {t("admin.tenants.tenant" as any)}
+                            </th>
+                            <th className="py-4 px-6">
+                                <div className="flex items-center gap-2">
+                                    <CircleStackIcon className="w-3.5 h-3.5" />
+                                    {t("admin.tenants.total" as any)}
+                                </div>
+                            </th>
+                            <th className="py-4 px-6">
+                                <div className="flex items-center gap-2">
+                                    <CheckBadgeIcon className="w-3.5 h-3.5" />
+                                    {t("admin.tenants.success" as any)}
+                                </div>
+                            </th>
+                            <th className="py-4 px-6">
+                                <div className="flex items-center gap-2">
+                                    <BoltIcon className="w-3.5 h-3.5" />
+                                    {t("admin.tenants.latency" as any)}
+                                </div>
+                            </th>
                             <th className="py-4 px-4 text-right">{t("admin.tenants.last" as any)}</th>
                         </tr>
                     </thead>
