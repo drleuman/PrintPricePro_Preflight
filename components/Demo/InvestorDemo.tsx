@@ -88,8 +88,8 @@ export function InvestorDemo({ onBack, onJobComplete }: InvestorDemoProps) {
         try {
             const res = await fetch('/api/v2/preflight/analyze', { method: 'POST', body: fd });
             const data = await res.json();
-            if (data.ok && data.job_id) {
-                setJobId(data.job_id);
+            if (data.jobId || data.job_id) {
+                setJobId(data.jobId || data.job_id);
                 setStatus('PENDING');
             } else {
                 alert('Upload failed: ' + (data.error || 'Unknown error'));
