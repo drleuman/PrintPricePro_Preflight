@@ -264,6 +264,16 @@ app.all('/api/*path', (req, res) => {
   });
 });
 
+// -------- SPA Fallback --------
+app.get(['/admin', '/admin/'], (req, res) => {
+  const indexPath = path.join(staticPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send('<h1>App not built</h1><p>Run npm run build first.</p>');
+  }
+});
+
 // -------- Global Error Handler --------
 app.use((err, req, res, next) => {
   console.error(`[SERVER-ERROR] ${req.method} ${req.url}:`, err);
