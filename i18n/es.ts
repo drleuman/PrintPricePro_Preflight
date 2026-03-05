@@ -312,4 +312,12 @@ export const es = {
   'admin.kpi.queueBacklog': 'Cola Pendiente',
   'admin.kpi.oldestAge': 'Trabajo más Antiguo',
   'admin.queue.title': 'Matriz de Rendimiento de Colas',
+
+  'admin.jobs.filterTenant': 'Filtrar por ID de Inquilino...',
+  'admin.jobs.filterType': 'Filtrar por Tipo de Proceso...',
+  'admin.jobs.all': 'Todos los Estados',
+  'admin.jobs.empty': 'No se encontraron transacciones',
+  'admin.audit.filterTenant': 'Buscar en registros de auditoría...',
+  'admin.audit.empty': 'No se encontraron eventos de auditoría',
+  'common.loading': 'Cargando secuencia...',
 } as const;

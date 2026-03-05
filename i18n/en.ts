@@ -314,6 +314,14 @@ export const en = {
   'admin.kpi.queueBacklog': 'Queue Backlog',
   'admin.kpi.oldestAge': 'Oldest Job Age',
   'admin.queue.title': 'Queue Performance Matrix',
+
+  'admin.jobs.filterTenant': 'Filter by Tenant ID...',
+  'admin.jobs.filterType': 'Filter by Process Type...',
+  'admin.jobs.all': 'All Statuses',
+  'admin.jobs.empty': 'No transactions found',
+  'admin.audit.filterTenant': 'Search audit logs...',
+  'admin.audit.empty': 'No audit events found',
+  'common.loading': 'Loading sequence...',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

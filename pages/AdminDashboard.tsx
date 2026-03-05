@@ -86,23 +86,25 @@ export const AdminDashboard: React.FC = () => {
             </header>
 
             <div className="max-w-7xl mx-auto px-6 pb-12">
-                <nav className="flex gap-1 bg-slate-200/40 p-1 rounded-xl mb-8 w-fit border border-slate-200/60 transition-all duration-300">
-                    {tabs.map(([id, label, Icon]) => (
-                        <button
-                            key={id}
-                            className={[
-                                "flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200",
-                                activeTab === id
-                                    ? "bg-white text-slate-900 shadow-sm border border-slate-200/50"
-                                    : "text-slate-500 hover:text-slate-800 hover:bg-white/30",
-                            ].join(" ")}
-                            onClick={() => setActiveTab(id)}
-                        >
-                            <Icon className={`w-4 h-4 ${activeTab === id ? "text-primary" : "text-slate-400"}`} />
-                            {label}
-                        </button>
-                    ))}
-                </nav>
+                <div className="overflow-x-auto pb-4 -mb-4 scrollbar-hide">
+                    <nav className="flex gap-1 bg-slate-200/40 p-1 rounded-xl mb-8 w-fit border border-slate-200/60 transition-all duration-300 whitespace-nowrap">
+                        {tabs.map(([id, label, Icon]) => (
+                            <button
+                                key={id}
+                                className={[
+                                    "flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200",
+                                    activeTab === id
+                                        ? "bg-white text-slate-900 shadow-sm border border-slate-200/50"
+                                        : "text-slate-500 hover:text-slate-800 hover:bg-white/30",
+                                ].join(" ")}
+                                onClick={() => setActiveTab(id)}
+                            >
+                                <Icon className={`w-4 h-4 ${activeTab === id ? "text-primary" : "text-slate-400"}`} />
+                                {label}
+                            </button>
+                        ))}
+                    </nav>
+                </div>
 
                 <main className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl shadow-slate-200/50 border border-white p-6 relative overflow-hidden animate-slide-fade">
                     {/* Background glass decoration */}

@@ -103,7 +103,7 @@ export const AuditTab: React.FC<{ refreshMs?: number }> = ({ refreshMs = 0 }) =>
                     {q.data.length === 0 && (
                         <div className="py-20 text-center">
                             <DocumentTextIcon className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                            <div className="text-slate-400 font-bold uppercase tracking-widest text-xs">No audit events found</div>
+                            <div className="text-slate-400 font-bold uppercase tracking-widest text-xs">{t("admin.audit.empty" as any)}</div>
                         </div>
                     )}
                 </div>

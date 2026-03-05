@@ -159,7 +159,7 @@ export const JobsTab: React.FC<{ refreshMs?: number }> = ({ refreshMs = 0 }) => 
                         {q.data.jobs.length === 0 && (
                             <div className="py-20 text-center">
                                 <QueueListIcon className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                                <div className="text-slate-400 font-bold uppercase tracking-widest text-sm">No transactions found</div>
+                                <div className="text-slate-400 font-bold uppercase tracking-widest text-sm">{t("admin.jobs.empty" as any)}</div>
                             </div>
                         )}
                     </div>
