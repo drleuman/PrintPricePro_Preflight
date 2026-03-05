@@ -1,6 +1,6 @@
 // pages/AdminDashboard.tsx
 import React, { useMemo, useState } from "react";
-import { t } from "../i18n";
+import { t, LocaleProvider, useLocale } from "../i18n";
 import { getAdminKey, setAdminKey, clearAdminKey } from "../lib/adminApi";
 import { OverviewTab } from "./admin/OverviewTab";
 import { TenantsTab } from "./admin/TenantsTab";
@@ -23,7 +23,8 @@ import {
 type Tab = "overview" | "tenants" | "jobs" | "errors" | "audit" | "controls";
 type Range = "24h" | "7d" | "30d";
 
-export const AdminDashboard: React.FC = () => {
+const AdminDashboardInner: React.FC = () => {
+    const { currentLocale } = useLocale();
     const [activeTab, setActiveTab] = useState<Tab>("overview");
     const [range, setRange] = useState<Range>("24h");
     const [refresh, setRefresh] = useState<number>(0);
@@ -53,7 +54,7 @@ export const AdminDashboard: React.FC = () => {
             ["audit", t("admin.tabs.audit" as any), ShieldCheckIcon],
             ["controls", t("admin.tabs.controls" as any), WrenchScrewdriverIcon],
         ] as Array<[Tab, string, any]>),
-        []
+        [currentLocale]
     );
 
     if (!isAuthorized) {
@@ -71,7 +72,7 @@ export const AdminDashboard: React.FC = () => {
                         <div className="w-full space-y-4">
                             <input
                                 type="password"
-                                className="w-full bg-white/50 border border-slate-200 rounded-xl px-5 py-3.5 text-center text-lg font-mono tracking-widest outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all transition-all"
+                                className="w-full bg-white/50 border border-slate-200 rounded-xl px-5 py-3.5 text-center text-lg font-mono tracking-widest outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all"
                                 placeholder="••••••••••••"
                                 value={authKey}
                                 onChange={(e) => setAuthKey(e.target.value)}
@@ -181,5 +182,13 @@ export const AdminDashboard: React.FC = () => {
                 </main>
             </div>
         </div>
+    );
+};
+
+export const AdminDashboard: React.FC = () => {
+    return (
+        <LocaleProvider>
+            <AdminDashboardInner />
+        </LocaleProvider>
     );
 };

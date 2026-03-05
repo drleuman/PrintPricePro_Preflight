@@ -160,16 +160,16 @@ router.get("/errors/top", async (req, res) => {
     const { rows } = await db.query(
       `
   SELECT
-  JSON_UNQUOTE(JSON_EXTRACT(error, '$.code')) as error_code,
+    COALESCE(JSON_UNQUOTE(JSON_EXTRACT(error, '$.code')), 'UNKNOWN') as error_code,
     COUNT(*) as error_count,
     MAX(updated_at) as last_seen
-      FROM jobs
-      WHERE status = 'FAILED'
-        AND created_at >= NOW() - INTERVAL ${interval}
-        AND error IS NOT NULL
-      GROUP BY error_code
-      ORDER BY error_count DESC
-      LIMIT 10;
+  FROM jobs
+  WHERE status = 'FAILED'
+    AND created_at >= NOW() - ${interval}
+    AND error IS NOT NULL
+  GROUP BY error_code
+  ORDER BY error_count DESC
+  LIMIT 10;
   `
     );
 
