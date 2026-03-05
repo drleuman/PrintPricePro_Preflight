@@ -35,8 +35,7 @@ async function enqueueJob(type, data) {
         removeOnComplete: true,
         removeOnFail: false,
     });
-});
-return job;
+    return job;
 }
 
 /**
