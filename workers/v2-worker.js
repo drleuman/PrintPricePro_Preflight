@@ -6,6 +6,9 @@ const deterministicService = require('../services/deterministicService');
 const reportService = require('../services/reportService');
 const autofixService = require('../services/autofixService');
 const deltaService = require('../services/deltaService');
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Common worker logic to update job status in the Database.
@@ -41,9 +44,9 @@ const v2Worker = new Worker('preflight-v2', async (job) => {
 
         // Save report to DB
         await db.query(`
-            INSERT INTO reports (job_id, asset_id, summary, findings, version, data)
-            VALUES (?, ?, ?, ?, 'v2', ?)
-        `, [job.id, asset_id, 'Standard V2 Deterministic Analysis', JSON.stringify(report.findings), JSON.stringify(report)]);
+            INSERT INTO reports (id, job_id, asset_id, summary, findings, version, data)
+            VALUES (?, ?, ?, ?, ?, 'v2', ?)
+        `, [crypto.randomUUID(), job.id, asset_id, 'Standard V2 Deterministic Analysis', JSON.stringify(report.findings), JSON.stringify(report)]);
 
         await updateJobStatus(job.id, 'COMPLETED', 100);
         console.log(`[WORKER][${job.id}] Completed successfully with ${report.findings.length} findings`);
@@ -122,9 +125,10 @@ const autofixWorker = new Worker('autofix-v2', async (job) => {
 
         // 6. Save final report with delta
         await db.query(`
-            INSERT INTO reports (job_id, asset_id, summary, findings, version, data, delta)
-            VALUES (?, ?, ?, ?, 'v2', ?, ?)
+            INSERT INTO reports (id, job_id, asset_id, summary, findings, version, data, delta)
+            VALUES (?, ?, ?, ?, ?, 'v2', ?, ?)
         `, [
+            crypto.randomUUID(),
             job.id,
             fixedAsset.id,
             `AutoFix completed. ${delta.fixed_count} issues resolved.`,
@@ -136,9 +140,9 @@ const autofixWorker = new Worker('autofix-v2', async (job) => {
         // 7. Log Telemetry / Metrics
         const processing_ms = Date.now() - tStart;
         await db.query(`
-            INSERT INTO metrics (job_id, tenant_id, policy_slug, success, processing_ms, file_size_bytes, page_count, delta_score)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `, [job.id, tenant_id, policy || 'OFFSET_CMYK_STRICT', true, processing_ms, originalAsset.size || 0, afterReport.summary?.pages || 0, delta.fixed_count || 0]);
+            INSERT INTO metrics (id, job_id, tenant_id, policy_slug, success, processing_ms, file_size_bytes, page_count, delta_score)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [crypto.randomUUID(), job.id, tenant_id, policy || 'OFFSET_CMYK_STRICT', true, processing_ms, originalAsset.size || 0, afterReport.summary?.pages || 0, delta.fixed_count || 0]);
 
         await updateJobStatus(job.id, 'COMPLETED', 100);
         return { ok: true, fixed_asset_id: fixedAsset.id, delta };
@@ -146,9 +150,9 @@ const autofixWorker = new Worker('autofix-v2', async (job) => {
         const processing_ms = Date.now() - tStart;
         // Best effort to log failure telemetry
         db.query(`
-            INSERT INTO metrics (job_id, tenant_id, policy_slug, success, processing_ms, file_size_bytes, page_count, delta_score)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `, [job.id, tenant_id, policy || 'OFFSET_CMYK_STRICT', false, processing_ms, 0, 0, 0]).catch(() => { });
+            INSERT INTO metrics (id, job_id, tenant_id, policy_slug, success, processing_ms, file_size_bytes, page_count, delta_score)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [crypto.randomUUID(), job.id, tenant_id, policy || 'OFFSET_CMYK_STRICT', false, processing_ms, 0, 0, 0]).catch(() => { });
 
         console.error(`[AUTOFIX-WORKER][${job.id}] Failed:`, err);
         await updateJobStatus(job.id, 'FAILED', 0, { message: err.message });
