@@ -44,7 +44,7 @@ const SCHEMA_QUERIES = [
     FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
 );`,
     `CREATE TABLE IF NOT EXISTS reports (
-    id VARCHAR(36) PRIMARY KEY,
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
     job_id VARCHAR(36),
     asset_id VARCHAR(36),
     version VARCHAR(20) DEFAULT 'v2',
@@ -57,7 +57,7 @@ const SCHEMA_QUERIES = [
     FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE
 );`,
     `CREATE TABLE IF NOT EXISTS metrics (
-    id VARCHAR(36) PRIMARY KEY,
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
     job_id VARCHAR(36),
     tenant_id VARCHAR(255) NOT NULL DEFAULT 'default',
     policy_slug VARCHAR(255) NOT NULL,

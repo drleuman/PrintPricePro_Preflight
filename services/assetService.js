@@ -37,7 +37,7 @@ class AssetService {
 
         const sql = `
             INSERT INTO assets (id, tenant_id, filename, storage_path, sha256, size, mime_type)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
         const values = [id, tenantId, filename, storagePath, sha256, size, 'application/pdf'];
 
