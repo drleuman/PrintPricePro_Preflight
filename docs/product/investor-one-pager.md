@@ -1,6 +1,6 @@
 # PrintRisk Intelligence: The Automation Layer for Production Print
 
-**Elevator Pitch:** We are the cloud infrastructure that turns unprintable PDFs into production-ready print assets — automatically, instantly, and with measurable ROI.
+**Elevator Pitch:** We are the cloud infrastructure that turns unprintable PDFs into production-ready print assets — automatically, instantly, and with measurable ROI. **We reduce manual prepress time and print risk by automatically fixing files and verifying the improvement with a deterministic recheck.**
 
 ## The Problem
 Commercial print shops, print-on-demand networks, and packaging companies waste **25% of their margin** on manual prepress. Human operators open PDFs, hunt for CMYK conversion errors, fix missing bleed, and repair spot colors. It's a massive, unscalable bottleneck.
