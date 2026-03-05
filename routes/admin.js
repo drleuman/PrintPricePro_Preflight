@@ -31,8 +31,9 @@ router.get("/metrics/overview", async (req, res) => {
         MAX(processing_ms) as max_latency_ms,
         (SUM(processing_ms) / 1000) as cost_proxy_seconds
       FROM metrics
-      WHERE created_at >= NOW() - INTERVAL '${interval}';
-      `
+      WHERE created_at >= NOW() - INTERVAL ?;
+      `,
+      [interval]
     );
 
     const { rows: [improve] } = await db.query(
@@ -41,8 +42,9 @@ router.get("/metrics/overview", async (req, res) => {
         ((SUM(CASE WHEN delta_score > 0 THEN 1 ELSE 0 END) / NULLIF(COUNT(*),0)) * 100) as improvement_rate
       FROM metrics
       WHERE success = 1
-        AND created_at >= NOW() - INTERVAL '${interval}';
-      `
+        AND created_at >= NOW() - INTERVAL ?;
+      `,
+      [interval]
     );
 
     const { rows: [queueStats] } = await db.query(
@@ -85,10 +87,11 @@ router.get("/metrics/tenants", async (req, res) => {
         AVG(processing_ms) as avg_latency_ms,
         MAX(created_at) as last_activity
       FROM metrics
-      WHERE created_at >= NOW() - INTERVAL '${interval}'
+      WHERE created_at >= NOW() - INTERVAL ?
       GROUP BY tenant_id
       ORDER BY total_jobs DESC;
-      `
+      `,
+      [interval]
     );
 
     res.json(rows.map(r => ({
