@@ -321,6 +321,9 @@ export const en = {
   'admin.jobs.empty': 'No transactions found',
   'admin.audit.filterTenant': 'Search audit logs...',
   'admin.audit.empty': 'No audit events found',
+  'admin.errors.code': 'Fault Code',
+  'admin.errors.count': 'Stack Count',
+  'admin.errors.lastSeen': 'Last Observed',
   'common.loading': 'Loading sequence...',
 } as const;
 

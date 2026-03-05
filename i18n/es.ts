@@ -319,5 +319,8 @@ export const es = {
   'admin.jobs.empty': 'No se encontraron transacciones',
   'admin.audit.filterTenant': 'Buscar en registros de auditoría...',
   'admin.audit.empty': 'No se encontraron eventos de auditoría',
+  'admin.errors.code': 'Código de Fallo',
+  'admin.errors.count': 'Recuento de Pilas',
+  'admin.errors.lastSeen': 'Última Observación',
   'common.loading': 'Cargando secuencia...',
 } as const;
