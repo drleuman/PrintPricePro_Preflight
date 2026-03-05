@@ -62,8 +62,8 @@ router.get("/metrics/overview", async (req, res) => {
       p95LatencyMs: null,
       deltaImprovementRate: Number(improve.improvement_rate || 0),
       costProxy: Number(overview.cost_proxy_seconds || 0),
-      queueBacklog: Number(queueStats[0]?.backlog || queueStats.backlog || 0),
-      oldestAgeSeconds: Number(queueStats[0]?.oldest_age_seconds || queueStats.oldest_age_seconds || 0)
+      queueBacklog: Number(queueStats?.backlog || 0),
+      oldestAgeSeconds: Number(queueStats?.oldest_age_seconds || 0)
     });
   } catch (err) {
     console.error('[ADMIN-API] Error fetching overview metrics:', err);
@@ -76,7 +76,7 @@ router.get("/metrics/tenants", async (req, res) => {
   const interval = rangeToInterval(req.query.range || "7d");
 
   try {
-    const rows = await db.query(
+    const { rows } = await db.query(
       `
       SELECT 
         tenant_id,
