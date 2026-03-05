@@ -302,7 +302,7 @@ export const es = {
   'admin.tenants.total': 'Volumen Tráfico',
   'admin.tenants.success': 'Fiabilidad %',
   'admin.tenants.latency': 'Latencia Sincro',
-  'admin.tenants.activity': 'Último Pulso',
+  'admin.tenants.last': 'Último Pulso',
   'admin.tabs.jobs': 'Trabajos',
   'admin.tabs.errors': 'Errores',
   'admin.tabs.audit': 'Auditoría',

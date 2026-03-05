@@ -304,7 +304,7 @@ export const en = {
   'admin.tenants.total': 'Traffic Volume',
   'admin.tenants.success': 'Reliability',
   'admin.tenants.latency': 'Sync Latency',
-  'admin.tenants.activity': 'Last Pulse',
+  'admin.tenants.last': 'Last Pulse',
   'admin.tabs.jobs': 'Jobs',
   'admin.tabs.errors': 'Errors',
   'admin.tabs.audit': 'Audit Log',

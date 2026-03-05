@@ -65,7 +65,12 @@ export const TenantsTab: React.FC<{ range: Range; refreshMs?: number }> = ({ ran
                                     {t("admin.tenants.latency" as any)}
                                 </div>
                             </th>
-                            <th className="py-4 px-4 text-right">{t("admin.tenants.last" as any)}</th>
+                            <th className="py-4 px-6 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                    <BoltIcon className="w-3.5 h-3.5" />
+                                    {t("admin.tenants.last" as any)}
+                                </div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
