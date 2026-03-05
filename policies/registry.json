@@ -34,6 +34,27 @@
             "description": "Banners, signage, and large format printing. Relaxed resolution requirements.",
             "category": "large_format",
             "tier": "standard"
+        },
+        {
+            "slug": "LARGE_FORMAT_RGB_SAFE",
+            "name": "Large Format RGB Safe (Signage)",
+            "description": "Banners and signage. RGB allowed, lower DPI threshold.",
+            "category": "large_format",
+            "tier": "standard"
+        },
+        {
+            "slug": "PACKAGING_SPOT_ALLOWED",
+            "name": "Packaging (Spot/Diecut Allowed)",
+            "description": "Packaging printing. Spot color whitelists for CutContour, Varnish, etc.",
+            "category": "packaging",
+            "tier": "professional"
+        },
+        {
+            "slug": "BOOK_COVER_VS_INTERIOR",
+            "name": "Book Print (Cover vs Interior Rules)",
+            "description": "Book printing. Stricter rules for interior text blacks, fonts, and overprinting.",
+            "category": "books",
+            "tier": "professional"
         }
     ],
     "default": "OFFSET_CMYK_STRICT"

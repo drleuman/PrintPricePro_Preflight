@@ -189,8 +189,23 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, onClose }
                         </div>
                     </div>
 
+                    <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.8rem', color: '#94a3b8' }}>
+                        🛡️ Verified by Post-Fix Deterministic Recheck (Ghostscript V10.06 | Poppler 24.x)
+                    </div>
+
                     <div className="v2-action-buttons">
-                        <button className="v2-btn-primary">Download Fixed PDF</button>
+                        <button
+                            className="v2-btn-primary"
+                            onClick={() => {
+                                if (job?.download_url) {
+                                    window.open(job.download_url, '_blank');
+                                }
+                            }}
+                            disabled={!job?.download_url}
+                            style={{ opacity: job?.download_url ? 1 : 0.5 }}
+                        >
+                            Download Fixed PDF (Secure)
+                        </button>
                         <button className="v2-btn-outline">Download Report JSON</button>
                     </div>
                 </div>

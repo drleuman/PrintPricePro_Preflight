@@ -13,6 +13,31 @@ class ReportService {
     }
 
     /**
+     * Sanitizes evidence to hide absolute server paths and limits length.
+     */
+    sanitizeEvidence(evidence) {
+        if (!evidence || !evidence.details) return evidence;
+
+        // Clone to avoid mutating original
+        const safe = { ...evidence };
+        let str = safe.details;
+
+        if (typeof str === 'string') {
+            // Redact Windows and Linux absolute paths
+            str = str.replace(/[A-Z]:\\[^\s"'\n]+/gi, '[REDACTED_SECURE_TENANT_PATH]');
+            str = str.replace(/(?:\/(?:var|usr|etc|opt|home|tmp)\/)[^\s"'\n]+/gi, '[REDACTED_SECURE_TENANT_PATH]');
+
+            // Limit length
+            const MAX_LEN = 10000; // 10K char limit for demo view
+            if (str.length > MAX_LEN) {
+                str = str.substring(0, MAX_LEN) + '\n\n... [TRUNCATED: Full log available via Audit Log API]';
+            }
+            safe.details = str;
+        }
+        return safe;
+    }
+
+    /**
      * Builds a V2 Preflight Report from raw findings and metadata.
      */
     buildReport(asset, analysisResults, engines = {}) {
@@ -35,6 +60,8 @@ class ReportService {
         // Merge and enrich findings using the registry
         rawFindings.forEach(raw => {
             const regEntry = this.registry[raw.id];
+            const safeEvidence = this.sanitizeEvidence(raw.evidence || {});
+
             if (regEntry) {
                 report.findings.push({
                     id: raw.id,
@@ -43,9 +70,9 @@ class ReportService {
                     severity: raw.severity || regEntry.severity,
                     confidence: raw.confidence || 1.0,
                     user_message: regEntry.user_message,
-                    developer_message: raw.evidence ? raw.evidence.details : '',
+                    developer_message: safeEvidence.details || '',
                     tags: regEntry.tags || [],
-                    evidence: raw.evidence || {},
+                    evidence: safeEvidence,
                     fix: {
                         available: !!regEntry.fix,
                         applied: false,
@@ -61,8 +88,8 @@ class ReportService {
                     severity: raw.severity || 'warning',
                     confidence: 0.5,
                     user_message: 'Unhandled preflight finding.',
-                    developer_message: raw.evidence ? raw.evidence.details : '',
-                    evidence: raw.evidence || {}
+                    developer_message: safeEvidence.details || '',
+                    evidence: safeEvidence
                 });
             }
         });

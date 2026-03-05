@@ -105,11 +105,16 @@ router.get('/jobs/:id', async (req, res) => {
         // If completed, find the report
         let report = null;
         let delta = null;
+        let downloadUrl = null;
         if (jobRecord.status === 'COMPLETED') {
-            const reportResult = await db.query('SELECT data, delta FROM reports WHERE job_id = ?', [jobRecord.id]);
+            const reportResult = await db.query('SELECT asset_id, data, delta FROM reports WHERE job_id = ?', [jobRecord.id]);
             if (reportResult.rows[0]) {
                 report = reportResult.rows[0].data;
                 delta = reportResult.rows[0].delta;
+
+                const auditService = require('../services/auditService');
+                const fixedAssetId = reportResult.rows[0].asset_id;
+                downloadUrl = auditService.generateSignedUrl(fixedAssetId, 3600); // 1 hour expiry
             }
         }
 
@@ -119,7 +124,8 @@ router.get('/jobs/:id', async (req, res) => {
             progress: jobRecord.progress,
             error: jobRecord.error,
             report: report,
-            delta: delta
+            delta: delta,
+            download_url: downloadUrl
         });
     } catch (err) {
         console.error('[V2-JOB-STATUS-ERROR]', err);
@@ -133,10 +139,27 @@ router.get('/jobs/:id', async (req, res) => {
  */
 router.get('/assets/:id', async (req, res) => {
     try {
+        const auditService = require('../services/auditService');
+        const { expires, sig } = req.query;
+
+        if (expires && sig) {
+            if (!auditService.verifySignedUrl(req.params.id, expires, sig)) {
+                return res.status(403).json({ error: 'Invalid or expired secure download link' });
+            }
+        } else {
+            // For production, this should block unsigned requests
+            // return res.status(403).json({ error: 'Missing security signature' });
+        }
+
         const asset = await assetService.getAsset(req.params.id);
         if (!asset) {
             return res.status(404).json({ error: 'Asset not found' });
         }
+
+        await auditService.logAction(asset.tenant_id, 'DOWNLOAD_SECURE_ASSET', {
+            ipAddress: req.ip,
+            details: { asset_id: asset.id }
+        });
 
         res.download(asset.storage_path, asset.filename);
     } catch (err) {

@@ -68,6 +68,17 @@ const SCHEMA_QUERIES = [
     delta_score INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+);`,
+    `CREATE TABLE IF NOT EXISTS audit_logs (
+    id VARCHAR(36) PRIMARY KEY,
+    job_id VARCHAR(36),
+    tenant_id VARCHAR(255) NOT NULL DEFAULT 'default',
+    action VARCHAR(100) NOT NULL,
+    policy_slug VARCHAR(255),
+    ip_address VARCHAR(45),
+    details JSON,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE SET NULL
 );`
 ];
 
