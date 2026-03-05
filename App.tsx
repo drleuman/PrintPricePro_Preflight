@@ -104,6 +104,13 @@ export default function App() {
     return cleanupUrl;
   }, [cleanupUrl]);
 
+  // Handle subdomain routing for demo.printprice.pro
+  useEffect(() => {
+    if (window.location.hostname.startsWith('demo')) {
+      setAppMode('demo');
+    }
+  }, []);
+
   const downloadAndRemember = useCallback((blob: Blob, filename: string, autoDownload = true) => {
     cleanupUrl();
 

@@ -125,12 +125,14 @@ export function InvestorDemo({ onBack, onJobComplete }: InvestorDemoProps) {
                         Experience the power of the PrintPricePro V2 AutoFix Engine with Policy Enforcement.
                     </p>
                 </div>
-                <button onClick={onBack} style={{
-                    background: 'none', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '8px 16px',
-                    color: '#374151', cursor: 'pointer', fontWeight: 600
-                }}>
-                    Close Demo
-                </button>
+                {!window.location.hostname.startsWith('demo') && (
+                    <button onClick={onBack} style={{
+                        background: 'none', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '8px 16px',
+                        color: '#374151', cursor: 'pointer', fontWeight: 600
+                    }}>
+                        Close Demo
+                    </button>
+                )}
             </div>
 
             {!jobId && !uploading && (
