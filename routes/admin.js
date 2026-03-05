@@ -22,7 +22,7 @@ router.get("/metrics/overview", async (req, res) => {
   const interval = rangeToInterval(req.query.range);
 
   try {
-    const [overview] = await db.query(
+    const { rows: [overview] } = await db.query(
       `
       SELECT 
         COUNT(*) as total_jobs,
@@ -35,7 +35,7 @@ router.get("/metrics/overview", async (req, res) => {
       `
     );
 
-    const [improve] = await db.query(
+    const { rows: [improve] } = await db.query(
       `
       SELECT 
         ((SUM(CASE WHEN delta_score > 0 THEN 1 ELSE 0 END) / NULLIF(COUNT(*),0)) * 100) as improvement_rate
@@ -45,7 +45,7 @@ router.get("/metrics/overview", async (req, res) => {
       `
     );
 
-    const [queueStats] = await db.query(
+    const { rows: [queueStats] } = await db.query(
       `
       SELECT 
         SUM(CASE WHEN status IN ('QUEUED', 'RUNNING', 'FAILED') THEN 1 ELSE 0 END) as backlog,
@@ -123,12 +123,12 @@ router.get("/jobs", async (req, res) => {
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
   try {
-    const [countRow] = await db.query(
+    const { rows: [countRow] } = await db.query(
       `SELECT COUNT(*) as total FROM jobs ${whereSql};`,
       params
     );
 
-    const rows = await db.query(
+    const { rows } = await db.query(
       `
       SELECT id, tenant_id, type, status, progress, error, created_at, updated_at
       FROM jobs
@@ -157,7 +157,7 @@ router.get("/errors/top", async (req, res) => {
   const interval = rangeToInterval(req.query.range || "7d");
 
   try {
-    const rows = await db.query(
+    const { rows } = await db.query(
       `
   SELECT
   JSON_UNQUOTE(JSON_EXTRACT(error, '$.code')) as error_code,
@@ -199,7 +199,7 @@ router.get("/audit", async (req, res) => {
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
   try {
-    const rows = await db.query(
+    const { rows } = await db.query(
       `
       SELECT id, job_id, tenant_id, action, policy_slug, ip_address, created_at
       FROM audit_logs
