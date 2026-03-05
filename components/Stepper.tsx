@@ -6,6 +6,7 @@ import {
     CheckCircleIcon,
 } from '@heroicons/react/24/outline';
 import { CheckIcon } from '@heroicons/react/20/solid';
+import { t } from '../i18n';
 
 interface Step {
     number: number;
@@ -52,14 +53,14 @@ export const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
             }}>
                 {/* Background track */}
                 <div style={{
-                    position: 'absolute', top: '1.75rem', left: 0,
-                    width: '100%', height: '2px',
+                    position: 'absolute', top: '1.75rem', left: '1.75rem',
+                    width: 'calc(100% - 3.5rem)', height: '2px',
                     background: '#f3f4f6', zIndex: 0,
                 }} />
                 {/* Active progress line */}
                 <div style={{
-                    position: 'absolute', top: '1.75rem', left: 0,
-                    width: `${progressPct}%`, height: '2px',
+                    position: 'absolute', top: '1.75rem', left: '1.75rem',
+                    width: `calc(${progressPct}% * (100% - 3.5rem) / 100%)`, height: '2px',
                     background: '#dc2626',
                     transition: 'width 0.7s ease-in-out', zIndex: 0,
                 }} />
@@ -114,14 +115,18 @@ export const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
                             </div>
 
                             <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-                                <div style={{
-                                    fontSize: '10px', fontWeight: 900,
-                                    textTransform: 'uppercase', letterSpacing: '0.1em',
-                                    marginBottom: '2px',
-                                    color: isActive ? '#dc2626' : isCompleted ? '#16a34a' : '#9ca3af',
-                                    transition: 'color 0.3s',
-                                }}>
-                                    Step 0{step.number}
+                                <div
+                                    style={{
+                                        fontSize: '10px',
+                                        fontWeight: 900,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.1em',
+                                        marginBottom: '2px',
+                                        color: isActive ? '#dc2626' : isCompleted ? '#16a34a' : '#9ca3af',
+                                        transition: 'color 0.3s',
+                                    }}
+                                >
+                                    {t('stepNumber', { number: step.number })}
                                 </div>
                                 <div style={{
                                     fontSize: '0.875rem', fontWeight: 700,

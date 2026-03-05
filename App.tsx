@@ -23,13 +23,6 @@ import {
 import { usePreflightWorker } from './hooks/usePreflightWorker';
 import { usePdfTools } from './hooks/usePdfTools';
 
-const WORKFLOW_STEPS = [
-  { number: 1, title: 'Upload PDF', icon: 'document' },
-  { number: 2, title: 'Analysis', icon: 'search' },
-  { number: 3, title: 'Fix Issues', icon: 'wrench' },
-  { number: 4, title: 'Review', icon: 'check' },
-];
-
 export default function App() {
   // ---------- Workflow State ----------
   const [currentStep, setCurrentStep] = useState(1);
@@ -860,7 +853,15 @@ export default function App() {
           />
         ) : (
           <>
-            <Stepper currentStep={currentStep} steps={WORKFLOW_STEPS} />
+            <Stepper
+              currentStep={currentStep}
+              steps={[
+                { number: 1, title: t('uploadPdf'), icon: 'document' },
+                { number: 2, title: t('analysis'), icon: 'search' },
+                { number: 3, title: t('fixIssuesTitle'), icon: 'wrench' },
+                { number: 4, title: t('review'), icon: 'check' },
+              ]}
+            />
 
             <div style={{ marginTop: '16px' }}>
               {currentStep === 1 && (
