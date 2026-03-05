@@ -2,7 +2,7 @@
 import React from "react";
 import { getTopErrors } from "../../lib/adminApi";
 import { useAdminQuery } from "../../hooks/useAdminData";
-import { t } from "../../i18n";
+import { t, useLocale } from "../../i18n";
 import {
     BugAntIcon,
     ExclamationTriangleIcon,
@@ -13,6 +13,7 @@ import {
 type Range = "24h" | "7d" | "30d";
 
 export const ErrorsTab: React.FC<{ range: Range; refreshMs?: number }> = ({ range, refreshMs = 0 }) => {
+    useLocale(); // Enforce context
     const q = useAdminQuery(`errors:${range}`, () => getTopErrors(range), refreshMs);
 
     if (q.status === "loading") return (
