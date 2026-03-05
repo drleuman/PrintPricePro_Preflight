@@ -19,6 +19,13 @@ router.post('/analyze', upload.single('pdf'), async (req, res) => {
         }
 
         const tenantId = req.body.tenant_id || 'default';
+
+        // Quarantine Check
+        const qCheck = await db.query('SELECT quarantined_until, reason FROM tenant_controls WHERE tenant_id = ? AND quarantined_until > NOW()', [tenantId]);
+        if (qCheck.rows.length > 0) {
+            return res.status(403).json({ error: 'Tenant is currently quarantined', reason: qCheck.rows[0].reason });
+        }
+
         const asset = await assetService.createAsset({
             filename: req.file.originalname,
             filePath: req.file.path,

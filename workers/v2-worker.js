@@ -29,6 +29,13 @@ const v2Worker = new Worker('preflight-v2', async (job) => {
     console.log(`[WORKER][${job.id}] Starting ${job.name} for asset ${asset_id}`);
 
     try {
+        // Soft-check cancellation
+        const jobRecord = await db.query('SELECT status FROM jobs WHERE id = ?', [job.id]);
+        if (jobRecord.rows[0]?.status === 'CANCELED' || jobRecord.rows[0]?.status === 'CANCEL_REQUESTED') {
+            console.log(`[WORKER][${job.id}] Job was canceled before starting. Skipping.`);
+            return { ok: false, canceled: true };
+        }
+
         await updateJobStatus(job.id, 'PROCESSING', 10);
 
         const asset = await assetService.getAsset(asset_id);
@@ -67,8 +74,15 @@ const autofixWorker = new Worker('autofix-v2', async (job) => {
     const { asset_id, tenant_id, policy } = job.data;
     console.log(`[WORKER][${job.id}] Starting AUTOFIX for asset ${asset_id}`);
 
+    const tStart = Date.now();
     try {
-        const tStart = Date.now();
+        // Soft-check cancellation
+        const jobRecord = await db.query('SELECT status FROM jobs WHERE id = ?', [job.id]);
+        if (jobRecord.rows[0]?.status === 'CANCELED' || jobRecord.rows[0]?.status === 'CANCEL_REQUESTED') {
+            console.log(`[WORKER][${job.id}] AUTOFIX Job was canceled before starting. Skipping.`);
+            return { ok: false, canceled: true };
+        }
+
         await updateJobStatus(job.id, 'PROCESSING', 10);
 
         const originalAsset = await assetService.getAsset(asset_id);

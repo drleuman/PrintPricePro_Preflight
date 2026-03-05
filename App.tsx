@@ -9,6 +9,7 @@ import { AIAuditModal } from './components/AIAuditModal';
 import { V2ReportViewer } from './components/V2ReportViewer';
 import { useLocale, Locale } from './i18n';
 import { InvestorDemo } from './components/Demo/InvestorDemo';
+import { AdminDashboard } from './pages/AdminDashboard';
 import { RocketLaunchIcon } from '@heroicons/react/24/outline';
 
 import { t } from './i18n';
@@ -784,6 +785,10 @@ export default function App() {
   }, []);
 
   // ---------- Render ----------
+  if (window.location.pathname === '/admin' || window.location.pathname === '/admin/') {
+    return <AdminDashboard />;
+  }
+
   return (
     <div style={{
       minHeight: '100vh',

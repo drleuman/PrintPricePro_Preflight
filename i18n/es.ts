@@ -288,4 +288,7 @@ export const es = {
   bleedMethodScale: 'Escalado Centrado (V3)',
   bleedMethodBox: 'Ajuste de Cajas (Margen Real)',
   bleedScaleWarning: 'Escalado agresivo detectado (>4%). Los márgenes de seguridad están comprimidos.',
+
+  // Admin Dashboard
+  'admin.tabs.controls': 'Controles ⚠️',
 } as const;

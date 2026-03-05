@@ -290,6 +290,9 @@ export const en = {
   bleedMethodScale: 'Centered Scaling (V3)',
   bleedMethodBox: 'Box Adjustment (Real Margin)',
   bleedScaleWarning: 'Aggressive scaling detected (>4%). Safety margins are compressed.',
+
+  // Admin Dashboard
+  'admin.tabs.controls': 'Controls ⚠️',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

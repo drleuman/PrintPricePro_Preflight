@@ -35,7 +35,62 @@ async function enqueueJob(type, data) {
         removeOnComplete: true,
         removeOnFail: false,
     });
-    return job;
+});
+return job;
+}
+
+/**
+ * Admin: Pause a specific queue.
+ */
+async function pauseQueue(type) {
+    const queue = type === 'AUTOFIX' ? autofixQueue : preflightQueue;
+    await queue.pause();
+    return true;
+}
+
+/**
+ * Admin: Resume a specific queue.
+ */
+async function resumeQueue(type) {
+    const queue = type === 'AUTOFIX' ? autofixQueue : preflightQueue;
+    await queue.resume();
+    return true;
+}
+
+/**
+ * Admin: Drain the queue.
+ */
+async function drainQueue(type, includeDelayed = false) {
+    // BullMQ drain() only removes waiting and delayed (if delayed is passed as true)
+    const queue = type === 'AUTOFIX' ? autofixQueue : preflightQueue;
+    await queue.drain(includeDelayed);
+    return true;
+}
+
+/**
+ * Admin: Obliterate the queue completely.
+ */
+async function obliterateQueue(type) {
+    const queue = type === 'AUTOFIX' ? autofixQueue : preflightQueue;
+    await queue.obliterate({ force: true });
+    return true;
+}
+
+/**
+ * Admin: Get queue counts (BullMQ truth)
+ */
+async function getAdminStats() {
+    const pCounts = await preflightQueue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed');
+    const aCounts = await autofixQueue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed');
+
+    return {
+        preflight: pCounts,
+        autofix: aCounts,
+        paused: {
+            preflight: await preflightQueue.isPaused(),
+            autofix: await autofixQueue.isPaused()
+        }
+    };
 }
 
 module.exports = {
@@ -43,4 +98,9 @@ module.exports = {
     preflightQueue,
     autofixQueue,
     enqueueJob,
+    pauseQueue,
+    resumeQueue,
+    drainQueue,
+    obliterateQueue,
+    getAdminStats
 };

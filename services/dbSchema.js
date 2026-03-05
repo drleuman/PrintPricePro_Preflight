@@ -79,7 +79,12 @@ const SCHEMA_QUERIES = [
     details JSON,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE SET NULL
-);`
+    `CREATE TABLE IF NOT EXISTS tenant_controls(
+        tenant_id VARCHAR(255) PRIMARY KEY,
+        quarantined_until DATETIME,
+        reason TEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ); `
 ];
 
 /**

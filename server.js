@@ -16,6 +16,8 @@ const compression = require('compression');
 const { router: proxyRouter, handleWsUpgrade } = require('./routes/proxy');
 const pdfRouter = require('./routes/pdf');
 const preflightV2Router = require('./routes/preflightV2');
+const adminRoutes = require('./routes/admin');
+const adminControlRoutes = require('./routes/adminControl');
 const { startCleanupTask } = require('./services/cleanup');
 const apiKeyMiddleware = require('./middleware/apiKey');
 const rateLimit = require('express-rate-limit');
@@ -165,6 +167,13 @@ app.use('/api/convert', (req, res, next) => {
 // V2 Asynchronous Routes
 debugLog('Mounting /api/v2/preflight routes...');
 app.use('/api/v2/preflight', preflightV2Router);
+
+// Admin Dashboard Routes
+debugLog('Mounting /api/admin routes...');
+app.use('/api/admin', adminRoutes);
+
+debugLog('Mounting /api/admin/control routes...');
+app.use('/api/admin/control', adminControlRoutes);
 
 // -------- Static Files --------
 const staticPath = path.resolve(__dirname, 'dist');
