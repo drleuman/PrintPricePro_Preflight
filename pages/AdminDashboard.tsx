@@ -1,6 +1,7 @@
 // pages/AdminDashboard.tsx
 import React, { useMemo, useState } from "react";
 import { t } from "../i18n";
+import { getAdminKey, setAdminKey, clearAdminKey } from "../lib/adminApi";
 import { OverviewTab } from "./admin/OverviewTab";
 import { TenantsTab } from "./admin/TenantsTab";
 import { JobsTab } from "./admin/JobsTab";
@@ -15,7 +16,8 @@ import {
     ShieldCheckIcon,
     WrenchScrewdriverIcon,
     ArrowPathIcon,
-    ClockIcon
+    ClockIcon,
+    XMarkIcon
 } from "@heroicons/react/24/outline";
 
 type Tab = "overview" | "tenants" | "jobs" | "errors" | "audit" | "controls";
@@ -25,6 +27,21 @@ export const AdminDashboard: React.FC = () => {
     const [activeTab, setActiveTab] = useState<Tab>("overview");
     const [range, setRange] = useState<Range>("24h");
     const [refresh, setRefresh] = useState<number>(0);
+    const [isAuthorized, setIsAuthorized] = useState<boolean>(!!getAdminKey());
+    const [authKey, setAuthKey] = useState<string>("");
+
+    const handleConnect = () => {
+        if (!authKey.trim()) return;
+        setAdminKey(authKey.trim());
+        setIsAuthorized(true);
+        setRefresh(r => r + 1); // trigger reload
+    };
+
+    const handleDisconnect = () => {
+        clearAdminKey();
+        setIsAuthorized(false);
+        setAuthKey("");
+    };
 
     const tabs = useMemo(
         () =>
@@ -38,6 +55,40 @@ export const AdminDashboard: React.FC = () => {
         ] as Array<[Tab, string, any]>),
         []
     );
+
+    if (!isAuthorized) {
+        return (
+            <div className="min-h-screen premium-gradient flex items-center justify-center p-6">
+                <div className="max-w-md w-full glass rounded-3xl p-10 border border-white shadow-2xl animate-slide-fade">
+                    <div className="flex flex-col items-center text-center gap-6">
+                        <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-xl shadow-primary/20">
+                            <ShieldCheckIcon className="w-8 h-8 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Admin Gate</h2>
+                            <p className="text-sm text-slate-500 font-medium mt-2">Enter your secure API key to access control systems.</p>
+                        </div>
+                        <div className="w-full space-y-4">
+                            <input
+                                type="password"
+                                className="w-full bg-white/50 border border-slate-200 rounded-xl px-5 py-3.5 text-center text-lg font-mono tracking-widest outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all transition-all"
+                                placeholder="••••••••••••"
+                                value={authKey}
+                                onChange={(e) => setAuthKey(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
+                            />
+                            <button
+                                onClick={handleConnect}
+                                className="w-full bg-slate-900 text-white rounded-xl py-4 font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+                            >
+                                Establish Connection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 premium-gradient">
@@ -82,6 +133,14 @@ export const AdminDashboard: React.FC = () => {
                             <option value={30000}>30s</option>
                         </select>
                     </div>
+
+                    <button
+                        onClick={handleDisconnect}
+                        className="p-2.5 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors border border-red-100"
+                        title="Disconnect"
+                    >
+                        <XMarkIcon className="w-5 h-5" />
+                    </button>
                 </div>
             </header>
 

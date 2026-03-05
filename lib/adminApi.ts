@@ -1,8 +1,24 @@
 // lib/adminApi.ts
 type Range = "24h" | "7d" | "30d";
 
-const getAdminKey = () =>
-    (import.meta as any)?.env?.VITE_ADMIN_API_KEY || "";
+const ADMIN_KEY_STORAGE = "ppp_admin_api_key";
+
+export const getAdminKey = () => {
+    // 1. Check local storage (manual login)
+    const stored = localStorage.getItem(ADMIN_KEY_STORAGE);
+    if (stored) return stored;
+
+    // 2. Check build-time env
+    return (import.meta as any)?.env?.VITE_ADMIN_API_KEY || "";
+};
+
+export const setAdminKey = (key: string) => {
+    localStorage.setItem(ADMIN_KEY_STORAGE, key);
+};
+
+export const clearAdminKey = () => {
+    localStorage.removeItem(ADMIN_KEY_STORAGE);
+};
 
 async function adminFetch<T>(path: string, options?: RequestInit): Promise<T> {
     const key = getAdminKey();
