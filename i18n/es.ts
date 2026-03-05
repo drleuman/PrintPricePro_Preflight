@@ -290,5 +290,26 @@ export const es = {
   bleedScaleWarning: 'Escalado agresivo detectado (>4%). Los márgenes de seguridad están comprimidos.',
 
   // Admin Dashboard
+  'admin.title': 'Centro de Control Admin',
+  'admin.subtitle': 'SRE COCKPIT & SALUD DEL SISTEMA',
+  'admin.range.24h': 'Últimas 24 Horas',
+  'admin.range.7d': 'Últimos 7 Días',
+  'admin.range.30d': 'Últimos 30 Días',
+  'admin.refresh.off': 'Refresco Manual',
+  'admin.tabs.overview': 'Vista General',
+  'admin.tabs.tenants': 'Clientes',
+  'admin.tabs.jobs': 'Trabajos',
+  'admin.tabs.errors': 'Errores',
+  'admin.tabs.audit': 'Auditoría',
   'admin.tabs.controls': 'Controles ⚠️',
+
+  'admin.kpi.totalJobs': 'Total Trabajos',
+  'admin.kpi.successRate': 'Tasa de Éxito',
+  'admin.kpi.avgLatency': 'Latencia Media',
+  'admin.kpi.deltaRate': 'Mejora Delta',
+  'admin.kpi.costProxy': 'Coste Proxy',
+  'admin.kpi.p95Latency': 'Latencia P95',
+  'admin.kpi.queueBacklog': 'Cola Pendiente',
+  'admin.kpi.oldestAge': 'Trabajo más Antiguo',
+  'admin.queue.title': 'Matriz de Rendimiento de Colas',
 } as const;

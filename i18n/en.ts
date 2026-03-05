@@ -292,7 +292,28 @@ export const en = {
   bleedScaleWarning: 'Aggressive scaling detected (>4%). Safety margins are compressed.',
 
   // Admin Dashboard
+  'admin.title': 'Admin Control Center',
+  'admin.subtitle': 'SRE COCKPIT & SYSTEM HEALTH',
+  'admin.range.24h': 'Last 24 Hours',
+  'admin.range.7d': 'Last 7 Days',
+  'admin.range.30d': 'Last 30 Days',
+  'admin.refresh.off': 'Manual Refresh',
+  'admin.tabs.overview': 'Overview',
+  'admin.tabs.tenants': 'Tenants',
+  'admin.tabs.jobs': 'Jobs',
+  'admin.tabs.errors': 'Errors',
+  'admin.tabs.audit': 'Audit Log',
   'admin.tabs.controls': 'Controls ⚠️',
+
+  'admin.kpi.totalJobs': 'Total Jobs',
+  'admin.kpi.successRate': 'Success Rate',
+  'admin.kpi.avgLatency': 'Avg Latency',
+  'admin.kpi.deltaRate': 'Delta Improvement',
+  'admin.kpi.costProxy': 'Cost Proxy',
+  'admin.kpi.p95Latency': 'P95 Latency',
+  'admin.kpi.queueBacklog': 'Queue Backlog',
+  'admin.kpi.oldestAge': 'Oldest Job Age',
+  'admin.queue.title': 'Queue Performance Matrix',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

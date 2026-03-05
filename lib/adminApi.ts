@@ -2,17 +2,17 @@
 type Range = "24h" | "7d" | "30d";
 
 const getAdminKey = () =>
-    (import.meta as any)?.env?.VITE_ADMIN_API_KEY ||
-    (process as any)?.env?.REACT_APP_ADMIN_API_KEY ||
-    "";
+    (import.meta as any)?.env?.VITE_ADMIN_API_KEY || "";
 
-async function adminFetch<T>(path: string): Promise<T> {
+async function adminFetch<T>(path: string, options?: RequestInit): Promise<T> {
     const key = getAdminKey();
 
     const res = await fetch(path, {
+        ...options,
         headers: {
             "Content-Type": "application/json",
             ...(key ? { "X-Admin-Api-Key": key } : {}),
+            ...(options?.headers || {}),
         },
         credentials: "include", // por si luego metes cookie auth
     });
