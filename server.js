@@ -33,12 +33,13 @@ const pino = require('pino-http')({
 const { checkAllDependencies } = require('./services/dependencyChecker');
 const { initSchema } = require('./services/dbSchema');
 
-if (process.env.AUTO_MIGRATE !== '0') {
-  if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
-    console.error('[CRITICAL] DATABASE_URL must be defined in production. Exiting.');
-    process.exit(1);
-  }
-  // initSchema moved to listen callback for production resilience
+const isProd = process.env.NODE_ENV === 'production';
+const shouldAutoMigrate = process.env.AUTO_MIGRATE === '1';
+
+// P0: Mandatory check - Fail fast if missing DATABASE_URL in production
+if (isProd && !process.env.DATABASE_URL) {
+  console.error('[CRITICAL] DATABASE_URL must be defined in production. Exiting.');
+  process.exit(1);
 }
 
 // Initialize V2 Workers (BE-005) - Moved to listen callback for production safety
@@ -137,8 +138,15 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-PPP-Autofix-Report', 'x-ppp-api-key'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'X-PPP-Autofix-Report',
+    'x-ppp-api-key',
+    'X-Admin-Api-Key',
+    'x-admin-api-key'
+  ],
   exposedHeaders: ['Content-Disposition', 'X-PPP-Autofix-Report', 'Content-Length'],
   credentials: true
 }));
@@ -181,6 +189,32 @@ const v2UploadLimiter = rateLimit({
   message: { error: 'V2 Engine: Too many upload requests. Limit is 10 per minute.' }
 });
 
+// -------- Diagnostic Routes Handlers (P0: Define before usage) --------
+const readyHandler = async (_req, res) => {
+  const { ok, deps } = checkAllDependencies();
+  const response = {
+    status: ok ? 'ok' : 'error',
+    version: require('./package.json').version || '1.0.0',
+    dependencies: deps,
+    uploadDirWritable: false,
+    time: new Date().toISOString()
+  };
+  try {
+    if (pdfRouter.uploadDir) {
+      fs.accessSync(pdfRouter.uploadDir, fs.constants.W_OK);
+      response.uploadDirWritable = true;
+    }
+  } catch (err) {
+    response.status = 'error';
+  }
+  res.status(response.status === 'ok' ? 200 : 503).json(response);
+};
+
+const healthDepsHandler = (_req, res) => {
+  const result = checkAllDependencies();
+  res.status(result.ok ? 200 : 503).json(result);
+};
+
 // -------- Routes --------
 app.use('/api/gemini-proxy', apiKeyMiddleware, proxyRouter);
 
@@ -202,15 +236,10 @@ debugLog('Mounting /api/v2/preflight routes...');
 app.use('/api/v2/preflight', v2UploadLimiter, preflightV2Router);
 
 // Public API v2 (External, API-Key Authenticated)
+// Mount specific endpoints to avoid middleware duplication and ambiguity (P1)
 debugLog('Mounting /api/v2 public routes...');
-app.use('/api/v2', v2UploadLimiter, apiV2Router);
-
-// Batch Processing API (API-Key Authenticated)
-debugLog('Mounting /api/v2/batches routes...');
+app.use('/api/v2/jobs', v2UploadLimiter, apiV2Router);
 app.use('/api/v2/batches', v2UploadLimiter, batchV2Router);
-
-// Tenant Analytics API (API-Key Authenticated)
-debugLog('Mounting /api/v2/analytics routes...');
 app.use('/api/v2/analytics', analyticsV2Router);
 
 // Admin Dashboard Routes
@@ -240,36 +269,7 @@ app.use(
   })
 );
 
-const readyHandler = async (_req, res) => {
-  const { ok, deps } = checkAllDependencies();
-
-  const response = {
-    status: ok ? 'ok' : 'error',
-    version: require('./package.json').version || '1.0.0',
-    dependencies: deps,
-    uploadDirWritable: false,
-    time: new Date().toISOString()
-  };
-
-  try {
-    if (pdfRouter.uploadDir) {
-      fs.accessSync(pdfRouter.uploadDir, fs.constants.W_OK);
-      response.uploadDirWritable = true;
-    }
-  } catch (err) {
-    response.status = 'error';
-  }
-
-  res.status(response.status === 'ok' ? 200 : 503).json(response);
-};
-
-const healthDepsHandler = (_req, res) => {
-  const result = checkAllDependencies();
-  res.status(result.ok ? 200 : 503).json(result);
-};
-
-// -------- Diagnostic Routes Handlers --------
-// Handlers moved up near mounting.
+// Handlers moved up near mounting to avoid hoisting errors.
 
 app.get(['/version', '/api/version'], (_req, res) => {
   const pkg = require('./package.json');
@@ -345,12 +345,24 @@ if (!global.__SERVER_STARTED) {
   const runDiagnostics = () => {
     debugLog('Verifying system dependencies...');
     const { ok, deps } = checkAllDependencies();
+
+    // P1: Fail fast if critical dependencies are missing in production
+    if (isProd && !ok) {
+      console.error('[CRITICAL] Missing required dependencies (GS). Exiting.');
+      process.exit(1);
+    }
+
     if (!ok) {
       console.warn('[WARNING] Missing dependencies detected!');
     }
 
-    debugLog('Initializing database schema...');
-    initSchema().catch(err => console.error('[DB-SCHEMA-INIT-ERROR]', err));
+    // P0: Only auto-migrate if explicitly enabled (usually NOT in production)
+    if (shouldAutoMigrate) {
+      debugLog('Initializing database schema (AUTO_MIGRATE=1)...');
+      initSchema().catch(err => console.error('[DB-SCHEMA-INIT-ERROR]', err));
+    } else {
+      debugLog('Skipping auto-migration (AUTO_MIGRATE=0).');
+    }
 
     initWorkers();
   };
