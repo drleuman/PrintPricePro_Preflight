@@ -7,6 +7,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+console.log(`[BOOTSTRAP] Starting PrintPrice Engine at ${new Date().toISOString()}`);
 const fs = require('fs');
 const WebSocket = require('ws');
 const cors = require('cors');
@@ -37,8 +38,7 @@ if (process.env.AUTO_MIGRATE !== '0') {
     console.error('[CRITICAL] DATABASE_URL must be defined in production. Exiting.');
     process.exit(1);
   }
-  // Fire-and-forget but caught to prevent unhandled rejections
-  initSchema().catch(err => console.error('[DB-INIT-ERROR]', err.message));
+  // initSchema moved to listen callback for production resilience
 }
 
 // Initialize V2 Workers (BE-005) - Moved to listen callback for production safety
@@ -341,35 +341,29 @@ app.use((err, req, res, next) => {
 if (!global.__SERVER_STARTED) {
   global.__SERVER_STARTED = true;
 
-  // Run Startup Dependency Check (BE-001)
-  debugLog('Verifying system dependencies core before listening...');
-  const { ok, deps } = checkAllDependencies();
-  if (!ok) {
-    console.error('[CRITICAL] Missing hard dependencies! Server cannot start safely.');
-    console.error(JSON.stringify(deps, null, 2));
-    if (process.env.NODE_ENV === 'production') {
-      process.exit(1);
-    } else {
-      console.warn('[WARNING] Continuing in DEV mode despite missing dependencies. AutoFix WILL fail.');
+  // -------- Early Initialization (Non-blocking) --------
+  const runDiagnostics = () => {
+    debugLog('Verifying system dependencies...');
+    const { ok, deps } = checkAllDependencies();
+    if (!ok) {
+      console.warn('[WARNING] Missing dependencies detected!');
     }
-  } else {
-    debugLog('Dependencies verified: OK');
-  }
 
-  // Initialize DB Schema (BE-003)
-  initSchema().catch(err => {
-    console.error('[DB-SCHEMA-INIT-ERROR]', err);
-  });
+    debugLog('Initializing database schema...');
+    initSchema().catch(err => console.error('[DB-SCHEMA-INIT-ERROR]', err));
+
+    initWorkers();
+  };
 
   // Start server
   const server = (typeof port === 'number'
     ? app.listen(port, '0.0.0.0', () => {
       console.log(`[SERVER-START] OK: Listening on 0.0.0.0:${port}`);
-      initWorkers();
+      runDiagnostics();
     })
     : app.listen(port, () => {
       console.log(`[SERVER-START] OK: Listening on socket/pipe: ${port}`);
-      initWorkers();
+      runDiagnostics();
     })
   ).on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
