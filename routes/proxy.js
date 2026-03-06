@@ -36,6 +36,8 @@ const allowedOrigins = [
     'http://localhost:8080',
     'https://preflight.printprice.pro',
     'https://preflight.printprice.pro/',
+    'https://demo.printprice.pro',
+    'https://demo.printprice.pro/',
     'https://print-price-pro-preflight.vercel.app',
     'https://print-price-pro-preflight.vercel.app/'
 ];

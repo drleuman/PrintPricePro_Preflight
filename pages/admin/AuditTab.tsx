@@ -95,10 +95,16 @@ export const AuditTab: React.FC<{ refreshMs?: number }> = ({ refreshMs = 0 }) =>
                                         </div>
                                     </td>
                                     <td className="py-4 px-6 font-bold text-slate-900 font-mono tracking-tight text-xs uppercase">{r.tenant_id}</td>
-                                    <td className="py-4 px-6">
+                                    <td className="py-4 px-6 relative group/action">
                                         <div className="flex items-center gap-2">
                                             <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
                                             <span className="font-bold text-slate-700">{r.action.replace('_', ' ')}</span>
+                                            <a
+                                                href={`/admin/help?q=${r.action.toLowerCase()}`}
+                                                className="opacity-0 group-hover/action:opacity-100 transition-opacity ml-2 text-[10px] font-bold bg-white text-blue-600 px-2 py-1 rounded shadow-sm border border-blue-100 hover:bg-blue-50"
+                                            >
+                                                ℹ What is this?
+                                            </a>
                                         </div>
                                     </td>
                                     <td className="py-4 px-6">

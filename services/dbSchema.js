@@ -85,6 +85,15 @@ const SCHEMA_QUERIES = [
         quarantined_until DATETIME,
         reason TEXT,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    );`,
+    `CREATE TABLE IF NOT EXISTS audit_help_analytics (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    event_type ENUM('article_viewed', 'search_query', 'search_result_clicked', 'helpful_yes', 'helpful_no', 'improvement_suggested') NOT NULL,
+    article_id VARCHAR(255) NULL,
+    search_query VARCHAR(255) NULL,
+    tenant_id VARCHAR(255) NULL,
+    user_id VARCHAR(255) NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );`
 ];
 

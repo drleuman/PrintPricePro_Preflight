@@ -232,4 +232,28 @@ router.get("/queue", async (_req, res) => {
   }
 });
 
+// POST /api/admin/help/analytics
+router.post("/help/analytics", async (req, res) => {
+  const { event_type, article_id, search_query, tenant_id, user_id } = req.body;
+
+  if (!event_type) {
+    return res.status(400).json({ ok: false, error: "event_type is required" });
+  }
+
+  try {
+    const { rows } = await db.query(
+      `
+      INSERT INTO audit_help_analytics (event_type, article_id, search_query, tenant_id, user_id)
+      VALUES (?, ?, ?, ?, ?)
+      `,
+      [event_type, article_id || null, search_query || null, tenant_id || null, user_id || null]
+    );
+
+    res.json({ ok: true, id: rows.insertId });
+  } catch (err) {
+    console.error('[ADMIN-API] Error saving help analytics:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;

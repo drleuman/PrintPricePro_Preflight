@@ -9,6 +9,7 @@ import {
     ClockIcon,
     ExclamationCircleIcon
 } from "@heroicons/react/24/outline";
+import { getErrorArticleLink } from "../../lib/helpSearch";
 
 type Range = "24h" | "7d" | "30d";
 
@@ -57,6 +58,12 @@ export const ErrorsTab: React.FC<{ range: Range; refreshMs?: number }> = ({ rang
                                         <span className="font-bold text-red-900 font-mono tracking-tighter text-xs bg-red-50/50 px-2 py-1 rounded">
                                             {r.errorCode}
                                         </span>
+                                        <a
+                                            href={getErrorArticleLink(r.errorCode)}
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 text-[10px] font-bold bg-white text-red-600 px-2 py-1 rounded shadow-sm border border-red-100 hover:bg-red-50"
+                                        >
+                                            ℹ Explain
+                                        </a>
                                     </div>
                                 </td>
                                 <td className="py-4 px-6">

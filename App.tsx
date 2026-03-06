@@ -10,6 +10,8 @@ import { V2ReportViewer } from './components/V2ReportViewer';
 import { useLocale, Locale } from './i18n';
 import { InvestorDemo } from './components/Demo/InvestorDemo';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { AdminHelpCenter } from './pages/admin-help/AdminHelpCenter';
+import { AdminHelpArticle } from './pages/admin-help/AdminHelpArticle';
 import { RocketLaunchIcon } from '@heroicons/react/24/outline';
 
 import { t } from './i18n';
@@ -778,6 +780,14 @@ export default function App() {
   }, []);
 
   // ---------- Render ----------
+  if (window.location.pathname.startsWith('/admin/help')) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('doc')) {
+      return <AdminHelpArticle />;
+    }
+    return <AdminHelpCenter />;
+  }
+
   if (window.location.pathname === '/admin' || window.location.pathname === '/admin/') {
     return <AdminDashboard />;
   }

@@ -21,6 +21,7 @@ import {
     ShieldCheckIcon,
     WrenchScrewdriverIcon
 } from "@heroicons/react/24/outline";
+import { getErrorArticleLink } from "../../lib/helpSearch";
 
 export const JobsTab: React.FC<{ refreshMs?: number }> = ({ refreshMs = 0 }) => {
     const [status, setStatus] = useState<string>("");
@@ -264,9 +265,17 @@ export const JobsTab: React.FC<{ refreshMs?: number }> = ({ refreshMs = 0 }) => 
 
                                 {selectedJob.error && (
                                     <div className="p-5 bg-red-500/[0.03] border border-red-100 rounded-2xl">
-                                        <div className="flex items-center gap-2 text-red-600 mb-3">
-                                            <ExclamationCircleIcon className="w-5 h-5" />
-                                            <span className="text-xs font-black uppercase tracking-widest">Stack Trace / Fault Report</span>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2 text-red-600">
+                                                <ExclamationCircleIcon className="w-5 h-5" />
+                                                <span className="text-xs font-black uppercase tracking-widest">Stack Trace / Fault Report</span>
+                                            </div>
+                                            <a
+                                                href={getErrorArticleLink(typeof selectedJob.error === 'string' ? selectedJob.error : (selectedJob.error?.code || 'unknown'))}
+                                                className="text-[10px] font-bold bg-white text-red-600 px-2 py-1 rounded shadow-sm border border-red-100 hover:bg-red-50 transition-colors"
+                                            >
+                                                ℹ Explain this error
+                                            </a>
                                         </div>
                                         <pre className="p-4 bg-white/80 border border-red-100 text-red-900 text-[11px] font-mono rounded-xl overflow-auto max-h-60 whitespace-pre-wrap leading-relaxed">
                                             {typeof selectedJob.error === 'string' ? selectedJob.error : JSON.stringify(selectedJob.error, null, 2)}

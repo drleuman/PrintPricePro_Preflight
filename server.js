@@ -106,6 +106,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:8080',
   'https://preflight.printprice.pro',
+  'https://demo.printprice.pro',
   'https://print-price-pro-preflight.vercel.app'
 ];
 

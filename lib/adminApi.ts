@@ -193,3 +193,17 @@ export async function getAdminQueueStats() {
 export async function getQueue() {
     return adminFetch<any>(`/api/admin/queue`);
 }
+
+export async function postHelpAnalytics(payload: {
+    event_type: 'article_viewed' | 'search_query' | 'search_result_clicked' | 'helpful_yes' | 'helpful_no' | 'improvement_suggested';
+    article_id?: string;
+    search_query?: string;
+    tenant_id?: string;
+    user_id?: string;
+}) {
+    // Fire and forget usually, but we return the promise
+    return adminFetch<{ ok: boolean, id: number }>(`/api/admin/help/analytics`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    });
+}

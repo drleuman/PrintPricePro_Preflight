@@ -89,6 +89,9 @@ export const ControlsTab: React.FC<{ refreshMs?: number }> = ({ refreshMs = 0 })
                             <ArrowPathRoundedSquareIcon className="w-5 h-5 text-indigo-600" />
                         </div>
                         <h2 className="text-lg font-bold text-slate-800 tracking-tight">Queue Engine</h2>
+                        <a href="/admin/help?doc=control-pause-queue" className="ml-auto flex items-center gap-1 text-xs text-blue-600 hover:underline bg-blue-50 px-2 flex-shrink-0 py-1 rounded-md font-medium border border-blue-100">
+                            ℹ Explain Controls
+                        </a>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-6">
@@ -279,6 +282,9 @@ export const ControlsTab: React.FC<{ refreshMs?: number }> = ({ refreshMs = 0 })
                             <h3 className="text-sm font-bold text-red-900 mb-2 flex items-center gap-2">
                                 <TrashIcon className="w-4 h-4" />
                                 Wipe Waiting Queue
+                                <a href="/admin/help?doc=control-drain-queue" className="ml-auto text-xs text-red-600 hover:underline bg-white/60 px-2 py-1 flex-shrink-0 rounded-md font-bold shadow-sm border border-red-200">
+                                    ℹ Explain Risk
+                                </a>
                             </h3>
                             <p className="text-[11px] font-medium text-red-700 mb-4 leading-relaxed">Instantly purge all <span className="font-bold">WAITING</span> tasks. Running workers are unaffected but no new work will proceed from the backlog.</p>
 

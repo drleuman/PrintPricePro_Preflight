@@ -17,7 +17,8 @@ import {
     WrenchScrewdriverIcon,
     ArrowPathIcon,
     ClockIcon,
-    XMarkIcon
+    XMarkIcon,
+    BookOpenIcon
 } from "@heroicons/react/24/outline";
 
 type Tab = "overview" | "tenants" | "jobs" | "errors" | "audit" | "controls";
@@ -135,9 +136,18 @@ const AdminDashboardInner: React.FC = () => {
                         </select>
                     </div>
 
+                    <a
+                        href="/admin/help"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100 font-medium text-sm ml-2"
+                        title="Operations Knowledge Console"
+                    >
+                        <BookOpenIcon className="w-5 h-5" />
+                        <span className="hidden sm:inline">Help Console</span>
+                    </a>
+
                     <button
                         onClick={handleDisconnect}
-                        className="p-2.5 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors border border-red-100"
+                        className="p-2.5 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors border border-red-100 ml-2"
                         title="Disconnect"
                     >
                         <XMarkIcon className="w-5 h-5" />
