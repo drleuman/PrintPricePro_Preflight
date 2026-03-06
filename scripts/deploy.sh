@@ -47,29 +47,26 @@ chmod 770 "$UPLOAD_DIR"
 echo "  Upload dir: $UPLOAD_DIR (owner: $PLESK_USER)"
 
 # ── 5. Restart Node process ──────────────────────────────────
-echo "▶ [5/6] Restarting Node process..."
-PID=$(lsof -ti:8080 2>/dev/null || true)
-if [[ -n "$PID" ]]; then
-  kill "$PID"
-  echo "  Killed PID $PID, waiting for Plesk to restart..."
-  sleep 5
-else
-  echo "  No process on 8080 — Plesk will start it automatically."
-  sleep 3
-fi
+echo "▶ [5/6] Restarting Node process (Passenger)..."
+mkdir -p "$APP_DIR/tmp"
+touch "$APP_DIR/tmp/restart.txt"
+echo "  Touched tmp/restart.txt. Waiting for Passenger to cycle..."
+sleep 5
 
 # ── 6. Health check ──────────────────────────────────────────
 echo "▶ [6/6] Verifying API health..."
-for i in 1 2 3 4 5; do
-  HTTP=$(curl -s -o /tmp/ppp_ready.json -w "%{http_code}" "$API_READY" 2>/dev/null || echo "000")
+rm -f /tmp/ppp_ready.json # Clear stale check
+for i in 1 2 3 4 5 6 7 8; do
+  # Use -k/--insecure because loopback SSL on some servers fails
+  HTTP=$(curl -s -k -o /tmp/ppp_ready.json -w "%{http_code}" "$API_READY" 2>/dev/null || echo "000")
   if [[ "$HTTP" == "200" ]]; then
     echo ""
     echo "  ✅ API ready (HTTP 200)"
     cat /tmp/ppp_ready.json | python3 -m json.tool 2>/dev/null || cat /tmp/ppp_ready.json
     break
   fi
-  echo "  Attempt $i/5 — HTTP $HTTP, retrying in 3s..."
-  sleep 3
+  echo "  Attempt $i/8 — HTTP $HTTP, retrying in 4s..."
+  sleep 4
 done
 
 if [[ "$HTTP" != "200" ]]; then
