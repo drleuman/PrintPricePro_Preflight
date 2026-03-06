@@ -41,12 +41,15 @@ if (process.env.AUTO_MIGRATE !== '0') {
   initSchema().catch(err => console.error('[DB-INIT-ERROR]', err.message));
 }
 
-// Initialize V2 Workers (BE-005)
-if (process.env.NODE_ENV !== 'test') {
-  require('./workers/v2-worker');
-  require('./workers/batch-orchestrator');
-  require('./workers/webhook-worker');
-}
+// Initialize V2 Workers (BE-005) - Moved to listen callback for production safety
+const initWorkers = () => {
+  if (process.env.NODE_ENV !== 'test') {
+    debugLog('Starting background workers...');
+    require('./workers/v2-worker');
+    require('./workers/batch-orchestrator');
+    require('./workers/webhook-worker');
+  }
+};
 
 // Simple logger without file-system writes to avoid PM2 watch-loop crashes
 const debugLog = (msg) => {
@@ -180,7 +183,13 @@ const v2UploadLimiter = rateLimit({
 
 // -------- Routes --------
 app.use('/api/gemini-proxy', apiKeyMiddleware, proxyRouter);
-app.use(['/ready', '/api/ready', '/healthz', '/api/healthz', '/version', '/api/version', '/metrics', '/api/metrics', '/health/deps', '/api/health/deps'], diagnosticLimiter);
+
+// Diagnostic Routes (No limiter for /ready to ensure health-checks pass during startup load)
+app.get(['/healthz', '/api/healthz'], (_req, res) => res.status(200).send('ok'));
+app.get(['/ready', '/api/ready'], readyHandler);
+app.get(['/health/deps', '/api/health/deps'], healthDepsHandler);
+
+app.use(['/version', '/api/version', '/metrics', '/api/metrics'], diagnosticLimiter);
 app.use('/api/convert', convertLimiter);
 console.log('Mounting /api/convert routes...');
 app.use('/api/convert', (req, res, next) => {
@@ -259,10 +268,8 @@ const healthDepsHandler = (_req, res) => {
   res.status(result.ok ? 200 : 503).json(result);
 };
 
-// -------- Diagnostic Routes (BEFORE catch-all) --------
-app.get(['/healthz', '/api/healthz'], (_req, res) => res.status(200).send('ok'));
-app.get(['/ready', '/api/ready'], readyHandler);
-app.get(['/health/deps', '/api/health/deps'], healthDepsHandler);
+// -------- Diagnostic Routes Handlers --------
+// Handlers moved up near mounting.
 
 app.get(['/version', '/api/version'], (_req, res) => {
   const pkg = require('./package.json');
@@ -356,8 +363,14 @@ if (!global.__SERVER_STARTED) {
 
   // Start server
   const server = (typeof port === 'number'
-    ? app.listen(port, '0.0.0.0', () => console.log(`[SERVER-START] OK: Listening on 0.0.0.0:${port}`))
-    : app.listen(port, () => console.log(`[SERVER-START] OK: Listening on socket: ${port}`))
+    ? app.listen(port, '0.0.0.0', () => {
+      console.log(`[SERVER-START] OK: Listening on 0.0.0.0:${port}`);
+      initWorkers();
+    })
+    : app.listen(port, () => {
+      console.log(`[SERVER-START] OK: Listening on socket/pipe: ${port}`);
+      initWorkers();
+    })
   ).on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
       console.error(`[CRITICAL] Port/Socket ${port} is already in use.`);
