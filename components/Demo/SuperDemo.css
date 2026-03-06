@@ -1,0 +1,368 @@
+/* SuperDemo.css - Premium PrintPrice Demo Styles */
+:root {
+    --sd-primary: #111827;
+    --sd-accent: #3B82F6;
+    --sd-success: #10B981;
+    --sd-warning: #F59E0B;
+    --sd-danger: #EF4444;
+    --sd-bg: #F9FAFB;
+    --sd-glass: rgba(255, 255, 255, 0.7);
+    --sd-glass-border: rgba(255, 255, 255, 0.5);
+    --sd-blur: blur(20px);
+}
+
+@keyframes dash {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+.sd-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--sd-primary);
+    opacity: 0;
+    animation: sd-fade-in 0.6s ease-out forwards;
+}
+
+@keyframes sd-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Pipeline Visualization */
+.sd-pipeline {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    margin-bottom: 48px;
+    padding: 0 40px;
+}
+
+.sd-pipeline-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    z-index: 10;
+    flex: 1;
+}
+
+.sd-step-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #E5E7EB;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    color: #9CA3AF;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.sd-pipeline-step.active .sd-step-circle {
+    border-color: var(--sd-accent);
+    color: var(--sd-accent);
+    background: #EFF6FF;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    transform: scale(1.1);
+}
+
+.sd-pipeline-step.completed .sd-step-circle {
+    background: var(--sd-success);
+    border-color: var(--sd-success);
+    color: white;
+}
+
+.sd-step-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #6B7280;
+    transition: color 0.3s;
+}
+
+.sd-pipeline-step.active .sd-step-label {
+    color: var(--sd-primary);
+    font-weight: 600;
+}
+
+.sd-pipeline-line {
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #E5E7EB;
+    z-index: 5;
+    margin: 0 80px;
+}
+
+.sd-pipeline-progress {
+    height: 100%;
+    background: var(--sd-accent);
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Cards & Glassmorphism */
+.sd-card {
+    background: var(--sd-glass);
+    backdrop-filter: var(--sd-blur);
+    -webkit-backdrop-filter: var(--sd-blur);
+    border: 1px solid var(--sd-glass-border);
+    border-radius: 24px;
+    padding: 32px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+}
+
+.sd-card:hover {
+    border-color: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 25px 30px -5px rgba(0, 0, 0, 0.08);
+}
+
+/* Specific Step Styles - Upload */
+.sd-dropzone {
+    border: 2px dashed #D1D5DB;
+    border-radius: 20px;
+    padding: 60px 40px;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(249, 250, 251, 0.5);
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.sd-dropzone:hover {
+    border-color: var(--sd-accent);
+    background: rgba(59, 130, 246, 0.04);
+}
+
+.sd-samples-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-top: 32px;
+}
+
+.sd-sample-btn {
+    background: white;
+    border: 1px solid #E5E7EB;
+    padding: 16px;
+    border-radius: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sd-sample-btn:hover {
+    border-color: var(--sd-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.sd-sample-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #F3F4F6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6B7280;
+}
+
+.sd-sample-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.sd-sample-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.sd-sample-desc {
+    font-size: 12px;
+    color: #6B7280;
+}
+
+/* Animations - Logs */
+.sd-logs-container {
+    background: #0F172A;
+    border-radius: 16px;
+    padding: 20px;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 13px;
+    color: #ADBAC7;
+    height: 240px;
+    overflow-y: auto;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.sd-log-line {
+    margin-bottom: 6px;
+    display: flex;
+    gap: 8px;
+    opacity: 0;
+    transform: translateX(-5px);
+    animation: log-fade-in 0.3s forwards;
+}
+
+@keyframes log-fade-in {
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.sd-log-timestamp {
+    color: #57606A;
+}
+
+.sd-log-tag {
+    color: #58A6FF;
+    font-weight: 600;
+}
+
+.sd-log-success {
+    color: #3FB950;
+}
+
+.sd-log-warning {
+    color: #D29922;
+}
+
+/* Pulse Animation for Scanning */
+.sd-scanning-pulse {
+    position: relative;
+    overflow: hidden;
+}
+
+.sd-scanning-pulse::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: sd-scan 2s infinite;
+}
+
+@keyframes sd-scan {
+    to {
+        left: 100%;
+    }
+}
+
+/* Results - Risk Meter */
+.sd-risk-meter {
+    height: 8px;
+    background: #E5E7EB;
+    border-radius: 4px;
+    position: relative;
+    margin: 16px 0;
+}
+
+.sd-risk-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s ease-out;
+}
+
+.sd-risk-low {
+    background: var(--sd-success);
+}
+
+.sd-risk-medium {
+    background: var(--sd-warning);
+}
+
+.sd-risk-high {
+    background: var(--sd-danger);
+}
+
+/* Delta Card */
+.sd-delta-card {
+    background: linear-gradient(135deg, #111827 0%, #1F2937 100%);
+    color: white;
+    border-radius: 24px;
+    padding: 40px;
+    text-align: center;
+}
+
+.sd-delta-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sd-delta-value {
+    font-size: 48px;
+    font-weight: 800;
+    letter-spacing: -1px;
+}
+
+.sd-delta-label {
+    font-size: 14px;
+    color: #9CA3AF;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.sd-btn-primary {
+    background: var(--sd-accent);
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+}
+
+.sd-btn-primary:hover {
+    background: #2563EB;
+    box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+}
+
+.sd-btn-outline {
+    background: transparent;
+    color: var(--sd-primary);
+    border: 1px solid #E5E7EB;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sd-btn-outline:hover {
+    background: #F9FAFB;
+    border-color: #D1D5DB;
+}

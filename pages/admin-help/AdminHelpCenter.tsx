@@ -24,10 +24,16 @@ const getIconForType = (type: string) => {
 export const AdminHelpCenter: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('All');
-    const [results, setResults] = useState<HelpDoc[]>(adminHelpDocs);
+    const [results, setResults] = useState<HelpDoc[]>([]);
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     const categories = ['All', ...getCategories()];
+
+    useEffect(() => {
+        // Initial data sync
+        setResults(adminHelpDocs);
+        console.log('HelpCenter: Initialized with docs:', adminHelpDocs.length);
+    }, []);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -51,6 +57,7 @@ export const AdminHelpCenter: React.FC = () => {
             filtered = filtered.filter(doc => doc.category === selectedCategory);
         }
 
+        console.log(`HelpCenter: Filtered to ${filtered.length} docs (q: "${searchQuery}", cat: "${selectedCategory}")`);
         setResults(filtered);
     }, [searchQuery, selectedCategory]);
 

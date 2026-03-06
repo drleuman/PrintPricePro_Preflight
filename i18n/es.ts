@@ -328,4 +328,5 @@ export const es = {
   'admin.errors.count': 'Recuento de Pilas',
   'admin.errors.lastSeen': 'Última Observación',
   'common.loading': 'Cargando secuencia...',
+  'common.na': 'N/D',
 } as const;

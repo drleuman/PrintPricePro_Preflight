@@ -8,6 +8,7 @@ import { LoaderOverlay } from './components/LoaderOverlay';
 import { AIAuditModal } from './components/AIAuditModal';
 import { V2ReportViewer } from './components/V2ReportViewer';
 import { useLocale, Locale } from './i18n';
+import { SuperDemoEngine } from './components/Demo/SuperDemoEngine';
 import { InvestorDemo } from './components/Demo/InvestorDemo';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { AdminHelpCenter } from './pages/admin-help/AdminHelpCenter';
@@ -854,12 +855,8 @@ export default function App() {
         {v2JobId ? (
           <V2ReportViewer jobId={v2JobId} onClose={() => setV2JobId(null)} />
         ) : appMode === 'demo' ? (
-          <InvestorDemo
+          <SuperDemoEngine
             onBack={() => setAppMode(null)}
-            onJobComplete={(id) => {
-              setAppMode(null);
-              setV2JobId(id);
-            }}
           />
         ) : (
           <>

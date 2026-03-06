@@ -330,6 +330,7 @@ export const en = {
   'admin.errors.count': 'Stack Count',
   'admin.errors.lastSeen': 'Last Observed',
   'common.loading': 'Loading sequence...',
+  'common.na': 'N/A',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

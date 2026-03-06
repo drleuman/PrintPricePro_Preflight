@@ -17,32 +17,46 @@ import {
 
 type Range = "24h" | "7d" | "30d";
 
-const KpiCard = ({ title, value, sub, Icon, colorClass, helpKey }: { title: string; value: string; sub?: string; Icon: any; colorClass: string; helpKey?: string }) => (
-    <div className="glass rounded-xl p-3.5 border border-white hover-slide flex items-start justify-between gap-2 group relative">
-        <div className="flex items-center gap-4">
-            <div className={`p-2.5 rounded-lg ${colorClass} bg-opacity-10 shrink-0`}>
-                <Icon className={`w-5 h-5 ${colorClass.replace('bg-', 'text-')}`} />
-            </div>
-            <div className="min-w-0">
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5 truncate flex items-center gap-1">
-                    {title}
+const COLOR_MAP: Record<string, { bg: string; text: string }> = {
+    blue: { bg: "bg-blue-600/10", text: "text-blue-600" },
+    emerald: { bg: "bg-emerald-600/10", text: "text-emerald-600" },
+    amber: { bg: "bg-amber-600/10", text: "text-amber-600" },
+    indigo: { bg: "bg-indigo-600/10", text: "text-indigo-600" },
+    violet: { bg: "bg-violet-600/10", text: "text-violet-600" },
+    pink: { bg: "bg-pink-600/10", text: "text-pink-600" },
+    orange: { bg: "bg-orange-600/10", text: "text-orange-600" },
+    cyan: { bg: "bg-cyan-600/10", text: "text-cyan-600" },
+};
+
+const KpiCard = ({ title, value, sub, Icon, color, helpKey }: { title: string; value: string; sub?: string; Icon: any; color: keyof typeof COLOR_MAP; helpKey?: string }) => {
+    const theme = COLOR_MAP[color];
+    return (
+        <div className="glass rounded-xl p-3.5 border border-white hover-slide flex items-start justify-between gap-2 group relative">
+            <div className="flex items-center gap-4">
+                <div className={`p-2.5 rounded-lg ${theme.bg} shrink-0`}>
+                    <Icon className={`w-5 h-5 ${theme.text}`} />
                 </div>
-                <div className="flex items-baseline gap-2">
-                    <div className="text-xl font-black text-slate-900 tracking-tight">{value}</div>
-                    {sub && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">{sub}</span>}
+                <div className="min-w-0">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5 truncate flex items-center gap-1">
+                        {title}
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                        <div className="text-xl font-black text-slate-900 tracking-tight">{value}</div>
+                        {sub && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">{sub}</span>}
+                    </div>
                 </div>
             </div>
+            {helpKey && (
+                <a
+                    href={`/admin/help?doc=${helpKey}`}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] flex items-center gap-1 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-200 px-2 py-1 rounded-md shadow-sm"
+                >
+                    <div title="Explain this metric">ℹ Explain</div>
+                </a>
+            )}
         </div>
-        {helpKey && (
-            <a
-                href={`/admin/help?doc=${helpKey}`}
-                className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] flex items-center gap-1 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-200 px-2 py-1 rounded-md shadow-sm"
-            >
-                <div title="Explain this metric">ℹ Explain</div>
-            </a>
-        )}
-    </div>
-);
+    );
+};
 
 export const OverviewTab: React.FC<{ range: Range; refreshMs?: number }> = ({ range, refreshMs = 0 }) => {
     const o = useAdminQuery(`overview:${range}`, () => getOverview(range), refreshMs);
@@ -72,14 +86,14 @@ export const OverviewTab: React.FC<{ range: Range; refreshMs?: number }> = ({ ra
     return (
         <div className="space-y-6 animate-slide-fade">
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                <KpiCard Icon={Square3Stack3DIcon} colorClass="bg-blue-600" title={t("admin.kpi.totalJobs" as any)} value={String(d.totalJobs)} />
-                <KpiCard Icon={CheckBadgeIcon} colorClass="bg-emerald-600" title={t("admin.kpi.successRate" as any)} value={`${d.successRate.toFixed(1)}%`} helpKey="metric-success-rate" />
-                <KpiCard Icon={BoltIcon} colorClass="bg-amber-600" title={t("admin.kpi.avgLatency" as any)} value={`${d.avgLatencyMs} ms`} />
-                <KpiCard Icon={ArrowTrendingUpIcon} colorClass="bg-indigo-600" title={t("admin.kpi.deltaRate" as any)} value={`${d.deltaImprovementRate.toFixed(1)}%`} />
-                <KpiCard Icon={BanknotesIcon} colorClass="bg-violet-600" title={t("admin.kpi.costProxy" as any)} value={`${d.costProxy.toFixed(0)} s`} sub="Est." />
-                <KpiCard Icon={ScaleIcon} colorClass="bg-pink-600" title={t("admin.kpi.p95Latency" as any)} value={d.p95LatencyMs ? `${d.p95LatencyMs} ms` : t("common.na" as any)} />
-                <KpiCard Icon={QueueListIcon} colorClass="bg-orange-600" title={t("admin.kpi.queueBacklog" as any)} value={String(d.queueBacklog || 0)} helpKey="metric-queue-backlog" />
-                <KpiCard Icon={ClockIcon} colorClass="bg-cyan-600" title={t("admin.kpi.oldestAge" as any)} value={`${d.oldestAgeSeconds || 0} s`} />
+                <KpiCard Icon={Square3Stack3DIcon} color="blue" title={t("admin.kpi.totalJobs" as any)} value={String(d.totalJobs)} />
+                <KpiCard Icon={CheckBadgeIcon} color="emerald" title={t("admin.kpi.successRate" as any)} value={`${d.successRate.toFixed(1)}%`} helpKey="metric-success-rate" />
+                <KpiCard Icon={BoltIcon} color="amber" title={t("admin.kpi.avgLatency" as any)} value={`${d.avgLatencyMs} ms`} />
+                <KpiCard Icon={ArrowTrendingUpIcon} color="indigo" title={t("admin.kpi.deltaRate" as any)} value={`${d.deltaImprovementRate.toFixed(1)}%`} />
+                <KpiCard Icon={BanknotesIcon} color="violet" title={t("admin.kpi.costProxy" as any)} value={`${d.costProxy.toFixed(0)} s`} sub="Est." />
+                <KpiCard Icon={ScaleIcon} color="pink" title={t("admin.kpi.p95Latency" as any)} value={d.p95LatencyMs ? `${d.p95LatencyMs} ms` : t("common.na" as any)} />
+                <KpiCard Icon={QueueListIcon} color="orange" title={t("admin.kpi.queueBacklog" as any)} value={String(d.queueBacklog || 0)} helpKey="metric-queue-backlog" />
+                <KpiCard Icon={ClockIcon} color="cyan" title={t("admin.kpi.oldestAge" as any)} value={`${d.oldestAgeSeconds || 0} s`} />
             </div>
 
             <div className="glass rounded-2xl border border-white overflow-hidden shadow-sm hover-slide">
