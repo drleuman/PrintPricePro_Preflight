@@ -37,7 +37,8 @@ if (process.env.AUTO_MIGRATE !== '0') {
     console.error('[CRITICAL] DATABASE_URL must be defined in production. Exiting.');
     process.exit(1);
   }
-  initSchema(); // Auto-create tables for V2 MySQL unless disabled in production
+  // Fire-and-forget but caught to prevent unhandled rejections
+  initSchema().catch(err => console.error('[DB-INIT-ERROR]', err.message));
 }
 
 // Initialize V2 Workers (BE-005)
@@ -77,7 +78,9 @@ try {
 }
 
 const app = express();
-const port = Number.parseInt(process.env.PORT || '8080', 10);
+// Port can be a number or a pipe string (Plesk/Passenger)
+const rawPort = process.env.PORT || '8080';
+const port = /^\d+$/.test(rawPort) ? Number.parseInt(rawPort, 10) : rawPort;
 
 if (pdfRouter.uploadDir) {
   startCleanupTask(pdfRouter.uploadDir);
@@ -351,14 +354,13 @@ if (!global.__SERVER_STARTED) {
     console.error('[DB-SCHEMA-INIT-ERROR]', err);
   });
 
-  const server = app.listen(port, '0.0.0.0', () => {
-    console.log(`[SERVER-START] OK: Listening on 0.0.0.0:${port}`);
-    console.log(`[SERVER-START] Upload context: ${pdfRouter.uploadDir || 'Not set'}`);
-    console.log(`[SERVER-START] Security Limits: Max Upload = ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)}MB`);
-    console.log(`[SERVER-START] Resource Limits: GS Concurrency = ${process.env.PPP_MAX_GS_CONCURRENCY || '4'}, Workers = ${process.env.PPP_MAX_WORKERS || '4'}`);
-  }).on('error', (err) => {
+  // Start server
+  const server = (typeof port === 'number'
+    ? app.listen(port, '0.0.0.0', () => console.log(`[SERVER-START] OK: Listening on 0.0.0.0:${port}`))
+    : app.listen(port, () => console.log(`[SERVER-START] OK: Listening on socket: ${port}`))
+  ).on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-      console.error(`[CRITICAL] Port ${port} is already in use. App cannot start.`);
+      console.error(`[CRITICAL] Port/Socket ${port} is already in use.`);
     } else {
       console.error(`[CRITICAL] Server failed to start:`, err);
     }
