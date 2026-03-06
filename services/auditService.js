@@ -34,7 +34,19 @@ class AuditService {
 
     verifySignedUrl(assetId, expires, signature) {
         if (!expires || !signature) return false;
-        if (Math.floor(Date.now() / 1000) > parseInt(expires)) return false;
+
+        const now = Math.floor(Date.now() / 1000);
+        const expiresInt = parseInt(expires);
+
+        // 1. Check if expired
+        if (now > expiresInt) return false;
+
+        // 2. Check maximum window (Security recommendation: max 1 hour)
+        const MAX_WINDOW = 3600;
+        if (expiresInt - now > MAX_WINDOW) {
+            console.warn(`[SECURITY][SIGNED-URL] Expiry window too large for asset ${assetId}: ${expiresInt - now}s`);
+            return false;
+        }
 
         const secret = process.env.APP_SECRET || 'dev-secret-key-123';
         const expected = crypto.createHmac('sha256', secret)

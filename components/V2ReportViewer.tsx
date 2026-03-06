@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import './V2ReportViewer.css';
+import { RiskMeter } from './RiskMeter';
+import { PdfComparisonViewer } from './PdfComparisonViewer';
 
 interface V2ReportViewerProps {
     jobId: string;
+    originalUrl?: string | null;
     onClose?: () => void;
 }
 
-export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, onClose }) => {
+export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalUrl, onClose }) => {
     const [job, setJob] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -24,7 +27,7 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, onClose }
 
                 setJob(data);
 
-                if (data.status === 'COMPLETED' || data.status === 'FAILED') {
+                if (data.status === 'SUCCEEDED' || data.status === 'FAILED') {
                     setLoading(false);
                     clearInterval(pollTimer);
                 }
@@ -72,14 +75,27 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, onClose }
     const report = job?.report;
     const delta = job?.delta;
 
+    // Calculate Risk Score
+    const calculateRiskScore = () => {
+        if (!report?.findings) return 0;
+        let score = 0;
+        report.findings.forEach((f: any) => {
+            if (f.severity === 'ERROR' || f.severity === 'CRITICAL') score += 30;
+            else if (f.severity === 'WARNING') score += 10;
+            else if (f.severity === 'INFO') score += 2;
+        });
+        return Math.min(100, score);
+    };
+    const riskScore = calculateRiskScore();
+
     // Timeline steps
     const steps = ['Upload', 'Analyze', 'Magic Fix', 'Recheck', 'Delta'];
     let currentStep = 0;
-    if (job?.status === 'PENDING') currentStep = 0;
-    else if (job?.status === 'PROCESSING') currentStep = 1;
-    else if (job?.progress >= 30) currentStep = 2;
-    else if (job?.progress >= 70) currentStep = 3;
-    if (job?.status === 'COMPLETED') currentStep = 4;
+    if (job?.status === 'QUEUED') currentStep = 0;
+    else if (job?.status === 'RUNNING' && job?.progress < 30) currentStep = 1;
+    else if (job?.progress >= 30 && job?.progress < 70) currentStep = 2;
+    else if (job?.progress >= 70 && job?.progress < 100) currentStep = 3;
+    if (job?.status === 'SUCCEEDED') currentStep = 4;
 
     const hasResolved = (id: string) => delta?.resolved_ids?.includes(id);
 
@@ -123,7 +139,7 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, onClose }
             </div>
 
             {/* Loading State Mid-Timeline */}
-            {job?.status === 'PROCESSING' && (
+            {job?.status === 'RUNNING' && (
                 <div className="v2-report-glass v2-loading" style={{ textAlign: 'center', margin: '2rem 0' }}>
                     <h2 style={{ color: '#64ffda', margin: 0 }}>AI V2-Engine is processing your file...</h2>
                     <p style={{ marginTop: '0.5rem', color: '#94a3b8' }}>{job?.progress}% completed</p>
@@ -225,6 +241,24 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, onClose }
                         <span className="v2-stat-label">{report.document.fileName} • {report.document.pdfVersion}</span>
                     </div>
                 </div>
+            )}
+
+            {/* Risk and Comparison */}
+            {report && (
+                <div className="v2-grid" style={{ marginTop: '1.5rem' }}>
+                    <div className="v2-report-glass">
+                        <RiskMeter score={riskScore} />
+                    </div>
+                    {originalUrl && job?.download_url && (
+                        <div style={{}}>
+                            {/* Empty gap for grid alignment if needed or more stats */}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {originalUrl && job?.download_url && (
+                <PdfComparisonViewer originalUrl={originalUrl} fixedUrl={job.download_url} />
             )}
 
             {/* Findings List */}

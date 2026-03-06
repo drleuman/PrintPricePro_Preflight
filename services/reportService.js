@@ -38,6 +38,20 @@ class ReportService {
     }
 
     /**
+     * Calculates a Risk Score (0-100).
+     */
+    calculateRiskScore(findings = []) {
+        let score = 0;
+        findings.forEach(f => {
+            const severity = (f.severity || '').toUpperCase();
+            if (severity === 'CRITICAL' || severity === 'ERROR') score += 30;
+            else if (severity === 'WARNING') score += 10;
+            else if (severity === 'INFO') score += 2;
+        });
+        return Math.min(100, score);
+    }
+
+    /**
      * Builds a V2 Preflight Report from raw findings and metadata.
      */
     buildReport(asset, analysisResults, engines = {}) {
@@ -52,10 +66,12 @@ class ReportService {
             },
             engines: {
                 client_engine_version: engines.client || 'v2-stub',
-                server_engine_version: engines.server || `v2-deterministic-1.0`
+                server_engine_version: engines.server || `v2-deterministic-${process.env.GIT_COMMIT?.slice(0, 7) || '1.0'}`,
+                policy_version: process.env.PPP_POLICY_VERSION || '2026-03'
             },
             findings: []
         };
+        report.risk_score = this.calculateRiskScore(rawFindings);
 
         // Merge and enrich findings using the registry
         rawFindings.forEach(raw => {

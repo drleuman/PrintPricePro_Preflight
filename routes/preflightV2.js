@@ -6,7 +6,11 @@ const queue = require('../services/queue');
 const db = require('../services/db');
 
 // Multer setup for temporary storage before moving to V2 Assets
-const upload = multer({ dest: 'uploads-v2-temp/' });
+const MAX_UPLOAD_BYTES = Number(process.env.PPP_MAX_UPLOAD_BYTES || 500 * 1024 * 1024);
+const upload = multer({
+    dest: 'uploads-v2-temp/',
+    limits: { fileSize: MAX_UPLOAD_BYTES }
+});
 
 /**
  * Endpoint: POST /api/preflight/analyze
@@ -43,12 +47,12 @@ router.post('/analyze', upload.single('pdf'), async (req, res) => {
         await db.query(`
             INSERT INTO jobs (id, tenant_id, asset_id, type, status)
             VALUES (?, ?, ?, ?, ?)
-        `, [job.id, tenantId, asset.id, 'PREFLIGHT', 'PENDING']);
+        `, [job.id, tenantId, asset.id, 'PREFLIGHT', 'QUEUED']);
 
         res.status(202).json({
             asset_id: asset.id,
             job_id: job.id,
-            status: 'queued'
+            status: 'QUEUED'
         });
     } catch (err) {
         console.error('[V2-ANALYZE-ERROR]', err);
@@ -81,11 +85,11 @@ router.post('/autofix', async (req, res) => {
         await db.query(`
             INSERT INTO jobs (id, tenant_id, asset_id, type, status)
             VALUES ($1, $2, $3, $4, $5)
-        `, [job.id, tenant_id || asset.tenant_id, asset_id, 'AUTOFIX', 'PENDING']);
+        `, [job.id, tenant_id || asset.tenant_id, asset_id, 'AUTOFIX', 'QUEUED']);
 
         res.status(202).json({
             job_id: job.id,
-            status: 'queued'
+            status: 'QUEUED'
         });
     } catch (err) {
         console.error('[V2-AUTOFIX-ERROR]', err);
@@ -113,7 +117,7 @@ router.get('/jobs/:id', async (req, res) => {
         let report = null;
         let delta = null;
         let downloadUrl = null;
-        if (jobRecord.status === 'COMPLETED') {
+        if (jobRecord.status === 'SUCCEEDED') {
             const reportResult = await db.query('SELECT asset_id, data, delta FROM reports WHERE job_id = ?', [jobRecord.id]);
             if (reportResult.rows[0]) {
                 report = reportResult.rows[0].data;
@@ -153,11 +157,11 @@ router.get('/assets/:id', async (req, res) => {
             if (!auditService.verifySignedUrl(req.params.id, expires, sig)) {
                 return res.status(403).json({ error: 'Invalid or expired secure download link' });
             }
-        } else {
-            // For production, this should block unsigned requests
-            // return res.status(403).json({ error: 'Missing security signature' });
-        }
-
+        } else        // SECURITY: Mandatory Signed URLs for all downloads
+            if (!expires || !sig || !auditService.verifySignedUrl(req.params.id, expires, sig)) {
+                console.warn(`[SECURITY][DOWNLOAD] Unsigned or invalid request for asset ${req.params.id} from ${req.ip}`);
+                return res.status(403).json({ error: 'Access Denied: Signature Required' });
+            }
         const asset = await assetService.getAsset(req.params.id);
         if (!asset) {
             return res.status(404).json({ error: 'Asset not found' });

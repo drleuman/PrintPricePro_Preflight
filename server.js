@@ -16,6 +16,9 @@ const compression = require('compression');
 const { router: proxyRouter, handleWsUpgrade } = require('./routes/proxy');
 const pdfRouter = require('./routes/pdf');
 const preflightV2Router = require('./routes/preflightV2');
+const apiV2Router = require('./routes/apiV2');
+const batchV2Router = require('./routes/batchV2');
+const analyticsV2Router = require('./routes/analyticsV2');
 const adminRoutes = require('./routes/admin');
 const adminControlRoutes = require('./routes/adminControl');
 const { startCleanupTask } = require('./services/cleanup');
@@ -30,12 +33,18 @@ const { checkAllDependencies } = require('./services/dependencyChecker');
 const { initSchema } = require('./services/dbSchema');
 
 if (process.env.AUTO_MIGRATE !== '0') {
+  if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+    console.error('[CRITICAL] DATABASE_URL must be defined in production. Exiting.');
+    process.exit(1);
+  }
   initSchema(); // Auto-create tables for V2 MySQL unless disabled in production
 }
 
 // Initialize V2 Workers (BE-005)
 if (process.env.NODE_ENV !== 'test') {
   require('./workers/v2-worker');
+  require('./workers/batch-orchestrator');
+  require('./workers/webhook-worker');
 }
 
 // Simple logger without file-system writes to avoid PM2 watch-loop crashes
@@ -43,13 +52,17 @@ const debugLog = (msg) => {
   console.log(`[${new Date().toISOString()}] ${msg}`);
 };
 
-// Global Process Guards to prevent 502 Gateway errors on unexpected crashes
+// Global error handlers
 process.on('uncaughtException', (err) => {
   console.error('[CRITICAL] Uncaught Exception:', err);
+  // Give time for logs to flush, then exit with failure
+  setTimeout(() => process.exit(1), 500);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('[CRITICAL] Unhandled Rejection at:', promise, 'reason:', reason);
+  // Exit with failure to allow process manager to restart
+  setTimeout(() => process.exit(1), 500);
 });
 
 debugLog('Server starting environment diagnostic...');
@@ -154,6 +167,13 @@ app.use((req, res, next) => {
 // 3) Per-endpoint rate limits
 const diagnosticLimiter = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false });
 const convertLimiter = rateLimit({ windowMs: 60_000, max: 5000, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many conversion requests, try again in a minute.' } });
+const v2UploadLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'V2 Engine: Too many upload requests. Limit is 10 per minute.' }
+});
 
 // -------- Routes --------
 app.use('/api/gemini-proxy', apiKeyMiddleware, proxyRouter);
@@ -165,9 +185,21 @@ app.use('/api/convert', (req, res, next) => {
   next();
 }, pdfRouter);
 
-// V2 Asynchronous Routes
+// V2 Asynchronous Routes (Internal)
 debugLog('Mounting /api/v2/preflight routes...');
-app.use('/api/v2/preflight', preflightV2Router);
+app.use('/api/v2/preflight', v2UploadLimiter, preflightV2Router);
+
+// Public API v2 (External, API-Key Authenticated)
+debugLog('Mounting /api/v2 public routes...');
+app.use('/api/v2', v2UploadLimiter, apiV2Router);
+
+// Batch Processing API (API-Key Authenticated)
+debugLog('Mounting /api/v2/batches routes...');
+app.use('/api/v2/batches', v2UploadLimiter, batchV2Router);
+
+// Tenant Analytics API (API-Key Authenticated)
+debugLog('Mounting /api/v2/analytics routes...');
+app.use('/api/v2/analytics', analyticsV2Router);
 
 // Admin Dashboard Routes
 debugLog('Mounting /api/admin routes...');
@@ -256,7 +288,10 @@ app.get(['/metrics', '/api/metrics'], (_req, res) => {
   });
 });
 
-app.all('/api/*path', (req, res) => {
+// -------- 404 & Error Handlers --------
+
+// API 404
+app.all('/api/*', (req, res) => {
   console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     error: `Route not found: ${req.originalUrl}`,
@@ -265,32 +300,7 @@ app.all('/api/*path', (req, res) => {
   });
 });
 
-// -------- SPA Fallback --------
-app.get(['/admin', '/admin/'], (req, res) => {
-  const indexPath = path.join(staticPath, 'index.html');
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    res.status(404).send('<h1>App not built</h1><p>Run npm run build first.</p>');
-  }
-});
-
-// -------- Global Error Handler --------
-app.use((err, req, res, next) => {
-  console.error(`[SERVER-ERROR] ${req.method} ${req.url}:`, err);
-
-  if (res.headersSent) {
-    return next(err);
-  }
-
-  const statusCode = err.status || err.statusCode || 500;
-  res.status(statusCode).json({
-    error: err.message || 'Internal Server Error',
-    code: err.code || 'UNKNOWN_ERROR',
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-  });
-});
-
+// SPA Fallback (Non-API routes)
 app.get(/^\/(?!api\/).*/, (req, res) => {
   const indexPath = path.join(staticPath, 'index.html');
   if (fs.existsSync(indexPath)) {
@@ -300,7 +310,24 @@ app.get(/^\/(?!api\/).*/, (req, res) => {
   }
 });
 
-// -------- Server & WebSocket --------
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error(`[SERVER-ERROR] ${req.method} ${req.url}:`, err);
+  if (res.headersSent) return next(err);
+
+  const statusCode = err.status || err.statusCode || 500;
+  if (req.path.startsWith('/api')) {
+    return res.status(statusCode).json({
+      error: err.message || 'Internal Server Error',
+      code: err.code || 'UNKNOWN_ERROR',
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+
+  res.status(statusCode).send(`<h1>Error ${statusCode}</h1><p>${err.message}</p>`);
+});
+
+// -------- Server & WebSocket Initialization --------
 if (!global.__SERVER_STARTED) {
   global.__SERVER_STARTED = true;
 
@@ -310,7 +337,6 @@ if (!global.__SERVER_STARTED) {
   if (!ok) {
     console.error('[CRITICAL] Missing hard dependencies! Server cannot start safely.');
     console.error(JSON.stringify(deps, null, 2));
-    // In production, we exit. In dev, we might log and continue but here we enforce stability.
     if (process.env.NODE_ENV === 'production') {
       process.exit(1);
     } else {
@@ -358,7 +384,6 @@ if (!global.__SERVER_STARTED) {
       console.log('[SERVER-SHUTDOWN] Port released. Process exit.');
       process.exit(0);
     });
-    // Force exit after 10s if stuck
     setTimeout(() => {
       console.error('[SERVER-SHUTDOWN] Forced exit after timeout.');
       process.exit(1);

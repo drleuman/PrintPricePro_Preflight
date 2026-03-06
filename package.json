@@ -20,6 +20,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.16.0",
     "@heroicons/react": "^2.2.0",
+    "adm-zip": "^0.5.16",
     "axios": "^1.13.2",
     "bullmq": "^5.70.1",
     "compression": "^1.7.5",

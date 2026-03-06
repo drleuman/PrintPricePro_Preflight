@@ -2,8 +2,15 @@ const mysql = require('mysql2/promise');
 
 let pool;
 try {
+    const dbUrl = process.env.DATABASE_URL;
+
+    if (!dbUrl && process.env.NODE_ENV === 'production') {
+        console.error('[CRITICAL] DATABASE_URL is not defined. Production server cannot start without database configuration.');
+        process.exit(1);
+    }
+
     pool = mysql.createPool({
-        uri: process.env.DATABASE_URL || 'mysql://Kike:L8YwOuq0i4$v&dql@localhost:3306/preflight_',
+        uri: dbUrl || 'mysql://root@localhost:3306/preflight_dev',
         waitForConnections: true,
         connectionLimit: 20,
         queueLimit: 0,

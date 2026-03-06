@@ -11,6 +11,18 @@ export enum Severity {
 }
 
 /**
+ * Unified job statuses for the system.
+ */
+export enum JobStatus {
+  QUEUED = 'QUEUED',
+  RUNNING = 'RUNNING',
+  SUCCEEDED = 'SUCCEEDED',
+  FAILED = 'FAILED',
+  CANCELED = 'CANCELED',
+  CANCEL_REQUESTED = 'CANCEL_REQUESTED',
+}
+
+/**
  * Enum-like object containing all possible IssueCategory values.
  * This provides the runtime values and allows for type derivation.
  * Exported as 'const' to ensure it's available for Vite/Rollup to resolve

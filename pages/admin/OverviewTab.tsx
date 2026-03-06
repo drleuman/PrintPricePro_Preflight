@@ -86,14 +86,14 @@ export const OverviewTab: React.FC<{ range: Range; refreshMs?: number }> = ({ ra
     return (
         <div className="space-y-6 animate-slide-fade">
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                <KpiCard Icon={Square3Stack3DIcon} color="blue" title={t("admin.kpi.totalJobs" as any)} value={String(d.totalJobs)} />
-                <KpiCard Icon={CheckBadgeIcon} color="emerald" title={t("admin.kpi.successRate" as any)} value={`${d.successRate.toFixed(1)}%`} helpKey="metric-success-rate" />
-                <KpiCard Icon={BoltIcon} color="amber" title={t("admin.kpi.avgLatency" as any)} value={`${d.avgLatencyMs} ms`} />
-                <KpiCard Icon={ArrowTrendingUpIcon} color="indigo" title={t("admin.kpi.deltaRate" as any)} value={`${d.deltaImprovementRate.toFixed(1)}%`} />
-                <KpiCard Icon={BanknotesIcon} color="violet" title={t("admin.kpi.costProxy" as any)} value={`${d.costProxy.toFixed(0)} s`} sub="Est." />
-                <KpiCard Icon={ScaleIcon} color="pink" title={t("admin.kpi.p95Latency" as any)} value={d.p95LatencyMs ? `${d.p95LatencyMs} ms` : t("common.na" as any)} />
-                <KpiCard Icon={QueueListIcon} color="orange" title={t("admin.kpi.queueBacklog" as any)} value={String(d.queueBacklog || 0)} helpKey="metric-queue-backlog" />
-                <KpiCard Icon={ClockIcon} color="cyan" title={t("admin.kpi.oldestAge" as any)} value={`${d.oldestAgeSeconds || 0} s`} />
+                <KpiCard Icon={Square3Stack3DIcon} color="blue" title="Ledger Total (DB)" value={String(d.totalJobs)} helpKey="metric-total-jobs" />
+                <KpiCard Icon={CheckBadgeIcon} color="emerald" title="SLA Success Rate" value={`${d.successRate.toFixed(1)}%`} helpKey="metric-success-rate" />
+                <KpiCard Icon={BanknotesIcon} color="emerald" title="AutoFix Value" value={`$${Math.round(d.totalValueGenerated).toLocaleString()}`} sub="USD Generated" />
+                <KpiCard Icon={ClockIcon} color="blue" title="Prepress Saved" value={`${d.totalHoursSaved.toFixed(1)} h`} sub="Time ROI" />
+                <KpiCard Icon={ArrowTrendingUpIcon} color="indigo" title="Optimization Delta" value={`${d.deltaImprovementRate.toFixed(1)}%`} />
+                <KpiCard Icon={ScaleIcon} color="violet" title="Risk Reduction" value={`${(d.avgRiskBefore - d.avgRiskAfter).toFixed(1)} pts`} sub={`${d.avgRiskBefore.toFixed(0)} → ${d.avgRiskAfter.toFixed(0)}`} />
+                <KpiCard Icon={BoltIcon} color="amber" title="Mean Latency" value={`${d.avgLatencyMs} ms`} />
+                <KpiCard Icon={QueueListIcon} color="orange" title="Live Buffer (Queue)" value={String(d.queueBacklog || 0)} helpKey="metric-queue-backlog" />
             </div>
 
             <div className="glass rounded-2xl border border-white overflow-hidden shadow-sm hover-slide">

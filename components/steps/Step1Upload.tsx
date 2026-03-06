@@ -8,6 +8,8 @@ interface Step1UploadProps {
     fileMeta: FileMeta | null;
     onFileSelect: (file: File | null) => void;
     onNext: (mode: AppMode) => void;
+    selectedPolicy: string;
+    onPolicyChange: (p: string) => void;
 }
 
 export const Step1Upload: React.FC<Step1UploadProps> = ({
@@ -15,27 +17,30 @@ export const Step1Upload: React.FC<Step1UploadProps> = ({
     fileMeta,
     onFileSelect,
     onNext,
+    selectedPolicy,
+    onPolicyChange,
 }) => {
-    const [selectedMode, setSelectedMode] = useState<'magic' | 'manual'>('magic'); // Default to 'magic'
+    const [selectedMode, setSelectedMode] = useState<'magic' | 'manual'>('magic');
+    const [policies, setPolicies] = useState<{ slug: string, name: string }[]>([]);
     const dropzoneRef = useRef<PreflightDropzoneRef>(null);
 
-    const handlePickFile = () => {
-        dropzoneRef.current?.openFileDialog();
-    };
+    React.useEffect(() => {
+        fetch('/api/v2/preflight/policies')
+            .then(r => r.json())
+            .then(res => {
+                if (res.ok && res.policies) setPolicies(res.policies);
+            })
+            .catch(console.error);
+    }, []);
 
-    const handleRemoveFile = () => {
-        onFileSelect(null);
-    };
-
+    const handlePickFile = () => dropzoneRef.current?.openFileDialog();
+    const handleRemoveFile = () => onFileSelect(null);
     const handleContinue = () => {
         const appMode: AppMode = selectedMode === 'magic' ? 'ai' : 'manual';
         onNext(appMode);
     };
 
-    const formatFileSize = (bytes: number) => {
-        const mb = bytes / (1024 * 1024);
-        return `${mb.toFixed(1)} MB`;
-    };
+    const formatFileSize = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -51,6 +56,9 @@ export const Step1Upload: React.FC<Step1UploadProps> = ({
                 onFileDrop={onFileSelect}
                 onContinue={handleContinue}
                 canContinue={!!file}
+                selectedPolicy={selectedPolicy}
+                onPolicyChange={onPolicyChange}
+                policies={policies}
             />
         </div>
     );

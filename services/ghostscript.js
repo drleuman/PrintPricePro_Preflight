@@ -65,7 +65,7 @@ async function runGs(args, options = {}) {
     await acquireGsSlot();
     const gsCmd = resolveGsCmd();
     const reqId = options.reqId || 'internal';
-    const timeoutMs = options.timeoutMs || 120000;
+    const timeoutMs = options.timeoutMs || Number(process.env.PPP_GS_TIMEOUT || 60000);
 
     // Hardened safety: Ensure -dSAFER is always present if not already in args or overridden by -dNOSAFER
     if (!args.includes('-dSAFER') && !args.includes('-dNOSAFER')) {

@@ -48,6 +48,10 @@ export type OverviewResponse = {
     p95LatencyMs: number | null;
     deltaImprovementRate: number;
     costProxy: number;
+    totalValueGenerated: number;
+    totalHoursSaved: number;
+    avgRiskBefore: number;
+    avgRiskAfter: number;
     queueBacklog: number;
     oldestAgeSeconds: number;
 };
@@ -57,6 +61,8 @@ export type TenantRow = {
     totalJobs: number;
     successRate: number;
     avgLatencyMs: number;
+    totalValueGenerated: number;
+    totalHoursSaved: number;
     topPolicy: string | null;
     lastActivity: string;
 };

@@ -29,7 +29,11 @@ router.get("/metrics/overview", async (req, res) => {
         (SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) / NULLIF(COUNT(*),0)) * 100 as success_rate,
         AVG(processing_ms) as avg_latency_ms,
         MAX(processing_ms) as max_latency_ms,
-        (SUM(processing_ms) / 1000) as cost_proxy_seconds
+        (SUM(processing_ms) / 1000) as cost_proxy_seconds,
+        SUM(value_generated) as total_value_generated,
+        SUM(hours_saved) as total_hours_saved,
+        AVG(risk_score_before) as avg_risk_before,
+        AVG(risk_score_after) as avg_risk_after
       FROM metrics
       WHERE created_at >= NOW() - ${interval};
       `
@@ -62,6 +66,10 @@ router.get("/metrics/overview", async (req, res) => {
       p95LatencyMs: null,
       deltaImprovementRate: Number(improve.improvement_rate || 0),
       costProxy: Number(overview.cost_proxy_seconds || 0),
+      totalValueGenerated: Number(overview.total_value_generated || 0),
+      totalHoursSaved: Number(overview.total_hours_saved || 0),
+      avgRiskBefore: Number(overview.avg_risk_before || 0),
+      avgRiskAfter: Number(overview.avg_risk_after || 0),
       queueBacklog: Number(queueStats?.backlog || 0),
       oldestAgeSeconds: Number(queueStats?.oldest_age_seconds || 0)
     });
@@ -83,6 +91,8 @@ router.get("/metrics/tenants", async (req, res) => {
         COUNT(*) as total_jobs,
         (SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) / NULLIF(COUNT(*),0)) * 100 as success_rate,
         AVG(processing_ms) as avg_latency_ms,
+        SUM(value_generated) as total_value_generated,
+        SUM(hours_saved) as total_hours_saved,
         MAX(created_at) as last_activity
       FROM metrics
       WHERE created_at >= NOW() - ${interval}
@@ -96,6 +106,8 @@ router.get("/metrics/tenants", async (req, res) => {
       totalJobs: Number(r.total_jobs || 0),
       successRate: Number(r.success_rate || 0),
       avgLatencyMs: Math.round(Number(r.avg_latency_ms || 0)),
+      totalValueGenerated: Number(r.total_value_generated || 0),
+      totalHoursSaved: Number(r.total_hours_saved || 0),
       topPolicy: null,
       lastActivity: r.last_activity
     })));

@@ -13,6 +13,7 @@ import { InvestorDemo } from './components/Demo/InvestorDemo';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { AdminHelpCenter } from './pages/admin-help/AdminHelpCenter';
 import { AdminHelpArticle } from './pages/admin-help/AdminHelpArticle';
+import { AnalyticsPortal } from './pages/AnalyticsPortal';
 import { RocketLaunchIcon } from '@heroicons/react/24/outline';
 
 import { t } from './i18n';
@@ -72,6 +73,7 @@ export default function App() {
 
   // V2 Engine State
   const [v2JobId, setV2JobId] = useState<string | null>(null);
+  const [originalUrl, setOriginalUrl] = useState<string | null>(null);
 
   // UI / Loader
   const [processMessage, setProcessMessage] = useState<string | null>(null);
@@ -81,7 +83,8 @@ export default function App() {
   const [lastPdfUrl, setLastPdfUrl] = useState<string | null>(null);
   const [lastPdfName, setLastPdfName] = useState<string | null>(null);
   const lastPdfUrlRef = useRef<string | null>(null);
-  const [selectedProfile, setSelectedProfile] = useState<string>('iso_coated_v3');
+  const [selectedProfile, setSelectedProfile] = useState<string>('OFFSET_CMYK_STRICT');
+  const [selectedPolicy, setSelectedPolicy] = useState<string>('OFFSET_CMYK_STRICT');
   const [serverAvailable, setServerAvailable] = useState(true);
 
   const { currentLocale, setLocale } = useLocale(); // Usa el hook useLocale
@@ -346,20 +349,56 @@ export default function App() {
 
   const onFileSelect = useCallback((f: File | null) => {
     setFile(f);
-    setOriginalFile(f); // Store original for Before/After comparison
+    setOriginalFile(f);
     setResult(null);
     setSelectedIssue(null);
     setNumPages(0);
     setCurrentPage(1);
     setVisualPageImage(null);
     setAppMode(null);
+    setV2JobId(null); // Reset V2 state on new file
+
+    if (originalUrl) {
+      try { URL.revokeObjectURL(originalUrl); } catch (e) { }
+    }
 
     if (f) {
       setFileMeta({ name: f.name, size: f.size, type: f.type });
+      setOriginalUrl(URL.createObjectURL(f));
     } else {
       setFileMeta(null);
+      setOriginalUrl(null);
     }
-  }, []);
+  }, [originalUrl]);
+
+  const handleV2Start = useCallback(async () => {
+    if (!file) return;
+    setProcessMessage('V2 Engine: Initiating Secure Upload...');
+    setProcessStage('preflight');
+
+    const fd = new FormData();
+    fd.append('pdf', file);
+    fd.append('policy', selectedPolicy);
+
+    try {
+      const res = await fetch('/api/v2/preflight/analyze', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.jobId || data.job_id) {
+        setV2JobId(data.jobId || data.job_id);
+        setAppMode('ai');
+      } else {
+        alert('V2 Engine Error: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error communicating with V2 Engine');
+    } finally {
+      setProcessMessage(null);
+      setProcessStage(undefined);
+    }
+  }, [file, selectedPolicy]);
+
+  const startV2Preflight = handleV2Start;
 
   const runPreflight = useCallback(() => {
     if (!file || !fileMeta) return;
@@ -721,31 +760,6 @@ export default function App() {
     }
   }, [file, fileMeta, autoFixServer, updateFileState, downloadAndRemember, runAnalysis]);
 
-  const startV2Preflight = useCallback(async () => {
-    if (!file) return;
-    setProcessMessage('Igniting V2 Advanced Engine...');
-    try {
-      const formData = new FormData();
-      formData.append('pdf', file);
-
-      const res = await fetch('/api/v2/preflight/analyze', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await res.json();
-      if (data.jobId) {
-        setV2JobId(data.jobId);
-      } else {
-        throw new Error(data.error || 'Failed to start V2 job');
-      }
-    } catch (err: any) {
-      alert(`V2 Engine failed: ${err.message}`);
-    } finally {
-      setProcessMessage(null);
-    }
-  }, [file]);
-
   const onPageChange = useCallback((p: number) => setCurrentPage(p), []);
 
   const openIssue = useCallback((issue: Issue | null) => {
@@ -791,6 +805,10 @@ export default function App() {
 
   if (window.location.pathname === '/admin' || window.location.pathname === '/admin/') {
     return <AdminDashboard />;
+  }
+
+  if (window.location.pathname === '/analytics' || window.location.pathname === '/analytics/') {
+    return <AnalyticsPortal />;
   }
 
   return (
@@ -853,7 +871,11 @@ export default function App() {
         zIndex: 10
       }}>
         {v2JobId ? (
-          <V2ReportViewer jobId={v2JobId} onClose={() => setV2JobId(null)} />
+          <V2ReportViewer
+            jobId={v2JobId}
+            originalUrl={originalUrl}
+            onClose={() => setV2JobId(null)}
+          />
         ) : appMode === 'demo' ? (
           <SuperDemoEngine
             onBack={() => setAppMode(null)}
@@ -879,11 +901,13 @@ export default function App() {
                   onNext={(mode) => {
                     setAppMode(mode);
                     if (mode === 'ai') {
-                      runMagicAiFix();
+                      handleV2Start();
                     } else {
                       setCurrentStep(2);
                     }
                   }}
+                  selectedPolicy={selectedPolicy}
+                  onPolicyChange={setSelectedPolicy}
                 />
               )}
 

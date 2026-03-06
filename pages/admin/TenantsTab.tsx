@@ -10,7 +10,8 @@ import {
     CircleStackIcon,
     GlobeAltIcon,
     BoltIcon,
-    CheckBadgeIcon
+    CheckBadgeIcon,
+    BanknotesIcon
 } from "@heroicons/react/24/outline";
 
 type Range = "24h" | "7d" | "30d";
@@ -66,6 +67,18 @@ export const TenantsTab: React.FC<{ range: Range; refreshMs?: number }> = ({ ran
                                 </div>
                             </th>
                             <th className="py-4 px-6 text-right">
+                                <div className="flex items-center justify-end gap-2 text-emerald-600">
+                                    <BanknotesIcon className="w-3.5 h-3.5" />
+                                    Value ($)
+                                </div>
+                            </th>
+                            <th className="py-4 px-6 text-right">
+                                <div className="flex items-center justify-end gap-2 text-blue-600">
+                                    <ClockIcon className="w-3.5 h-3.5" />
+                                    Saved (h)
+                                </div>
+                            </th>
+                            <th className="py-4 px-6 text-right">
                                 <div className="flex items-center justify-end gap-2">
                                     <BoltIcon className="w-3.5 h-3.5" />
                                     {t("admin.tenants.last" as any)}
@@ -101,6 +114,16 @@ export const TenantsTab: React.FC<{ range: Range; refreshMs?: number }> = ({ ran
                                 <td className="py-4 px-6">
                                     <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md font-bold text-xs">
                                         {r.avgLatencyMs} ms
+                                    </span>
+                                </td>
+                                <td className="py-4 px-6 text-right">
+                                    <span className="font-bold text-emerald-600">
+                                        ${Math.round(r.totalValueGenerated).toLocaleString()}
+                                    </span>
+                                </td>
+                                <td className="py-4 px-6 text-right">
+                                    <span className="font-bold text-blue-600">
+                                        {r.totalHoursSaved.toFixed(1)}h
                                     </span>
                                 </td>
                                 <td className="py-4 px-4 text-right">
