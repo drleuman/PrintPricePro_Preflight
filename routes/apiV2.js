@@ -16,11 +16,28 @@ const upload = multer({
 // All routes in this router require v2 API Authentication
 router.use(v2Auth);
 
+// Granular rate limits for Public v2 (P1)
+const rateLimit = require('express-rate-limit');
+const v2UploadLimiter = rateLimit({
+    windowMs: 60_000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'V2 Engine: Too many upload requests. Limit is 10 per minute.' }
+});
+const v2ReadLimiter = rateLimit({
+    windowMs: 60_000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'V2 Engine: Too many status requests. Limit is 100 per minute.' }
+});
+
 /**
  * POST /api/v2/jobs
  * Standardized entry for external systems.
  */
-router.post('/jobs', upload.single('file'), async (req, res) => {
+router.post('/jobs', v2UploadLimiter, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No PDF file provided in "file" field.' });
@@ -74,7 +91,7 @@ router.post('/jobs', upload.single('file'), async (req, res) => {
  * GET /api/v2/jobs/:id
  * Detailed job status, including ROI metrics if completed.
  */
-router.get('/jobs/:id', async (req, res) => {
+router.get('/jobs/:id', v2ReadLimiter, async (req, res) => {
     try {
         const { rows } = await db.query(`
             SELECT j.*, m.risk_score_before, m.risk_score_after, m.hours_saved, m.value_generated, r.asset_id as fixed_asset_id
@@ -120,7 +137,7 @@ router.get('/jobs/:id', async (req, res) => {
  * GET /api/v2/jobs
  * List recent jobs for the tenant.
  */
-router.get('/jobs', async (req, res) => {
+router.get('/jobs', v2ReadLimiter, async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit || 20), 100);
         const { rows } = await db.query(`

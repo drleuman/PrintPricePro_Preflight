@@ -98,7 +98,7 @@ if (!fs.existsSync(v2TempDir)) {
 
 app.use(pino);
 
-app.set('trust proxy', 1);
+app.set('trust proxy', true); // P2: Flexible for Plesk/Nginx/Apache multi-layer proxying
 
 // Compression for large JSON/PDF responses
 app.use(compression());
@@ -189,6 +189,14 @@ const v2UploadLimiter = rateLimit({
   message: { error: 'V2 Engine: Too many upload requests. Limit is 10 per minute.' }
 });
 
+const v2ReadLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'V2 Engine: Too many status requests. Limit is 100 per minute.' }
+});
+
 // -------- Diagnostic Routes Handlers (P0: Define before usage) --------
 const readyHandler = async (_req, res) => {
   const { ok, deps } = checkAllDependencies();
@@ -238,8 +246,8 @@ app.use('/api/v2/preflight', v2UploadLimiter, preflightV2Router);
 // Public API v2 (External, API-Key Authenticated)
 // Mount specific endpoints to avoid middleware duplication and ambiguity (P1)
 debugLog('Mounting /api/v2 public routes...');
-app.use('/api/v2/jobs', v2UploadLimiter, apiV2Router);
-app.use('/api/v2/batches', v2UploadLimiter, batchV2Router);
+app.use('/api/v2/jobs', apiV2Router);
+app.use('/api/v2/batches', batchV2Router);
 app.use('/api/v2/analytics', analyticsV2Router);
 
 // Admin Dashboard Routes
@@ -347,8 +355,12 @@ if (!global.__SERVER_STARTED) {
     const { ok, deps } = checkAllDependencies();
 
     // P1: Fail fast if critical dependencies are missing in production
+    // Enhanced error reporting with specific missing tools (P2)
     if (isProd && !ok) {
-      console.error('[CRITICAL] Missing required dependencies (GS). Exiting.');
+      const missing = Object.entries(deps)
+        .filter(([_, d]) => !d.installed)
+        .map(([name]) => name);
+      console.error(`[CRITICAL] Missing required dependencies: ${missing.join(', ')}. Exiting.`);
       process.exit(1);
     }
 
@@ -359,12 +371,20 @@ if (!global.__SERVER_STARTED) {
     // P0: Only auto-migrate if explicitly enabled (usually NOT in production)
     if (shouldAutoMigrate) {
       debugLog('Initializing database schema (AUTO_MIGRATE=1)...');
-      initSchema().catch(err => console.error('[DB-SCHEMA-INIT-ERROR]', err));
+      initSchema()
+        .then(() => {
+          debugLog('Database schema initialized.');
+          initWorkers();
+        })
+        .catch(err => {
+          // P1: Fail hard if migration fails (don't start in broken state)
+          console.error('[CRITICAL][DB-SCHEMA-INIT-ERROR]', err);
+          process.exit(1);
+        });
     } else {
       debugLog('Skipping auto-migration (AUTO_MIGRATE=0).');
+      initWorkers();
     }
-
-    initWorkers();
   };
 
   // Start server

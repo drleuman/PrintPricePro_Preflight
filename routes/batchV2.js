@@ -19,11 +19,28 @@ const upload = multer({
 
 router.use(v2Auth);
 
+// Granular rate limits for Batch v2 (P1)
+const rateLimit = require('express-rate-limit');
+const v2UploadLimiter = rateLimit({
+    windowMs: 60_000,
+    max: 5, // Even stricter for batches (ZIPs)
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'V2 Batch: Too many upload requests. Limit is 5 per minute.' }
+});
+const v2ReadLimiter = rateLimit({
+    windowMs: 60_000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'V2 Batch: Too many status requests. Limit is 100 per minute.' }
+});
+
 /**
  * POST /api/v2/batches
  * Upload a ZIP of PDFs for batch processing.
  */
-router.post('/', upload.single('file'), async (req, res) => {
+router.post('/', v2UploadLimiter, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No ZIP file provided in "file" field.' });
@@ -84,7 +101,7 @@ router.post('/', upload.single('file'), async (req, res) => {
  * GET /api/v2/batches
  * List batches for the tenant with optional filters.
  */
-router.get('/', async (req, res) => {
+router.get('/', v2ReadLimiter, async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit || 20), 100);
         const status = req.query.status || null;
@@ -112,7 +129,7 @@ router.get('/', async (req, res) => {
  * GET /api/v2/batches/:id
  * Aggregate status and ROI metrics for a batch.
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', v2ReadLimiter, async (req, res) => {
     try {
         const { rows } = await db.query(
             `SELECT *, 
@@ -155,7 +172,7 @@ router.get('/:id', async (req, res) => {
  * GET /api/v2/batches/:id/jobs
  * List all child jobs of a batch.
  */
-router.get('/:id/jobs', async (req, res) => {
+router.get('/:id/jobs', v2ReadLimiter, async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit || 50), 200);
         const { rows: [batchCheck] } = await db.query(
@@ -205,7 +222,7 @@ router.get('/:id/jobs', async (req, res) => {
  * - summary.json : Aggregate batch summary
  * - summary.csv : Tabular CSV for spreadsheet import
  */
-router.get('/:id/download', async (req, res) => {
+router.get('/:id/download', v2ReadLimiter, async (req, res) => {
     try {
         // Verify tenant ownership
         const { rows: [batch] } = await db.query(
