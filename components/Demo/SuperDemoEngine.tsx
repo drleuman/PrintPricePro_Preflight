@@ -10,17 +10,21 @@ import {
     ExclamationTriangleIcon,
     CheckCircleIcon,
     CpuChipIcon,
-    PresentationChartLineIcon
+    PresentationChartLineIcon,
+    PlayIcon,
+    BoltIcon,
+    DocumentDuplicateIcon,
+    BeakerIcon
 } from '@heroicons/react/24/outline';
 
 type Step = 'UPLOAD' | 'INSPECT' | 'FIX' | 'VERIFY' | 'DELTA';
 
 const PIPELINE_STEPS: { id: Step; label: string }[] = [
     { id: 'UPLOAD', label: 'Upload' },
-    { id: 'INSPECT', label: 'AI Preflight' },
+    { id: 'INSPECT', label: 'Inspect' },
     { id: 'FIX', label: 'AutoFix' },
-    { id: 'VERIFY', label: 'Verification' },
-    { id: 'DELTA', label: 'Delta Report' },
+    { id: 'VERIFY', label: 'Verify' },
+    { id: 'DELTA', label: 'Delta' },
 ];
 
 interface SuperDemoEngineProps {
@@ -31,8 +35,9 @@ export function SuperDemoEngine({ onBack }: SuperDemoEngineProps) {
     const [currentStep, setCurrentStep] = useState<Step>('UPLOAD');
     const [isInvestorMode, setIsInvestorMode] = useState(false);
     const [isAutoDemo, setIsAutoDemo] = useState(false);
-    const [file, setFile] = useState<File | null>(null);
+    const [file, setFile] = useState<{ name: string; type: string } | null>(null);
     const [logs, setLogs] = useState<{ msg: string; type: 'info' | 'success' | 'warning' }[]>([]);
+    const [processingTime, setProcessingTime] = useState(0);
 
     // Logic to calculate progress width
     const stepIndex = PIPELINE_STEPS.findIndex(s => s.id === currentStep);
@@ -42,18 +47,38 @@ export function SuperDemoEngine({ onBack }: SuperDemoEngineProps) {
         setLogs(prev => [...prev, { msg, type }]);
     }, []);
 
-    const handleStartDemo = () => {
+    const handleRunAutoDemo = () => {
         setIsAutoDemo(true);
+        setFile({ name: 'high_res_brochure_RGB.pdf', type: 'demo' });
         setCurrentStep('INSPECT');
     };
 
-    const handleFileUpload = (f: File) => {
-        setFile(f);
+    const handleFileUpload = (name: string) => {
+        setFile({ name, type: 'demo' });
         setCurrentStep('INSPECT');
     };
+
+    // Auto-advance logic for Auto Demo
+    useEffect(() => {
+        if (!isAutoDemo) return;
+
+        if (currentStep === 'INSPECT' && logs.length === 6) {
+            const timer = setTimeout(() => setCurrentStep('FIX'), 1500);
+            return () => clearTimeout(timer);
+        }
+        if (currentStep === 'FIX') {
+            const timer = setTimeout(() => setCurrentStep('VERIFY'), 3000);
+            return () => clearTimeout(timer);
+        }
+        if (currentStep === 'VERIFY') {
+            const timer = setTimeout(() => setCurrentStep('DELTA'), 3500);
+            return () => clearTimeout(timer);
+        }
+    }, [currentStep, isAutoDemo, logs.length]);
 
     useEffect(() => {
         if (currentStep === 'INSPECT') {
+            setLogs([]);
             const messages: { msg: string; type: 'info' | 'success' | 'warning' }[] = [
                 { msg: 'Initializing PrintPrice V2 Engine...', type: 'info' },
                 { msg: 'Loading deterministic probes (GS 10.03)...', type: 'info' },
@@ -70,8 +95,9 @@ export function SuperDemoEngine({ onBack }: SuperDemoEngineProps) {
                     i++;
                 } else {
                     clearInterval(interval);
+                    setProcessingTime(1.2);
                 }
-            }, 800);
+            }, 500);
             return () => clearInterval(interval);
         }
     }, [currentStep, addLog]);
@@ -79,41 +105,37 @@ export function SuperDemoEngine({ onBack }: SuperDemoEngineProps) {
     return (
         <div className="sd-container">
             {/* Header & Controls */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+            <div className="sd-header">
                 <div>
-                    <h1 style={{ margin: 0, fontSize: '32px', fontWeight: 800, letterSpacing: '-1px' }}>
-                        PrintPrice <span style={{ color: 'var(--sd-accent)' }}>Preflight V2</span>
+                    <h1 className="sd-title">
+                        PrintPrice <span className="sd-accent-text">Preflight V2</span>
                     </h1>
-                    <p style={{ margin: '4px 0 0 0', color: '#6B7280', fontSize: '15px' }}>
-                        Hybrid Intelligence Engine for Production Print Risk
+                    <p className="sd-subtitle text-gradient">
+                        Automatically turn problematic PDFs into production-ready print files — and verify the improvement.
                     </p>
                 </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div className="sd-controls">
                     <button
                         onClick={() => setIsInvestorMode(!isInvestorMode)}
-                        className="sd-btn-outline"
-                        style={{ padding: '8px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                        className={`sd-toggle-btn ${isInvestorMode ? 'active' : ''}`}
                     >
                         <PresentationChartLineIcon className="w-4 h-4" />
-                        {isInvestorMode ? 'Hide Tech Data' : 'Investor Mode'}
+                        Investor Mode
                     </button>
-                    {!isAutoDemo && (
-                        <button
-                            onClick={handleStartDemo}
-                            className="sd-btn-primary"
-                            style={{ padding: '8px 16px', fontSize: '13px' }}
-                        >
-                            Run Interactive Demo
+                    {!isAutoDemo && currentStep === 'UPLOAD' && (
+                        <button onClick={handleRunAutoDemo} className="sd-btn-special">
+                            <PlayIcon className="w-4 h-4" />
+                            Run Auto Demo
                         </button>
                     )}
-                    <button onClick={onBack} className="sd-btn-outline" style={{ padding: '8px 16px', fontSize: '13px' }}>
+                    <button onClick={onBack} className="sd-btn-outline">
                         Exit
                     </button>
                 </div>
             </div>
 
-            {/* Pipeline Tracker */}
-            <div className="sd-pipeline">
+            {/* Pipeline Visual */}
+            <div className="sd-pipeline-container">
                 <div className="sd-pipeline-line">
                     <div className="sd-pipeline-progress" style={{ width: `${progressWidth}%` }}></div>
                 </div>
@@ -122,7 +144,7 @@ export function SuperDemoEngine({ onBack }: SuperDemoEngineProps) {
                     const isCompleted = stepIndex > idx;
                     return (
                         <div key={step.id} className={`sd-pipeline-step ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}>
-                            <div className="sd-step-circle">
+                            <div className="sd-step-node">
                                 {isCompleted ? <CheckCircleIcon className="w-5 h-5" /> : idx + 1}
                             </div>
                             <span className="sd-step-label">{step.label}</span>
@@ -131,252 +153,214 @@ export function SuperDemoEngine({ onBack }: SuperDemoEngineProps) {
                 })}
             </div>
 
-            {/* Main Experience Area */}
-            <div className="sd-card">
+            {/* Main Stage */}
+            <div className="sd-main-card glass-panel">
                 {currentStep === 'UPLOAD' && (
                     <div className="animate-fade-in">
-                        <div className="sd-dropzone" onClick={() => handleFileUpload(new File([], 'demo.pdf'))}>
-                            <div style={{ padding: '12px', background: '#EFF6FF', borderRadius: '50%' }}>
-                                <CloudArrowUpIcon className="w-10 h-10 text-blue-600" />
+                        <div className="sd-upload-zone" onClick={() => handleFileUpload('custom_file.pdf')}>
+                            <div className="sd-upload-icon-wrapper">
+                                <CloudArrowUpIcon className="w-12 h-12" />
                             </div>
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: '18px' }}>Drop your PDF to analyze</h3>
-                                <p style={{ margin: '4px 0 0 0', color: '#6B7280' }}>Deterministic inspection + AI heuristic signals</p>
+                            <div className="sd-upload-text">
+                                <h3>Drop your PDF to start</h3>
+                                <p>Deterministic inspection + AI heuristic signals</p>
                             </div>
                         </div>
 
-                        <div className="sd-samples-grid">
-                            <button className="sd-sample-btn" onClick={() => handleFileUpload(new File([], 'brochure.pdf'))}>
-                                <div className="sd-sample-icon"><DocumentMagnifyingGlassIcon className="w-5 h-5" /></div>
-                                <div className="sd-sample-info">
-                                    <span className="sd-sample-title">RGB Brochure</span>
-                                    <span className="sd-sample-desc">4 Isses • CMYK mismatch</span>
-                                </div>
-                            </button>
-                            <button className="sd-sample-btn" onClick={() => handleFileUpload(new File([], 'packaging.pdf'))}>
-                                <div className="sd-sample-icon"><ExclamationTriangleIcon className="w-5 h-5" /></div>
-                                <div className="sd-sample-info">
-                                    <span className="sd-sample-title">Packaging File</span>
-                                    <span className="sd-sample-desc">Bleed missing • Spot colors</span>
-                                </div>
-                            </button>
-                            <button className="sd-sample-btn" onClick={() => handleFileUpload(new File([], 'book.pdf'))}>
-                                <div className="sd-sample-icon"><ArrowPathIcon className="w-5 h-5" /></div>
-                                <div className="sd-sample-info">
-                                    <span className="sd-sample-title">Book Interior</span>
-                                    <span className="sd-sample-desc">Font issues • Transparency</span>
-                                </div>
-                            </button>
-                            <button className="sd-sample-btn" onClick={() => handleFileUpload(new File([], 'poster.pdf'))}>
-                                <div className="sd-sample-icon"><SparklesIcon className="w-5 h-5" /></div>
-                                <div className="sd-sample-info">
-                                    <span className="sd-sample-title">Low DPI Poster</span>
-                                    <span className="sd-sample-desc">Image optimization required</span>
-                                </div>
-                            </button>
+                        <div className="sd-demo-scenarios">
+                            <p className="sd-scenarios-label">Try a demo scenario</p>
+                            <div className="sd-samples-grid">
+                                <button className="sd-scenario-card" onClick={() => handleFileUpload('brochure_rgb.pdf')}>
+                                    <DocumentDuplicateIcon className="w-5 h-5 text-blue-500" />
+                                    <span>RGB Brochure</span>
+                                </button>
+                                <button className="sd-scenario-card" onClick={() => handleFileUpload('book_missing_fonts.pdf')}>
+                                    <BeakerIcon className="w-5 h-5 text-purple-500" />
+                                    <span>Book Interior</span>
+                                </button>
+                                <button className="sd-scenario-card" onClick={() => handleFileUpload('packaging_no_bleed.pdf')}>
+                                    <SparklesIcon className="w-5 h-5 text-emerald-500" />
+                                    <span>Packaging Design</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
 
                 {currentStep === 'INSPECT' && (
                     <div className="animate-fade-in">
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div className="animate-spin" style={{ color: 'var(--sd-accent)' }}><CpuChipIcon className="w-8 h-8" /></div>
-                                <div>
-                                    <h3 style={{ margin: 0, fontSize: '20px' }}>Deep Analysis in Progress</h3>
-                                    <p style={{ margin: 0, color: '#6B7280', fontSize: '14px' }}>{file?.name || 'Interactive Demo'} • {logs.length}/6 probes complete</p>
-                                </div>
+                        <div className="sd-step-header">
+                            <div className="sd-status-indicator">
+                                <div className="sd-pulse-ring"></div>
+                                <CpuChipIcon className="w-8 h-8 text-blue-500" />
                             </div>
-                            {logs.length === 6 && (
-                                <button className="sd-btn-primary" onClick={() => setCurrentStep('FIX')}>
-                                    View Print Risks
+                            <div>
+                                <h3>Deep Pipeline Analysis</h3>
+                                <p className="sd-file-name">{file?.name} • {logs.length}/6 probes complete</p>
+                            </div>
+                            {logs.length === 6 && !isAutoDemo && (
+                                <button onClick={() => setCurrentStep('FIX')} className="sd-btn-primary animate-bounce-in">
+                                    View Logic Errors
                                 </button>
                             )}
                         </div>
-
-                        <div className="sd-logs-container">
-                            {logs.map((log, idx) => (
-                                <div key={idx} className="sd-log-line">
-                                    <span className="sd-log-timestamp">[{new Date().toLocaleTimeString()}]</span>
-                                    <span className="sd-log-tag">SYS</span>
-                                    <span className={`sd-log-${log.type}`}>{log.msg}</span>
+                        <div className="sd-terminal glass">
+                            {logs.map((log, i) => (
+                                <div key={i} className={`sd-terminal-line ${log.type}`}>
+                                    <span className="sd-term-tag">[{new Date().toLocaleTimeString()}]</span>
+                                    <span className="sd-term-msg">{log.msg}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 )}
 
-                {/* Other steps will be implemented sequentially */}
                 {currentStep === 'FIX' && (
                     <div className="animate-fade-in">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+                        <div className="sd-risk-header">
                             <div>
-                                <h3 style={{ margin: 0, fontSize: '20px', color: 'var(--sd-danger)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <ExclamationTriangleIcon className="w-6 h-6" /> High Risk Detected
+                                <h3 className="sd-risk-title text-danger">
+                                    <ExclamationTriangleIcon className="w-6 h-6" /> High Print Risk Detected
                                 </h3>
-                                <p style={{ margin: '4px 0 0 0', color: '#6B7280' }}>The engine found 4 critical violations of the active print policy.</p>
+                                <p>The engine identified 4 critical policy violations.</p>
                             </div>
-                            <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase' }}>Issue Severity</div>
-                                <div className="sd-risk-meter" style={{ width: '120px' }}>
-                                    <div className="sd-risk-fill sd-risk-high" style={{ width: '85%' }}></div>
+                            <div className="sd-risk-gauge">
+                                <span className="sd-gauge-label">RISK LEVEL</span>
+                                <div className="sd-gauge-bar">
+                                    <div className="sd-gauge-fill high" style={{ width: '85%' }}></div>
                                 </div>
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gap: '12px', marginBottom: '32px' }}>
+                        <div className="sd-risk-list">
                             {[
-                                { title: 'RGB Images Detected', desc: '12 raster objects use prohibited DeviceRGB color space', severity: 'High' },
-                                { title: 'Missing Bleed Information', desc: 'TrimBox detected without sufficient bleed offset (0mm found, 3mm required)', severity: 'High' },
-                                { title: 'Low Resolution Assets', desc: '3 images found below 150 DPI limit', severity: 'Medium' },
-                                { title: 'Transparency Conflicts', desc: 'Overprinting elements may cause unexpected results on this device', severity: 'Medium' }
+                                { title: 'Invalid Color Space', desc: 'DeviceRGB targets found. ISO Coated v2 (FOGRA39) required.', icon: SparklesIcon },
+                                { title: 'Bleed Violation', desc: 'TrimBox misaligned. Bleed pixels missing in bleedzone.', icon: DocumentMagnifyingGlassIcon },
+                                { title: 'Missing Subsets', desc: '2 Type-1 fonts are not embedded. Rendering risk detected.', icon: ExclamationTriangleIcon },
                             ].map((risk, i) => (
-                                <div key={i} style={{ padding: '16px', background: 'white', border: '1px solid #E5E7EB', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div>
-                                        <div style={{ fontWeight: 600, fontSize: '15px' }}>{risk.title}</div>
-                                        <div style={{ fontSize: '13px', color: '#6B7280' }}>{risk.desc}</div>
+                                <div key={i} className="sd-risk-item">
+                                    <div className="sd-risk-icon"><risk.icon className="w-5 h-5" /></div>
+                                    <div className="sd-risk-content">
+                                        <h4>{risk.title}</h4>
+                                        <p>{risk.desc}</p>
                                     </div>
-                                    <span style={{
-                                        padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
-                                        background: risk.severity === 'High' ? '#FEF2F2' : '#FFFBEB',
-                                        color: risk.severity === 'High' ? '#DC2626' : '#D97706'
-                                    }}>{risk.severity}</span>
+                                    <div className="sd-risk-tag high">FAIL</div>
                                 </div>
                             ))}
                         </div>
 
-                        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
-                            <button className="sd-btn-primary" style={{ padding: '16px 40px', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '12px' }} onClick={() => setCurrentStep('VERIFY')}>
-                                <SparklesIcon className="w-6 h-6" /> Make Print-Ready (AutoFix)
-                            </button>
-                        </div>
+                        {!isAutoDemo && (
+                            <div className="sd-action-footer">
+                                <button onClick={() => setCurrentStep('VERIFY')} className="sd-btn-glow">
+                                    <BoltIcon className="w-5 h-5" />
+                                    Launch AutoFix Pipeline
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {currentStep === 'VERIFY' && (
-                    <div className="animate-fade-in" style={{ textAlign: 'center', padding: '40px 0' }}>
-                        <div className="sd-scanning-pulse" style={{ width: '80px', height: '80px', background: '#EFF6FF', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px auto', color: 'var(--sd-accent)' }}>
-                            <ArrowPathIcon className="w-10 h-10 animate-spin" />
+                    <div className="animate-fade-in text-center py-10">
+                        <div className="sd-verify-scanner">
+                            <div className="sd-scan-line"></div>
+                            <ShieldCheckIcon className="w-20 h-20 text-emerald-500 mx-auto" />
                         </div>
-                        <h3 style={{ margin: 0, fontSize: '22px' }}>Executing Deterministic Verification</h3>
-                        <p style={{ color: '#6B7280', maxWidth: '400px', margin: '8px auto 32px auto' }}>The engine is applying fixes and re-inspecting the output against the FOGRA51 policy.</p>
+                        <h3 className="mt-6 text-2xl font-bold">Deterministic Verification</h3>
+                        <p className="text-gray-500">Applying Policy-based AutoFix & GS-Recheck</p>
 
-                        <div style={{ maxWidth: '300px', margin: '0 auto', display: 'grid', gap: '8px', textAlign: 'left' }}>
-                            {[
-                                'Converting RGB to Gracol/Fogra CMYK...',
-                                'Generating secondary bleed zones...',
-                                'Embedding missing font subsets...',
-                                'Flattening transparency layers...',
-                                'Running final G-Check recheck...'
-                            ].map((task, i) => (
-                                <div key={i} style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: i < 4 ? 'var(--sd-success)' : '#6B7280' }}>
-                                    {i < 4 ? <CheckCircleIcon className="w-4 h-4" /> : <div className="animate-spin h-3 w-3 border-2 border-blue-600 border-t-transparent rounded-full" />}
-                                    {task}
+                        <div className="sd-mini-tasks mt-8">
+                            {['Remapping RGB to CMYK', 'Injecting Bleed Markers', 'Embedding Fonts', 'Final Re-Inspection'].map((t, i) => (
+                                <div key={i} className="sd-mini-task completed">
+                                    <CheckCircleIcon className="w-4 h-4 text-emerald-500" />
+                                    <span>{t}</span>
                                 </div>
                             ))}
                         </div>
-
-                        <button
-                            className="sd-btn-primary"
-                            style={{ marginTop: '40px' }}
-                            onClick={() => setCurrentStep('DELTA')}
-                        >
-                            Finalizing Report...
-                        </button>
                     </div>
                 )}
 
                 {currentStep === 'DELTA' && (
                     <div className="animate-fade-in">
-                        <div className="sd-delta-card" style={{ marginBottom: '32px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '60px', marginBottom: '32px' }}>
-                                <div className="sd-delta-stat">
-                                    <div className="sd-delta-value" style={{ color: 'var(--sd-success)' }}>80%</div>
-                                    <div className="sd-delta-label">Risk Reduction</div>
+                        <div className="sd-delta-hero glass-dark">
+                            <div className="sd-delta-stats">
+                                <div className="sd-stat">
+                                    <span className="sd-stat-val text-emerald-400">80%</span>
+                                    <span className="sd-stat-lbl">Risk Reduced</span>
                                 </div>
-                                <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
-                                <div className="sd-delta-stat">
-                                    <div className="sd-delta-value">18m</div>
-                                    <div className="sd-delta-label">Time Saved</div>
+                                <div className="sd-stat-divider"></div>
+                                <div className="sd-stat">
+                                    <span className="sd-stat-val">18m</span>
+                                    <span className="sd-stat-lbl">Prepress Saved</span>
                                 </div>
-                                <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
-                                <div className="sd-delta-stat">
-                                    <div className="sd-delta-value">$24.50</div>
-                                    <div className="sd-delta-label">Value (Est)</div>
-                                </div>
-                            </div>
-
-                            <h2 style={{ fontSize: '24px', margin: '0 0 8px 0' }}>Asset is Production-Ready</h2>
-                            <p style={{ color: '#9CA3AF', margin: 0 }}>4 High-risk issues resolved. 1 informational note remaining.</p>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
-                            <div style={{ background: '#F9FAFB', borderRadius: '16px', padding: '20px', border: '1px solid #E5E7EB' }}>
-                                <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '12px' }}>Before Optimization</div>
-                                <div style={{ height: '180px', background: '#D1D5DB', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', fontSize: '12px' }}>
-                                    [PDF Visualization with RGB markers]
+                                <div className="sd-stat-divider"></div>
+                                <div className="sd-stat">
+                                    <span className="sd-stat-val text-blue-400">1.2s</span>
+                                    <span className="sd-stat-lbl">Execution</span>
                                 </div>
                             </div>
-                            <div style={{ background: '#F9FAFB', borderRadius: '16px', padding: '20px', border: '1px solid #E5E7EB' }}>
-                                <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '12px' }}>After AutoFix</div>
-                                <div style={{ height: '180px', background: '#E5E7EB', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sd-success)', fontSize: '12px' }}>
-                                    [Clean CMYK PDF Output]
-                                </div>
+                            <div className="sd-delta-summary">
+                                <h3>File Certified: Pass</h3>
+                                <p>PDF/X-4 compliant and ready for production printers.</p>
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
-                            <button className="sd-btn-primary" onClick={() => { setFile(null); setCurrentStep('UPLOAD'); setLogs([]); setIsAutoDemo(false); }}>
-                                Analyze Another Asset
+                        <div className="sd-comparison mt-8">
+                            <div className="sd-comp-side">
+                                <h5>ORIGINAL</h5>
+                                <div className="sd-comp-box original">
+                                    <div className="sd-error-overlay"></div>
+                                </div>
+                            </div>
+                            <div className="sd-comp-side">
+                                <h5>OPTIMIZED</h5>
+                                <div className="sd-comp-box fixed">
+                                    <CheckCircleIcon className="w-12 h-12 text-white opacity-20" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="sd-final-actions">
+                            <button onClick={() => setCurrentStep('UPLOAD')} className="sd-btn-primary">
+                                <ArrowPathIcon className="w-5 h-5" /> Analyze New Asset
                             </button>
-                            <button className="sd-btn-outline" onClick={() => window.open('https://docs.printprice.pro', '_blank')}>
-                                Read Documentation
-                            </button>
+                            <button className="sd-btn-outline">Download Report</button>
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Investor Mode Meta-Overlay */}
+            {/* Investor Meta Panel */}
             {isInvestorMode && (
-                <div className="animate-slide-in" style={{
-                    marginTop: '24px',
-                    background: 'rgba(17, 24, 39, 0.05)',
-                    borderRadius: '16px',
-                    padding: '24px',
-                    border: '1px solid rgba(17, 24, 39, 0.1)'
-                }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-                        <div>
-                            <div style={{ color: '#6B7280', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>Latency</div>
-                            <div style={{ fontSize: '18px', fontWeight: 700 }}>142ms</div>
+                <div className="sd-meta-panel glass animate-slide-up">
+                    <div className="sd-meta-grid">
+                        <div className="sd-meta-item">
+                            <label>LATENCY</label>
+                            <span>142ms</span>
                         </div>
-                        <div>
-                            <div style={{ color: '#6B7280', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>Queue Load</div>
-                            <div style={{ fontSize: '18px', fontWeight: 700 }}>2%</div>
+                        <div className="sd-meta-item">
+                            <label>ENGINE</label>
+                            <span>V2-ASYNC</span>
                         </div>
-                        <div>
-                            <div style={{ color: '#6B7280', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>Threads Active</div>
-                            <div style={{ fontSize: '18px', fontWeight: 700 }}>8</div>
+                        <div className="sd-meta-item">
+                            <label>CORE</label>
+                            <span>GS 10.03</span>
                         </div>
-                        <div>
-                            <div style={{ color: '#6B7280', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>Reliability</div>
-                            <div style={{ fontSize: '18px', fontWeight: 700 }}>99.99%</div>
+                        <div className="sd-meta-item">
+                            <label>RELIABILITY</label>
+                            <span>99.98%</span>
                         </div>
-                    </div>
-                    <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(0,0,0,0.05)', fontSize: '12px', color: '#6B7280' }}>
-                        <b>Architecture:</b> BullMQ Distributed Workers • PostgreSQL Job Persistence • Memory-safe PDF Isolation
                     </div>
                 </div>
             )}
 
-            {/* Footer Trust Bar */}
-            <div style={{ marginTop: '48px', paddingBottom: '40px', textAlign: 'center' }}>
-                <p style={{ color: '#9CA3AF', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    <ShieldCheckIcon className="w-4 h-4" />
-                    Deterministic verification powered by Ghostscript 10.03 + Poppler 24.08
+            {/* Global Trust Footer */}
+            <div className="sd-footer">
+                <p>
+                    <ShieldCheckIcon className="w-4 h-4 text-emerald-500" />
+                    Deterministic verification powered by <strong>Ghostscript + Poppler</strong>
                 </p>
+                {processingTime > 0 && <span className="sd-time-badge">⚡ Processing: {processingTime}s</span>}
             </div>
         </div>
     );
