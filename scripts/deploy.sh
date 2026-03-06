@@ -9,7 +9,8 @@ APP_DIR="/var/www/vhosts/printprice.pro/preflight.printprice.pro"
 UPLOAD_DIR="$APP_DIR/tmp/uploads"
 PLESK_USER="printprice.pro_a2w0fsu9yw9"
 PLESK_GROUP="psacln"
-API_READY="http://127.0.0.1:8080/api/ready"
+# The health check URL should hit the production domain as port 8080 is not fixed in Passenger
+API_READY="https://preflight.printprice.pro/api/ready"
 SKIP_BUILD="${1:-}"
 
 cd "$APP_DIR"
