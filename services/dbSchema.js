@@ -158,8 +158,6 @@ async function patchSchema() {
         { table: 'metrics', column: 'value_generated', query: 'ALTER TABLE metrics ADD COLUMN value_generated DECIMAL(10,2)' },
         { table: 'metrics', column: 'risk_score_before', query: 'ALTER TABLE metrics ADD COLUMN risk_score_before INTEGER' },
         { table: 'metrics', column: 'risk_score_after', query: 'ALTER TABLE metrics ADD COLUMN risk_score_after INTEGER' },
-        { table: 'metrics', column: 'risk_score_before', query: 'ALTER TABLE metrics ADD COLUMN risk_score_before INTEGER' },
-        { table: 'metrics', column: 'risk_score_after', query: 'ALTER TABLE metrics ADD COLUMN risk_score_after INTEGER' },
 
         // Batches table: ROI aggregations (Phase 17.2)
         { table: 'batches', column: 'risk_score_before_avg', query: 'ALTER TABLE batches ADD COLUMN risk_score_before_avg DECIMAL(5,2)' },
