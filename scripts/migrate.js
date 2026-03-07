@@ -1,4 +1,4 @@
-
+require('dotenv').config();
 const { initSchema } = require('../services/dbSchema');
 
 async function runMigration() {
