@@ -9,14 +9,13 @@ try {
         // We no longer exit here to allow Resilient Boot to show diagnostics via API
     }
 
-    pool = mysql.createPool({
-        uri: dbUrl || 'mysql://root@localhost:3306/preflight_dev',
-        waitForConnections: true,
-        connectionLimit: 20,
-        queueLimit: 0,
-        enableKeepAlive: true,
-        keepAliveInitialDelay: 0
-    });
+    const fallbackUrl = 'mysql://root@localhost:3306/preflight_dev';
+    pool = mysql.createPool(dbUrl || fallbackUrl);
+
+    // Add explicit pool settings
+    pool.config.connectionLimit = 20;
+    pool.config.waitForConnections = true;
+    pool.config.enableKeepAlive = true;
 
     pool.getConnection().then((conn) => {
         console.log('[DB-READY] Connected to MySQL');
