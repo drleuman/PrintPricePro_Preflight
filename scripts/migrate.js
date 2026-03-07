@@ -1,5 +1,5 @@
 
-const { initSchema } = require('./services/dbSchema');
+const { initSchema } = require('../services/dbSchema');
 
 async function runMigration() {
     console.log('--- Manual Schema Migration ---');
