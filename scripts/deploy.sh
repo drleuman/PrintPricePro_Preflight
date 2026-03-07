@@ -65,8 +65,12 @@ chmod +x "$APP_DIR/scripts/"*.sh || true
 
 echo "  ✅ Ownership and permissions synchronized for $PLESK_USER."
 
-# ── 5. Restart Node process ──────────────────────────────────
-echo "▶ [5/6] Restarting Node process (Passenger)..."
+# ── 5. Boot Test (Diagnostic) ────────────────────────────────
+echo "▶ [5/6] Running boot-test.js..."
+node scripts/boot-test.js || echo "  ⚠️ Boot test failed, attempting to restart anyway..."
+
+# ── 6. Restart Node process ──────────────────────────────────
+echo "▶ [6/6] Restarting Node process (Passenger)..."
 mkdir -p "$APP_DIR/tmp"
 touch "$APP_DIR/tmp/restart.txt"
 echo "  Touched tmp/restart.txt. Waiting for Passenger to cycle..."
