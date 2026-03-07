@@ -3,11 +3,22 @@ import React, { useMemo, useState } from "react";
 import { t, LocaleProvider, useLocale } from "../i18n";
 import { getAdminKey, setAdminKey, clearAdminKey } from "../lib/adminApi";
 import { OverviewTab } from "./admin/OverviewTab";
-import { TenantsTab } from "./admin/TenantsTab";
+import { PricingIntelligenceTab } from "./admin/PricingIntelligenceTab";
+import { OffersTab } from "./admin/OffersTab";
+import { MarketplaceTab } from "./admin/MarketplaceTab";
+import { MarketplaceReadinessTab } from "./admin/MarketplaceReadinessTab";
+import { CommercialCommitmentsTab } from "./admin/CommercialCommitmentsTab";
+import { AutonomousOpsTab } from "./admin/AutonomousOpsTab";
+import { FinancialOpsTab } from "./admin/FinancialOpsTab";
+import TenantManagement from "./admin/TenantManagement";
+import { SuccessWorkspace } from "./admin/SuccessWorkspace";
 import { JobsTab } from "./admin/JobsTab";
 import { ErrorsTab } from "./admin/ErrorsTab";
 import { AuditTab } from "./admin/AuditTab";
 import { ControlsTab } from "./admin/ControlsTab";
+import { NotificationsTab } from "./admin/NotificationsTab";
+import { EngagementSignalsTab } from "./admin/EngagementSignalsTab";
+import { NetworkOpsTab } from "./admin/NetworkOpsTab";
 import {
     ChartBarIcon,
     UsersIcon,
@@ -18,10 +29,21 @@ import {
     ArrowPathIcon,
     ClockIcon,
     XMarkIcon,
-    BookOpenIcon
+    BookOpenIcon,
+    HeartIcon,
+    BanknotesIcon,
+    BellIcon,
+    BoltIcon,
+    BuildingOfficeIcon,
+    BuildingStorefrontIcon,
+    CurrencyEuroIcon,
+    DocumentCheckIcon,
+    CpuChipIcon,
+    ArrowsRightLeftIcon,
+    AdjustmentsHorizontalIcon
 } from "@heroicons/react/24/outline";
 
-type Tab = "overview" | "tenants" | "jobs" | "errors" | "audit" | "controls";
+type Tab = "overview" | "success" | "tenants" | "network" | "pricing" | "offers" | "marketplace" | "negotiations" | "commitments" | "autonomy" | "finance" | "notifications" | "jobs" | "errors" | "audit" | "controls" | "engagement";
 type Range = "24h" | "7d" | "30d";
 
 const AdminDashboardInner: React.FC = () => {
@@ -49,11 +71,22 @@ const AdminDashboardInner: React.FC = () => {
         () =>
         ([
             ["overview", t("admin.tabs.overview" as any), ChartBarIcon],
-            ["tenants", t("admin.tabs.tenants" as any), UsersIcon],
+            ["success", "Success Workspace", HeartIcon],
+            ["tenants", "Tenants & Subscriptions", UsersIcon],
+            ["network", "Network Operations", BuildingOfficeIcon],
+            ["pricing", "Pricing Intelligence", CurrencyEuroIcon],
+            ["offers", "Production Offers", QueueListIcon],
+            ["marketplace", "Marketplace", BuildingStorefrontIcon],
+            ["negotiations", "Negotiation & Readiness", ArrowsRightLeftIcon],
+            ["commitments", "Commercial Commitments", DocumentCheckIcon],
+            ["autonomy", "Autonomous Operations", CpuChipIcon],
+            ["finance", "Financial Operations", BanknotesIcon],
+            ["notifications", "Notifications", BellIcon],
             ["jobs", t("admin.tabs.jobs" as any), QueueListIcon],
             ["errors", t("admin.tabs.errors" as any), ExclamationTriangleIcon],
             ["audit", t("admin.tabs.audit" as any), ShieldCheckIcon],
             ["controls", t("admin.tabs.controls" as any), WrenchScrewdriverIcon],
+            ["engagement", "Engagement", BoltIcon],
         ] as Array<[Tab, string, any]>),
         [currentLocale]
     );
@@ -183,11 +216,22 @@ const AdminDashboardInner: React.FC = () => {
 
                     <div className="relative z-10">
                         {activeTab === "overview" && <OverviewTab range={range} refreshMs={refresh} />}
-                        {activeTab === "tenants" && <TenantsTab range={range} refreshMs={refresh} />}
+                        {activeTab === "success" && <SuccessWorkspace />}
+                        {activeTab === "tenants" && <TenantManagement />}
+                        {activeTab === "network" && <NetworkOpsTab />}
+                        {activeTab === "pricing" && <PricingIntelligenceTab />}
+                        {activeTab === "offers" && <OffersTab />}
+                        {activeTab === "marketplace" && <MarketplaceTab />}
+                        {activeTab === "negotiations" && <MarketplaceReadinessTab />}
+                        {activeTab === "commitments" && <CommercialCommitmentsTab />}
+                        {activeTab === "autonomy" && <AutonomousOpsTab />}
+                        {activeTab === "finance" && <FinancialOpsTab />}
+                        {activeTab === "notifications" && <NotificationsTab refreshMs={refresh} />}
                         {activeTab === "jobs" && <JobsTab refreshMs={refresh} />}
                         {activeTab === "errors" && <ErrorsTab range={range} refreshMs={refresh} />}
                         {activeTab === "audit" && <AuditTab refreshMs={refresh} />}
                         {activeTab === "controls" && <ControlsTab refreshMs={refresh} />}
+                        {activeTab === "engagement" && <EngagementSignalsTab />}
                     </div>
                 </main>
             </div>

@@ -6,6 +6,7 @@ const assetService = require('../services/assetService');
 const queue = require('../services/queue');
 const db = require('../services/db');
 const auditService = require('../services/auditService');
+const routingService = require('../services/routingService');
 
 const MAX_UPLOAD_BYTES = Number(process.env.PPP_MAX_UPLOAD_BYTES || 500 * 1024 * 1024);
 const upload = multer({
@@ -161,6 +162,38 @@ router.get('/jobs', v2ReadLimiter, async (req, res) => {
     } catch (err) {
         console.error('[API-V2-JOBS-LIST]', err);
         res.status(500).json({ error: 'Internal server error while listing jobs.' });
+    }
+});
+
+/**
+ * POST /api/v2/jobs/:id/routing
+ * Get routing recommendations for a specific job.
+ */
+router.post('/jobs/:id/routing', v2ReadLimiter, async (req, res) => {
+    try {
+        const jobId = req.params.id;
+        const tenantId = req.tenant.id;
+        const { paper_id, policy_id } = req.body;
+
+        // Verify job ownership
+        const { rows } = await db.query('SELECT id FROM jobs WHERE id = ? AND tenant_id = ?', [jobId, tenantId]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Job not found.' });
+
+        const recommendation = await routingService.recommendRoute(jobId, {
+            paperId: paper_id,
+            policyId: policy_id
+        });
+
+        // Audit
+        await auditService.logAction(tenantId, 'ROUTING_RECOMMENDATION_REQUESTED', {
+            ipAddress: req.ip,
+            details: { job_id: jobId, paper_id, policy_id }
+        });
+
+        res.json(recommendation);
+    } catch (err) {
+        console.error('[API-V2-ROUTING-POST]', err);
+        res.status(500).json({ error: err.message || 'Internal server error while fetching routing' });
     }
 });
 

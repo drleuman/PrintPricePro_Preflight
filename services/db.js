@@ -16,7 +16,9 @@ try {
         waitForConnections: true,
         enableKeepAlive: true,
         // Ensure character set is correct for special characters in password
-        charset: 'utf8mb4'
+        charset: 'utf8mb4',
+        // Phase 19.6: Enforce UTC for session to ensure consistent quota resets
+        timezone: 'Z'
     });
 
     pool.getConnection().then((conn) => {

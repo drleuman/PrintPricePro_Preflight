@@ -20,6 +20,7 @@ const preflightQueue = new Queue('preflight-v2', { connection });
 const autofixQueue = new Queue('autofix-v2', { connection });
 const webhookQueue = new Queue('webhooks-v2', { connection });
 const batchOrchestratorQueue = new Queue('batch-orchestrate-v2', { connection });
+const notificationQueue = new Queue('notifications-v2', { connection });
 
 /**
  * Enqueue a new preflight/autofix job.
@@ -100,6 +101,7 @@ module.exports = {
     autofixQueue,
     webhookQueue,
     batchOrchestratorQueue,
+    notificationQueue,
     enqueueJob,
     pauseQueue,
     resumeQueue,

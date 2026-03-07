@@ -26,6 +26,22 @@ const batchV2Router = require('./routes/batchV2');
 const analyticsV2Router = require('./routes/analyticsV2');
 const adminRoutes = require('./routes/admin');
 const adminControlRoutes = require('./routes/adminControl');
+const connectRouter = require('./routes/connect');
+const connectAdminRouter = require('./routes/connectAdmin');
+const routingAdminRouter = require('./routes/routingAdmin');
+const printerSyncRouter = require('./routes/printerSync');
+const reservationsRouter = require('./routes/reservations');
+const printerDispatchRouter = require('./routes/printerDispatch');
+const pricingAdminRouter = require('./routes/pricingAdmin');
+const economicRoutingAdminRouter = require('./routes/economicRoutingAdmin');
+const printerOffersRouter = require('./routes/printerOffers');
+const offersAdminRouter = require('./routes/offersAdmin');
+const marketplaceAdminRouter = require('./routes/marketplaceAdmin');
+const negotiationAdminRouter = require('./routes/negotiationAdmin');
+const commercialCommitmentAdminRouter = require('./routes/commercialCommitmentAdmin');
+const autonomyAdminRouter = require('./routes/autonomyAdmin');
+const autonomyFinanceRouter = require('./routes/autonomyFinanceAdmin');
+const settlementWorker = require('./services/settlementWorker');
 const { startCleanupTask } = require('./services/cleanup');
 const apiKeyMiddleware = require('./middleware/apiKey');
 const rateLimit = require('express-rate-limit');
@@ -265,6 +281,35 @@ debugLog('Mounting /api/v2 public routes...');
 app.use('/api/v2/jobs', apiV2Router);
 app.use('/api/v2/batches', batchV2Router);
 app.use('/api/v2/analytics', analyticsV2Router);
+
+// PrintPrice Connect (Printer Onboarding & Network)
+debugLog('Mounting /api/connect routes...');
+app.use('/api/connect', connectRouter);
+
+debugLog('Mounting /api/admin/connect routes...');
+app.use('/api/admin/connect', connectAdminRouter);
+app.use('/api/admin/routing', routingAdminRouter);
+app.use('/api/printer-sync', printerSyncRouter);
+app.use('/api/reservations', reservationsRouter);
+app.use('/api/printer-dispatch', printerDispatchRouter);
+app.use('/api/admin/pricing', pricingAdminRouter);
+app.use('/api/admin/routing/economic', economicRoutingAdminRouter);
+app.use('/api/admin/offers', offersAdminRouter);
+app.use('/api/admin/marketplace', marketplaceAdminRouter);
+app.use('/api/admin/marketplace/ready', negotiationAdminRouter);
+app.use('/api/admin/commercial', commercialCommitmentAdminRouter);
+app.use('/api/admin/autonomy', autonomyAdminRouter);
+app.use('/api/admin/finance', autonomyFinanceRouter);
+
+// Start autonomous workers
+settlementWorker.start();
+app.use('/api/printer-offers', printerOffersRouter);
+
+// Start Background Workers
+if (process.env.NODE_ENV !== 'test') {
+  require('./workers/offer-expiry-worker');
+  require('./workers/marketplace-expiry-worker');
+}
 
 // Admin Dashboard Routes
 debugLog('Mounting /api/admin routes...');

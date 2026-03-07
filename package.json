@@ -35,6 +35,7 @@
     "marked": "^16.4.1",
     "multer": "^2.0.2",
     "mysql2": "^3.18.2",
+    "nodemailer": "^8.0.1",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^4.6.82",
     "pino-http": "^10.4.0",

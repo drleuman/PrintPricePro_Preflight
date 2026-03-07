@@ -5,6 +5,8 @@ const { query } = require('./db');
 const JobManager = require('./jobManager');
 const { getPdfInfoGS } = require('../utils-server/pdfInfo');
 const { gsConvertColor, gsFlattenTransparency, rebuildAtDpi, addBleedCanvasPdf } = require('./pdfPipeline');
+const deterministicService = require('./deterministicService');
+const intelligenceService = require('./intelligenceService');
 
 class JobProcessor {
     static async executeTask(task) {
@@ -173,14 +175,29 @@ class JobProcessor {
     }
 
     static async handleVerify(jobId, payload) {
-        const prof = normalizeProfile(payload.profile || 'iso_coated_v3');
+        const prof = this.normalizeProfile(payload.profile || 'iso_coated_v3');
         const standardNames = {
             'iso_coated_v3': 'PSO Coated v3 (FOGRA51)',
             'iso_uncoated_v3': 'PSO Uncoated v3 (FOGRA52)',
             'gracol': 'GRACoL 2006'
         };
 
-        // Here we'd run final global checks, generate certificate, etc.
+        // 1. Run Final Feature Extraction (Phase 23.5)
+        const finalPath = path.join(JobManager.getJobDir(jobId), 'final_fixed.pdf');
+        const analysis = await deterministicService.analyze(finalPath);
+        const job = await JobManager.getJob(jobId);
+
+        const features = {
+            fonts: analysis.fonts.map(f => ({ name: f.name, embedded: f.emb })),
+            max_tac: analysis.color?.max_tac || 0,
+            has_bleed: analysis.info?.hasBleedBox || false,
+            min_dpi: analysis.imageHeuristics?.min_dpi || 0,
+            color_profile: analysis.color?.profile_name || 'unknown'
+        };
+
+        await intelligenceService.logJobFeatures(jobId, job.tenant_id, features);
+
+        // 2. Certification
         await JobManager.updateJob(jobId, {
             status: 'CERTIFIED',
             progress: 100,
@@ -190,9 +207,16 @@ class JobProcessor {
                 standard: standardNames[prof] || prof,
                 compliance: 'ISO 12647-2:2013',
                 output_intent_verified: true,
-                engine: 'v3.5.0-industrial'
+                engine: 'v3.5.0-industrial',
+                intelligence_logged: true
             }
         });
+    }
+
+    static normalizeProfile(p) {
+        if (p.includes('coated_v3')) return 'iso_coated_v3';
+        if (p.includes('uncoated_v3')) return 'iso_uncoated_v3';
+        return p;
     }
 
     // Helper: GS Extract

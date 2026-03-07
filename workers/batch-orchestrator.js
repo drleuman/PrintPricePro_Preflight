@@ -64,8 +64,13 @@ const batchOrchestratorWorker = new Worker('batch-orchestrator', async (bullJob)
         if (pdfEntries.length === 0) {
             throw new Error('No valid PDF files found in ZIP');
         }
-        if (pdfEntries.length > MAX_BATCH_FILES) {
-            throw new Error(`ZIP contains ${pdfEntries.length} files; max allowed is ${MAX_BATCH_FILES}`);
+
+        // --- Fetch Tenant-Specific Limits (Phase 19.5) ---
+        const { rows: [tenant] } = await db.query('SELECT max_batch_size FROM tenants WHERE id = ?', [tenant_id]);
+        const tenantMaxBatch = tenant?.max_batch_size || MAX_BATCH_FILES;
+
+        if (pdfEntries.length > tenantMaxBatch) {
+            throw new Error(`ZIP contains ${pdfEntries.length} files; your plan limit is ${tenantMaxBatch} PDFs per ZIP.`);
         }
 
         // 5. Update batch totals

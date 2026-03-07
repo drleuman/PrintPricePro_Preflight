@@ -117,6 +117,228 @@ router.get("/metrics/tenants", async (req, res) => {
   }
 });
 
+// GET /api/admin/tenants - Detailed tenant list for management (Phase 19)
+router.get("/tenants", async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT 
+        id, name, status, plan, rate_limit_rpm, 
+        plan_expires_at, last_active_at, daily_job_limit, 
+        max_batch_size, created_at, metadata_json
+      FROM tenants
+      ORDER BY last_active_at DESC, created_at DESC;
+    `);
+
+    // Fetch API Keys count per tenant
+    const { rows: keyCounts } = await db.query(`
+      SELECT tenant_id, COUNT(*) as key_count
+      FROM api_keys
+      WHERE revoked = FALSE
+      GROUP BY tenant_id;
+    `);
+
+    // Fetch Daily Job Usage (Phase 19.5)
+    const { rows: usageCounts } = await db.query(`
+      SELECT tenant_id, COUNT(*) as daily_count
+      FROM jobs
+      WHERE created_at >= CURDATE()
+      GROUP BY tenant_id;
+    `);
+
+    const keyMap = keyCounts.reduce((acc, current) => {
+      acc[current.tenant_id] = current.key_count;
+      return acc;
+    }, {});
+
+    const usageMap = usageCounts.reduce((acc, current) => {
+      acc[current.tenant_id] = current.daily_count;
+      return acc;
+    }, {});
+
+    res.json(rows.map(t => ({
+      ...t,
+      keyCount: keyMap[t.id] || 0,
+      dailyUsage: usageMap[t.id] || 0
+    })));
+  } catch (err) {
+    console.error('[ADMIN-API] Error fetching detailed tenants:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/admin/tenants/:id - Update tenant settings (Phase 19)
+// POST /api/admin/tenants/:id
+router.post("/tenants/:id", async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+
+  try {
+    // 1. Get current state for history (Phase 20)
+    const { rows: [current] } = await db.query('SELECT plan, status FROM tenants WHERE id = ?', [id]);
+    if (!current) return res.status(404).json({ ok: false, error: 'Tenant not found' });
+
+    // 2. Perform Update
+    const allowedFields = ['name', 'status', 'plan', 'rate_limit_rpm', 'plan_expires_at', 'daily_job_limit', 'max_batch_size', 'metadata_json', 'notification_settings_json'];
+    const fieldsToUpdate = Object.keys(updates).filter(k => allowedFields.includes(k));
+
+    if (fieldsToUpdate.length > 0) {
+      const setClause = fieldsToUpdate.map(k => `${k} = ?`).join(', ');
+      const values = fieldsToUpdate.map(k => {
+        const val = updates[k];
+        if (k === 'plan_expires_at' && !val) return null;
+        if ((k === 'metadata_json' || k === 'notification_settings_json') && typeof val === 'object') {
+          return JSON.stringify(val);
+        }
+        return val;
+      });
+
+      await db.query(`UPDATE tenants SET ${setClause} WHERE id = ?`, [...values, id]);
+    }
+
+    // 3. Log lifecycle events if plan or status changed
+    if (updates.plan && updates.plan !== current.plan) {
+      await db.query(`
+        INSERT INTO tenant_plan_history (tenant_id, old_plan, new_plan, reason)
+        VALUES (?, ?, ?, ?)
+      `, [id, current.plan, updates.plan, 'Manual update via Admin Dashboard']);
+    }
+
+    if (updates.status && updates.status !== current.status) {
+      await db.query(`
+        INSERT INTO tenant_alerts_history (tenant_id, alert_type, details_json)
+        VALUES (?, ?, ?)
+      `, [id, 'STATUS_CHANGE', JSON.stringify({ old: current.status, new: updates.status })]);
+    }
+
+    res.json({ ok: true, message: `Tenant ${id} updated.` });
+  } catch (err) {
+    console.error('[ADMIN-API] Error updating tenant:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/admin/tenants/:id/usage?days=7
+router.get("/tenants/:id/usage", async (req, res) => {
+  const { id } = req.params;
+  const days = Math.min(Number(req.query.days || 7), 30);
+
+  try {
+    const { rows } = await db.query(`
+      SELECT date, jobs_count, batches_count, value_generated, hours_saved
+      FROM tenant_usage_stats
+      WHERE tenant_id = ?
+      ORDER BY date DESC
+      LIMIT ?
+    `, [id, days]);
+
+    res.json(rows.reverse()); // Return in chronological order
+  } catch (err) {
+    console.error('[ADMIN-API] Error fetching tenant usage stats:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/admin/tenants/:id/timeline
+router.get("/tenants/:id/timeline", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { rows } = await db.query(`
+      (SELECT 'ALERT' as type, alert_type as event, details_json as details, created_at as timestamp 
+       FROM tenant_alerts_history WHERE tenant_id = ?)
+      UNION ALL
+      (SELECT 'PLAN' as type, CONCAT(old_plan, ' -> ', new_plan) as event, JSON_OBJECT('reason', reason) as details, changed_at as timestamp
+       FROM tenant_plan_history WHERE tenant_id = ?)
+      ORDER BY timestamp DESC
+      LIMIT 100
+    `, [id, id]);
+
+    res.json(rows);
+  } catch (err) {
+    console.error('[ADMIN-API] Error fetching tenant timeline:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/admin/tenants/:id/billing/:year/:month
+// Support for range queries: ?from=YYYY-MM-DD&to=YYYY-MM-DD
+// Precedence: If ?from and ?to are present, they override :year and :month.
+router.get("/tenants/:id/billing/:year/:month", async (req, res) => {
+  const { id, year, month } = req.params;
+  const { from, to } = req.query;
+
+  try {
+    let startDate, endDate;
+
+    if (from && to) {
+      startDate = from;
+      endDate = to;
+    } else {
+      startDate = `${year}-${month.padStart(2, '0')}-01`;
+      const lastDay = new Date(year, month, 0).getDate();
+      endDate = `${year}-${month.padStart(2, '0')}-${lastDay}`;
+    }
+
+    // Prepend time to dates for precision
+    const startTs = `${startDate} 00:00:00`;
+    const nextDayDate = new Date(new Date(endDate).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const endTsLimit = `${nextDayDate} 00:00:00`;
+
+    const { rows: stats } = await db.query(`
+      SELECT 
+        SUM(jobs_count) as total_jobs,
+        SUM(batches_count) as total_batches,
+        SUM(value_generated) as total_value,
+        SUM(hours_saved) as total_hours,
+        MAX(jobs_count) as peak_daily_jobs,
+        AVG(jobs_count) as avg_jobs_per_day,
+        (SELECT date FROM tenant_usage_stats 
+         WHERE tenant_id = ? AND date >= ? AND date < ?
+         ORDER BY jobs_count DESC LIMIT 1) as peak_day,
+        (SELECT SUM(risk_reduction) FROM tenant_usage_stats
+         WHERE tenant_id = ? AND date >= ? AND date < ?) as total_risk_reduction
+      FROM tenant_usage_stats
+      WHERE tenant_id = ? AND date >= ? AND date < ?
+    `, [id, startDate, nextDayDate, id, startDate, nextDayDate, id, startDate, nextDayDate]);
+
+    // Enhanced metrics: Policy distribution (as object)
+    const { rows: policies } = await db.query(`
+      SELECT policy_slug, COUNT(*) as count
+      FROM audit_logs
+      WHERE tenant_id = ? AND created_at >= ? AND created_at < ?
+        AND policy_slug IS NOT NULL
+      GROUP BY policy_slug
+      ORDER BY count DESC
+    `, [id, startTs, endTsLimit]);
+
+    const policyMap = policies.reduce((acc, curr) => {
+      acc[curr.policy_slug] = curr.count;
+      return acc;
+    }, {});
+
+    if (!stats[0] || stats[0].total_jobs === null) {
+      return res.json({
+        ok: true,
+        period: from && to ? `${from} to ${to}` : `${year}-${month}`,
+        usage: { total_jobs: 0, total_batches: 0, total_value: 0, total_hours: 0, total_risk_reduction: 0, avg_jobs_per_day: 0, policy_distribution: {} },
+        message: "No usage data found for this period."
+      });
+    }
+
+    res.json({
+      ok: true,
+      period: from && to ? `${from} to ${to}` : `${year}-${month}`,
+      usage: {
+        ...stats[0],
+        policy_distribution: policyMap
+      }
+    });
+  } catch (err) {
+    console.error('[ADMIN-API] Error fetching billing data:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // GET /api/admin/jobs?status=FAILED&tenant=...&limit=50&offset=0
 router.get("/jobs", async (req, res) => {
   const status = req.query.status || null;
@@ -136,7 +358,7 @@ router.get("/jobs", async (req, res) => {
 
   try {
     const { rows: [countRow] } = await db.query(
-      `SELECT COUNT(*) as total FROM jobs ${whereSql};`,
+      `SELECT COUNT(*) as total FROM jobs ${whereSql}; `,
       params
     );
 
@@ -146,8 +368,8 @@ router.get("/jobs", async (req, res) => {
       FROM jobs
       ${whereSql}
       ORDER BY created_at DESC
-      LIMIT ? OFFSET ?;
-      `,
+    LIMIT ? OFFSET ?;
+    `,
       [...params, limit, offset]
     );
 
@@ -171,10 +393,10 @@ router.get("/errors/top", async (req, res) => {
   try {
     const { rows } = await db.query(
       `
-  SELECT
+    SELECT
     COALESCE(JSON_UNQUOTE(JSON_EXTRACT(error, '$.code')), 'UNKNOWN') as error_code,
-    COUNT(*) as error_count,
-    MAX(updated_at) as last_seen
+      COUNT(*) as error_count,
+      MAX(updated_at) as last_seen
   FROM jobs
   WHERE status = 'FAILED'
     AND created_at >= NOW() - ${interval}
@@ -182,7 +404,7 @@ router.get("/errors/top", async (req, res) => {
   GROUP BY error_code
   ORDER BY error_count DESC
   LIMIT 10;
-  `
+    `
     );
 
     res.json(rows.map(r => ({
@@ -208,7 +430,7 @@ router.get("/audit", async (req, res) => {
   if (tenant) { where.push("tenant_id = ?"); params.push(tenant); }
   if (jobId) { where.push("job_id = ?"); params.push(jobId); }
 
-  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")} ` : "";
 
   try {
     const { rows } = await db.query(
@@ -217,8 +439,8 @@ router.get("/audit", async (req, res) => {
       FROM audit_logs
       ${whereSql}
       ORDER BY created_at DESC
-      LIMIT ?;
-      `,
+    LIMIT ?;
+    `,
       [...params, limit]
     );
 
@@ -255,8 +477,8 @@ router.post("/help/analytics", async (req, res) => {
   try {
     const { rows } = await db.query(
       `
-      INSERT INTO audit_help_analytics (event_type, article_id, search_query, tenant_id, user_id)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO audit_help_analytics(event_type, article_id, search_query, tenant_id, user_id)
+    VALUES(?, ?, ?, ?, ?)
       `,
       [event_type, article_id || null, search_query || null, tenant_id || null, user_id || null]
     );
@@ -264,6 +486,189 @@ router.post("/help/analytics", async (req, res) => {
     res.json({ ok: true, id: rows.insertId });
   } catch (err) {
     console.error('[ADMIN-API] Error saving help analytics:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+/**
+ * PHASE 21.1: Notification Management
+ */
+
+// GET /api/admin/notifications
+router.get("/notifications", async (req, res) => {
+  const { tenant_id, status, event_type, channel, limit = 50, offset = 0 } = req.query;
+  const where = [];
+  const params = [];
+
+  if (tenant_id) { where.push("tenant_id = ?"); params.push(tenant_id); }
+  if (status) { where.push("status = ?"); params.push(status); }
+  if (event_type) { where.push("event_type = ?"); params.push(event_type); }
+  if (channel) { where.push("channel = ?"); params.push(channel); }
+
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+
+  try {
+    const { rows: notifications } = await db.query(`
+      SELECT * FROM notifications 
+      ${whereSql} 
+      ORDER BY created_at DESC 
+      LIMIT ? OFFSET ?
+    `, [...params, Number(limit), Number(offset)]);
+
+    const { rows: [count] } = await db.query(`SELECT COUNT(*) as total FROM notifications ${whereSql}`, params);
+
+    res.json({
+      ok: true,
+      notifications,
+      total: count.total
+    });
+  } catch (err) {
+    console.error('[ADMIN-API] Error fetching notifications:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/admin/notifications/:id
+router.get("/notifications/:id", async (req, res) => {
+  try {
+    const { rows: [notification] } = await db.query("SELECT * FROM notifications WHERE id = ?", [req.params.id]);
+    if (!notification) return res.status(404).json({ ok: false, error: "Not found" });
+
+    const { rows: events } = await db.query("SELECT * FROM notification_events WHERE notification_id = ? ORDER BY created_at ASC", [req.params.id]);
+
+    res.json({
+      ok: true,
+      notification,
+      events
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/admin/notifications/:id/resend
+router.post("/notifications/:id/resend", async (req, res) => {
+  try {
+    const { rows: [notification] } = await db.query("SELECT * FROM notifications WHERE id = ?", [req.params.id]);
+    if (!notification) return res.status(404).json({ ok: false, error: "Not found" });
+
+    // Mark as pending and reset attempts
+    await db.query("UPDATE notifications SET status = 'PENDING', attempt_count = 0, last_error = NULL WHERE id = ?", [req.params.id]);
+
+    // Track resent event
+    await db.query(`
+        INSERT INTO notification_events (notification_id, event, metadata_json)
+        VALUES (?, ?, ?)
+    `, [req.params.id, 'NOTIFICATION_RESENT', JSON.stringify({ trigger: 'admin_manual' })]);
+
+    // Re-enqueue
+    const queue = require("../services/queue");
+    await queue.notificationQueue.add('deliver', { notificationId: req.params.id });
+
+    res.json({ ok: true, message: "Notification re-enqueued for delivery." });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/admin/notifications/:id/cancel
+router.post("/notifications/:id/cancel", async (req, res) => {
+  try {
+    await db.query("UPDATE notifications SET status = 'CANCELED' WHERE id = ? AND status = 'PENDING'", [req.params.id]);
+    await db.query(`
+        INSERT INTO notification_events (notification_id, event, metadata_json)
+        VALUES (?, ?, ?)
+    `, [req.params.id, 'NOTIFICATION_CANCELED', JSON.stringify({ trigger: 'admin_manual' })]);
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/admin/tenants/:id/notification-preferences
+router.get("/tenants/:id/notification-preferences", async (req, res) => {
+  try {
+    const { rows: [prefs] } = await db.query("SELECT * FROM tenant_notification_preferences WHERE tenant_id = ?", [req.params.id]);
+    res.json({ ok: true, prefs: prefs || null });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// PUT /api/admin/tenants/:id/notification-preferences
+router.put("/tenants/:id/notification-preferences", async (req, res) => {
+  const { id } = req.params;
+  const body = req.body;
+
+  const fields = Object.keys(body).filter(k => k !== 'tenant_id' && k !== 'created_at' && k !== 'updated_at');
+  if (fields.length === 0) return res.status(400).json({ ok: false, error: "No fields to update" });
+
+  const setClause = fields.map(f => `${f} = ?`).join(", ");
+  const values = fields.map(f => (f === 'email_recipients_json' ? JSON.stringify(body[f]) : body[f]));
+
+  try {
+    await db.query(`
+            INSERT INTO tenant_notification_preferences (tenant_id, ${fields.join(", ")})
+            VALUES (?, ${fields.map(() => "?").join(", ")})
+            ON DUPLICATE KEY UPDATE ${setClause}
+        `, [id, ...values, ...values]);
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/admin/engagement-signals
+router.get('/engagement-signals', async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+            SELECT 
+                ee.*,
+                t.name as tenant_name
+            FROM engagement_events ee
+            JOIN tenants t ON ee.tenant_id = t.id
+            ORDER BY ee.created_at DESC
+            LIMIT 100
+        `);
+    res.json({ ok: true, signals: rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/admin/engagement-stats
+router.get('/engagement-stats', async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+            SELECT 
+                signal_type, 
+                COUNT(*) as count,
+                MAX(created_at) as last_seen
+            FROM engagement_events
+            GROUP BY signal_type
+        `);
+    res.json({ ok: true, stats: rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/admin/cs-workflows
+router.get('/cs-workflows', async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+            SELECT 
+                cw.*,
+                t.name as tenant_name
+            FROM cs_workflows cw
+            JOIN tenants t ON cw.tenant_id = t.id
+            ORDER BY cw.updated_at DESC
+            LIMIT 100
+        `);
+    res.json({ ok: true, workflows: rows });
+  } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
 });

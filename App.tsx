@@ -14,6 +14,7 @@ import { AdminDashboard } from './pages/AdminDashboard';
 import { AdminHelpCenter } from './pages/admin-help/AdminHelpCenter';
 import { AdminHelpArticle } from './pages/admin-help/AdminHelpArticle';
 import { AnalyticsPortal } from './pages/AnalyticsPortal';
+import { ConnectPortal } from './pages/connect';
 import { RocketLaunchIcon } from '@heroicons/react/24/outline';
 
 import { t } from './i18n';
@@ -809,6 +810,10 @@ export default function App() {
 
   if (window.location.pathname === '/analytics' || window.location.pathname === '/analytics/') {
     return <AnalyticsPortal />;
+  }
+
+  if (window.location.pathname.startsWith('/connect')) {
+    return <ConnectPortal />;
   }
 
   return (

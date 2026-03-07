@@ -67,6 +67,33 @@ export type TenantRow = {
     lastActivity: string;
 };
 
+export interface NotificationSettings {
+    email: boolean;
+    email_to?: string;
+    webhooks?: string[];
+}
+
+export type TenantDetail = {
+    id: string;
+    name: string;
+    status: 'ACTIVE' | 'SUSPENDED' | 'QUARANTINED';
+    plan: 'FREE' | 'PRO' | 'ENTERPRISE';
+    rate_limit_rpm: number;
+    plan_expires_at: string | null;
+    last_active_at: string | null;
+    daily_job_limit: number;
+    max_batch_size: number;
+    created_at: string;
+    metadata_json: any;
+    keyCount: number;
+    dailyUsage: number;
+    alerts_state_json?: {
+        last_date?: string;
+        fired?: string[];
+    };
+    notification_settings_json?: NotificationSettings;
+};
+
 export type JobsResponse = {
     total: number;
     jobs: Array<{
@@ -99,12 +126,63 @@ export type AuditRow = {
     created_at: string;
 };
 
+export type CSWorkflow = {
+    id: string;
+    tenant_id: string;
+    tenant_name: string;
+    workflow_type: string;
+    status: 'ACTIVE' | 'COMPLETED' | 'ABANDONED';
+    current_step: number;
+    last_action_at: string | null;
+    next_action_at: string | null;
+    metadata_json: any;
+    created_at: string;
+    updated_at: string;
+};
+
 export async function getOverview(range: Range) {
     return adminFetch<OverviewResponse>(`/api/admin/metrics/overview?range=${range}`);
 }
 export async function getTenants(range: Range) {
     return adminFetch<TenantRow[]>(`/api/admin/metrics/tenants?range=${range}`);
 }
+export async function getTenantsList() {
+    return adminFetch<TenantDetail[]>(`/api/admin/tenants`);
+}
+export async function updateTenant(id: string, data: Partial<TenantDetail>) {
+    return adminFetch<{ ok: boolean }>(`/api/admin/tenants/${id}`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
+}
+
+export type TenantUsageHistory = {
+    date: string;
+    jobs_count: number;
+    batches_count: number;
+    value_generated: number;
+    hours_saved: number;
+};
+
+export interface TimelineEvent {
+    type: 'ALERT' | 'PLAN';
+    event: string;
+    details: any;
+    timestamp: string;
+}
+
+export async function getTenantUsage(id: string, days: number = 7) {
+    return adminFetch<TenantUsageHistory[]>(`/api/admin/tenants/${id}/usage?days=${days}`);
+}
+
+export async function getTenantTimeline(tenantId: string): Promise<TimelineEvent[]> {
+    return adminFetch<TimelineEvent[]>(`/api/admin/tenants/${tenantId}/timeline`);
+}
+
+export async function getBillingData(tenantId: string, year: string, month: string): Promise<any> {
+    return adminFetch<any>(`/api/admin/tenants/${tenantId}/billing/${year}/${month}`);
+}
+
 export async function getJobs(params: {
     status?: string;
     tenant?: string;
@@ -198,6 +276,11 @@ export async function getAdminQueueStats() {
 }
 export async function getQueue() {
     return adminFetch<any>(`/api/admin/queue`);
+}
+
+export async function getCSWorkflows(): Promise<CSWorkflow[]> {
+    const res = await adminFetch<{ ok: boolean, workflows: CSWorkflow[] }>(`/api/admin/cs-workflows`);
+    return res.workflows;
 }
 
 export async function postHelpAnalytics(payload: {
