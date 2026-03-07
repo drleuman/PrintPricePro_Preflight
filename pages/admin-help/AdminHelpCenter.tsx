@@ -49,21 +49,25 @@ export const AdminHelpCenter: React.FC = () => {
 
     useEffect(() => {
         let filtered = adminHelpDocs;
+        console.log('HelpCenter: adminHelpDocs count:', adminHelpDocs.length);
 
         if (searchQuery.trim()) {
             filtered = searchHelpDocs(searchQuery);
+            console.log('HelpCenter: Search query active:', searchQuery);
         }
 
         if (selectedCategory && selectedCategory !== 'All') {
             filtered = filtered.filter(doc => doc.category === selectedCategory);
+            console.log('HelpCenter: Category filter active:', selectedCategory);
         }
 
-        console.log(`HelpCenter: Filtered to ${filtered.length} docs (q: "${searchQuery}", cat: "${selectedCategory}")`);
+        console.log(`HelpCenter: Rendering ${filtered.length} docs`);
         setResults(filtered);
     }, [searchQuery, selectedCategory]);
 
     // Track search query when user stops typing for 1 second
     useEffect(() => {
+        console.log('HelpCenter: Current results in state:', results.length);
         if (!searchQuery.trim()) return;
         const timeout = setTimeout(() => {
             postHelpAnalytics({ event_type: 'search_query', search_query: searchQuery.trim() }).catch(console.error);
