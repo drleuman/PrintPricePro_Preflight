@@ -14,6 +14,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 
+// Global state for boot diagnostics (P0: Define before first use)
+let startupErrors = [];
+let isReady = false;
+
 const { router: proxyRouter, handleWsUpgrade } = require('./routes/proxy');
 const pdfRouter = require('./routes/pdf');
 const preflightV2Router = require('./routes/preflightV2');
@@ -33,9 +37,6 @@ const pino = require('pino-http')({
 const { checkAllDependencies } = require('./services/dependencyChecker');
 const { initSchema } = require('./services/dbSchema');
 
-// Global state for boot diagnostics
-let startupErrors = [];
-let isReady = false;
 
 const isProd = process.env.NODE_ENV === 'production';
 const shouldAutoMigrate = process.env.AUTO_MIGRATE === '1';
