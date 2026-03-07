@@ -36,6 +36,7 @@ const pino = require('pino-http')({
 });
 const { checkAllDependencies } = require('./services/dependencyChecker');
 const { initSchema } = require('./services/dbSchema');
+const dbService = require('./services/db');
 
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -205,30 +206,32 @@ const v2ReadLimiter = rateLimit({
 });
 
 // -------- Diagnostic Routes Handlers (P0: Define before usage) --------
-const readyHandler = async (_req, res) => {
-  const { ok, deps } = checkAllDependencies();
+const { ok: depsOk, deps } = checkAllDependencies();
+const dbConnected = await dbService.checkConnection();
+const isHealthy = depsOk && startupErrors.length === 0 && dbConnected;
 
-  const response = {
-    status: (ok && startupErrors.length === 0) ? 'READY' : 'BOOT_ERROR',
-    version: require('./package.json').version || '1.0.0',
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV || 'production',
-    startup_errors: startupErrors,
-    dependencies: deps,
-    uploadDirWritable: false
-  };
+const response = {
+  status: isHealthy ? 'READY' : 'BOOT_ERROR',
+  version: require('./package.json').version || '1.0.0',
+  timestamp: new Date().toISOString(),
+  env: process.env.NODE_ENV || 'production',
+  database: dbConnected ? 'CONNECTED' : 'DISCONNECTED',
+  startup_errors: startupErrors,
+  dependencies: deps,
+  uploadDirWritable: false
+};
 
-  try {
-    if (pdfRouter.uploadDir && fs.existsSync(pdfRouter.uploadDir)) {
-      fs.accessSync(pdfRouter.uploadDir, fs.constants.W_OK);
-      response.uploadDirWritable = true;
-    }
-  } catch (err) {
-    response.uploadDirWritable = false;
+try {
+  if (pdfRouter.uploadDir && fs.existsSync(pdfRouter.uploadDir)) {
+    fs.accessSync(pdfRouter.uploadDir, fs.constants.W_OK);
+    response.uploadDirWritable = true;
   }
+} catch (err) {
+  response.uploadDirWritable = false;
+}
 
-  // Return 503 if not ready, for load balancer awareness
-  res.status(response.status === 'READY' ? 200 : 503).json(response);
+// Return 503 if not ready, for load balancer awareness
+res.status(response.status === 'READY' ? 200 : 503).json(response);
 };
 
 const healthDepsHandler = (_req, res) => {
