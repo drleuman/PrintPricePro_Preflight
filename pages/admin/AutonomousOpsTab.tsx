@@ -11,6 +11,7 @@ import {
     ChartPieIcon,
     BoltIcon
 } from "@heroicons/react/24/outline";
+import * as adminApi from "../../lib/adminApi";
 
 export const AutonomousOpsTab: React.FC = () => {
     const [pipelines, setPipelines] = useState<any[]>([]);
@@ -26,24 +27,23 @@ export const AutonomousOpsTab: React.FC = () => {
 
     const fetchData = async () => {
         try {
-            const [pRes, mRes] = await Promise.all([
-                fetch('/api/admin/autonomy', { headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` } }),
-                fetch('/api/admin/autonomy/metrics', { headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` } })
+            const [pData, mData] = await Promise.all([
+                adminApi.getAutonomyPipelines(),
+                adminApi.getAutonomyMetrics()
             ]);
-            setPipelines(await pRes.json());
-            setMetrics(await mRes.json());
+            setPipelines(Array.isArray(pData) ? pData : []);
+            setMetrics(mData || null);
             setLoading(false);
         } catch (err) {
             console.error('Failed to fetch autonomy data:', err);
+            setPipelines([]);
         }
     };
 
     const fetchDetail = async (id: string) => {
         try {
-            const res = await fetch(`/api/admin/autonomy/${id}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` }
-            });
-            setSelectedPipeline(await res.json());
+            const data = await adminApi.getAutonomyPipelineDetail(id);
+            setSelectedPipeline(data);
         } catch (err) {
             console.error('Failed to fetch pipeline detail:', err);
         }
@@ -51,14 +51,15 @@ export const AutonomousOpsTab: React.FC = () => {
 
     const handleAction = async (id: string, action: string) => {
         try {
-            const res = await fetch(`/api/admin/autonomy/${id}/${action}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` }
-            });
-            if (res.ok) {
-                fetchDetail(id);
-                fetchData();
+            if (action === 'pause') {
+                await adminApi.pauseAutonomyPipeline(id, 'Manual intervention');
+            } else if (action === 'resume') {
+                await adminApi.resumeAutonomyPipeline(id);
+            } else if (action === 'retry-step') {
+                await adminApi.retryAutonomyPipelineStep(id);
             }
+            fetchDetail(id);
+            fetchData();
         } catch (err) {
             console.error(`Failed to ${action} pipeline:`, err);
         }
@@ -120,8 +121,8 @@ export const AutonomousOpsTab: React.FC = () => {
                                     <div className="flex justify-between items-start mb-1">
                                         <div className="font-bold text-slate-900 truncate pr-4 text-xs">{p.job_name || 'Autonomous Job'}</div>
                                         <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider ${p.pipeline_status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                p.pipeline_status === 'FAILED' ? 'bg-red-50 text-red-600 border-red-100' :
-                                                    p.pipeline_status === 'PAUSED' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-blue-50 text-blue-600 border-blue-100'
+                                            p.pipeline_status === 'FAILED' ? 'bg-red-50 text-red-600 border-red-100' :
+                                                p.pipeline_status === 'PAUSED' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-blue-50 text-blue-600 border-blue-100'
                                             }`}>
                                             {p.pipeline_status}
                                         </span>
@@ -176,7 +177,7 @@ export const AutonomousOpsTab: React.FC = () => {
                                     {selectedPipeline.events.map((e: any, i: number) => (
                                         <div key={i} className="relative pl-12">
                                             <div className={`absolute left-0 top-0 w-10 h-10 rounded-xl flex items-center justify-center border-2 ${e.event_type === 'STEP_FAILED' ? 'bg-red-50 border-red-100' :
-                                                    e.event_type === 'STEP_COMPLETED' ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-slate-200'
+                                                e.event_type === 'STEP_COMPLETED' ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-slate-200'
                                                 }`}>
                                                 {e.event_type === 'STEP_FAILED' ? <ExclamationTriangleIcon className="w-5 h-5 text-red-500" /> :
                                                     e.event_type === 'STEP_COMPLETED' ? <CheckBadgeIcon className="w-5 h-5 text-emerald-500" /> :

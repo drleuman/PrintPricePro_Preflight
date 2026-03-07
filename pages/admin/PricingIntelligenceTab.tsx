@@ -8,6 +8,7 @@ import {
     ChartPieIcon,
     ArrowPathIcon
 } from "@heroicons/react/24/outline";
+import * as adminApi from "../../lib/adminApi";
 
 export const PricingIntelligenceTab: React.FC = () => {
     const [view, setView] = useState<'profiles' | 'routing'>('profiles');
@@ -25,16 +26,16 @@ export const PricingIntelligenceTab: React.FC = () => {
     const fetchRoutingData = async () => {
         setLoading(true);
         try {
-            const [historyRes, conflictRes] = await Promise.all([
-                fetch('/api/admin/routing/economic/history', { headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` } }),
-                fetch('/api/admin/routing/economic/conflicts', { headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` } })
+            const [historyData, conflictData] = await Promise.all([
+                adminApi.getEconomicRoutingHistory(),
+                adminApi.getEconomicRoutingConflicts()
             ]);
-            const historyData = await historyRes.json();
-            const conflictData = await conflictRes.json();
-            setRoutingHistory(historyData);
-            setConflicts(conflictData);
+            setRoutingHistory(Array.isArray(historyData) ? historyData : []);
+            setConflicts(Array.isArray(conflictData) ? conflictData : []);
         } catch (err: any) {
             setError(err.message);
+            setRoutingHistory([]);
+            setConflicts([]);
         } finally {
             setLoading(false);
         }
@@ -43,13 +44,11 @@ export const PricingIntelligenceTab: React.FC = () => {
     const fetchProfiles = async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/admin/pricing/profiles', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` }
-            });
-            const data = await res.json();
-            setProfiles(data);
+            const data = await adminApi.getPricingProfiles();
+            setProfiles(Array.isArray(data) ? data : []);
         } catch (err: any) {
             setError(err.message);
+            setProfiles([]);
         } finally {
             setLoading(false);
         }

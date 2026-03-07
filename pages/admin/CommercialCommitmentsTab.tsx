@@ -11,6 +11,7 @@ import {
     IdentificationIcon,
     ChartBarIcon
 } from "@heroicons/react/24/outline";
+import * as adminApi from "../../lib/adminApi";
 
 export const CommercialCommitmentsTab: React.FC = () => {
     const [commitments, setCommitments] = useState<any[]>([]);
@@ -25,14 +26,16 @@ export const CommercialCommitmentsTab: React.FC = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [cRes, sRes] = await Promise.all([
-                fetch('/api/admin/commercial', { headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` } }),
-                fetch('/api/admin/commercial/settlement/readiness', { headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` } })
+            const [cData, sData] = await Promise.all([
+                adminApi.getCommercialCommitments(),
+                adminApi.getSettlementReadiness()
             ]);
-            setCommitments(await cRes.json());
-            setStats(await sRes.json());
+            setCommitments(Array.isArray(cData) ? cData : []);
+            setStats(Array.isArray(sData) ? sData : []);
         } catch (err) {
             console.error('Failed to fetch commercial data:', err);
+            setCommitments([]);
+            setStats([]);
         } finally {
             setLoading(false);
         }
@@ -40,10 +43,8 @@ export const CommercialCommitmentsTab: React.FC = () => {
 
     const fetchDetail = async (id: string) => {
         try {
-            const res = await fetch(`/api/admin/commercial/${id}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` }
-            });
-            setSelectedCommitment(await res.json());
+            const data = await adminApi.getCommercialCommitmentDetail(id);
+            setSelectedCommitment(data);
         } catch (err) {
             console.error('Failed to fetch commitment detail:', err);
         }
@@ -51,14 +52,13 @@ export const CommercialCommitmentsTab: React.FC = () => {
 
     const handleAction = async (id: string, action: 'lock' | 'void') => {
         try {
-            const res = await fetch(`/api/admin/commercial/${id}/${action}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` }
-            });
-            if (res.ok) {
-                fetchDetail(id);
-                fetchData();
+            if (action === 'lock') {
+                await adminApi.lockCommercialCommitment(id);
+            } else {
+                await adminApi.voidCommercialCommitment(id);
             }
+            fetchDetail(id);
+            fetchData();
         } catch (err) {
             console.error(`Failed to ${action} commitment:`, err);
         }
@@ -118,7 +118,7 @@ export const CommercialCommitmentsTab: React.FC = () => {
                                         <td className="px-4 py-4 text-xs font-black text-slate-900">{c.committed_price} {c.currency}</td>
                                         <td className="px-4 py-4">
                                             <span className={`text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-wider ${c.commercial_commitment_status === 'LOCKED' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                                                    c.commercial_commitment_status === 'VOIDED' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-slate-50 text-slate-600 border-slate-100'
+                                                c.commercial_commitment_status === 'VOIDED' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-slate-50 text-slate-600 border-slate-100'
                                                 }`}>
                                                 {c.commercial_commitment_status}
                                             </span>

@@ -1,4 +1,3 @@
-// pages/admin/EngagementSignalsTab.tsx
 import React, { useEffect, useState } from "react";
 import {
     SignalIcon,
@@ -8,6 +7,7 @@ import {
     ArrowPathIcon,
     BoltIcon
 } from "@heroicons/react/24/outline";
+import * as adminApi from "../../lib/adminApi";
 
 interface EngagementSignal {
     id: string;
@@ -33,17 +33,16 @@ export const EngagementSignalsTab: React.FC = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [sigRes, statRes] = await Promise.all([
-                fetch('/api/admin/engagement-signals'),
-                fetch('/api/admin/engagement-stats')
+            const [sigData, statData] = await Promise.all([
+                adminApi.getEngagementSignals(),
+                adminApi.getEngagementStats()
             ]);
-            const sigData = await sigRes.json();
-            const statData = await statRes.json();
-
-            if (sigData.ok) setSignals(sigData.signals);
-            if (statData.ok) setStats(statData.stats);
+            setSignals(sigData);
+            setStats(statData);
         } catch (err) {
             console.error("Failed to fetch engagement data", err);
+            setSignals([]);
+            setStats([]);
         } finally {
             setLoading(false);
         }

@@ -367,3 +367,89 @@ export async function postHelpAnalytics(payload: {
         body: JSON.stringify(payload)
     });
 }
+
+// --- Autonomy API ---
+export async function getAutonomyPipelines() {
+    return adminFetch<any[]>(`/api/admin/autonomy`);
+}
+
+export async function getAutonomyMetrics() {
+    return adminFetch<any>(`/api/admin/autonomy/metrics`);
+}
+
+export async function getAutonomyPipelineDetail(id: string) {
+    return adminFetch<any>(`/api/admin/autonomy/${id}`);
+}
+
+export async function pauseAutonomyPipeline(id: string, reason: string) {
+    return adminFetch<{ ok: boolean }>(`/api/admin/autonomy/${id}/pause`, {
+        method: 'POST',
+        body: JSON.stringify({ reason })
+    });
+}
+
+export async function resumeAutonomyPipeline(id: string) {
+    return adminFetch<{ ok: boolean }>(`/api/admin/autonomy/${id}/resume`, {
+        method: 'POST'
+    });
+}
+
+export async function retryAutonomyPipelineStep(id: string) {
+    return adminFetch<{ ok: boolean }>(`/api/admin/autonomy/${id}/retry-step`, {
+        method: 'POST'
+    });
+}
+
+// --- Commercial Commitments ---
+export async function getCommercialCommitments() {
+    return adminFetch<any[]>(`/api/admin/commercial`);
+}
+
+export async function getCommercialCommitmentDetail(id: string) {
+    return adminFetch<any>(`/api/admin/commercial/${id}`);
+}
+
+export async function lockCommercialCommitment(id: string) {
+    return adminFetch<{ ok: boolean }>(`/api/admin/commercial/${id}/lock`, {
+        method: 'POST'
+    });
+}
+
+export async function voidCommercialCommitment(id: string) {
+    return adminFetch<{ ok: boolean }>(`/api/admin/commercial/${id}/void`, {
+        method: 'POST'
+    });
+}
+
+export async function getSettlementReadiness() {
+    return adminFetch<any[]>(`/api/admin/commercial/settlement/readiness`);
+}
+
+// --- Pricing (Profiles/Quotes) ---
+export async function getPricingProfiles() {
+    return adminFetch<any[]>(`/api/admin/pricing/profiles`);
+}
+
+export async function getJobQuotes(jobId: string) {
+    return adminFetch<any[]>(`/api/admin/pricing/jobs/${jobId}/quotes`);
+}
+
+// --- Economic Routing ---
+export async function getEconomicRoutingHistory() {
+    return adminFetch<any[]>(`/api/admin/routing/economic/history`);
+}
+
+export async function getEconomicRoutingConflicts() {
+    return adminFetch<any[]>(`/api/admin/routing/economic/conflicts`);
+}
+
+// --- Engagement ---
+export async function getEngagementSignals() {
+    const res = await adminFetch<{ ok: boolean, signals: any[] }>(`/api/admin/engagement-signals`);
+    return res.signals || [];
+}
+
+export async function getEngagementStats() {
+    const res = await adminFetch<{ ok: boolean, stats: any[] }>(`/api/admin/engagement-stats`);
+    return res.stats || [];
+}

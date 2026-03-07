@@ -286,24 +286,39 @@ app.use('/api/v2/analytics', analyticsV2Router);
 debugLog('Mounting /api/connect routes...');
 app.use('/api/connect', connectRouter);
 
-debugLog('Mounting /api/admin/connect routes...');
-app.use('/api/admin/network', connectAdminRouter);
-app.use('/api/admin/routing', routingAdminRouter);
+// --- Unified Admin API Registration ---
+const adminMasterRouter = express.Router();
+
+// Centralized Admin Protection Middleware
+const requireAdmin = require('./middleware/requireAdmin');
+adminMasterRouter.use((req, res, next) => {
+  debugLog(`[ADMIN-API-ACCESS] ${req.method} ${req.originalUrl}`);
+  next();
+}, requireAdmin);
+
+// Mount Sub-Routers to the Master Router (Explicit ordering)
+adminMasterRouter.use('/network', connectAdminRouter);
+adminMasterRouter.use('/routing/economic', economicRoutingAdminRouter);
+adminMasterRouter.use('/routing', routingAdminRouter);
+adminMasterRouter.use('/pricing', pricingAdminRouter);
+adminMasterRouter.use('/offers', offersAdminRouter);
+adminMasterRouter.use('/marketplace/ready', negotiationAdminRouter);
+adminMasterRouter.use('/marketplace', marketplaceAdminRouter);
+adminMasterRouter.use('/commercial', commercialCommitmentAdminRouter);
+adminMasterRouter.use('/autonomy', autonomyAdminRouter);
+adminMasterRouter.use('/finance', autonomyFinanceRouter);
+adminMasterRouter.use('/control', adminControlRoutes);
+
+// Main Admin Routes (metrics, tenants, queue, etc. - mounted at the root of /api/admin)
+adminMasterRouter.use('/', adminRoutes);
+
+// Finally, mount the Master Router to the application
+app.use('/api/admin', adminMasterRouter);
+
+// Public/Open Network Routes (Non-admin)
 app.use('/api/printer-sync', printerSyncRouter);
 app.use('/api/reservations', reservationsRouter);
 app.use('/api/printer-dispatch', printerDispatchRouter);
-app.use('/api/admin/pricing', pricingAdminRouter);
-app.use('/api/admin/routing/economic', economicRoutingAdminRouter);
-app.use('/api/admin/offers', offersAdminRouter);
-app.use('/api/admin/marketplace', marketplaceAdminRouter);
-app.use('/api/admin/marketplace/ready', negotiationAdminRouter);
-app.use('/api/admin/commercial', commercialCommitmentAdminRouter);
-app.use('/api/admin/autonomy', autonomyAdminRouter);
-app.use('/api/admin/finance', autonomyFinanceRouter);
-
-// Start autonomous workers
-settlementWorker.start();
-app.use('/api/printer-offers', printerOffersRouter);
 
 // Start Background Workers
 if (process.env.NODE_ENV !== 'test') {
@@ -311,12 +326,9 @@ if (process.env.NODE_ENV !== 'test') {
   require('./workers/marketplace-expiry-worker');
 }
 
-// Admin Dashboard Routes
-debugLog('Mounting /api/admin routes...');
-app.use('/api/admin', adminRoutes);
-
-debugLog('Mounting /api/admin/control routes...');
-app.use('/api/admin/control', adminControlRoutes);
+// Start autonomous workers
+settlementWorker.start();
+app.use('/api/printer-offers', printerOffersRouter);
 
 // -------- Static Files --------
 const staticPath = path.resolve(__dirname, 'dist');
