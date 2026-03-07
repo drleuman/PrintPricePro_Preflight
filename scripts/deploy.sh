@@ -49,12 +49,21 @@ else
   echo "▶ [3/6] Skipping frontend build (--skip-build flag)"
 fi
 
-# ── 4. Upload directory permissions ──────────────────────────
-echo "▶ [4/6] Ensuring upload directory permissions..."
+# ── 4. Directory permissions (Auto-Fix) ──────────────────────
+echo "▶ [4/6] Ensuring directory permissions..."
+# Recursively fix ownership for the whole app (critical when running as root)
+chown -R "$PLESK_USER:$PLESK_GROUP" "$APP_DIR"
+
+# Ensure the upload directory exists and is writable
 mkdir -p "$UPLOAD_DIR"
 chown -R "$PLESK_USER:$PLESK_GROUP" "$APP_DIR/tmp/"
-chmod 770 "$UPLOAD_DIR"
-echo "  Upload dir: $UPLOAD_DIR (owner: $PLESK_USER)"
+chmod -R 775 "$APP_DIR/tmp/"
+# Fix basic permissions
+find "$APP_DIR" -type d -exec chmod 755 {} \;
+find "$APP_DIR" -type f -exec chmod 644 {} \;
+chmod +x "$APP_DIR/scripts/"*.sh || true
+
+echo "  ✅ Ownership and permissions synchronized for $PLESK_USER."
 
 # ── 5. Restart Node process ──────────────────────────────────
 echo "▶ [5/6] Restarting Node process (Passenger)..."
