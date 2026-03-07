@@ -32,13 +32,14 @@ export const en = {
   // Navigation
   back: '← Back',
   next: 'Next →',
+  igniteEngine: 'Ignite V2 Engine',
   fixIssues: 'Fix Issues →',
   continueToReview: 'Continue to Review →',
   startOver: 'Start Over',
 
   // Status messages
   analysisWaitMessage: 'Please wait while we check your document for print readiness',
-  issuesFoundMessage: 'We found some items that need attention',
+  issuesFoundMessage: 'Review the items that need attention below',
   pdfLooksGood: 'Great! Your PDF looks good',
   checkingDetails: 'Checking fonts, colors, images, and more...',
   perfectNoIssues: 'Perfect! No issues found',
@@ -83,6 +84,7 @@ export const en = {
   noIssuesToDisplay: 'No issues to display.',
   noIssuesFound: 'No issues found. Your PDF looks perfect!',
   noIssues: 'No issues',
+  totalIssues: 'total issues',
 
   // Issues panel
   issuesFound: 'Issues Found',
@@ -96,11 +98,20 @@ export const en = {
   selectAnIssue: 'Select an issue to view its details and potential fixes.',
   selectedIssueDetails: 'Selected Issue Details',
   currentIssue: 'Current Issue',
+  categoryImages: 'Images',
+  categoryColor: 'Color Spaces',
+  categoryFonts: 'Fonts',
+  categoryMetadata: 'Metadata',
+  categoryTransparency: 'Transparency',
+  categoryBleedMargins: 'Bleed & Margins',
+  categoryResolution: 'Resolution',
+  categoryCompliance: 'Compliance',
   categoryPageSetup: 'Page setup',
   categoryAnnotations: 'Annotations',
   categoryFormFields: 'Form fields',
   categoryMultimedia: 'Multimedia',
   categoryLayers: 'Layers',
+  categoryOther: 'Other',
 
   // Quick Fixes
   quickFixes: 'Quick Fixes',

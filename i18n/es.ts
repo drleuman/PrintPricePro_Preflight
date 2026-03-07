@@ -30,13 +30,14 @@ export const es = {
   // Navigation
   back: '← Atrás',
   next: 'Siguiente →',
+  igniteEngine: 'Probar Motor V2',
   fixIssues: 'Corregir Incidencias →',
   continueToReview: 'Continuar para Revisar →',
   startOver: 'Empezar de Nuevo',
 
   // Status messages
   analysisWaitMessage: 'Espera mientras verificamos tu documento para impresión',
-  issuesFoundMessage: 'Encontramos algunos elementos que necesitan atención',
+  issuesFoundMessage: 'Revisa los elementos a continuación que requieren atención',
   pdfLooksGood: '¡Genial! Tu PDF se ve bien',
   checkingDetails: 'Verificando fuentes, colores, imágenes y más...',
   perfectNoIssues: '¡Perfecto! No se encontraron incidencias',
@@ -81,6 +82,7 @@ export const es = {
   noIssuesToDisplay: 'No hay incidencias para mostrar.',
   noIssuesFound: '¡No se encontraron incidencias. Tu PDF se ve perfecto!',
   noIssues: 'No hay incidencias',
+  totalIssues: 'incidencias en total',
 
   // Issues panel
   issuesFound: 'Incidencias Encontradas',
@@ -94,11 +96,20 @@ export const es = {
   selectAnIssue: 'Selecciona una incidencia para ver sus detalles y posibles soluciones.',
   selectedIssueDetails: 'Detalle de la Incidencia Seleccionada',
   currentIssue: 'Incidencia Actual',
+  categoryImages: 'Imágenes',
+  categoryColor: 'Espacios de Color',
+  categoryFonts: 'Fuentes',
+  categoryMetadata: 'Metadatos',
+  categoryTransparency: 'Transparencia',
+  categoryBleedMargins: 'Sangrado y Márgenes',
+  categoryResolution: 'Resolución',
+  categoryCompliance: 'Cumplimiento',
   categoryPageSetup: 'Configuración de Página',
   categoryAnnotations: 'Anotaciones',
   categoryFormFields: 'Campos de Formulario',
   categoryMultimedia: 'Multimedia',
   categoryLayers: 'Capas',
+  categoryOther: 'Otros',
 
   // Quick Fixes
   quickFixes: 'Soluciones Rápidas',

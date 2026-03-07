@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import type { FileMeta, Issue, PreflightResult } from '../types';
 import { t, useLocale } from '../i18n';
+import type { TranslationKeys } from '../i18n';
 import { ISSUE_CATEGORY_LABELS } from '../constants';
 import { generatePreflightReport } from '../utils/reportGenerator';
 import { formatBytes } from '../components/PreflightDropzone';
@@ -37,6 +38,27 @@ type CategoryBucket = {
   info: number;
 };
 
+// Map constants.ts category key (snake_case) to i18n key (camelCase)
+const categoryKeyToI18nKey = (key: string): TranslationKeys => {
+  const map: Record<string, TranslationKeys> = {
+    images: 'categoryImages',
+    color: 'categoryColor',
+    fonts: 'categoryFonts',
+    metadata: 'categoryMetadata',
+    transparency: 'categoryTransparency',
+    bleed_margins: 'categoryBleedMargins',
+    resolution: 'categoryResolution',
+    compliance: 'categoryCompliance',
+    page_setup: 'categoryPageSetup',
+    annotations: 'categoryAnnotations',
+    form_fields: 'categoryFormFields',
+    multimedia: 'categoryMultimedia',
+    layers: 'categoryLayers',
+    other: 'categoryOther',
+  };
+  return map[key] ?? 'categoryOther';
+};
+
 // Helper function to get icon component for category
 const getCategoryIcon = (key: string) => {
   const iconStyle = { width: '24px', height: '24px' };
@@ -45,19 +67,19 @@ const getCategoryIcon = (key: string) => {
       return <PhotoIcon style={iconStyle} />;
     case 'fonts':
       return <DocumentTextIcon style={iconStyle} />;
-    case 'colors':
+    case 'color':
       return <SwatchIcon style={iconStyle} />;
     case 'transparency':
       return <EyeIcon style={iconStyle} />;
     case 'resolution':
       return <ArrowsPointingOutIcon style={iconStyle} />;
-    case 'bleed':
+    case 'bleed_margins':
       return <ScissorsIcon style={iconStyle} />;
-    case 'pageSetup':
+    case 'page_setup':
       return <DocumentIcon style={iconStyle} />;
     case 'annotations':
       return <ChatBubbleLeftIcon style={iconStyle} />;
-    case 'formFields':
+    case 'form_fields':
       return <ClipboardDocumentListIcon style={iconStyle} />;
     case 'multimedia':
       return <FilmIcon style={iconStyle} />;
@@ -104,9 +126,10 @@ export const PreflightSummary: React.FC<Props> = ({
     const buckets: Record<string, CategoryBucket> = {};
 
     for (const key of keys) {
+      const i18nKey = categoryKeyToI18nKey(key);
       buckets[key] = {
         key,
-        label: (ISSUE_CATEGORY_LABELS as any)[key] || key,
+        label: t(i18nKey) || (ISSUE_CATEGORY_LABELS as Record<string, string>)[key] || key,
         errors: 0,
         warnings: 0,
         info: 0,
@@ -125,7 +148,7 @@ export const PreflightSummary: React.FC<Props> = ({
     }
 
     return Object.values(buckets);
-  }, [issues]);
+  }, [issues, currentLocale]);
 
   const score = result?.score ?? null;
 
@@ -163,14 +186,14 @@ export const PreflightSummary: React.FC<Props> = ({
               <p className="text-sm font-bold text-gray-900">{t('overallScore') || 'Overall Score'}</p>
               {hasPdf && (
                 <p className="text-[11px] text-gray-500 font-medium">
-                  {errors} errors · {warnings} warnings · {info} info
+                  {errors} {t('errors')} · {warnings} {t('warnings')} · {info} {t('info')}
                 </p>
               )}
             </div>
             <p className="text-[10px] text-gray-500 truncate max-w-sm">
               {!hasPdf
                 ? t('noPdfLoaded')
-                : `File: ${fileMeta?.name} ${fileMeta?.size ? `— ${formatBytes(fileMeta.size, currentLocale)}` : ''}`}
+                : `${t('fileLabel')}: ${fileMeta?.name} ${fileMeta?.size ? `— ${formatBytes(fileMeta.size, currentLocale)}` : ''}`}
             </p>
           </div>
         </div>
@@ -182,7 +205,7 @@ export const PreflightSummary: React.FC<Props> = ({
             disabled={!hasPdf || !result}
             className="inline-flex items-center justify-center px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none disabled:opacity-50"
           >
-            Download Report
+            {t('downloadReport')}
           </button>
         </div>
       </div>
@@ -194,7 +217,7 @@ export const PreflightSummary: React.FC<Props> = ({
             {t('issueCategories')}
           </h3>
           <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
-            {categories.reduce((sum, cat) => sum + cat.errors + cat.warnings + cat.info, 0)} total issues
+            {categories.reduce((sum, cat) => sum + cat.errors + cat.warnings + cat.info, 0)} {t('totalIssues')}
           </div>
         </div>
 
@@ -245,23 +268,23 @@ export const PreflightSummary: React.FC<Props> = ({
                   <div className="flex flex-wrap gap-1 mt-auto pt-1 border-t border-gray-900/5">
                     {cat.errors > 0 && (
                       <span className="text-[8px] font-bold text-red-700 bg-red-100 px-1 rounded uppercase tracking-wider">
-                        {cat.errors} err
+                        {cat.errors} {t('errAbbr')}
                       </span>
                     )}
                     {cat.warnings > 0 && (
                       <span className="text-[8px] font-bold text-amber-700 bg-amber-100 px-1 rounded uppercase tracking-wider">
-                        {cat.warnings} warn
+                        {cat.warnings} {t('warnAbbr')}
                       </span>
                     )}
                     {cat.info > 0 && (
                       <span className="text-[8px] font-bold text-blue-700 bg-blue-100 px-1 rounded uppercase tracking-wider">
-                        {cat.info} info
+                        {cat.info} {t('infoAbbr')}
                       </span>
                     )}
                   </div>
                 ) : (
                   <div className="text-[9px] text-gray-400 font-medium flex items-center gap-1 mt-auto pt-1 border-t border-gray-900/5">
-                    <CheckCircleIcon className="w-3 h-3 text-green-500" /> No issues
+                    <CheckCircleIcon className="w-3 h-3 text-green-500" /> {t('noIssues')}
                   </div>
                 )}
               </div>
