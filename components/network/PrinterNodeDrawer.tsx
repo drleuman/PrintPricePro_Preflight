@@ -1,4 +1,5 @@
 import React from "react";
+import * as adminApi from "../../lib/adminApi";
 import {
     XMarkIcon,
     BuildingOfficeIcon,
@@ -31,13 +32,18 @@ export const PrinterNodeDrawer: React.FC<Props> = ({ printerId, onClose, onActio
     React.useEffect(() => {
         if (printerId) {
             setLoading(true);
-            fetch(`/api/admin/network/printers/${printerId}`, {
-                headers: { 'X-Admin-Api-Key': localStorage.getItem('ppp_admin_api_key') || '' }
-            })
-                .then(res => res.json())
-                .then(json => setData(json))
-                .catch(err => console.error(err))
-                .finally(() => setLoading(false));
+            adminApi.getPrinters().then(printers => {
+                const found = printers.find(p => p.id === printerId);
+                if (found) {
+                    // Fetch full detail if available, or use the object from list
+                    // For now, list has most of what we need
+                    setData({ profile: found.profile, id: found.id });
+                }
+                setLoading(false);
+            }).catch(err => {
+                console.error(err);
+                setLoading(false);
+            });
         }
     }, [printerId]);
 

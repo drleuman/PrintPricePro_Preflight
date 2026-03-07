@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import * as adminApi from "../../lib/adminApi";
 import {
     BuildingStorefrontIcon,
     ArrowPathIcon,
@@ -21,10 +22,8 @@ export const MarketplaceTab: React.FC = () => {
     const fetchSessions = async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/admin/marketplace/sessions', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` }
-            });
-            setSessions(await res.json());
+            const data = await adminApi.getMarketplaceSessions();
+            setSessions(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error('Failed to fetch marketplace sessions:', err);
         } finally {
@@ -34,10 +33,8 @@ export const MarketplaceTab: React.FC = () => {
 
     const fetchSessionDetail = async (id: string) => {
         try {
-            const res = await fetch(`/api/admin/marketplace/sessions/${id}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` }
-            });
-            setSelectedSession(await res.json());
+            const data = await adminApi.getMarketplaceSessionDetail(id);
+            setSelectedSession(data);
         } catch (err) {
             console.error('Failed to fetch session detail:', err);
         }
@@ -46,15 +43,8 @@ export const MarketplaceTab: React.FC = () => {
     const handleSelectOffer = async (offerId: string) => {
         if (!selectedSession) return;
         try {
-            const res = await fetch(`/api/admin/marketplace/sessions/${selectedSession.id}/select`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('admin_key')}`
-                },
-                body: JSON.stringify({ offer_id: offerId, selection_mode: 'ADMIN_OVERRIDE' })
-            });
-            if (res.ok) {
+            const res = await adminApi.selectMarketplaceOffer(selectedSession.id, offerId);
+            if (res) {
                 fetchSessionDetail(selectedSession.id);
                 fetchSessions();
             }
@@ -98,7 +88,7 @@ export const MarketplaceTab: React.FC = () => {
                                     <div className="flex justify-between items-start mb-1">
                                         <div className="font-bold text-slate-900 truncate pr-4">{s.job_name}</div>
                                         <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider ${s.session_status === 'SELECTED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                s.session_status === 'OPEN' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-50 text-slate-500 border-slate-200'
+                                            s.session_status === 'OPEN' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-50 text-slate-500 border-slate-200'
                                             }`}>
                                             {s.session_status}
                                         </span>

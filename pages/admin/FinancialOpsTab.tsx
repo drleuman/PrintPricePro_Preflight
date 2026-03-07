@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import * as adminApi from "../../lib/adminApi";
 import {
     BanknotesIcon,
     DocumentTextIcon,
@@ -26,12 +27,12 @@ export const FinancialOpsTab: React.FC = () => {
 
     const fetchData = async () => {
         try {
-            const [tRes, mRes] = await Promise.all([
-                fetch('/api/admin/finance/transactions', { headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` } }),
-                fetch('/api/admin/finance/metrics', { headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` } })
+            const [tData, mData] = await Promise.all([
+                adminApi.getFinanceTransactions(),
+                adminApi.getFinanceMetrics()
             ]);
-            setTransactions(await tRes.json());
-            setMetrics(await mRes.json());
+            setTransactions(Array.isArray(tData) ? tData : []);
+            setMetrics(mData);
             setLoading(false);
         } catch (err) {
             console.error('Failed to fetch finance data:', err);
@@ -40,10 +41,8 @@ export const FinancialOpsTab: React.FC = () => {
 
     const fetchDetail = async (id: string) => {
         try {
-            const res = await fetch(`/api/admin/finance/transactions/${id}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` }
-            });
-            setSelectedTx(await res.json());
+            const data = await adminApi.getFinanceTransactionDetail(id);
+            setSelectedTx(data);
         } catch (err) {
             console.error('Failed to fetch transaction detail:', err);
         }
@@ -124,8 +123,8 @@ export const FinancialOpsTab: React.FC = () => {
                                         </td>
                                         <td className="px-4 py-4">
                                             <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-widest ${tx.transaction_status === 'SETTLED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                    tx.transaction_status === 'FAILED' ? 'bg-red-50 text-red-600 border-red-100' :
-                                                        tx.transaction_status === 'CREATED' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+                                                tx.transaction_status === 'FAILED' ? 'bg-red-50 text-red-600 border-red-100' :
+                                                    tx.transaction_status === 'CREATED' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'
                                                 }`}>
                                                 {tx.transaction_status}
                                             </span>

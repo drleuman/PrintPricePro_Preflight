@@ -4,8 +4,10 @@ type Range = "24h" | "7d" | "30d";
 const ADMIN_KEY_STORAGE = "ppp_admin_api_key";
 
 export const getAdminKey = () => {
-    // 1. Check local storage (manual login)
-    const stored = localStorage.getItem(ADMIN_KEY_STORAGE);
+    // 1. Check local storage (manual login) - support both legacy and new keys
+    const stored = localStorage.getItem(ADMIN_KEY_STORAGE) ||
+        localStorage.getItem('admin_key') ||
+        localStorage.getItem('ppp_admin_api_key');
     if (stored) return stored;
 
     // 2. Check build-time env
@@ -278,9 +280,78 @@ export async function getQueue() {
     return adminFetch<any>(`/api/admin/queue`);
 }
 
+export async function getPrinters(filters: string = "") {
+    return adminFetch<any[]>(`/api/admin/network/printers${filters ? '?' + filters : ''}`);
+}
+
+export async function getNetworkOverview() {
+    return adminFetch<any>(`/api/admin/network/overview`);
+}
+
+export async function getCapacity() {
+    return adminFetch<any[]>(`/api/admin/network/capacity`);
+}
+
+export async function getHealth() {
+    return adminFetch<any[]>(`/api/admin/network/health`);
+}
+
+export async function getRoutingOverview() {
+    return adminFetch<any>(`/api/admin/routing/overview`);
+}
+
 export async function getCSWorkflows(): Promise<CSWorkflow[]> {
     const res = await adminFetch<{ ok: boolean, workflows: CSWorkflow[] }>(`/api/admin/cs-workflows`);
     return res.workflows;
+}
+
+export async function getMarketplaceSessions() {
+    return adminFetch<any[]>(`/api/admin/marketplace/sessions`);
+}
+
+export async function getMarketplaceSessionDetail(id: string) {
+    return adminFetch<any>(`/api/admin/marketplace/sessions/${id}`);
+}
+
+export async function selectMarketplaceOffer(sessionId: string, offerId: string) {
+    return adminFetch<{ ok: boolean }>(`/api/admin/marketplace/sessions/${sessionId}/select`, {
+        method: 'POST',
+        body: JSON.stringify({ offer_id: offerId, selection_mode: 'ADMIN_OVERRIDE' })
+    });
+}
+
+export async function getFinanceTransactions() {
+    return adminFetch<any[]>(`/api/admin/finance/transactions`);
+}
+
+export async function getFinanceMetrics() {
+    return adminFetch<any>(`/api/admin/finance/metrics`);
+}
+
+export async function getFinanceTransactionDetail(id: string) {
+    return adminFetch<any>(`/api/admin/finance/transactions/${id}`);
+}
+
+export async function getNegotiations() {
+    return adminFetch<any[]>(`/api/admin/marketplace/ready/negotiations`);
+}
+
+export async function getNegotiationChain(offerId: string) {
+    return adminFetch<any[]>(`/api/admin/marketplace/ready/negotiations/${offerId}`);
+}
+
+export async function acceptCounteroffer(offerId: string, counterofferId: string) {
+    return adminFetch<{ ok: boolean }>(`/api/printer-offers/${offerId}/counter/${counterofferId}/accept`, {
+        method: 'POST'
+    });
+}
+
+export async function getOffers() {
+    return adminFetch<any[]>(`/api/admin/offers`);
+}
+
+export async function getOffersMetrics() {
+    return adminFetch<any>(`/api/admin/offers/metrics`);
 }
 
 export async function postHelpAnalytics(payload: {

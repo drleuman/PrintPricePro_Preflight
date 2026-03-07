@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import * as adminApi from "../../lib/adminApi";
 import {
     QueueListIcon,
     ArrowPathIcon,
@@ -20,12 +21,12 @@ export const OffersTab: React.FC = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [offersRes, metricsRes] = await Promise.all([
-                fetch('/api/admin/offers', { headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` } }),
-                fetch('/api/admin/offers/metrics', { headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` } })
+            const [oData, mData] = await Promise.all([
+                adminApi.getOffers(),
+                adminApi.getOffersMetrics()
             ]);
-            setOffers(await offersRes.json());
-            setMetrics(await metricsRes.json());
+            setOffers(Array.isArray(oData) ? oData : []);
+            setMetrics(mData || {});
         } catch (err) {
             console.error('Failed to fetch offers:', err);
         } finally {

@@ -37,6 +37,24 @@ This document serves as the strategic "North Star" for the PrintPrice platform, 
 
 ---
 
+### Live Deployment Debugging (Post-Phase 31)
+
+After the initial deployment, several critical errors were reported and resolved:
+
+### 1. Fix 401 Unauthorized (Global Admin API)
+- **Issue**: Frontend was sending inconsistent legacy `Authorization: Bearer` headers while the server expected `X-Admin-Api-Key`.
+- **Solution**: Standardized ALL Admin Dashboard components to use a centralized `adminApi` library.
+- **Backward Compatibility**: Updated `adminApi` to automatically fallback to legacy session keys (`admin_key`, `ppp_admin_api_key`) if the primary key is missing, ensuring zero downtime for active sessions.
+
+### 2. Fix 404 Not Found (Routing Sub-Paths)
+- **Issue**: Specific admin sub-routes (e.g., `/tenants`, `/network/*`) were returning 404s due to router mounting order and path matching.
+- **Solution**: Standardized `server.js` to use consistent router mounting for `/api/admin` and ensured sub-paths are correctly delegated to the internal admin routers.
+- **Mount Points**: Corrected `/api/admin/network` mount point mapping for the network operations module.
+
+### 3. Prevent Javascript Crash (Success Workspace & Tabs)
+- **Issue**: `TypeError: i.map is not a function` occurred when an API returned an error object or non-array instead of an array.
+- **Solution**: Implemented `Array.isArray()` checks and defensive mapping across `NetworkOpsTab`, `MarketplaceTab`, `FinancialOpsTab`, and `OffersTab`.
+
 ## The 12 Layers of PrintPrice
 
 1.  **Experience Layer**: Production App, Dashboards (Admin/Network/CS), Connect Portal.

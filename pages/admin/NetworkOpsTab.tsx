@@ -1,5 +1,5 @@
-// pages/admin/NetworkOpsTab.tsx
 import React, { useState, useEffect } from "react";
+import * as adminApi from "../../lib/adminApi";
 import {
     SignalIcon,
     ArrowPathIcon,
@@ -37,21 +37,15 @@ export const NetworkOpsTab: React.FC = () => {
 
     const fetchData = async () => {
         setLoading(true);
-        const adminKey = localStorage.getItem('ppp_admin_api_key') || '';
-        const authHeader = { 'X-Admin-Api-Key': adminKey };
         const queryParams = new URLSearchParams(filters).toString();
 
         try {
-            const [pRes, oRes, cRes, hRes, rRes] = await Promise.all([
-                fetch(`/api/admin/network/printers?${queryParams}`, { headers: authHeader }),
-                fetch('/api/admin/network/overview', { headers: authHeader }),
-                fetch('/api/admin/network/capacity', { headers: authHeader }),
-                fetch('/api/admin/network/health', { headers: authHeader }),
-                fetch('/api/admin/routing/overview', { headers: authHeader })
-            ]);
-
             const [pData, oData, cData, hData, rData] = await Promise.all([
-                pRes.json(), oRes.json(), cRes.json(), hRes.json(), rRes.json()
+                adminApi.getPrinters(queryParams),
+                adminApi.getNetworkOverview(),
+                adminApi.getCapacity(),
+                adminApi.getHealth(),
+                adminApi.getRoutingOverview()
             ]);
 
             setPrinters(Array.isArray(pData) ? pData : []);

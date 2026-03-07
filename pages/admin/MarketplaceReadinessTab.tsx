@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import * as adminApi from "../../lib/adminApi";
 import {
     BanknotesIcon,
     ArrowPathIcon,
@@ -23,10 +24,8 @@ export const MarketplaceReadinessTab: React.FC = () => {
     const fetchNegotiations = async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/admin/marketplace/ready/negotiations', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` }
-            });
-            setNegotiations(await res.json());
+            const data = await adminApi.getNegotiations();
+            setNegotiations(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error('Failed to fetch negotiations:', err);
         } finally {
@@ -37,10 +36,8 @@ export const MarketplaceReadinessTab: React.FC = () => {
     const fetchNegotiationChain = async (offerId: string) => {
         setSelectedOfferId(offerId);
         try {
-            const res = await fetch(`/api/admin/marketplace/ready/negotiations/${offerId}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` }
-            });
-            setNegotiationChain(await res.json());
+            const data = await adminApi.getNegotiationChain(offerId);
+            setNegotiationChain(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error('Failed to fetch negotiation chain:', err);
         }
@@ -48,11 +45,8 @@ export const MarketplaceReadinessTab: React.FC = () => {
 
     const handleAcceptCounter = async (offerId: string, counterofferId: string) => {
         try {
-            const res = await fetch(`/api/printer-offers/${offerId}/counter/${counterofferId}/accept`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` }
-            });
-            if (res.ok) {
+            const res = await adminApi.acceptCounteroffer(offerId, counterofferId);
+            if (res) {
                 fetchNegotiationChain(offerId);
                 fetchNegotiations();
             }
@@ -93,7 +87,7 @@ export const MarketplaceReadinessTab: React.FC = () => {
                                     <div className="flex justify-between items-start mb-1">
                                         <div className="font-bold text-slate-900 truncate pr-4">{n.printer_name}</div>
                                         <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider ${n.negotiation_status === 'ACCEPTED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                n.negotiation_status === 'COUNTERED' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-blue-50 text-blue-600 border-blue-100'
+                                            n.negotiation_status === 'COUNTERED' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-blue-50 text-blue-600 border-blue-100'
                                             }`}>
                                             {n.negotiation_status}
                                         </span>
@@ -136,14 +130,14 @@ export const MarketplaceReadinessTab: React.FC = () => {
                                                 {co.counterparty === 'PRINTER' ? <UserCircleIcon className="w-6 h-6 text-blue-400" /> : <CpuChipIcon className="w-6 h-6 text-slate-400" />}
                                             </div>
                                             <div className={`p-4 rounded-2xl border ${co.counteroffer_status === 'ACCEPTED' ? 'bg-emerald-50 border-emerald-100' :
-                                                    co.counteroffer_status === 'REJECTED' ? 'bg-red-50 border-red-100' : 'bg-white border-slate-100'
+                                                co.counteroffer_status === 'REJECTED' ? 'bg-red-50 border-red-100' : 'bg-white border-slate-100'
                                                 }`}>
                                                 <div className="flex justify-between items-start mb-2">
                                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                                         {co.counterparty} PROPOSAL
                                                     </span>
                                                     <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider border ${co.counteroffer_status === 'ACCEPTED' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                                                            co.counteroffer_status === 'PENDING' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-500 border-slate-200'
+                                                        co.counteroffer_status === 'PENDING' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-500 border-slate-200'
                                                         }`}>
                                                         {co.counteroffer_status}
                                                     </span>
