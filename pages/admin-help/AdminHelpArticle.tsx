@@ -50,14 +50,18 @@ export const AdminHelpArticle: React.FC = () => {
             {/* Header */}
             <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
                 <div className="flex items-center gap-3">
-                    <a href="/admin/help" className="text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1">
-                        <span>← Search</span>
+                    <a href="/admin" className="text-blue-600 font-bold hover:text-blue-800 transition-colors flex items-center gap-1.5 text-sm">
+                        <span>← Back to Dashboard</span>
                     </a>
-                    <div className="h-6 w-px bg-slate-300 mx-2" />
+                    <div className="h-6 w-px bg-slate-300 mx-1" />
+                    <a href="/admin/help" className="text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1 text-sm">
+                        <span>Search</span>
+                    </a>
+                    <div className="h-6 w-px bg-slate-300 mx-1" />
                     <nav className="text-sm font-medium flex items-center gap-2">
-                        <span className="text-slate-400">{doc.category}</span>
-                        <span className="text-slate-300">/</span>
-                        <span className="text-slate-900 truncate max-w-[200px] md:max-w-md">{doc.title}</span>
+                        <span className="text-slate-400 hidden md:inline">{doc.category}</span>
+                        <span className="text-slate-300 hidden md:inline">/</span>
+                        <span className="text-slate-900 truncate max-w-[150px] md:max-w-md">{doc.title}</span>
                     </nav>
                 </div>
                 {doc.dashboardPath && (

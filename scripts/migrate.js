@@ -1,17 +1,16 @@
-require('dotenv').config();
-const { initSchema } = require('../services/dbSchema');
-const db = require('../services/db');
+
+const { initSchema } = require('./services/dbSchema');
 
 async function runMigration() {
-    console.log('[MIGRATE] Starting database schema migration...');
+    console.log('--- Manual Schema Migration ---');
     const success = await initSchema();
     if (success) {
-        console.log('[MIGRATE] Migration completed successfully.');
+        console.log('Migration completed successfully.');
+        process.exit(0);
     } else {
-        console.error('[MIGRATE] Migration failed.');
+        console.error('Migration failed.');
         process.exit(1);
     }
-    await db.pool.end();
 }
 
 runMigration();

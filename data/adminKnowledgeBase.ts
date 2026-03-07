@@ -21,6 +21,7 @@ export interface HelpDoc {
     relatedIds?: string[];
     lastUpdated?: string;
     appliesTo?: string[];
+    relatedActions?: { label: string, url: string }[];
 }
 
 export const adminHelpDocs: HelpDoc[] = [

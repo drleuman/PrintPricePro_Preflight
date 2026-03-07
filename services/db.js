@@ -10,12 +10,14 @@ try {
     }
 
     const fallbackUrl = 'mysql://root@localhost:3306/preflight_dev';
-    pool = mysql.createPool(dbUrl || fallbackUrl);
-
-    // Add explicit pool settings
-    pool.config.connectionLimit = 20;
-    pool.config.waitForConnections = true;
-    pool.config.enableKeepAlive = true;
+    pool = mysql.createPool({
+        uri: dbUrl || fallbackUrl,
+        connectionLimit: 20,
+        waitForConnections: true,
+        enableKeepAlive: true,
+        // Ensure character set is correct for special characters in password
+        charset: 'utf8mb4'
+    });
 
     pool.getConnection().then((conn) => {
         console.log('[DB-READY] Connected to MySQL');

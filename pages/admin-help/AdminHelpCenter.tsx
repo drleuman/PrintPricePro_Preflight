@@ -7,7 +7,8 @@ import {
     ChartBarIcon,
     CommandLineIcon,
     ExclamationTriangleIcon,
-    BeakerIcon
+    BeakerIcon,
+    ArrowLeftIcon
 } from '@heroicons/react/24/outline';
 import { postHelpAnalytics } from '../../lib/adminApi';
 
@@ -82,6 +83,14 @@ export const AdminHelpCenter: React.FC = () => {
                 </div>
 
                 <nav className="space-y-1">
+                    <a
+                        href="/admin"
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg mb-6 font-medium transition-colors"
+                    >
+                        <ArrowLeftIcon className="w-4 h-4" />
+                        Back to Dashboard
+                    </a>
+
                     <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-3">Categories</div>
                     {categories.map(cat => (
                         <button
@@ -121,9 +130,16 @@ export const AdminHelpCenter: React.FC = () => {
                 </div>
 
                 {/* Results List */}
-                <div className="space-y-4">
-                    <div className="text-sm font-medium text-slate-500 mb-4">
-                        Showing {results.length} result{results.length !== 1 ? 's' : ''}
+                <div className="space-y-4 flex-1">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="text-sm font-medium text-slate-500">
+                            Showing {results.length} result{results.length !== 1 ? 's' : ''}
+                        </div>
+                        {results.length > 0 && (
+                            <div className="text-[10px] font-bold text-blue-500 uppercase tracking-widest bg-blue-50 px-2 py-1 rounded">
+                                Live Data Mode
+                            </div>
+                        )}
                     </div>
 
                     {results.length === 0 ? (
@@ -133,28 +149,33 @@ export const AdminHelpCenter: React.FC = () => {
                             <p className="text-slate-500 mt-1">Try adjusting your search query or category filter.</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
                             {results.map((doc) => (
                                 <a
                                     key={doc.id}
                                     href={`/admin/help?doc=${doc.id}`}
                                     onClick={() => postHelpAnalytics({ event_type: 'search_result_clicked', article_id: doc.id, search_query: searchQuery.trim() })}
-                                    className="block bg-white border border-slate-200 rounded-xl p-5 hover:border-blue-300 hover:shadow-md transition-all group"
+                                    className="block bg-white border border-slate-200 rounded-xl p-5 hover:border-blue-300 hover:shadow-lg transition-all group relative overflow-hidden"
                                 >
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className="bg-slate-50 p-1.5 rounded-md border border-slate-100 group-hover:border-blue-100 group-hover:bg-blue-50 transition-colors">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 group-hover:border-blue-100 group-hover:bg-blue-50 transition-colors">
                                             {getIconForType(doc.type)}
                                         </div>
-                                        <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400">{doc.category}</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400 leading-none mb-1">{doc.category}</span>
+                                            <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">{doc.title}</h3>
+                                        </div>
                                     </div>
-                                    <h3 className="text-lg font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">{doc.title}</h3>
-                                    <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">
+                                    <p className="text-sm text-slate-500 line-clamp-3 leading-relaxed">
                                         {doc.summary}
                                     </p>
-                                    <div className="mt-4 flex flex-wrap gap-1">
+                                    <div className="mt-4 flex flex-wrap gap-1.5">
                                         {doc.keywords.slice(0, 3).map(k => (
-                                            <span key={k} className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded-full font-medium">#{k}</span>
+                                            <span key={k} className="bg-slate-50 text-slate-500 text-[10px] px-2 py-0.5 rounded-md border border-slate-100 font-medium group-hover:bg-white group-hover:border-blue-100 transition-colors">#{k}</span>
                                         ))}
+                                    </div>
+                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <BookOpenIcon className="w-4 h-4 text-blue-400" />
                                     </div>
                                 </a>
                             ))}
