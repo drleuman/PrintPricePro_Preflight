@@ -33,13 +33,18 @@ const pino = require('pino-http')({
 const { checkAllDependencies } = require('./services/dependencyChecker');
 const { initSchema } = require('./services/dbSchema');
 
+// Global state for boot diagnostics
+let startupErrors = [];
+let isReady = false;
+
 const isProd = process.env.NODE_ENV === 'production';
 const shouldAutoMigrate = process.env.AUTO_MIGRATE === '1';
 
-// P0: Mandatory check - Fail fast if missing DATABASE_URL in production
+// P0: Mandatory check - Add to startupErrors if missing DATABASE_URL in production
 if (isProd && !process.env.DATABASE_URL) {
-  console.error('[CRITICAL] DATABASE_URL must be defined in production. Exiting.');
-  process.exit(1);
+  const msg = '[CRITICAL] DATABASE_URL missing in environment.';
+  console.error(msg);
+  startupErrors.push(msg);
 }
 
 // Initialize V2 Workers (BE-005) - Moved to listen callback for production safety
@@ -51,6 +56,7 @@ const initWorkers = () => {
     require('./workers/webhook-worker');
   }
 };
+
 
 // Simple logger without file-system writes to avoid PM2 watch-loop crashes
 const debugLog = (msg) => {
@@ -200,22 +206,28 @@ const v2ReadLimiter = rateLimit({
 // -------- Diagnostic Routes Handlers (P0: Define before usage) --------
 const readyHandler = async (_req, res) => {
   const { ok, deps } = checkAllDependencies();
+
   const response = {
-    status: ok ? 'ok' : 'error',
+    status: (ok && startupErrors.length === 0) ? 'READY' : 'BOOT_ERROR',
     version: require('./package.json').version || '1.0.0',
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'production',
+    startup_errors: startupErrors,
     dependencies: deps,
-    uploadDirWritable: false,
-    time: new Date().toISOString()
+    uploadDirWritable: false
   };
+
   try {
-    if (pdfRouter.uploadDir) {
+    if (pdfRouter.uploadDir && fs.existsSync(pdfRouter.uploadDir)) {
       fs.accessSync(pdfRouter.uploadDir, fs.constants.W_OK);
       response.uploadDirWritable = true;
     }
   } catch (err) {
-    response.status = 'error';
+    response.uploadDirWritable = false;
   }
-  res.status(response.status === 'ok' ? 200 : 503).json(response);
+
+  // Return 503 if not ready, for load balancer awareness
+  res.status(response.status === 'READY' ? 200 : 503).json(response);
 };
 
 const healthDepsHandler = (_req, res) => {
@@ -354,18 +366,24 @@ if (!global.__SERVER_STARTED) {
     debugLog('Verifying system dependencies...');
     const { ok, deps } = checkAllDependencies();
 
-    // P1: Fail fast if critical dependencies are missing in production
-    // Enhanced error reporting with specific missing tools (P2)
+    // P1: Capture missing dependencies
     if (isProd && !ok) {
       const missing = Object.entries(deps)
         .filter(([_, d]) => !d.installed)
         .map(([name]) => name);
-      console.error(`[CRITICAL] Missing required dependencies: ${missing.join(', ')}. Exiting.`);
-      process.exit(1);
+      const msg = `[CRITICAL] Missing dependencies: ${missing.join(', ')}.`;
+      console.error(msg);
+      startupErrors.push(msg);
     }
 
     if (!ok) {
       console.warn('[WARNING] Missing dependencies detected!');
+    }
+
+    // Abort further init if we have critical boot errors (like missing DB_URL)
+    if (startupErrors.length > 0) {
+      debugLog('Postponing schema init/workers due to startup errors.');
+      return;
     }
 
     // P0: Only auto-migrate if explicitly enabled (usually NOT in production)
@@ -377,9 +395,9 @@ if (!global.__SERVER_STARTED) {
           initWorkers();
         })
         .catch(err => {
-          // P1: Fail hard if migration fails (don't start in broken state)
-          console.error('[CRITICAL][DB-SCHEMA-INIT-ERROR]', err);
-          process.exit(1);
+          const msg = `[CRITICAL][DB-SCHEMA-INIT] ${err.message}`;
+          console.error(msg, err);
+          startupErrors.push(msg);
         });
     } else {
       debugLog('Skipping auto-migration (AUTO_MIGRATE=0).');

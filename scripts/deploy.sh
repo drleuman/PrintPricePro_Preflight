@@ -76,6 +76,12 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
     cat /tmp/ppp_ready.json | python3 -m json.tool 2>/dev/null || cat /tmp/ppp_ready.json
     break
   fi
+  if [[ "$HTTP" == "503" ]]; then
+    echo ""
+    echo "  ⚠️  API booting with errors (HTTP 503). Diagnostics received:"
+    cat /tmp/ppp_ready.json | python3 -m json.tool 2>/dev/null || cat /tmp/ppp_ready.json
+    # We don't break yet, maybe it's still initializing, or maybe we want to show logs
+  fi
   echo "  Attempt $i/10 — HTTP $HTTP, retrying in 5s..."
   sleep 5
 done
