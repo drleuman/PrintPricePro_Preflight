@@ -322,7 +322,7 @@ app.get(['/metrics', '/api/metrics'], (_req, res) => {
 // -------- 404 & Error Handlers --------
 
 // API 404
-app.all('/api/*', (req, res) => {
+app.all('/api/{*splat}', (req, res) => {
   console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     error: `Route not found: ${req.originalUrl}`,
@@ -422,7 +422,9 @@ if (!global.__SERVER_STARTED) {
     } else {
       console.error(`[CRITICAL] Server failed to start:`, err);
     }
-    process.exit(1);
+    // We keep this exit because if it can't bind, we are truly dead.
+    // However, we give it a tiny delay to allow logs to flush.
+    setTimeout(() => process.exit(1), 100);
   });
 
   server.timeout = 600000; // 10 minutes
