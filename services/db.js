@@ -5,8 +5,8 @@ try {
     const dbUrl = process.env.DATABASE_URL;
 
     if (!dbUrl && process.env.NODE_ENV === 'production') {
-        console.error('[CRITICAL] DATABASE_URL is not defined. Production server cannot start without database configuration.');
-        process.exit(1);
+        console.error('[CRITICAL] DATABASE_URL is not defined.');
+        // We no longer exit here to allow Resilient Boot to show diagnostics via API
     }
 
     pool = mysql.createPool({
