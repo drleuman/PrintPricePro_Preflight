@@ -86,15 +86,30 @@ if [[ "$HTTP" != "200" ]]; then
   echo "  Last response summary:"
   head -c 500 /tmp/ppp_ready.json 2>/dev/null || echo "No response content"
   echo ""
-  echo "  --- LATEST LOGS (logs/stderr.log) ---"
-  # Try common Passenger log locations
-  [ -f "$APP_DIR/logs/stderr.log" ] && tail -n 50 "$APP_DIR/logs/stderr.log" || echo "No logs found at $APP_DIR/logs/stderr.log"
+  echo "  🔍 --- DEEP DIAGNOSTICS ---"
+  echo "  Current User: $(whoami)"
+  echo "  Node Version: $(node -v)"
+  echo "  Memory free: $(free -m | awk '/^Mem:/{print $4 "MB"}')"
   echo ""
-  echo "  --- LATEST LOGS (logs/production.log) ---"
-  [ -f "$APP_DIR/logs/production.log" ] && tail -n 30 "$APP_DIR/logs/production.log" || true
+  echo "  --- ENVIRONMENT CHECK ---"
+  [ -z "${DATABASE_URL:-}" ] && echo "  ⚠️  DATABASE_URL is NOT set in the shell environment." || echo "  ✅ DATABASE_URL is set."
+  [ -z "${NODE_ENV:-}" ] && echo "  ⚠️  NODE_ENV is NOT set (defaulting to production)." || echo "  ✅ NODE_ENV=$NODE_ENV"
+  echo ""
+  echo "  --- LOG SEARCH (stderr.log) ---"
+  [ -f "$APP_DIR/logs/stderr.log" ] && tail -n 50 "$APP_DIR/logs/stderr.log" || echo "  No logs found at $APP_DIR/logs/stderr.log"
+  echo ""
+  echo "  --- LOG SEARCH (Plesk/Passenger Error Log) ---"
+  # Try common Plesk log locations relative to APP_DIR
+  PLESK_LOGS="$APP_DIR/../../statistics/logs/error_log"
+  if [ -f "$PLESK_LOGS" ]; then
+    echo "  Found Plesk error_log. Last 20 lines:"
+    tail -n 20 "$PLESK_LOGS" | grep -i "passenger\|node\|app" || echo "  (No relevant entries in last 20 lines)"
+  else
+    echo "  No Plesk error_log found at $PLESK_LOGS"
+  fi
   echo ""
   echo "  --- SYSTEM LOGS ---"
-  echo "  Try running: journalctl -u preflight-api.service -n 50 --no-pager"
+  echo "  If you have sudo, try: journalctl -u preflight-api.service -n 50 --no-pager"
   exit 1
 fi
 
