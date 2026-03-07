@@ -23,6 +23,10 @@ const getIconForType = (type: string) => {
 };
 
 export const AdminHelpCenter: React.FC = () => {
+    useEffect(() => {
+        console.log('HelpCenter: Component mounted at', window.location.pathname);
+    }, []);
+
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('All');
     const [results, setResults] = useState<HelpDoc[]>([]);
@@ -33,7 +37,7 @@ export const AdminHelpCenter: React.FC = () => {
     useEffect(() => {
         // Initial data sync
         setResults(adminHelpDocs);
-        console.log('HelpCenter: Initialized with docs:', adminHelpDocs.length);
+        console.log('HelpCenter: Data initialized:', adminHelpDocs.length);
     }, []);
 
     useEffect(() => {
@@ -49,36 +53,19 @@ export const AdminHelpCenter: React.FC = () => {
 
     useEffect(() => {
         let filtered = adminHelpDocs;
-        console.log('HelpCenter: adminHelpDocs count:', adminHelpDocs.length);
-
         if (searchQuery.trim()) {
             filtered = searchHelpDocs(searchQuery);
-            console.log('HelpCenter: Search query active:', searchQuery);
         }
-
         if (selectedCategory && selectedCategory !== 'All') {
             filtered = filtered.filter(doc => doc.category === selectedCategory);
-            console.log('HelpCenter: Category filter active:', selectedCategory);
         }
-
-        console.log(`HelpCenter: Rendering ${filtered.length} docs`);
         setResults(filtered);
     }, [searchQuery, selectedCategory]);
 
-    // Track search query when user stops typing for 1 second
-    useEffect(() => {
-        console.log('HelpCenter: Current results in state:', results.length);
-        if (!searchQuery.trim()) return;
-        const timeout = setTimeout(() => {
-            postHelpAnalytics({ event_type: 'search_query', search_query: searchQuery.trim() }).catch(console.error);
-        }, 1000);
-        return () => clearTimeout(timeout);
-    }, [searchQuery]);
-
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+        <div className="flex flex-col md:flex-row bg-slate-50 min-h-screen w-full">
             {/* Sidebar */}
-            <aside className="w-full md:w-64 bg-white border-r border-slate-200 shrink-0 p-6 flex flex-col h-auto md:h-screen md:sticky md:top-0">
+            <div className="w-full md:w-64 bg-white border-r border-slate-200 shrink-0 p-6">
                 <div className="flex items-center gap-2 mb-8">
                     <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                         <BookOpenIcon className="w-5 h-5 text-white" />
@@ -109,17 +96,16 @@ export const AdminHelpCenter: React.FC = () => {
                         </button>
                     ))}
                 </nav>
-            </aside>
+            </div>
 
-            {/* Main Content */}
-            <main className="flex-1 w-full min-h-screen bg-white md:bg-slate-50 p-6 md:p-10 max-w-7xl flex flex-col border-l border-slate-200">
-                <div className="mb-10">
-                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Help & Documentation</h1>
-                    <p className="text-slate-500 text-lg mt-1">Search the knowledge base for metrics, runbooks, and error guides.</p>
+            {/* Main Content Area */}
+            <div className="flex-1 p-6 md:p-10 max-w-7xl">
+                <div className="mb-8">
+                    <h1 className="text-3xl font-extrabold text-slate-900 leading-tight">Help & Documentation</h1>
                 </div>
 
                 {/* Search Bar */}
-                <div className="relative mb-8 group max-w-3xl">
+                <div className="relative mb-10 group max-w-2xl">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <MagnifyingGlassIcon className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                     </div>
@@ -197,7 +183,7 @@ export const AdminHelpCenter: React.FC = () => {
                         </div>
                     )}
                 </div>
-            </main>
+            </div>
         </div>
     );
 };
