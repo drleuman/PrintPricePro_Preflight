@@ -108,9 +108,14 @@ export const AdminHelpCenter: React.FC = () => {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 p-6 md:p-10 max-w-5xl">
+            <main className="flex-1 w-full min-h-screen bg-white md:bg-slate-50 p-6 md:p-10 max-w-7xl flex flex-col border-l border-slate-200">
+                <div className="mb-10">
+                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Help & Documentation</h1>
+                    <p className="text-slate-500 text-lg mt-1">Search the knowledge base for metrics, runbooks, and error guides.</p>
+                </div>
+
                 {/* Search Bar */}
-                <div className="relative mb-10 group">
+                <div className="relative mb-8 group max-w-3xl">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <MagnifyingGlassIcon className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                     </div>
@@ -118,7 +123,7 @@ export const AdminHelpCenter: React.FC = () => {
                         ref={searchInputRef}
                         type="text"
                         className="block w-full pl-11 pr-14 py-4 border-slate-200 rounded-2xl leading-5 bg-white shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
-                        placeholder="Search for metrics, alerts, errors, controls..."
+                        placeholder="Type to search (e.g. 'roi', 'cmyk', 'error 502')..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -130,52 +135,58 @@ export const AdminHelpCenter: React.FC = () => {
                 </div>
 
                 {/* Results List */}
-                <div className="space-y-4 flex-1">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="text-sm font-medium text-slate-500">
-                            Showing {results.length} result{results.length !== 1 ? 's' : ''}
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div className="text-sm font-semibold text-slate-900 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                            {results.length} article{results.length !== 1 ? 's' : ''} found in {selectedCategory}
                         </div>
                         {results.length > 0 && (
-                            <div className="text-[10px] font-bold text-blue-500 uppercase tracking-widest bg-blue-50 px-2 py-1 rounded">
-                                Live Data Mode
+                            <div className="text-[10px] font-bold text-blue-500 uppercase tracking-widest bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">
+                                Verified Documentation
                             </div>
                         )}
                     </div>
 
                     {results.length === 0 ? (
-                        <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300">
-                            <MagnifyingGlassIcon className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-slate-900">No results found</h3>
-                            <p className="text-slate-500 mt-1">Try adjusting your search query or category filter.</p>
+                        <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300 shadow-sm transition-all">
+                            <MagnifyingGlassIcon className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                            <h3 className="text-xl font-bold text-slate-900">No matching guides found</h3>
+                            <p className="text-slate-500 mt-2 max-w-sm mx-auto">Try common terms like "metrics", "audit", or "fix" to see available help articles.</p>
+                            <button
+                                onClick={() => { setSearchQuery(''); setSelectedCategory('All'); }}
+                                className="mt-6 text-blue-600 font-bold hover:underline"
+                            >
+                                Reset all filters
+                            </button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 pb-20">
                             {results.map((doc) => (
                                 <a
                                     key={doc.id}
                                     href={`/admin/help?doc=${doc.id}`}
                                     onClick={() => postHelpAnalytics({ event_type: 'search_result_clicked', article_id: doc.id, search_query: searchQuery.trim() })}
-                                    className="block bg-white border border-slate-200 rounded-xl p-5 hover:border-blue-300 hover:shadow-lg transition-all group relative overflow-hidden"
+                                    className="block bg-white border border-slate-200 rounded-2xl p-6 hover:border-blue-400 hover:shadow-xl transition-all group relative overflow-hidden"
                                 >
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 group-hover:border-blue-100 group-hover:bg-blue-50 transition-colors">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 group-hover:border-blue-100 group-hover:bg-blue-50 transition-colors">
                                             {getIconForType(doc.type)}
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400 leading-none mb-1">{doc.category}</span>
-                                            <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">{doc.title}</h3>
+                                            <span className="text-[10px] uppercase tracking-widest font-extrabold text-blue-500 leading-none mb-1.5">{doc.category}</span>
+                                            <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">{doc.title}</h3>
                                         </div>
                                     </div>
-                                    <p className="text-sm text-slate-500 line-clamp-3 leading-relaxed">
+                                    <p className="text-sm text-slate-600 line-clamp-3 leading-relaxed">
                                         {doc.summary}
                                     </p>
-                                    <div className="mt-4 flex flex-wrap gap-1.5">
-                                        {doc.keywords.slice(0, 3).map(k => (
-                                            <span key={k} className="bg-slate-50 text-slate-500 text-[10px] px-2 py-0.5 rounded-md border border-slate-100 font-medium group-hover:bg-white group-hover:border-blue-100 transition-colors">#{k}</span>
+                                    <div className="mt-6 flex flex-wrap gap-2">
+                                        {doc.keywords.slice(0, 4).map(k => (
+                                            <span key={k} className="bg-slate-50 text-slate-500 text-[11px] px-2.5 py-1 rounded-lg border border-slate-100 font-bold group-hover:bg-white group-hover:border-blue-100 transition-colors">#{k}</span>
                                         ))}
                                     </div>
-                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <BookOpenIcon className="w-4 h-4 text-blue-400" />
+                                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                                        <ArrowLeftIcon className="w-5 h-5 text-blue-400 rotate-180" />
                                     </div>
                                 </a>
                             ))}
