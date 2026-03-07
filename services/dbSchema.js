@@ -149,6 +149,38 @@ const SCHEMA_QUERIES = [
 );`
 ];
 
+async function patchSchema() {
+    console.log('[DB-SCHEMA] Checking for missing columns (ROI & Infrastructure patches)...');
+
+    const patches = [
+        // Metrics table: ROI columns (Phase 16.5)
+        { table: 'metrics', column: 'hours_saved', query: 'ALTER TABLE metrics ADD COLUMN hours_saved DECIMAL(10,2)' },
+        { table: 'metrics', column: 'value_generated', query: 'ALTER TABLE metrics ADD COLUMN value_generated DECIMAL(10,2)' },
+
+        // Batches table: ROI aggregations (Phase 17.2)
+        { table: 'batches', column: 'risk_score_before_avg', query: 'ALTER TABLE batches ADD COLUMN risk_score_before_avg DECIMAL(5,2)' },
+        { table: 'batches', column: 'risk_score_after_avg', query: 'ALTER TABLE batches ADD COLUMN risk_score_after_avg DECIMAL(5,2)' },
+        { table: 'batches', column: 'hours_saved_total', query: 'ALTER TABLE batches ADD COLUMN hours_saved_total DECIMAL(10,2) DEFAULT 0' },
+        { table: 'batches', column: 'value_generated_total', query: 'ALTER TABLE batches ADD COLUMN value_generated_total DECIMAL(10,2) DEFAULT 0' },
+
+        // Jobs table: Batch & Profile integration (Phase 16 & 17.2)
+        { table: 'jobs', column: 'batch_id', query: 'ALTER TABLE jobs ADD COLUMN batch_id VARCHAR(36)' },
+        { table: 'jobs', column: 'requested_profile', query: 'ALTER TABLE jobs ADD COLUMN requested_profile VARCHAR(100)' },
+    ];
+
+    for (const patch of patches) {
+        try {
+            await db.query(patch.query);
+            console.log(`[DB-PATCH] Added ${patch.column} to ${patch.table}`);
+        } catch (err) {
+            // Ignore "Duplicate column name" error (1060)
+            if (err.code !== 'ER_DUP_FIELDNAME') {
+                console.warn(`[DB-PATCH] Failed to add ${patch.column} to ${patch.table}:`, err.message);
+            }
+        }
+    }
+}
+
 /**
  * Initializes the database schema.
  */
@@ -158,6 +190,10 @@ async function initSchema() {
         for (const query of SCHEMA_QUERIES) {
             await db.query(query);
         }
+
+        // Run patches for existing tables
+        await patchSchema();
+
         // Job Events Timeline
         await db.query(`
             CREATE TABLE IF NOT EXISTS job_events (
