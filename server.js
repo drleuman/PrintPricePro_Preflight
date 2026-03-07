@@ -287,7 +287,7 @@ debugLog('Mounting /api/connect routes...');
 app.use('/api/connect', connectRouter);
 
 debugLog('Mounting /api/admin/connect routes...');
-app.use('/api/admin/connect', connectAdminRouter);
+app.use('/api/admin/network', connectAdminRouter);
 app.use('/api/admin/routing', routingAdminRouter);
 app.use('/api/printer-sync', printerSyncRouter);
 app.use('/api/reservations', reservationsRouter);
@@ -370,7 +370,7 @@ app.get(['/metrics', '/api/metrics'], (_req, res) => {
 // -------- 404 & Error Handlers --------
 
 // API 404
-app.all('/api/{*splat}', (req, res) => {
+app.all('/api/*', (req, res) => {
   console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     error: `Route not found: ${req.originalUrl}`,

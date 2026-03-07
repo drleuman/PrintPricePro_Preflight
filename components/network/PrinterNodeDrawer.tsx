@@ -32,7 +32,7 @@ export const PrinterNodeDrawer: React.FC<Props> = ({ printerId, onClose, onActio
         if (printerId) {
             setLoading(true);
             fetch(`/api/admin/network/printers/${printerId}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` }
+                headers: { 'X-Admin-Api-Key': localStorage.getItem('ppp_admin_api_key') || '' }
             })
                 .then(res => res.json())
                 .then(json => setData(json))
@@ -226,8 +226,8 @@ export const PrinterNodeDrawer: React.FC<Props> = ({ printerId, onClose, onActio
                                         </div>
                                         <div className="text-right">
                                             <div className={`text-[10px] font-black uppercase ${a.assignment_status === 'ACCEPTED' ? 'text-emerald-600' :
-                                                    a.assignment_status === 'REJECTED' ? 'text-rose-500' :
-                                                        'text-amber-500'
+                                                a.assignment_status === 'REJECTED' ? 'text-rose-500' :
+                                                    'text-amber-500'
                                                 }`}>
                                                 {a.assignment_status}
                                             </div>

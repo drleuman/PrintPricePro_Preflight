@@ -37,7 +37,8 @@ export const NetworkOpsTab: React.FC = () => {
 
     const fetchData = async () => {
         setLoading(true);
-        const authHeader = { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` };
+        const adminKey = localStorage.getItem('ppp_admin_api_key') || '';
+        const authHeader = { 'X-Admin-Api-Key': adminKey };
         const queryParams = new URLSearchParams(filters).toString();
 
         try {
@@ -53,11 +54,11 @@ export const NetworkOpsTab: React.FC = () => {
                 pRes.json(), oRes.json(), cRes.json(), hRes.json(), rRes.json()
             ]);
 
-            setPrinters(pData);
-            setOverview(oData);
-            setCapacity(cData);
-            setHealth(hData);
-            setRoutingStats(rData);
+            setPrinters(Array.isArray(pData) ? pData : []);
+            setOverview(oData && !oData.error ? oData : null);
+            setCapacity(Array.isArray(cData) ? cData : []);
+            setHealth(Array.isArray(hData) ? hData : []);
+            setRoutingStats(rData && !rData.error ? rData : null);
         } catch (err) {
             console.error('Failed to fetch network ops data', err);
         } finally {
@@ -73,7 +74,7 @@ export const NetworkOpsTab: React.FC = () => {
         try {
             await fetch(`/api/admin/network/printers/${id}/${action}`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_key')}` }
+                headers: { 'X-Admin-Api-Key': localStorage.getItem('ppp_admin_api_key') || '' }
             });
             fetchData();
         } catch (err) {
