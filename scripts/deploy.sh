@@ -13,6 +13,9 @@ PLESK_GROUP="psacln"
 API_READY="https://preflight.printprice.pro/api/ready"
 SKIP_BUILD="${1:-}"
 
+# Check if we were just updated by git-pull in a previous execution of this script
+RESTARTED_BY_SELF="${2:-}"
+
 cd "$APP_DIR"
 
 echo ""
@@ -24,8 +27,15 @@ echo ""
 # ── 1. Git sync ──────────────────────────────────────────────
 echo "▶ [1/6] Syncing with origin/main..."
 git fetch --all
+OLD_HEAD=$(git rev-parse HEAD)
 git reset --hard origin/main
+NEW_HEAD=$(git rev-parse HEAD)
 echo "  HEAD: $(git log -1 --oneline)"
+
+if [[ "$OLD_HEAD" != "$NEW_HEAD" ]] && [[ "$RESTARTED_BY_SELF" != "--restarted" ]]; then
+  echo "  💎 Deploy script updated. Relaunching..."
+  exec bash "$0" "$SKIP_BUILD" "--restarted"
+fi
 
 # ── 2. Dependencies ──────────────────────────────────────────
 echo "▶ [2/6] Installing dependencies (npm ci — full, for build)..."
@@ -56,26 +66,35 @@ sleep 5
 # ── 6. Health check ──────────────────────────────────────────
 echo "▶ [6/6] Verifying API health..."
 rm -f /tmp/ppp_ready.json # Clear stale check
-for i in 1 2 3 4 5 6 7 8; do
+for i in 1 2 3 4 5 6 7 8 9 10; do
   # Use -k/--insecure because loopback SSL on some servers fails
-  HTTP=$(curl -s -k -o /tmp/ppp_ready.json -w "%{http_code}" "$API_READY" 2>/dev/null || echo "000")
+  # Use --max-time to avoid hanging curl
+  HTTP=$(curl -s -k --max-time 10 -o /tmp/ppp_ready.json -w "%{http_code}" "$API_READY" 2>/dev/null || echo "000")
   if [[ "$HTTP" == "200" ]]; then
     echo ""
     echo "  ✅ API ready (HTTP 200)"
     cat /tmp/ppp_ready.json | python3 -m json.tool 2>/dev/null || cat /tmp/ppp_ready.json
     break
   fi
-  echo "  Attempt $i/8 — HTTP $HTTP, retrying in 4s..."
-  sleep 4
+  echo "  Attempt $i/10 — HTTP $HTTP, retrying in 5s..."
+  sleep 5
 done
 
 if [[ "$HTTP" != "200" ]]; then
   echo ""
-  echo "  ❌ Health check failed after 5 attempts (HTTP $HTTP)"
-  echo "  Last response:"
-  cat /tmp/ppp_ready.json 2>/dev/null || true
+  echo "  ❌ Health check failed after 10 attempts (HTTP $HTTP)"
+  echo "  Last response summary:"
+  head -c 500 /tmp/ppp_ready.json 2>/dev/null || echo "No response content"
   echo ""
-  echo "  Run: journalctl -u preflight-api.service -n 20 --no-pager"
+  echo "  --- LATEST LOGS (logs/stderr.log) ---"
+  # Try common Passenger log locations
+  [ -f "$APP_DIR/logs/stderr.log" ] && tail -n 50 "$APP_DIR/logs/stderr.log" || echo "No logs found at $APP_DIR/logs/stderr.log"
+  echo ""
+  echo "  --- LATEST LOGS (logs/production.log) ---"
+  [ -f "$APP_DIR/logs/production.log" ] && tail -n 30 "$APP_DIR/logs/production.log" || true
+  echo ""
+  echo "  --- SYSTEM LOGS ---"
+  echo "  Try running: journalctl -u preflight-api.service -n 50 --no-pager"
   exit 1
 fi
 
