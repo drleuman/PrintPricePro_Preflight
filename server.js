@@ -369,7 +369,7 @@ app.get(['/metrics', '/api/metrics'], (_req, res) => {
 app.all(/^\/api\/.*/, (req, res) => {
   console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
-    error: `[V2-ADMIN-REV-2.1.3] Route not found: ${req.originalUrl}`,
+    error: `[V2-ADMIN] Route not found: ${req.originalUrl}`,
     method: req.method,
     path: req.path
   });
