@@ -10,7 +10,7 @@ const negotiationService = require('../services/negotiationService');
  */
 router.get('/', async (req, res) => {
     try {
-        const printerId = req.printerId; // Provided by auth middleware
+        const printerId = req.printer.id; // Provided by auth middleware
         const { rows } = await db.query(`
             SELECT po.*, j.original_name as job_name
             FROM production_offers po

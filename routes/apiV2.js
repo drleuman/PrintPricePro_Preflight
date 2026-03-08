@@ -38,7 +38,7 @@ const v2ReadLimiter = rateLimit({
  * POST /api/v2/jobs
  * Standardized entry for external systems.
  */
-router.post('/jobs', v2UploadLimiter, upload.single('file'), async (req, res) => {
+router.post('/', v2UploadLimiter, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No PDF file provided in "file" field.' });
@@ -92,7 +92,7 @@ router.post('/jobs', v2UploadLimiter, upload.single('file'), async (req, res) =>
  * GET /api/v2/jobs/:id
  * Detailed job status, including ROI metrics if completed.
  */
-router.get('/jobs/:id', v2ReadLimiter, async (req, res) => {
+router.get('/:id', v2ReadLimiter, async (req, res) => {
     try {
         const { rows } = await db.query(`
             SELECT j.*, m.risk_score_before, m.risk_score_after, m.hours_saved, m.value_generated, r.asset_id as fixed_asset_id
@@ -138,7 +138,7 @@ router.get('/jobs/:id', v2ReadLimiter, async (req, res) => {
  * GET /api/v2/jobs
  * List recent jobs for the tenant.
  */
-router.get('/jobs', v2ReadLimiter, async (req, res) => {
+router.get('/', v2ReadLimiter, async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit || 20), 100);
         const { rows } = await db.query(`
@@ -169,7 +169,7 @@ router.get('/jobs', v2ReadLimiter, async (req, res) => {
  * POST /api/v2/jobs/:id/routing
  * Get routing recommendations for a specific job.
  */
-router.post('/jobs/:id/routing', v2ReadLimiter, async (req, res) => {
+router.post('/:id/routing', v2ReadLimiter, async (req, res) => {
     try {
         const jobId = req.params.id;
         const tenantId = req.tenant.id;

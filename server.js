@@ -65,17 +65,6 @@ if (isProd && !process.env.DATABASE_URL) {
   startupErrors.push(msg);
 }
 
-// Initialize V2 Workers (BE-005) - Moved to listen callback for production safety
-const initWorkers = () => {
-  if (process.env.NODE_ENV !== 'test') {
-    debugLog('Starting background workers...');
-    require('./workers/v2-worker');
-    require('./workers/batch-orchestrator');
-    require('./workers/webhook-worker');
-  }
-};
-
-
 // Simple logger without file-system writes to avoid PM2 watch-loop crashes
 const debugLog = (msg) => {
   console.log(`[${new Date().toISOString()}] ${msg}`);
@@ -250,12 +239,12 @@ const readyHandler = async (_req, res) => {
   res.status(response.status === 'READY' ? 200 : 503).json(response);
 };
 
-// diagnosticLimiter relocated to specific endpoints
+const healthDepsHandler = (_req, res) => {
+  const result = checkAllDependencies();
+  res.status(result.ok ? 200 : 503).json(result);
+};
 
-// Diagnostic Routes (No limiter for /ready to ensure health-checks pass during startup load)
-app.get(['/healthz', '/api/healthz'], (_req, res) => res.status(200).send('ok'));
-app.get(['/ready', '/api/ready'], readyHandler);
-app.get(['/health/deps', '/api/health/deps'], healthDepsHandler);
+// -------- Routes --------
 
 app.use(['/version', '/api/version', '/metrics', '/api/metrics'], diagnosticLimiter);
 app.use('/api/convert', convertLimiter);
@@ -285,15 +274,20 @@ app.use('/api/connect', connectRouter);
 // Public/Open Network Routes (Non-admin)
 app.use('/api/printer-sync', printerSyncRouter);
 app.use('/api/reservations', reservationsRouter);
-app.use('/api/printer-dispatch', printerDispatchRouter);
+app.use('/api/printer-dispatch', printerAuth, printerDispatchRouter);
 
-// Start Background Workers
-if (process.env.NODE_ENV !== 'test') {
-  require('./workers/offer-expiry-worker');
-  require('./workers/marketplace-expiry-worker');
-}
+const initWorkers = () => {
+  if (process.env.NODE_ENV !== 'test') {
+    debugLog('Starting background workers...');
+    require('./workers/v2-worker');
+    require('./workers/batch-orchestrator');
+    require('./workers/webhook-worker');
+    require('./workers/offer-expiry-worker');
+    require('./workers/marketplace-expiry-worker');
+    settlementWorker.start();
+  }
+};
 
-// Start autonomous workers
 // -------- Static Files --------
 const staticPath = path.resolve(__dirname, 'dist');
 debugLog(`Serving static files from: ${staticPath}`);
@@ -314,8 +308,8 @@ app.use(
   })
 );
 
-settlementWorker.start();
-app.use('/api/printer-offers', printerOffersRouter);
+const printerAuth = require('./middleware/printerAuth');
+app.use('/api/printer-offers', printerAuth, printerOffersRouter);
 
 // -------- 404 & Error Handlers --------
 
@@ -324,7 +318,11 @@ const requireAdmin = require('./middleware/requireAdmin');
 
 // Debug Logger for Admin Routes
 const adminLog = (req, res, next) => {
-  console.log(`[V2-ADMIN-ROUTE-HIT][${req.id || '-'}] ${req.method} ${req.originalUrl}`);
+  console.log(`[V2-ADMIN-ROUTE-HIT][${req.id || '-'}] ${req.method} ${req.originalUrl}`, {
+    hasAuthorization: !!req.headers.authorization,
+    hasAdminKey: !!req.headers['x-admin-api-key'],
+    origin: req.headers.origin || null,
+  });
   next();
 };
 
