@@ -286,24 +286,29 @@ app.use('/api/v2/analytics', analyticsV2Router);
 debugLog('Mounting /api/connect routes...');
 app.use('/api/connect', connectRouter);
 
-// --- Unified Admin API Registration (Flattened for reliable resolution) ---
+// --- Unified Admin API Registration ---
 const requireAdmin = require('./middleware/requireAdmin');
 
-// Mount Sub-Routers directly to the application (Explicit ordering)
-app.use('/api/admin/network', requireAdmin, connectAdminRouter);
-app.use('/api/admin/routing/economic', requireAdmin, economicRoutingAdminRouter);
-app.use('/api/admin/routing', requireAdmin, routingAdminRouter);
-app.use('/api/admin/pricing', requireAdmin, pricingAdminRouter);
-app.use('/api/admin/offers', requireAdmin, offersAdminRouter);
-app.use('/api/admin/marketplace/ready', requireAdmin, negotiationAdminRouter);
-app.use('/api/admin/marketplace', requireAdmin, marketplaceAdminRouter);
-app.use('/api/admin/commercial', requireAdmin, commercialCommitmentAdminRouter);
-app.use('/api/admin/autonomy', requireAdmin, autonomyAdminRouter);
-app.use('/api/admin/finance', requireAdmin, autonomyFinanceRouter);
-app.use('/api/admin/control', requireAdmin, adminControlRoutes);
+const adminMasterRouter = express.Router();
+adminMasterRouter.use(requireAdmin);
 
-// Main Admin Routes (metrics, tenants, queue, etc. - mounted at the root of /api/admin)
-app.use('/api/admin', requireAdmin, adminRoutes);
+// Mount Sub-Routers to the master admin router
+adminMasterRouter.use('/network', connectAdminRouter);
+adminMasterRouter.use('/routing/economic', economicRoutingAdminRouter);
+adminMasterRouter.use('/routing', routingAdminRouter);
+adminMasterRouter.use('/pricing', pricingAdminRouter);
+adminMasterRouter.use('/offers', offersAdminRouter);
+adminMasterRouter.use('/marketplace/ready', negotiationAdminRouter);
+adminMasterRouter.use('/marketplace', marketplaceAdminRouter);
+adminMasterRouter.use('/commercial', commercialCommitmentAdminRouter);
+adminMasterRouter.use('/autonomy', autonomyAdminRouter);
+adminMasterRouter.use('/finance', autonomyFinanceRouter);
+adminMasterRouter.use('/control', adminControlRoutes);
+
+// Root admin routes (metrics, tenants, queue, etc)
+adminMasterRouter.use('/', adminRoutes);
+
+app.use('/api/admin', adminMasterRouter);
 
 // Public/Open Network Routes (Non-admin)
 app.use('/api/printer-sync', printerSyncRouter);
@@ -375,7 +380,7 @@ app.get(['/metrics', '/api/metrics'], (_req, res) => {
 app.all('/api/*', (req, res) => {
   console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
-    error: `Route not found: ${req.originalUrl}`,
+    error: `[V2-ADMIN] Route not found: ${req.originalUrl}`,
     method: req.method,
     path: req.path
   });
