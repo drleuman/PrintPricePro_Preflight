@@ -8,7 +8,7 @@ console.log('DB_URL set:', !!process.env.DATABASE_URL);
 
 try {
     console.log('Attempting to require server.js...');
-    const app = require('./server');
+    const app = require('../server');
     console.log('server.js required successfully.');
 
     const port = process.env.TEST_PORT || 3999;
