@@ -8,6 +8,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 console.log(`[BOOTSTRAP] Starting PrintPrice Engine at ${new Date().toISOString()}`);
+console.log(`[BOOTSTRAP] Build Hash: ${process.env.GIT_COMMIT || 'v2.1.0-agg-fix'}`);
 const fs = require('fs');
 const WebSocket = require('ws');
 const cors = require('cors');
@@ -193,6 +194,18 @@ app.use((req, res, next) => {
   next();
 });
 
+// --- CRITICAL DEPLOYMENT HEALTH CHECKS (Priority #1) ---
+app.use((req, res, next) => {
+  if (req.path === '/api/ready' || req.path === '/health') {
+    debugLog(`[HEALTH-CHECK-HIT] ${req.method} ${req.path} from ${req.ip}`);
+  }
+  next();
+});
+
+app.get('/api/ready', readyHandler);
+app.get('/health', readyHandler);
+app.get('/api/health/deps', healthDepsHandler);
+
 // 3) Per-endpoint rate limits
 const diagnosticLimiter = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false });
 const convertLimiter = rateLimit({ windowMs: 60_000, max: 5000, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many conversion requests, try again in a minute.' } });
@@ -282,9 +295,6 @@ debugLog('Mounting /api/connect routes...');
 app.use('/api/connect', connectRouter);
 
 // Health & Readiness Endpoints (Consolidated for LB and Deploy Health Checks)
-app.get(['/api/ready', '/health'], readyHandler);
-app.get('/api/health/deps', healthDepsHandler);
-
 // Public/Open Network Routes (Non-admin)
 app.use('/api/printer-sync', printerSyncRouter);
 app.use('/api/reservations', reservationsRouter);
