@@ -1,8 +1,12 @@
+require('dotenv').config();
 const { initSchema } = require('../services/dbSchema');
 const db = require('../services/db');
 
 async function run() {
     console.log('--- PRODUCTION DATABASE MIGRATION START ---');
+    console.log('CWD:', process.cwd());
+    console.log('DB_URL present:', !!process.env.DATABASE_URL);
+
     try {
         const success = await initSchema();
         if (success) {
