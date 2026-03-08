@@ -19,6 +19,11 @@ const autonomyAdminRouter = require('./autonomyAdmin');
 const autonomyFinanceRouter = require('./autonomyFinanceAdmin');
 const adminControlRoutes = require('./adminControl');
 
+router.use((req, res, next) => {
+  console.log(`[DEBUG-ADMIN-ROUTER] Incoming: ${req.method} ${req.originalUrl} | BasePath: ${req.baseUrl} | Path: ${req.path}`);
+  next();
+});
+
 function rangeToInterval(range) {
   // soporta: 24h, 7d, 30d
   switch (range) {
