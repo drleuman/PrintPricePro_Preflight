@@ -3,7 +3,7 @@ const crypto = require('crypto');
 
 // Importing subsystems (placeholders for real services)
 // We assume these services exist with the correct interfaces from previous phases
-const preflightService = require('./preflightV2'); // Analysis & Fix
+// const preflightService = require('./preflightV2'); // Analysis & Fix (Coming Soon)
 const routingEngine = require('./routingRecommendationService'); // candidates
 const economicRoutingService = require('./economicRoutingService'); // scoring
 const productionOfferService = require('./productionOfferService'); // offer creation
@@ -11,7 +11,7 @@ const negotiationService = require('./negotiationService'); // counteroffers
 const commercialCommitmentService = require('./commercialCommitmentService'); // ledger
 const settlementReadinessService = require('./settlementReadinessService'); // payout prep
 const financialLedgerService = require('./financialLedgerService');
-const dispatchService = require('./printerDispatchService'); // assignment
+const dispatchService = require('./dispatchService'); // assignment
 
 const PIPELINE_STATES = {
     JOB_RECEIVED: 'JOB_RECEIVED',
