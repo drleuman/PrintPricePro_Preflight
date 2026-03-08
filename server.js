@@ -250,12 +250,36 @@ const readyHandler = async (_req, res) => {
   res.status(response.status === 'READY' ? 200 : 503).json(response);
 };
 
-const healthDepsHandler = (_req, res) => {
-  const result = checkAllDependencies();
-  res.status(result.ok ? 200 : 503).json(result);
+// -------- Routes --------
+
+// --- 1. Unified Admin API Registration (P0: Security & Stability) ---
+const requireAdmin = require('./middleware/requireAdmin');
+
+// Debug Logger for Admin Routes
+const adminLog = (req, res, next) => {
+  console.log(`[V2-ADMIN-ROUTE-HIT][${req.id || '-'}] ${req.method} ${req.originalUrl}`);
+  next();
 };
 
-// -------- Routes --------
+// Mount each admin sub-router directly with explicit prefixes to avoid ambiguity in Express 5
+app.get('/api/admin/debug-routing', requireAdmin, (req, res) => res.json({ ok: true, version: 'V2-ADMIN-FLATTENED' }));
+
+app.use('/api/admin/network', adminLog, requireAdmin, connectAdminRouter);
+app.use('/api/admin/routing/economic', adminLog, requireAdmin, economicRoutingAdminRouter);
+app.use('/api/admin/routing', adminLog, requireAdmin, routingAdminRouter);
+app.use('/api/admin/pricing', adminLog, requireAdmin, pricingAdminRouter);
+app.use('/api/admin/offers', adminLog, requireAdmin, offersAdminRouter);
+app.use('/api/admin/marketplace/ready', adminLog, requireAdmin, negotiationAdminRouter);
+app.use('/api/admin/marketplace', adminLog, requireAdmin, marketplaceAdminRouter);
+app.use('/api/admin/commercial', adminLog, requireAdmin, commercialCommitmentAdminRouter);
+app.use('/api/admin/autonomy', adminLog, requireAdmin, autonomyAdminRouter);
+app.use('/api/admin/finance', adminLog, requireAdmin, autonomyFinanceRouter);
+app.use('/api/admin/control', adminLog, requireAdmin, adminControlRoutes);
+
+// Root admin routes (metrics, tenants, queue, etc) - must be checked AFTER specific prefixes
+app.use('/api/admin', adminLog, requireAdmin, adminRoutes);
+
+// --- 2. Other API Routes ---
 app.use('/api/gemini-proxy', apiKeyMiddleware, proxyRouter);
 
 // Diagnostic Routes (No limiter for /ready to ensure health-checks pass during startup load)
@@ -286,29 +310,7 @@ app.use('/api/v2/analytics', analyticsV2Router);
 debugLog('Mounting /api/connect routes...');
 app.use('/api/connect', connectRouter);
 
-// --- Unified Admin API Registration ---
-const requireAdmin = require('./middleware/requireAdmin');
-
-const adminMasterRouter = express.Router();
-adminMasterRouter.use(requireAdmin);
-
-// Mount Sub-Routers to the master admin router
-adminMasterRouter.use('/network', connectAdminRouter);
-adminMasterRouter.use('/routing/economic', economicRoutingAdminRouter);
-adminMasterRouter.use('/routing', routingAdminRouter);
-adminMasterRouter.use('/pricing', pricingAdminRouter);
-adminMasterRouter.use('/offers', offersAdminRouter);
-adminMasterRouter.use('/marketplace/ready', negotiationAdminRouter);
-adminMasterRouter.use('/marketplace', marketplaceAdminRouter);
-adminMasterRouter.use('/commercial', commercialCommitmentAdminRouter);
-adminMasterRouter.use('/autonomy', autonomyAdminRouter);
-adminMasterRouter.use('/finance', autonomyFinanceRouter);
-adminMasterRouter.use('/control', adminControlRoutes);
-
-// Root admin routes (metrics, tenants, queue, etc)
-adminMasterRouter.use('/', adminRoutes);
-
-app.use('/api/admin', adminMasterRouter);
+// diagnosticLimiter relocated to specific endpoints to prevent double-wrapping
 
 // Public/Open Network Routes (Non-admin)
 app.use('/api/printer-sync', printerSyncRouter);
