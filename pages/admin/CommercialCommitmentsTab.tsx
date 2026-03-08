@@ -79,12 +79,15 @@ export const CommercialCommitmentsTab: React.FC = () => {
                 </button>
             </div>
 
-            {/* Metrics Ribbon */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {/* Metrics Ribbon - Enhanced Density */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
                 {stats.map((s, i) => (
-                    <div key={i} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{s.settlement_readiness_status.replace(/_/g, ' ')}</div>
-                        <div className="text-2xl font-black text-slate-900">{s.count}</div>
+                    <div key={i} className="bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm relative group hover:border-indigo-300 transition-all">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-slate-100 group-hover:bg-indigo-500 transition-colors" />
+                        <div className="p-4">
+                            <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 truncate">{s.settlement_readiness_status.replace(/_/g, ' ')}</div>
+                            <div className="text-xl font-black text-slate-900">{s.count}</div>
+                        </div>
                     </div>
                 ))}
             </div>
@@ -115,7 +118,7 @@ export const CommercialCommitmentsTab: React.FC = () => {
                                             <div className="text-[10px] text-slate-400 font-medium">#{c.job_id.slice(0, 8)}</div>
                                         </td>
                                         <td className="px-4 py-4 text-xs font-bold text-slate-600 truncate max-w-[120px]">{c.printer_name}</td>
-                                        <td className="px-4 py-4 text-xs font-black text-slate-900">{c.committed_price} {c.currency}</td>
+                                        <td className="px-4 py-4 text-xs font-black text-slate-900">{c.committed_price} €</td>
                                         <td className="px-4 py-4">
                                             <span className={`text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-wider ${c.commercial_commitment_status === 'LOCKED' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
                                                 c.commercial_commitment_status === 'VOIDED' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-slate-50 text-slate-600 border-slate-100'
@@ -158,11 +161,11 @@ export const CommercialCommitmentsTab: React.FC = () => {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                                             <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mb-1">Gross Value</div>
-                                            <div className="text-lg font-black text-slate-900">{selectedCommitment.committed_price} {selectedCommitment.currency}</div>
+                                            <div className="text-lg font-black text-slate-900">{selectedCommitment.committed_price} €</div>
                                         </div>
                                         <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                                             <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mb-1">Commission</div>
-                                            <div className="text-lg font-black text-emerald-600">+{selectedCommitment.committed_margin} {selectedCommitment.currency}</div>
+                                            <div className="text-lg font-black text-emerald-600">+{selectedCommitment.committed_margin} €</div>
                                         </div>
                                     </div>
 
@@ -173,11 +176,11 @@ export const CommercialCommitmentsTab: React.FC = () => {
                                             </div>
                                             <div className="flex justify-between items-center mb-2">
                                                 <span className="text-xs text-slate-600 font-medium">Payable to Printer</span>
-                                                <span className="text-sm font-black text-slate-900">{selectedCommitment.settlement_placeholder.payable_to_printer} {selectedCommitment.currency}</span>
+                                                <span className="text-sm font-black text-slate-900">{selectedCommitment.settlement_placeholder.payable_to_printer} €</span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-xs text-slate-600 font-medium">Platform Take</span>
-                                                <span className="text-sm font-black text-indigo-600">{selectedCommitment.settlement_placeholder.platform_fee} {selectedCommitment.currency}</span>
+                                                <span className="text-sm font-black text-indigo-600">{selectedCommitment.settlement_placeholder.platform_fee} €</span>
                                             </div>
                                         </div>
                                     )}

@@ -17,29 +17,64 @@ export const RiskMeter: React.FC<RiskMeterProps> = ({ score }) => {
         return 'CRITICAL RISK';
     };
 
+    // Gauge calculations
+    const radius = 36;
+    const circumference = 2 * Math.PI * radius;
+    // We only show 75% of the circle as a gauge
+    const arcLength = circumference * 0.75;
+    const offset = arcLength - (score / 100) * arcLength;
+
     return (
-        <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-end">
-                <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">Printability Risk</span>
-                <span className="text-xs font-black" style={{ color: getColor() }}>{getLabel()}</span>
+        <div className="flex flex-col items-center gap-4 p-4 glass rounded-3xl border border-white/20 shadow-xl">
+            <div className="relative w-32 h-32">
+                <svg className="w-full h-full -rotate-[225deg]" viewBox="0 0 100 100">
+                    {/* Background Track */}
+                    <circle
+                        cx="50"
+                        cy="50"
+                        r={radius}
+                        fill="none"
+                        stroke="rgba(255,255,255,0.05)"
+                        strokeWidth="8"
+                        strokeDasharray={`${arcLength} ${circumference}`}
+                        strokeLinecap="round"
+                    />
+                    {/* Progress Arc */}
+                    <circle
+                        cx="50"
+                        cy="50"
+                        r={radius}
+                        fill="none"
+                        stroke={getColor()}
+                        strokeWidth="8"
+                        strokeDasharray={`${arcLength} ${circumference}`}
+                        strokeDashoffset={offset}
+                        strokeLinecap="round"
+                        className="transition-all duration-1000 ease-out"
+                        style={{
+                            filter: `drop-shadow(0 0 8px ${getColor()}44)`
+                        }}
+                    />
+                </svg>
+                {/* Center Content */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center translate-y-2">
+                    <span className="text-2xl font-black text-slate-900 leading-none">{score}</span>
+                    <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase mt-1">Score</span>
+                </div>
             </div>
-            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                <div
-                    className="h-full transition-all duration-1000 ease-out"
-                    style={{
-                        width: `${Math.max(5, score)}%`,
-                        backgroundColor: getColor(),
-                        boxShadow: `0 0 10px ${getColor()}44`
-                    }}
-                />
+
+            <div className="text-center">
+                <div className="text-xs font-black tracking-[0.2em] mb-1" style={{ color: getColor() }}>
+                    {getLabel()}
+                </div>
+                <p className="text-[10px] text-slate-500 font-medium max-w-[140px] leading-relaxed mx-auto">
+                    {score < 20
+                        ? 'Document adheres to strict production standards.'
+                        : score < 60
+                            ? 'Minor issues detected. AI-Fix recommended for stability.'
+                            : 'Significant rendering risks detected. Review required.'}
+                </p>
             </div>
-            <p className="text-[9px] text-slate-400 font-medium">
-                {score < 20
-                    ? 'Document adheres to strict production standards.'
-                    : score < 60
-                        ? 'Minor issues detected. AI-Fix recommended for stability.'
-                        : 'Significant rendering risks detected. Review required.'}
-            </p>
         </div>
     );
 };

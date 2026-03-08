@@ -535,7 +535,7 @@ export default function App() {
     setResult(null);
     setSelectedIssue(null);
 
-    setProcessMessage('AutoFix Agent (PRO): Orchestrating PDF transformations...');
+    setProcessMessage('AI Magic Fix: Orchestrating automated PDF transformations...');
     setProcessStage('preflight');
     try {
       const { blob, report, jobId, ldm } = await autoFixServer(file, {
@@ -614,7 +614,7 @@ export default function App() {
       updateFileState(newFile, { name: newName, size: blob.size, type: 'application/pdf' });
 
       setTimeout(() => {
-        setProcessMessage('Re-analyzing AutoFixed PDF...');
+        setProcessMessage('Re-analyzing Magic Fixed PDF...');
         setProcessStage('verify');
         const config = {
           paperType: selectedProfile.includes('uncoated') ? 'uncoated' : 'coated' as 'uncoated' | 'coated',

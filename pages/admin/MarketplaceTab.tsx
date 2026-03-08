@@ -122,55 +122,50 @@ export const MarketplaceTab: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Comparison Grid */}
-                                <div className="space-y-3">
-                                    <div className="grid grid-cols-12 gap-4 px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        <div className="col-span-4">Printer Node</div>
-                                        <div className="col-span-2 text-center">Score</div>
-                                        <div className="col-span-2 text-center">Price / Margin</div>
-                                        <div className="col-span-2 text-center">Lead Time</div>
-                                        <div className="col-span-2"></div>
-                                    </div>
+                                {/* Comparison Grid - Dense Multi-column */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {selectedSession.offers.map((o: any, i: number) => (
-                                        <div key={i} className={`grid grid-cols-12 gap-4 p-4 rounded-2xl border transition-all ${o.offer_selected ? 'bg-emerald-50/50 border-emerald-200 ring-2 ring-emerald-500/10' : 'bg-white border-slate-100 hover:border-slate-300'
+                                        <div key={i} className={`p-4 rounded-2xl border transition-all ${o.offer_selected ? 'bg-emerald-50/50 border-emerald-200 ring-2 ring-emerald-500/10' : 'bg-white border-slate-100 hover:border-slate-300 shadow-sm'
                                             }`}>
-                                            <div className="col-span-4 flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 font-black text-xs">
-                                                    #{i + 1}
-                                                </div>
-                                                <div>
-                                                    <div className="font-bold text-slate-900 text-sm tracking-tight">{o.printer_name}</div>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        {i === 0 && <span className="bg-blue-100 text-blue-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter flex items-center gap-1"><ShieldCheckIcon className="w-2.5 h-2.5" /> Best Tech</span>}
-                                                        {o.offer_selected && <span className="bg-emerald-100 text-emerald-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter flex items-center gap-1"><BoltIcon className="w-2.5 h-2.5" /> Selected</span>}
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center font-black text-xs shadow-lg">
+                                                        #{i + 1}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-black text-slate-900 text-sm tracking-tight">{o.printer_name}</div>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            {i === 0 && <span className="bg-blue-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter flex items-center gap-1 shadow-sm"><ShieldCheckIcon className="w-2.5 h-2.5" /> Best Choice</span>}
+                                                            {o.offer_selected && <span className="bg-emerald-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter flex items-center gap-1 shadow-sm"><BoltIcon className="w-2.5 h-2.5" /> Active</span>}
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                <div className="text-right">
+                                                    <div className="text-lg font-black text-slate-900 leading-none">{o.suggested_price} €</div>
+                                                    <div className="text-[9px] text-emerald-600 font-black mt-1 uppercase tracking-tighter">+{o.margin_pct}% Pargin</div>
+                                                </div>
                                             </div>
-                                            <div className="col-span-2 flex flex-col items-center justify-center">
-                                                <div className="text-lg font-black text-slate-900 leading-none">{Math.round(o.offer_priority_score)}</div>
-                                                <div className="text-[9px] text-slate-400 font-bold uppercase mt-1">Market Prio</div>
+
+                                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                                <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                                    <div className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">Lead Time</div>
+                                                    <div className="font-black text-slate-900 text-xs">{o.lead_time_days} Work Days</div>
+                                                </div>
+                                                <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                                    <div className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">Market Score</div>
+                                                    <div className="font-black text-slate-900 text-xs">{Math.round(o.offer_priority_score)} / 100</div>
+                                                </div>
                                             </div>
-                                            <div className="col-span-2 flex flex-col items-center justify-center">
-                                                <div className="font-mono text-sm font-bold text-slate-700">{o.suggested_price} {o.currency}</div>
-                                                <div className="text-[9px] text-emerald-600 font-black mt-1 uppercase tracking-tighter">{o.margin_pct}% Margin</div>
-                                            </div>
-                                            <div className="col-span-2 flex flex-col items-center justify-center">
-                                                <div className="font-black text-slate-900 text-sm tracking-tighter">{o.lead_time_days} Days</div>
-                                                <div className="text-[9px] text-slate-400 font-bold uppercase mt-1 tracking-tighter">Est. Delivery</div>
-                                            </div>
-                                            <div className="col-span-2 flex items-center justify-end">
+
+                                            <div className="flex items-center justify-between pt-2 border-t border-slate-100/50">
+                                                <div className="text-[10px] text-slate-400 font-medium">Node ID: {o.id.slice(0, 8)}</div>
                                                 {!o.offer_selected && selectedSession.session_status === 'OPEN' && (
                                                     <button
                                                         onClick={() => handleSelectOffer(o.id)}
-                                                        className="px-4 py-2 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-600 transition-colors shadow-sm active:scale-95"
+                                                        className="px-4 py-2 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-600 transition-all shadow-md active:scale-95"
                                                     >
-                                                        Override & Select
+                                                        Select Offer
                                                     </button>
-                                                )}
-                                                {o.offer_selected && (
-                                                    <div className="text-emerald-500 font-black uppercase text-[10px] tracking-widest flex items-center gap-1">
-                                                        <ShieldCheckIcon className="w-5 h-5" /> Active
-                                                    </div>
                                                 )}
                                             </div>
                                         </div>

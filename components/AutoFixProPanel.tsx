@@ -106,7 +106,7 @@ export const AutoFixProPanel: React.FC<Props> = ({
       <div className="px-4 py-2 bg-gradient-to-r from-red-50 to-red-50 border-b border-red-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldCheckIcon className="w-6 h-6 text-red-600" />
-          <div className="font-black text-red-900 text-sm uppercase tracking-tight">AutoFix Agent (PRO)</div>
+          <div className="font-black text-red-900 text-sm uppercase tracking-tight">AI Magic Fix Engine</div>
         </div>
         <div className="flex items-center gap-3">
           {report?.blocked && <div className="text-[10px] font-bold text-white bg-red-600 px-1.5 py-0.5 rounded-full uppercase tracking-wider">Blocked</div>}
@@ -140,7 +140,7 @@ export const AutoFixProPanel: React.FC<Props> = ({
             <div className="flex items-start gap-3">
               <XCircleIcon className="w-8 h-8 text-red-600" />
               <div>
-                <div className="font-bold text-red-900 text-lg">AutoFix Blocked by Raster Guard</div>
+                <div className="font-bold text-red-900 text-lg">AI Magic Fix Blocked by Raster Guard</div>
                 <p className="text-red-800 text-sm mt-1">
                   The operation resulted in a rasterized PDF (images only), which violates the default strict vector policy.
                   Rasterized text is not selectable and may print with lower quality.
@@ -202,7 +202,7 @@ export const AutoFixProPanel: React.FC<Props> = ({
                   disabled={isRunning}
                   className="px-4 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white text-[11px] font-black uppercase tracking-widest rounded-md shadow-sm transition-all active:scale-95 flex items-center gap-2"
                 >
-                  {isRunning ? 'Processing...' : <><RocketLaunchIcon className="w-4 h-4" /> Start Pipeline</>}
+                  {isRunning ? 'Magic in progress...' : <><RocketLaunchIcon className="w-4 h-4" /> Start AI Magic Fix</>}
                 </button>
               </div>
             )}

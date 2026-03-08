@@ -174,7 +174,7 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
                                     <Icon.Refresh className="w-6 h-6 animate-spin" />
                                 </div>
                                 <div className="text-left">
-                                    <h3 className="text-lg font-bold">Large Document Mode Active</h3>
+                                    <h3 className="text-lg font-bold">AI Magic Fix Active</h3>
                                     <p className="text-red-100 text-sm">{ldmStatus || 'Processing sequential pages to optimize RAM...'}</p>
                                 </div>
                             </div>

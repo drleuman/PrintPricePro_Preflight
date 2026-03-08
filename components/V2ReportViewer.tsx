@@ -168,7 +168,7 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalU
                             <h2 style={{ fontSize: '2rem', margin: 0, color: '#00e676' }}>
                                 {delta.fixed_count} Issues
                             </h2>
-                            <span className="v2-stat-label">Cleared by Magic Fix</span>
+                            <span className="v2-stat-label">Resolved by AI Magic Fix</span>
                         </div>
                     </div>
 
@@ -206,7 +206,7 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalU
                     </div>
 
                     <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.8rem', color: '#94a3b8' }}>
-                        🛡️ Verified by Post-Fix Deterministic Recheck (Ghostscript V10.06 | Poppler 24.x)
+                        🛡️ Certified by AI Magic Fix Post-Analysis (Ghostscript 10.06 | Poppler 24.x)
                     </div>
 
                     <div className="v2-action-buttons">
@@ -282,11 +282,11 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalU
                                     <div key={i} className="v2-finding-item">
                                         <div className="v2-finding-header">
                                             <span className="v2-finding-title">{f.title || f.id}</span>
-                                            <span className={`v2-badge v2-badge-${f.severity?.toLowerCase()}`}>
+                                            <span className={`v2-badge v2-badge-${f.severity?.toLowerCase()} shadow-sm shadow-red-500/10`}>
                                                 {f.severity}
                                             </span>
                                         </div>
-                                        <p className="v2-finding-msg">{f.user_message}</p>
+                                        <p className="v2-finding-msg text-slate-300 italic">“{f.user_message}”</p>
 
                                         {viewMode === 'technical' && (
                                             <div style={{ marginTop: '1rem' }}>
