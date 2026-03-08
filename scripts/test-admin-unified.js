@@ -5,7 +5,7 @@
 const http = require('http');
 
 const ADMIN_KEY = process.env.ADMIN_API_KEY || 'test_admin_key'; // Default for local test if not set
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://localhost:8080';
 
 const endpoints = [
     { path: '/api/admin/metrics/overview', name: 'Metrics Overview (Main)' },

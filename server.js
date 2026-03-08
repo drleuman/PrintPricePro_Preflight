@@ -286,34 +286,24 @@ app.use('/api/v2/analytics', analyticsV2Router);
 debugLog('Mounting /api/connect routes...');
 app.use('/api/connect', connectRouter);
 
-// --- Unified Admin API Registration ---
-const adminMasterRouter = express.Router();
-
-// Centralized Admin Protection Middleware
+// --- Unified Admin API Registration (Flattened for reliable resolution) ---
 const requireAdmin = require('./middleware/requireAdmin');
-adminMasterRouter.use((req, res, next) => {
-  debugLog(`[ADMIN-API-ACCESS] ${req.method} ${req.originalUrl}`);
-  next();
-}, requireAdmin);
 
-// Mount Sub-Routers to the Master Router (Explicit ordering)
-adminMasterRouter.use('/network', connectAdminRouter);
-adminMasterRouter.use('/routing/economic', economicRoutingAdminRouter);
-adminMasterRouter.use('/routing', routingAdminRouter);
-adminMasterRouter.use('/pricing', pricingAdminRouter);
-adminMasterRouter.use('/offers', offersAdminRouter);
-adminMasterRouter.use('/marketplace/ready', negotiationAdminRouter);
-adminMasterRouter.use('/marketplace', marketplaceAdminRouter);
-adminMasterRouter.use('/commercial', commercialCommitmentAdminRouter);
-adminMasterRouter.use('/autonomy', autonomyAdminRouter);
-adminMasterRouter.use('/finance', autonomyFinanceRouter);
-adminMasterRouter.use('/control', adminControlRoutes);
+// Mount Sub-Routers directly to the application (Explicit ordering)
+app.use('/api/admin/network', requireAdmin, connectAdminRouter);
+app.use('/api/admin/routing/economic', requireAdmin, economicRoutingAdminRouter);
+app.use('/api/admin/routing', requireAdmin, routingAdminRouter);
+app.use('/api/admin/pricing', requireAdmin, pricingAdminRouter);
+app.use('/api/admin/offers', requireAdmin, offersAdminRouter);
+app.use('/api/admin/marketplace/ready', requireAdmin, negotiationAdminRouter);
+app.use('/api/admin/marketplace', requireAdmin, marketplaceAdminRouter);
+app.use('/api/admin/commercial', requireAdmin, commercialCommitmentAdminRouter);
+app.use('/api/admin/autonomy', requireAdmin, autonomyAdminRouter);
+app.use('/api/admin/finance', requireAdmin, autonomyFinanceRouter);
+app.use('/api/admin/control', requireAdmin, adminControlRoutes);
 
 // Main Admin Routes (metrics, tenants, queue, etc. - mounted at the root of /api/admin)
-adminMasterRouter.use('/', adminRoutes);
-
-// Finally, mount the Master Router to the application
-app.use('/api/admin', adminMasterRouter);
+app.use('/api/admin', requireAdmin, adminRoutes);
 
 // Public/Open Network Routes (Non-admin)
 app.use('/api/printer-sync', printerSyncRouter);
