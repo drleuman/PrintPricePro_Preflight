@@ -345,7 +345,7 @@ export const IssuesPanel: React.FC<Props> = ({
             </div>
             <p className="text-xs text-gray-500">
               {counts.total
-                ? `${counts.total} issues · ${counts.error} errors · ${counts.warning} warnings · ${counts.info} info`
+                ? `${counts.total} ${t('issues')} · ${counts.error} ${t('errors')} · ${counts.warning} ${t('warnings')} · ${counts.info} ${t('info')}`
                 : t('noIssuesToDisplay')}
             </p>
           </div>

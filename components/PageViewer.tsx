@@ -290,7 +290,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
             max={numPages > 0 ? numPages : 1}
             disabled={numPages === 0}
           />
-          <span className="text-gray-700">of {numPages}</span>
+          <span className="text-gray-700">{t('of')} {numPages}</span>
         </div>
         <button
           onClick={handleNextPage}
@@ -306,20 +306,20 @@ export const PageViewer: React.FC<PageViewerProps> = ({
         <button
           onClick={toggleHeatmap}
           className={`p-2 rounded-lg flex items-center gap-2 transition-colors ${showHeatmap ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-transparent'}`}
-          title="Toggle TAC Heatmap (Total Area Coverage)"
+          title={t('toggleTacHeatmap')}
         >
           <FireIcon className="h-5 w-5" />
-          <span className="text-sm font-medium">Heatmap</span>
+          <span className="text-sm font-medium">{t('heatmap')}</span>
         </button>
 
         {onRunVisualCheck && (
           <button
             onClick={onRunVisualCheck}
             className="p-2 rounded-lg flex items-center gap-2 bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 transition-colors"
-            title="AI Visual Quality Check"
+            title={t('aiVisualQualityCheck')}
           >
             <EyeIcon className="w-5 h-5" />
-            <span className="text-sm font-medium">AI Visual Check</span>
+            <span className="text-sm font-medium">{t('aiVisualCheck')}</span>
           </button>
         )}
       </div>

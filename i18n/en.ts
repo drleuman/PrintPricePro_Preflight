@@ -13,6 +13,7 @@ export const en = {
   thisMayTakeAMoment: 'This may take a moment.',
   runPreflight: 'Run Preflight',
   or: 'or',
+  of: 'of',
   browseYourComputer: 'browse your computer',
   pdfMaxHint: 'PDF · max. ~50 MB',
   selectedLabel: 'Selected PDF',
@@ -26,6 +27,7 @@ export const en = {
   analysisComplete: 'Analysis Complete',
   fixIssuesTitle: 'Fix Issues',
   fixIssuesDescription: 'Review and fix the {{count}} issue(s) found in your PDF',
+  fixIssuesRemaing: '{{count}} issue(s) remaining',
   reviewAndDownload: 'Review & Download',
   pdfProcessedReady: 'Your PDF has been processed and is ready',
 

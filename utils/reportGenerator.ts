@@ -32,6 +32,30 @@ export async function generatePreflightReport(
         }
     };
 
+    /**
+     * Splits `text` into lines that fit within `maxWidth` using the given font/size,
+     * respecting existing newline characters and performing word-wrap for long lines.
+     */
+    const wrapText = (text: string, font: any, size: number, maxWidth: number): string[] => {
+        const result: string[] = [];
+        for (const paragraph of text.split('\n')) {
+            const words = paragraph.split(' ');
+            let current = '';
+            for (const word of words) {
+                const candidate = current ? `${current} ${word}` : word;
+                if (font.widthOfTextAtSize(candidate, size) <= maxWidth) {
+                    current = candidate;
+                } else {
+                    if (current) result.push(current);
+                    // If a single word is wider than maxWidth, push it as-is
+                    current = word;
+                }
+            }
+            if (current) result.push(current);
+        }
+        return result.length > 0 ? result : [''];
+    };
+
     const drawText = (
         text: string,
         options: { font?: any; size?: number; color?: any, indent?: number } = {}
@@ -40,17 +64,24 @@ export async function generatePreflightReport(
         const size = options.size || fontSizeNormal;
         const color = options.color || rgb(0, 0, 0);
         const indent = options.indent || 0;
+        const availableWidth = A4_WIDTH - 2 * margin - indent;
+        const singleLineHeight = size + 4;
 
-        checkY(size);
-        page.drawText(text, {
-            x: margin + indent,
-            y: yPosition,
-            size,
-            font,
-            color,
-            maxWidth: A4_WIDTH - 2 * margin - indent,
-        });
-        yPosition -= (size + 4);
+        const lines = wrapText(text, font, size, availableWidth);
+
+        // Ensure the full block fits; if not, start a new page
+        checkY(lines.length * singleLineHeight);
+
+        for (const line of lines) {
+            page.drawText(line, {
+                x: margin + indent,
+                y: yPosition,
+                size,
+                font,
+                color,
+            });
+            yPosition -= singleLineHeight;
+        }
     };
 
     const drawLine = () => {
@@ -118,11 +149,7 @@ export async function generatePreflightReport(
             });
 
             if (issue.details) {
-                // Simple word wrap handling by pdf-lib's maxWidth, but manual multi-line for safety
-                const detailLines = issue.details.split('\n');
-                for (const line of detailLines) {
-                    drawText(line, { size: 9, color: rgb(0.3, 0.3, 0.3), indent: 10 });
-                }
+                drawText(issue.details, { size: 9, color: rgb(0.3, 0.3, 0.3), indent: 10 });
             }
             yPosition -= 5;
         }

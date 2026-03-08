@@ -11,6 +11,7 @@ export const es = {
   thisMayTakeAMoment: 'Esto puede tardar un momento.',
   runPreflight: 'Ejecutar Verificación Pre-vuelo',
   or: 'o',
+  of: 'de',
   browseYourComputer: 'examinar tu computadora',
   pdfMaxHint: 'PDF · máx. ~50 MB',
   selectedLabel: 'PDF seleccionado',
@@ -24,6 +25,7 @@ export const es = {
   analysisComplete: 'Análisis Completado',
   fixIssuesTitle: 'Corregir Incidencias',
   fixIssuesDescription: 'Revisa y corrige las {{count}} incidencia(s) encontradas en tu PDF',
+  fixIssuesRemaing: '{{count}} incidencia(s) pendiente(s)',
   reviewAndDownload: 'Revisar y Descargar',
   pdfProcessedReady: 'Tu PDF ha sido procesado y está listo',
 
