@@ -69,7 +69,7 @@ export const PricingIntelligenceTab: React.FC = () => {
             </div>
 
             {/* Quick Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
                     { label: "Pricing Profiles", value: profiles.length, icon: ArchiveBoxIcon, color: "text-blue-600", bg: "bg-blue-50" },
                     { label: "Active Nodes", value: profiles.filter(p => p.active).length, icon: TagIcon, color: "text-emerald-600", bg: "bg-emerald-50" },

@@ -85,7 +85,7 @@ export const SuccessWorkspace: React.FC = () => {
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* Health Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <HealthCard
                     title="Healthy"
                     count={stats.healthy}
@@ -120,7 +120,7 @@ export const SuccessWorkspace: React.FC = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Active CS Workflows */}
                 <div className="bg-slate-50/50 rounded-3xl border border-slate-200 overflow-hidden col-span-1 lg:col-span-2">
                     <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white">

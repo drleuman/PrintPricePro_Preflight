@@ -115,7 +115,7 @@ export const NetworkOverviewCards: React.FC<Props> = ({ stats }) => {
     ];
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-9 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-4">
             {cards.map((card, idx) => (
                 <div key={idx} className="glass p-4 rounded-2xl border border-white shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-2">

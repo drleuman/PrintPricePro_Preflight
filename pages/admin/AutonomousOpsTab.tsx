@@ -84,7 +84,7 @@ export const AutonomousOpsTab: React.FC = () => {
 
             {/* Global Metrics */}
             {metrics && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
                         <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Jobs</div>
                         <div className="text-2xl font-black text-slate-900">{metrics.total_jobs}</div>

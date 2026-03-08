@@ -85,7 +85,7 @@ export const OverviewTab: React.FC<{ range: Range; refreshMs?: number }> = ({ ra
 
     return (
         <div className="space-y-6 animate-slide-fade">
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-4">
                 <KpiCard Icon={Square3Stack3DIcon} color="blue" title="Ledger Total (DB)" value={String(d.totalJobs)} helpKey="metric-total-jobs" />
                 <KpiCard Icon={CheckBadgeIcon} color="emerald" title="SLA Success Rate" value={`${d.successRate.toFixed(1)}%`} helpKey="metric-success-rate" />
                 <KpiCard Icon={BanknotesIcon} color="emerald" title="AutoFix Value" value={`$${Math.round(d.totalValueGenerated).toLocaleString()}`} sub="USD Generated" />
