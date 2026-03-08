@@ -24,6 +24,32 @@ router.use((req, res, next) => {
   next();
 });
 
+// Test Trace Route
+router.get('/test-trace', (req, res) => {
+  res.json({
+    ok: true,
+    message: 'Admin Router Reachable',
+    path: req.path,
+    originalUrl: req.originalUrl,
+    baseUrl: req.baseUrl
+  });
+});
+
+/**
+ * Mount Sub-routers (Top Priority)
+ */
+router.use('/network', connectAdminRouter);
+router.use('/routing/economic', economicRoutingAdminRouter); // Important: more specific first
+router.use('/routing', routingAdminRouter);
+router.use('/marketplace/ready', negotiationAdminRouter); // Important: more specific first
+router.use('/marketplace', marketplaceAdminRouter);
+router.use('/pricing', pricingAdminRouter);
+router.use('/offers', offersAdminRouter);
+router.use('/commercial', commercialCommitmentAdminRouter);
+router.use('/autonomy', autonomyAdminRouter);
+router.use('/finance', autonomyFinanceRouter);
+router.use('/control', adminControlRoutes);
+
 function rangeToInterval(range) {
   // soporta: 24h, 7d, 30d
   switch (range) {
@@ -690,19 +716,6 @@ router.get('/cs-workflows', async (req, res) => {
   }
 });
 
-/**
- * Mount Sub-routers
- */
-router.use('/network', connectAdminRouter);
-router.use('/routing/economic', economicRoutingAdminRouter); // Important: more specific first
-router.use('/routing', routingAdminRouter);
-router.use('/marketplace/ready', negotiationAdminRouter); // Important: more specific first
-router.use('/marketplace', marketplaceAdminRouter);
-router.use('/pricing', pricingAdminRouter);
-router.use('/offers', offersAdminRouter);
-router.use('/commercial', commercialCommitmentAdminRouter);
-router.use('/autonomy', autonomyAdminRouter);
-router.use('/finance', autonomyFinanceRouter);
-router.use('/control', adminControlRoutes);
+// Sub-routers moved to the top for priority matching
 
 module.exports = router;
