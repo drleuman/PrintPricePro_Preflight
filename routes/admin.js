@@ -4,8 +4,20 @@ const requireAdmin = require("../middleware/requireAdmin");
 const db = require("../services/db");
 
 const router = express.Router();
-
 router.use(requireAdmin);
+
+// Import sub-routers
+const connectAdminRouter = require('./connectAdmin');
+const routingAdminRouter = require('./routingAdmin');
+const marketplaceAdminRouter = require('./marketplaceAdmin');
+const economicRoutingAdminRouter = require('./economicRoutingAdmin');
+const pricingAdminRouter = require('./pricingAdmin');
+const offersAdminRouter = require('./offersAdmin');
+const negotiationAdminRouter = require('./negotiationAdmin');
+const commercialCommitmentAdminRouter = require('./commercialCommitmentAdmin');
+const autonomyAdminRouter = require('./autonomyAdmin');
+const autonomyFinanceRouter = require('./autonomyFinanceAdmin');
+const adminControlRoutes = require('./adminControl');
 
 function rangeToInterval(range) {
   // soporta: 24h, 7d, 30d
@@ -672,5 +684,20 @@ router.get('/cs-workflows', async (req, res) => {
     res.status(500).json({ ok: false, error: err.message });
   }
 });
+
+/**
+ * Mount Sub-routers
+ */
+router.use('/network', connectAdminRouter);
+router.use('/routing/economic', economicRoutingAdminRouter); // Important: more specific first
+router.use('/routing', routingAdminRouter);
+router.use('/marketplace/ready', negotiationAdminRouter); // Important: more specific first
+router.use('/marketplace', marketplaceAdminRouter);
+router.use('/pricing', pricingAdminRouter);
+router.use('/offers', offersAdminRouter);
+router.use('/commercial', commercialCommitmentAdminRouter);
+router.use('/autonomy', autonomyAdminRouter);
+router.use('/finance', autonomyFinanceRouter);
+router.use('/control', adminControlRoutes);
 
 module.exports = router;
