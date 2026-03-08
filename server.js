@@ -321,6 +321,7 @@ app.use(
 );
 
 // --- Moved definitions up to avoid hoisting/ReferenceError ---
+app.use('/api/printer-offers', printerAuth, printerOffersRouter);
 
 // Root admin routes (consolidated in routes/admin.js)
 app.use('/api/admin', adminLog, requireAdmin, adminRoutes);
