@@ -281,7 +281,9 @@ app.use('/api/v2/analytics', analyticsV2Router);
 debugLog('Mounting /api/connect routes...');
 app.use('/api/connect', connectRouter);
 
-// diagnosticLimiter relocated to specific endpoints to prevent double-wrapping
+// Health & Readiness Endpoints (Consolidated for LB and Deploy Health Checks)
+app.get(['/api/ready', '/health'], readyHandler);
+app.get('/api/health/deps', healthDepsHandler);
 
 // Public/Open Network Routes (Non-admin)
 app.use('/api/printer-sync', printerSyncRouter);
