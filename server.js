@@ -44,6 +44,8 @@ const autonomyFinanceRouter = require('./routes/autonomyFinanceAdmin');
 const settlementWorker = require('./services/settlementWorker');
 const { startCleanupTask } = require('./services/cleanup');
 const apiKeyMiddleware = require('./middleware/apiKey');
+const printerAuth = require('./middleware/printerAuth');
+const requireAdmin = require('./middleware/requireAdmin');
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
 const pino = require('pino-http')({
@@ -246,6 +248,16 @@ const healthDepsHandler = (_req, res) => {
 
 // -------- Routes --------
 
+// Debug Logger for Admin Routes
+const adminLog = (req, res, next) => {
+  console.log(`[V2-ADMIN-ROUTE-HIT][${req.id || '-'}] ${req.method} ${req.originalUrl}`, {
+    hasAuthorization: !!req.headers.authorization,
+    hasAdminKey: !!req.headers['x-admin-api-key'],
+    origin: req.headers.origin || null,
+  });
+  next();
+};
+
 app.use(['/version', '/api/version', '/metrics', '/api/metrics'], diagnosticLimiter);
 app.use('/api/convert', convertLimiter);
 console.log('Mounting /api/convert routes...');
@@ -308,23 +320,7 @@ app.use(
   })
 );
 
-const printerAuth = require('./middleware/printerAuth');
-app.use('/api/printer-offers', printerAuth, printerOffersRouter);
-
-// -------- 404 & Error Handlers --------
-
-// --- Unified Admin API Registration ---
-const requireAdmin = require('./middleware/requireAdmin');
-
-// Debug Logger for Admin Routes
-const adminLog = (req, res, next) => {
-  console.log(`[V2-ADMIN-ROUTE-HIT][${req.id || '-'}] ${req.method} ${req.originalUrl}`, {
-    hasAuthorization: !!req.headers.authorization,
-    hasAdminKey: !!req.headers['x-admin-api-key'],
-    origin: req.headers.origin || null,
-  });
-  next();
-};
+// --- Moved definitions up to avoid hoisting/ReferenceError ---
 
 // Root admin routes (consolidated in routes/admin.js)
 app.use('/api/admin', adminLog, requireAdmin, adminRoutes);
