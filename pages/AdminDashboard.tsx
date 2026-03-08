@@ -51,6 +51,7 @@ const AdminDashboardInner: React.FC = () => {
     const [activeTab, setActiveTab] = useState<Tab>("overview");
     const [range, setRange] = useState<Range>("24h");
     const [refresh, setRefresh] = useState<number>(0);
+    const [reloadKey, setReloadKey] = useState<number>(0);
     const [isAuthorized, setIsAuthorized] = useState<boolean>(!!getAdminKey());
     const [authKey, setAuthKey] = useState<string>("");
 
@@ -58,7 +59,7 @@ const AdminDashboardInner: React.FC = () => {
         if (!authKey.trim()) return;
         setAdminKey(authKey.trim());
         setIsAuthorized(true);
-        setRefresh(r => r + 1); // trigger reload
+        setReloadKey(r => r + 1); // trigger reload of all data
     };
 
     const handleDisconnect = () => {
@@ -215,23 +216,23 @@ const AdminDashboardInner: React.FC = () => {
                     <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-slate-200 rounded-full blur-3xl pointer-events-none" />
 
                     <div className="relative z-10">
-                        {activeTab === "overview" && <OverviewTab range={range} refreshMs={refresh} />}
-                        {activeTab === "success" && <SuccessWorkspace />}
-                        {activeTab === "tenants" && <TenantManagement />}
-                        {activeTab === "network" && <NetworkOpsTab />}
-                        {activeTab === "pricing" && <PricingIntelligenceTab />}
-                        {activeTab === "offers" && <OffersTab />}
-                        {activeTab === "marketplace" && <MarketplaceTab />}
-                        {activeTab === "negotiations" && <MarketplaceReadinessTab />}
-                        {activeTab === "commitments" && <CommercialCommitmentsTab />}
-                        {activeTab === "autonomy" && <AutonomousOpsTab />}
-                        {activeTab === "finance" && <FinancialOpsTab />}
-                        {activeTab === "notifications" && <NotificationsTab refreshMs={refresh} />}
-                        {activeTab === "jobs" && <JobsTab refreshMs={refresh} />}
-                        {activeTab === "errors" && <ErrorsTab range={range} refreshMs={refresh} />}
-                        {activeTab === "audit" && <AuditTab refreshMs={refresh} />}
-                        {activeTab === "controls" && <ControlsTab refreshMs={refresh} />}
-                        {activeTab === "engagement" && <EngagementSignalsTab />}
+                        {activeTab === "overview" && <OverviewTab key={`overview-${reloadKey}`} range={range} refreshMs={refresh} />}
+                        {activeTab === "success" && <SuccessWorkspace key={`success-${reloadKey}`} />}
+                        {activeTab === "tenants" && <TenantManagement key={`tenants-${reloadKey}`} />}
+                        {activeTab === "network" && <NetworkOpsTab key={`network-${reloadKey}`} />}
+                        {activeTab === "pricing" && <PricingIntelligenceTab key={`pricing-${reloadKey}`} />}
+                        {activeTab === "offers" && <OffersTab key={`offers-${reloadKey}`} />}
+                        {activeTab === "marketplace" && <MarketplaceTab key={`marketplace-${reloadKey}`} />}
+                        {activeTab === "negotiations" && <MarketplaceReadinessTab key={`negotiations-${reloadKey}`} />}
+                        {activeTab === "commitments" && <CommercialCommitmentsTab key={`commitments-${reloadKey}`} />}
+                        {activeTab === "autonomy" && <AutonomousOpsTab key={`autonomy-${reloadKey}`} />}
+                        {activeTab === "finance" && <FinancialOpsTab key={`finance-${reloadKey}`} />}
+                        {activeTab === "notifications" && <NotificationsTab key={`notifications-${reloadKey}`} refreshMs={refresh} />}
+                        {activeTab === "jobs" && <JobsTab key={`jobs-${reloadKey}`} refreshMs={refresh} />}
+                        {activeTab === "errors" && <ErrorsTab key={`errors-${reloadKey}`} range={range} refreshMs={refresh} />}
+                        {activeTab === "audit" && <AuditTab key={`audit-${reloadKey}`} refreshMs={refresh} />}
+                        {activeTab === "controls" && <ControlsTab key={`controls-${reloadKey}`} refreshMs={refresh} />}
+                        {activeTab === "engagement" && <EngagementSignalsTab key={`engagement-${reloadKey}`} />}
                     </div>
                 </main>
             </div>

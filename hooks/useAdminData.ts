@@ -13,7 +13,9 @@ export function useAdminQuery<T>(key: string, fetcher: () => Promise<T>, refetch
 
     useEffect(() => {
         if (refetchIntervalMs && refetchIntervalMs > 0) {
-            const timer = setInterval(() => setTick(t => t + 1), refetchIntervalMs);
+            // Safety guard: prevent browser-killing 1ms loops
+            const safeInterval = refetchIntervalMs < 1000 ? 5000 : refetchIntervalMs;
+            const timer = setInterval(() => setTick(t => t + 1), safeInterval);
             return () => clearInterval(timer);
         }
     }, [refetchIntervalMs]);
