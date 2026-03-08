@@ -250,38 +250,7 @@ const readyHandler = async (_req, res) => {
   res.status(response.status === 'READY' ? 200 : 503).json(response);
 };
 
-// -------- Routes --------
-
-// --- 1. Unified Admin API Registration (P0: Security & Stability) ---
-const requireAdmin = require('./middleware/requireAdmin');
-
-// Debug Logger for Admin Routes
-const adminLog = (req, res, next) => {
-  console.log(`[V2-ADMIN-ROUTE-HIT][${req.id || '-'}] ${req.method} ${req.originalUrl}`);
-  next();
-};
-
-// Mount each admin sub-router directly with explicit prefixes to avoid ambiguity in Express 5
-app.get('/api/admin/debug-routing', requireAdmin, (req, res) => res.json({ ok: true, version: 'V2-ADMIN-ORDER-FIXED' }));
-
-app.use('/api/admin/network', adminLog, requireAdmin, connectAdminRouter);
-app.use('/api/admin/routing/economic', adminLog, requireAdmin, economicRoutingAdminRouter);
-app.use('/api/admin/routing', adminLog, requireAdmin, routingAdminRouter);
-app.use('/api/admin/pricing', adminLog, requireAdmin, pricingAdminRouter);
-app.use('/api/admin/offers', adminLog, requireAdmin, offersAdminRouter);
-app.use('/api/admin/marketplace/ready', adminLog, requireAdmin, negotiationAdminRouter);
-app.use('/api/admin/marketplace', adminLog, requireAdmin, marketplaceAdminRouter);
-app.use('/api/admin/commercial', adminLog, requireAdmin, commercialCommitmentAdminRouter);
-app.use('/api/admin/autonomy', adminLog, requireAdmin, autonomyAdminRouter);
-app.use('/api/admin/finance', adminLog, requireAdmin, autonomyFinanceRouter);
-app.use('/api/admin/control', adminLog, requireAdmin, adminControlRoutes);
-
-// Root admin routes (metrics, tenants, jobs, etc) - MUST BE LAST
-// Otherwise the generic paths in adminRoutes might intercept specific sub-router paths
-app.use('/api/admin', adminLog, requireAdmin, adminRoutes);
-
-// --- 2. Other API Routes ---
-app.use('/api/gemini-proxy', apiKeyMiddleware, proxyRouter);
+// diagnosticLimiter relocated to specific endpoints
 
 // Diagnostic Routes (No limiter for /ready to ensure health-checks pass during startup load)
 app.get(['/healthz', '/api/healthz'], (_req, res) => res.status(200).send('ok'));
@@ -325,9 +294,6 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // Start autonomous workers
-settlementWorker.start();
-app.use('/api/printer-offers', printerOffersRouter);
-
 // -------- Static Files --------
 const staticPath = path.resolve(__dirname, 'dist');
 debugLog(`Serving static files from: ${staticPath}`);
@@ -347,6 +313,38 @@ app.use(
     },
   })
 );
+
+settlementWorker.start();
+app.use('/api/printer-offers', printerOffersRouter);
+
+// -------- 404 & Error Handlers --------
+
+// --- Unified Admin API Registration ---
+const requireAdmin = require('./middleware/requireAdmin');
+
+// Debug Logger for Admin Routes
+const adminLog = (req, res, next) => {
+  console.log(`[V2-ADMIN-ROUTE-HIT][${req.id || '-'}] ${req.method} ${req.originalUrl}`);
+  next();
+};
+
+// Mount each admin sub-router directly with explicit prefixes to avoid ambiguity in Express 5
+app.get('/api/admin/debug-routing', requireAdmin, (req, res) => res.json({ ok: true, version: 'V2-ADMIN-FINAL-BOOT' }));
+
+app.use('/api/admin/network', adminLog, requireAdmin, connectAdminRouter);
+app.use('/api/admin/routing/economic', adminLog, requireAdmin, economicRoutingAdminRouter);
+app.use('/api/admin/routing', adminLog, requireAdmin, routingAdminRouter);
+app.use('/api/admin/pricing', adminLog, requireAdmin, pricingAdminRouter);
+app.use('/api/admin/offers', adminLog, requireAdmin, offersAdminRouter);
+app.use('/api/admin/marketplace/ready', adminLog, requireAdmin, negotiationAdminRouter);
+app.use('/api/admin/marketplace', adminLog, requireAdmin, marketplaceAdminRouter);
+app.use('/api/admin/commercial', adminLog, requireAdmin, commercialCommitmentAdminRouter);
+app.use('/api/admin/autonomy', adminLog, requireAdmin, autonomyAdminRouter);
+app.use('/api/admin/finance', adminLog, requireAdmin, autonomyFinanceRouter);
+app.use('/api/admin/control', adminLog, requireAdmin, adminControlRoutes);
+
+// Root admin routes MUST be checking trailing slash or exact /api/admin to avoid masking /api/admin-something
+app.use('/api/admin', adminLog, requireAdmin, adminRoutes);
 
 // Handlers moved up near mounting to avoid hoisting errors.
 
