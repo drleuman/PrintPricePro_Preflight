@@ -8,8 +8,49 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 console.log(`[BOOTSTRAP] Starting PrintPrice Engine at ${new Date().toISOString()}`);
-console.log(`[BOOTSTRAP] Build Hash: ${process.env.GIT_COMMIT || 'v2.1.0-agg-fix'}`);
+console.log(`[BOOTSTRAP] Build Hash: ${process.env.GIT_COMMIT || 'v2.1.2-priority-fix'}`);
 const fs = require('fs');
+
+/** 
+ * --- AGGRESSIVE HEALTH CHECK HANDLERS (Hoisted) ---
+ */
+async function readyHandler(_req, res) {
+  const { checkAllDependencies } = require('./services/dependencyChecker');
+  const dbService = require('./services/db');
+  const pkg = require('./package.json');
+
+  const { ok: depsOk, deps } = checkAllDependencies();
+  const dbConnected = await dbService.checkConnection();
+  const isHealthy = depsOk && startupErrors.length === 0 && dbConnected;
+
+  const response = {
+    status: isHealthy ? 'READY' : 'BOOT_ERROR',
+    version: pkg.version || '2.1.2',
+    commit: process.env.GIT_COMMIT || '321ab5d', // Fallback to last known local commit
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'production',
+    database: dbConnected ? 'CONNECTED' : 'DISCONNECTED',
+    startup_errors: startupErrors,
+    dependencies: deps
+  };
+
+  res.setHeader('X-PPP-Server-Version', response.commit);
+  res.status(response.status === 'READY' ? 200 : 503).json(response);
+}
+
+function healthDepsHandler(_req, res) {
+  const { checkAllDependencies } = require('./services/dependencyChecker');
+  const result = checkAllDependencies();
+  res.status(result.ok ? 200 : 503).json(result);
+}
+
+const app = express();
+
+// --- PRIORITY #1: Health Checks (Bypass all middleware) ---
+app.get('/api/ready', readyHandler);
+app.get('/health', readyHandler);
+app.get('/api/health/deps', healthDepsHandler);
+
 const WebSocket = require('ws');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -97,7 +138,6 @@ try {
   console.error('Diagnostic error:', e.message);
 }
 
-const app = express();
 // Port can be a number or a pipe string (Plesk/Passenger)
 const rawPort = process.env.PORT || '8080';
 const port = /^\d+$/.test(rawPort) ? Number.parseInt(rawPort, 10) : rawPort;
@@ -193,18 +233,6 @@ app.use((req, res, next) => {
   });
   next();
 });
-
-// --- CRITICAL DEPLOYMENT HEALTH CHECKS (Priority #1) ---
-app.use((req, res, next) => {
-  if (req.path === '/api/ready' || req.path === '/health') {
-    debugLog(`[HEALTH-CHECK-HIT] ${req.method} ${req.path} from ${req.ip}`);
-  }
-  next();
-});
-
-app.get('/api/ready', readyHandler);
-app.get('/health', readyHandler);
-app.get('/api/health/deps', healthDepsHandler);
 
 // 3) Per-endpoint rate limits
 const diagnosticLimiter = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false });
