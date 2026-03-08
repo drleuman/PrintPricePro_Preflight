@@ -358,7 +358,7 @@ app.get(['/metrics', '/api/metrics'], (_req, res) => {
 // -------- 404 & Error Handlers --------
 
 // API 404
-app.all('/api/(.*)', (req, res) => {
+app.all('/api/:path*', (req, res) => {
   console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     error: `[V2-ADMIN] Route not found: ${req.originalUrl}`,
