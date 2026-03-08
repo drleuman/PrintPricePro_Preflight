@@ -719,7 +719,7 @@ router.get('/cs-workflows', async (req, res) => {
 // Sub-routers moved to the top for priority matching
 
 // Diagnostic Catch-all for Admin
-router.all('*', (req, res) => {
+router.all('(.*)', (req, res) => {
   console.warn(`[ADMIN-ROUTER-FALLTHROUGH] ${req.method} ${req.originalUrl} | Path: ${req.path}`);
   res.status(404).json({
     error: `[ADMIN-ROUTER-FALLTHROUGH] Route not found in admin router: ${req.originalUrl}`,
