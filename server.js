@@ -262,7 +262,7 @@ const adminLog = (req, res, next) => {
 };
 
 // Mount each admin sub-router directly with explicit prefixes to avoid ambiguity in Express 5
-app.get('/api/admin/debug-routing', requireAdmin, (req, res) => res.json({ ok: true, version: 'V2-ADMIN-FLATTENED' }));
+app.get('/api/admin/debug-routing', requireAdmin, (req, res) => res.json({ ok: true, version: 'V2-ADMIN-ORDER-FIXED' }));
 
 app.use('/api/admin/network', adminLog, requireAdmin, connectAdminRouter);
 app.use('/api/admin/routing/economic', adminLog, requireAdmin, economicRoutingAdminRouter);
@@ -276,7 +276,8 @@ app.use('/api/admin/autonomy', adminLog, requireAdmin, autonomyAdminRouter);
 app.use('/api/admin/finance', adminLog, requireAdmin, autonomyFinanceRouter);
 app.use('/api/admin/control', adminLog, requireAdmin, adminControlRoutes);
 
-// Root admin routes (metrics, tenants, queue, etc) - must be checked AFTER specific prefixes
+// Root admin routes (metrics, tenants, jobs, etc) - MUST BE LAST
+// Otherwise the generic paths in adminRoutes might intercept specific sub-router paths
 app.use('/api/admin', adminLog, requireAdmin, adminRoutes);
 
 // --- 2. Other API Routes ---
