@@ -253,39 +253,7 @@ const v2ReadLimiter = rateLimit({
   message: { error: 'V2 Engine: Too many status requests. Limit is 100 per minute.' }
 });
 
-const readyHandler = async (_req, res) => {
-  const { ok: depsOk, deps } = checkAllDependencies();
-  const dbConnected = await dbService.checkConnection();
-  const isHealthy = depsOk && startupErrors.length === 0 && dbConnected;
-
-  const response = {
-    status: isHealthy ? 'READY' : 'BOOT_ERROR',
-    version: require('./package.json').version || '1.0.0',
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV || 'production',
-    database: dbConnected ? 'CONNECTED' : 'DISCONNECTED',
-    startup_errors: startupErrors,
-    dependencies: deps,
-    uploadDirWritable: false
-  };
-
-  try {
-    if (pdfRouter.uploadDir && fs.existsSync(pdfRouter.uploadDir)) {
-      fs.accessSync(pdfRouter.uploadDir, fs.constants.W_OK);
-      response.uploadDirWritable = true;
-    }
-  } catch (err) {
-    response.uploadDirWritable = false;
-  }
-
-  // Return 503 if not ready, for load balancer awareness
-  res.status(response.status === 'READY' ? 200 : 503).json(response);
-};
-
-const healthDepsHandler = (_req, res) => {
-  const result = checkAllDependencies();
-  res.status(result.ok ? 200 : 503).json(result);
-};
+// Health checks were moved to Priority #1 at the top of the file
 
 // -------- Routes --------
 
@@ -401,7 +369,7 @@ app.get(['/metrics', '/api/metrics'], (_req, res) => {
 app.all(/^\/api\/.*/, (req, res) => {
   console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
-    error: `[V2-ADMIN] Route not found: ${req.originalUrl}`,
+    error: `[V2-ADMIN-REV-2.1.3] Route not found: ${req.originalUrl}`,
     method: req.method,
     path: req.path
   });
