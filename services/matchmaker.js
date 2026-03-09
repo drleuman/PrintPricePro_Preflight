@@ -1,3 +1,9 @@
+/**
+ * @project PrintPrice Pro - Production Matchmaker Engine
+ * @author Manuel Enrique Morales (https://manuelenriquemorales.com/)
+ * @social https://x.com/manuel_emorales | https://www.linkedin.com/in/manuelenriquemorales/
+ */
+const db = require('./db');
 const capabilitySync = require('./capabilitySyncService');
 const compatibilityEngine = require('./compatibilityEngine');
 const weightsConfig = require('../registry/matchmaker_weights.json');

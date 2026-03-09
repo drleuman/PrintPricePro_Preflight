@@ -1,4 +1,15 @@
+/**
+ * @project PrintPrice Pro - V2 Background Worker
+ * @author Manuel Enrique Morales (https://manuelenriquemorales.com/)
+ * @social https://x.com/manuel_emorales | https://www.linkedin.com/in/manuelenriquemorales/
+ */
 const { Worker } = require('bullmq');
+/**
+ * @project PrintPrice Pro - Deterministic Analysis Service
+ * @author Manuel Enrique Morales (https://manuelenriquemorales.com/)
+ * @social https://x.com/manuel_emorales | https://www.linkedin.com/in/manuelenriquemorales/
+ */
+const { spawnSafe } = require('./processRunner');
 const { connection } = require('../services/queue');
 const db = require('../services/db');
 const assetService = require('../services/assetService');

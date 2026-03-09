@@ -1,3 +1,8 @@
+/**
+ * @project PrintPrice Pro - Policy & Rule Engine
+ * @author Manuel Enrique Morales (https://manuelenriquemorales.com/)
+ * @social https://x.com/manuel_emorales | https://www.linkedin.com/in/manuelenriquemorales/
+ */
 const { spawnSafe } = require('./processRunner');
 const colorService = require('./colorService');
 const heuristicService = require('./heuristicService');

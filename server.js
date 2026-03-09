@@ -1,6 +1,9 @@
 /**
+ * @project PrintPrice Pro - Production Intelligence Platform
+ * @author Manuel Enrique Morales (https://manuelenriquemorales.com/)
+ * @social https://x.com/manuel_emorales | https://www.linkedin.com/in/manuelenriquemorales/
  * @license
- * Copyright 2025
+ * Copyright 2025-2026 PrintPrice Pro
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -9,6 +12,12 @@ const express = require('express');
 const path = require('path');
 console.log(`[BOOTSTRAP] Starting PrintPrice Engine at ${new Date().toISOString()}`);
 console.log(`[BOOTSTRAP] Build Hash: ${process.env.GIT_COMMIT || 'v2.1.2-priority-fix'}`);
+/**
+ * @project PrintPrice Pro - PDF Processing Pipeline
+ * @author Manuel Enrique Morales (https://manuelenriquemorales.com/)
+ * @social https://x.com/manuel_emorales | https://www.linkedin.com/in/manuelenriquemorales/
+ * @copyright (c) 2025-2026 PrintPrice Pro
+ */
 const fs = require('fs');
 
 /** 

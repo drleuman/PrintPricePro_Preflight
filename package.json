@@ -2,6 +2,11 @@
   "name": "pdf-preflight-check",
   "private": true,
   "version": "1.0.0",
+  "author": {
+    "name": "Manuel Enrique Morales",
+    "url": "https://manuelenriquemorales.com/"
+  },
+  "description": "PrintPrice Pro - Production Intelligence Platform",
   "main": "server.js",
   "engines": {
     "node": ">=20 <21"

@@ -1,3 +1,8 @@
+/**
+ * @project PrintPrice Pro - PDF Processing Pipeline
+ * @author Manuel Enrique Morales (https://manuelenriquemorales.com/)
+ * @social https://x.com/manuel_emorales | https://www.linkedin.com/in/manuelenriquemorales/
+ */
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');

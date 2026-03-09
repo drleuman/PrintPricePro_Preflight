@@ -8,6 +8,11 @@
  */
 
 const path = require('path');
+/**
+ * @project PrintPrice Pro - Policy & Rule Engine
+ * @author Manuel Enrique Morales (https://manuelenriquemorales.com/)
+ * @social https://x.com/manuel_emorales | https://www.linkedin.com/in/manuelenriquemorales/
+ */
 const fs = require('fs');
 
 const POLICIES_DIR = path.join(__dirname, '../policies');
