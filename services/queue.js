@@ -1,3 +1,8 @@
+/**
+ * @project PrintPrice Pro - Job Queue Management
+ * @author Manuel Enrique Morales (https://manuelenriquemorales.com/)
+ * @social https://x.com/manuel_emorales | https://www.linkedin.com/in/manuelenriquemorales/
+ */
 const { Queue, ConnectionOptions } = require('bullmq');
 const Redis = require('ioredis');
 

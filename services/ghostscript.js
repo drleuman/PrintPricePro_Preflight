@@ -1,3 +1,8 @@
+/**
+ * @project PrintPrice Pro - Ghostscript Interface Service
+ * @author Manuel Enrique Morales (https://manuelenriquemorales.com/)
+ * @social https://x.com/manuel_emorales | https://www.linkedin.com/in/manuelenriquemorales/
+ */
 const fs = require('fs');
 const { execFile } = require('child_process');
 const { promisify } = require('util');

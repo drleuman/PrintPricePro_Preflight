@@ -1,3 +1,8 @@
+/**
+ * @project PrintPrice Pro - Report Generation & Validation
+ * @author Manuel Enrique Morales (https://manuelenriquemorales.com/)
+ * @social https://x.com/manuel_emorales | https://www.linkedin.com/in/manuelenriquemorales/
+ */
 const fs = require('fs');
 const path = require('path');
 const policyEngine = require('./policyEngine');

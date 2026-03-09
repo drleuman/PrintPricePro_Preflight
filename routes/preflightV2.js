@@ -1,3 +1,8 @@
+/**
+ * @project PrintPrice Pro - Preflight V2 API Routes
+ * @author Manuel Enrique Morales (https://manuelenriquemorales.com/)
+ * @social https://x.com/manuel_emorales | https://www.linkedin.com/in/manuelenriquemorales/
+ */
 const express = require('express');
 const multer = require('multer');
 const router = express.Router();
