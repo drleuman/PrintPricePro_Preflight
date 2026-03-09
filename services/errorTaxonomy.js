@@ -1,0 +1,33 @@
+/**
+ * PrintPrice V2 Error Taxonomy
+ * Standardized error codes for observability and client consumption.
+ */
+const ErrorTaxonomy = {
+    // Admission Control
+    ADMISSION_FILE_TOO_LARGE: 'ADMISSION_FILE_TOO_LARGE',
+    ADMISSION_PAGES_EXCEEDED: 'ADMISSION_PAGES_EXCEEDED',
+    ADMISSION_UNSUPPORTED_TYPE: 'ADMISSION_UNSUPPORTED_TYPE',
+
+    // Infrastructure / Pipeline
+    ASSET_NOT_FOUND: 'ASSET_NOT_FOUND',
+    QUEUE_LATENCY_EXCEEDED: 'QUEUE_LATENCY_EXCEEDED',
+
+    // Tools & Probes
+    TOOL_TIMEOUT: 'TOOL_TIMEOUT',
+    TOOL_EXECUTION_FAILED: 'TOOL_EXECUTION_FAILED',
+    PROBE_EXECUTION_FAILED: 'PROBE_EXECUTION_FAILED',
+    MALFORMED_PDF: 'MALFORMED_PDF',
+
+    // Policy & Logic
+    POLICY_NOT_FOUND: 'POLICY_NOT_FOUND',
+    FINDING_MAP_ERROR: 'FINDING_MAP_ERROR',
+
+    // Autofix
+    AUTOFIX_FAILED: 'AUTOFIX_FAILED',
+    RECHECK_MISMATCH: 'RECHECK_MISMATCH',
+
+    // Compliance
+    REPORT_SCHEMA_VALIDATION_FAILED: 'REPORT_SCHEMA_VALIDATION_FAILED'
+};
+
+module.exports = ErrorTaxonomy;

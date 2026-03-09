@@ -120,11 +120,45 @@ class RoutingRecommendationService {
     }
 
     /**
+     * Filters candidates based on technical compatibility (TAC, Dimensions).
+     */
+    async filterCandidatesByCapability(jobId, candidates, preflightResults) {
+        if (!preflightResults || !preflightResults.metrics) return candidates;
+
+        const docTac = preflightResults.metrics.max_tac || 0;
+        const docWidthMm = preflightResults.classification?.widthMm || 0;
+        const docHeightMm = preflightResults.classification?.heightMm || 0;
+
+        return candidates.map(c => {
+            let compatibilityReason = 'MATCH';
+            let technicalScore = 1.0;
+
+            // 1. TAC Match (Printer max ink limit)
+            const printerMaxTac = c.max_ink_limit || 300;
+            if (docTac > printerMaxTac) {
+                technicalScore *= 0.5;
+                compatibilityReason = `TAC_EXCEEDED (${docTac}% > ${printerMaxTac}%)`;
+            }
+
+            // 2. Dimension Match (Printer max size)
+            const printerMaxWidth = c.max_width_mm || 9999;
+            const printerMaxHeight = c.max_height_mm || 9999;
+            if (docWidthMm > printerMaxWidth || docHeightMm > printerMaxHeight) {
+                technicalScore = 0;
+                compatibilityReason = `SIZE_INCOMPATIBLE (${Math.round(docWidthMm)}x${Math.round(docHeightMm)} > ${printerMaxWidth}x${printerMaxHeight})`;
+            }
+
+            return {
+                ...c,
+                technical_compatibility: technicalScore,
+                compatibility_reason: compatibilityReason,
+                routing_score: c.routing_score * technicalScore
+            };
+        }).filter(c => c.technical_compatibility > 0);
+    }
+
+    /**
      * Computes a confidence score (0-1).
-     * Based on:
-     * - Candidate count
-     * - Routing score of the best candidate
-     * - Spread between candidates
      */
     computeConfidenceScore(candidates) {
         if (candidates.length === 0) return 0;

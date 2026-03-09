@@ -67,14 +67,24 @@ async function getPdfInfoGS(pdfPath) {
     });
 }
 
-// Another GS command to get MediaBox/TrimBox of the first page
+// GS command to get MediaBox, TrimBox, and BleedBox of the first page
 async function getPdfGeometryGS(pdfPath) {
     const gsCmd = resolveGs();
+
+    // PS snippet to get various page boxes
+    const psSnippet = `
+        (${pdfPath.replace(/\\/g, '/')}) (r) file runpdfbegin
+        1 pdfgetpage
+        dup /MediaBox get {= ( ) print} forall ( | ) print
+        dup /TrimBox known { dup /TrimBox get {= ( ) print} forall } { (null) print } ifelse ( | ) print
+        dup /BleedBox known { dup /BleedBox get {= ( ) print} forall } { (null) print } ifelse
+        (\n) print quit
+    `;
 
     const args = [
         '-dSAFER', '-dNOPAUSE', '-dBATCH', '-dQUIET',
         '-dNODISPLAY',
-        '-c', `(${pdfPath.replace(/\\/g, '/')}) (r) file runpdfbegin 1 pdfgetpage /MediaBox get {= ( ) print} forall (\n) print quit`
+        '-c', psSnippet
     ];
 
     return new Promise((resolve, reject) => {
@@ -91,14 +101,22 @@ async function getPdfGeometryGS(pdfPath) {
         proc.stdout.on('data', (d) => out += d.toString());
         proc.on('close', (code) => {
             if (code === 0) {
-                const parts = out.trim().split(/\s+/).map(Number);
-                if (parts.length === 4) {
-                    resolve({ mediaBox: parts });
-                } else {
-                    resolve({ mediaBox: null });
-                }
+                // Output format: "x1 y1 x2 y2 | tx1 ty1 tx2 ty2 | bx1 by1 bx2 by2"
+                const sections = out.trim().split('|').map(s => s.trim());
+
+                const parseBox = (str) => {
+                    if (!str || str === 'null') return null;
+                    const b = str.split(/\s+/).map(Number);
+                    return b.length === 4 ? b : null;
+                };
+
+                const mediaBox = parseBox(sections[0]);
+                const trimBox = parseBox(sections[1]) || mediaBox;
+                const bleedBox = parseBox(sections[2]) || mediaBox;
+
+                resolve({ mediaBox, trimBox, bleedBox });
             } else {
-                reject(new Error('GS failed to get geometry'));
+                reject(new Error('GS failed to get geometry boxes'));
             }
         });
     });

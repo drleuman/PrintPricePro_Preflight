@@ -39,6 +39,18 @@ function spawnSafe(command, args, options = {}) {
             stdoutSize += data.length;
             if (stdoutSize < maxBuffer) {
                 stdout += data.toString();
+            } else {
+                if (!killed) {
+                    killed = true;
+                    child.kill('SIGKILL');
+                    reject({
+                        error: 'BUFFER_EXCEEDED',
+                        command,
+                        args,
+                        message: `Stdout exceeded buffer limit of ${maxBuffer} bytes`,
+                        stdout: stdout.slice(-1000)
+                    });
+                }
             }
         });
 
@@ -46,6 +58,18 @@ function spawnSafe(command, args, options = {}) {
             stderrSize += data.length;
             if (stderrSize < maxBuffer) {
                 stderr += data.toString();
+            } else {
+                if (!killed) {
+                    killed = true;
+                    child.kill('SIGKILL');
+                    reject({
+                        error: 'BUFFER_EXCEEDED',
+                        command,
+                        args,
+                        message: `Stderr exceeded buffer limit of ${maxBuffer} bytes`,
+                        stderr: stderr.slice(-1000)
+                    });
+                }
             }
         });
 

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const policyEngine = require('./policyEngine');
 
 class ReportService {
     constructor() {
@@ -52,12 +53,49 @@ class ReportService {
     }
 
     /**
+     * Validates a report against the V2 internal schema.
+     * Throws if critical fields are missing to prevent contract breakage.
+     */
+    validateReport(report) {
+        const required = ['document', 'findings', 'risk_score', 'engines'];
+        for (const field of required) {
+            if (report[field] === undefined) {
+                const err = new Error(`[REPORT-CONTRACT-VIOLATION] Missing required field: ${field}`);
+                err.code = ErrorTaxonomy.REPORT_SCHEMA_VALIDATION_FAILED;
+                throw err;
+            }
+        }
+
+        if (!Array.isArray(report.findings)) {
+            const err = new Error(`[REPORT-CONTRACT-VIOLATION] Findings must be an array`);
+            err.code = ErrorTaxonomy.REPORT_SCHEMA_VALIDATION_FAILED;
+            throw err;
+        }
+
+        // Deep check for findings
+        report.findings.forEach((f, i) => {
+            if (!f.id || !f.severity || !f.user_message) {
+                const err = new Error(`[REPORT-CONTRACT-VIOLATION] Finding at index ${i} misses mandatory V2 fields (id, severity, user_message)`);
+                err.code = ErrorTaxonomy.REPORT_SCHEMA_VALIDATION_FAILED;
+                throw err;
+            }
+        });
+
+        console.log(`[REPORT-VALIDATOR] Report for ${report.document?.fileName} passed V2 contract validation.`);
+        return true;
+    }
+
+    /**
      * Builds a V2 Preflight Report from raw findings and metadata.
      */
-    buildReport(asset, analysisResults, engines = {}) {
-        const { info, fonts, findings: rawFindings } = analysisResults;
+    buildReport(asset, analysisResults, policyObj, engines = {}) {
+        const { info, fonts } = analysisResults;
+
+        // Generate findings dynamically based on policy
+        const rawFindings = policyEngine.evaluateTechnicalRules(analysisResults, policyObj);
 
         const report = {
+            // ...
             document: {
                 fileName: asset.filename,
                 fileSize: asset.size,
@@ -110,7 +148,16 @@ class ReportService {
             }
         });
 
+        this.validateReport(report);
         return report;
+    }
+    /**
+     * Prunes a report for public consumption (removes sensitive telemetry).
+     */
+    pruneForPublic(report) {
+        const publicReport = { ...report };
+        delete publicReport.telemetry;
+        return publicReport;
     }
 }
 

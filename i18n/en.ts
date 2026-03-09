@@ -76,6 +76,7 @@ export const en = {
   // Generic labels
   severity: 'Severity',
   page: 'Page',
+  documentWide: 'Document-wide',
   message: 'Message',
   details: 'Details',
   close: 'Close',

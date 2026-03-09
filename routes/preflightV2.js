@@ -6,7 +6,7 @@ const queue = require('../services/queue');
 const db = require('../services/db');
 
 // Multer setup for temporary storage before moving to V2 Assets
-const MAX_UPLOAD_BYTES = Number(process.env.PPP_MAX_UPLOAD_BYTES || 500 * 1024 * 1024);
+const MAX_UPLOAD_BYTES = Number(process.env.PPP_MAX_UPLOAD_BYTES || 250 * 1024 * 1024);
 const upload = multer({
     dest: 'uploads-v2-temp/',
     limits: { fileSize: MAX_UPLOAD_BYTES }
@@ -84,7 +84,7 @@ router.post('/autofix', async (req, res) => {
 
         await db.query(`
             INSERT INTO jobs (id, tenant_id, asset_id, type, status)
-            VALUES ($1, $2, $3, $4, $5)
+            VALUES (?, ?, ?, ?, ?)
         `, [job.id, tenant_id || asset.tenant_id, asset_id, 'AUTOFIX', 'QUEUED']);
 
         res.status(202).json({

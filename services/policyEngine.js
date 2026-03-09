@@ -243,6 +243,121 @@ function listPolicies() {
     return getRegistry().policies || [];
 }
 
+/**
+ * Evaluate technical rules from analysis results against a policy.
+ * @param {object} results - Analysis results from deterministicService
+ * @param {object} policy
+ * @returns {object[]} - Array of findings
+ */
+function evaluateTechnicalRules(results, policy) {
+    const findings = [];
+    const { info, fonts } = results;
+    const checks = policy.checks || {};
+    const doc = policy.document || {};
+
+    // 1. Font Findings
+    if (fonts && fonts.length > 0) {
+        const notEmbedded = fonts.filter(f => !f.emb);
+        if (notEmbedded.length > 0) {
+            findings.push({
+                id: 'fonts-not-embedded',
+                severity: 'ERROR',
+                evidence: {
+                    source: 'pdf_struct',
+                    details: `Found ${notEmbedded.length} fonts not embedded: ${notEmbedded.map(f => f.name).join(', ')}`
+                }
+            });
+        }
+
+        const type3 = fonts.filter(f => f.type === 'Type 3');
+        if (type3.length > 0 && checks.warn_on_type3_fonts) {
+            findings.push({
+                id: 'type3-fonts-present',
+                severity: 'WARNING',
+                evidence: {
+                    source: 'pdf_struct',
+                    details: `Found Type 3 (bitmap) fonts: ${type3.map(f => f.name).join(', ')}`
+                }
+            });
+        }
+    }
+
+    // 2. Geometry Findings
+    if (info && info.pages > 0) {
+        const requiredBleed = doc.bleed_mm_required || 0;
+        if (requiredBleed > 0 && !info.hasBleedBox) {
+            findings.push({
+                id: 'missing-bleed-info',
+                severity: checks.error_on_missing_bleed ? 'ERROR' : 'WARNING',
+                evidence: {
+                    source: 'pdf_struct',
+                    details: `Policy requires ${requiredBleed}mm bleed, but BleedBox is missing.`
+                }
+            });
+        }
+    }
+
+    // 3. Color Findings
+    if (results.separations && results.separations.hasSpots) {
+        const allowSpots = policy.color?.allow_spot_colors;
+        findings.push({
+            id: 'spot-color-detected',
+            severity: allowSpots ? 'INFO' : 'WARNING',
+            evidence: {
+                source: 'rip_probe',
+                details: `Found ${results.separations.spotColors.length} spot colors: ${results.separations.spotColors.join(', ')}`
+            }
+        });
+    }
+
+    if (policy.color?.require_output_intent && !results.hasOutputIntent) {
+        findings.push({
+            id: 'missing-output-intent',
+            severity: 'WARNING',
+            evidence: {
+                source: 'pdf_dictionary',
+                details: 'Policy requires OutputIntent, but none found.'
+            }
+        });
+    }
+
+    // 4. Integrated Heuristic Findings
+    const heuristicService = require('./heuristicService');
+
+    if (results.imageHeuristics && results.imageHeuristics.findings) {
+        findings.push(...results.imageHeuristics.findings.map(f => ({
+            ...f,
+            evidence: { source: 'image_probe', details: f.details }
+        })));
+    }
+
+    const editRisk = heuristicService.detectVectorTextRisk(info, fonts);
+    if (editRisk.length > 0) {
+        findings.push(...editRisk.map(f => ({
+            id: f.id,
+            severity: f.severity.toUpperCase(),
+            type: 'heuristic',
+            evidence: { source: 'font_heuristic', details: f.details }
+        })));
+    }
+
+    const intents = heuristicService.classifyEditionIntent(info);
+    intents.forEach(intent => {
+        findings.push({
+            id: intent.id,
+            severity: 'INFO',
+            type: 'heuristic',
+            confidence: intent.confidence,
+            evidence: {
+                source: 'layout_heuristic',
+                details: intent.user_message
+            }
+        });
+    });
+
+    return findings;
+}
+
 module.exports = {
     loadPolicy,
     resolveIccPath,
@@ -250,5 +365,6 @@ module.exports = {
     getAutoFixActions,
     getDefaultPolicy,
     listPolicies,
-    getRegistry
+    getRegistry,
+    evaluateTechnicalRules
 };

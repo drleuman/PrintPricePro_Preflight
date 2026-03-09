@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './V2ReportViewer.css';
 import { RiskMeter } from './RiskMeter';
 import { PdfComparisonViewer } from './PdfComparisonViewer';
+import { ProductionIntelligencePanel } from './V3/ProductionIntelligencePanel';
 
 interface V2ReportViewerProps {
     jobId: string;
@@ -18,6 +19,7 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalU
 
     useEffect(() => {
         let pollTimer: any;
+        let pollCount = 0;
 
         const fetchStatus = async () => {
             try {
@@ -26,10 +28,16 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalU
                 const data = await res.json();
 
                 setJob(data);
+                pollCount++;
 
                 if (data.status === 'SUCCEEDED' || data.status === 'FAILED') {
                     setLoading(false);
                     clearInterval(pollTimer);
+                } else {
+                    // Adjust interval dynamically: 1s for first 10 loops, then 3s
+                    const nextInterval = pollCount < 10 ? 1000 : 3000;
+                    clearInterval(pollTimer);
+                    pollTimer = setInterval(fetchStatus, nextInterval);
                 }
             } catch (err: any) {
                 setError(err.message);
@@ -39,7 +47,7 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalU
         };
 
         fetchStatus();
-        pollTimer = setInterval(fetchStatus, 2000);
+        pollTimer = setInterval(fetchStatus, 1000);
 
         return () => clearInterval(pollTimer);
     }, [jobId]);
@@ -232,13 +240,27 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalU
                 <div className="v2-grid">
                     <div className="v2-report-glass v2-summary-card">
                         <span className="v2-stat-label">Engine Configuration</span>
-                        <span className="v2-stat-value">{report.engines.server_engine_version}</span>
-                        <span className="v2-stat-label">Policy Active: OFFSET_CMYK_STRICT</span>
+                        <span className="v2-stat-value" style={{ fontSize: '1.2rem' }}>{report.engines?.server_engine_version || 'v2.2.0-PRO'}</span>
+                        <span className="v2-stat-label">Policy: {report.policy?.name || 'OFFSET_CMYK_STRICT'}</span>
                     </div>
                     <div className="v2-report-glass v2-summary-card">
-                        <span className="v2-stat-label">Document Summary</span>
-                        <span className="v2-stat-value">{report.document.pageCount} Pages</span>
-                        <span className="v2-stat-label">{report.document.fileName} • {report.document.pdfVersion}</span>
+                        <span className="v2-stat-label">Classification: {report.classification?.type || 'DOCUMENT'}</span>
+                        <span className="v2-stat-value" style={{ fontSize: '1.2rem' }}>{report.classification?.format || 'Custom'}</span>
+                        <span className="v2-stat-label">{report.document?.pageCount} Pages • {report.classification?.spineMm?.toFixed(2) || '0.00'}mm Spine</span>
+                    </div>
+                    <div className="v2-report-glass v2-summary-card">
+                        <span className="v2-stat-label">Editorial Geometry</span>
+                        <span className="v2-stat-value" style={{
+                            fontSize: '1.2rem',
+                            color: report.bleedAudit?.status === 'PASS' ? '#10B981' : '#F59E0B'
+                        }}>
+                            {report.bleedAudit?.status === 'PASS' ? 'Bleed OK' : 'Bleed Warning'}
+                        </span>
+                        <span className="v2-stat-label">
+                            {report.bleedAudit?.bleed ?
+                                `${report.bleedAudit.bleed.top.toFixed(1)}mm / ${report.bleedAudit.bleed.left.toFixed(1)}mm`
+                                : 'Missing Box Metadata'}
+                        </span>
                     </div>
                 </div>
             )}
@@ -259,6 +281,11 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalU
 
             {originalUrl && job?.download_url && (
                 <PdfComparisonViewer originalUrl={originalUrl} fixedUrl={job.download_url} />
+            )}
+
+            {/* V3 Production Intelligence */}
+            {report && (
+                <ProductionIntelligencePanel report={report} />
             )}
 
             {/* Findings List */}

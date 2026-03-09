@@ -82,6 +82,7 @@ const SCHEMA_QUERIES = [
     tenant_id VARCHAR(255) NOT NULL DEFAULT 'default',
     policy_slug VARCHAR(255) NOT NULL,
     success BOOLEAN NOT NULL,
+    outcome VARCHAR(20) DEFAULT 'SUCCESS',
     processing_ms BIGINT NOT NULL,
     file_size_bytes BIGINT,
     page_count INTEGER,
@@ -90,6 +91,7 @@ const SCHEMA_QUERIES = [
     risk_score_after INTEGER,
     hours_saved DECIMAL(10,2),
     value_generated DECIMAL(10,2),
+    telemetry_json JSON,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
 );`,
@@ -357,6 +359,8 @@ async function patchSchema() {
         { table: 'metrics', column: 'value_generated', query: 'ALTER TABLE metrics ADD COLUMN value_generated DECIMAL(10,2)' },
         { table: 'metrics', column: 'risk_score_before', query: 'ALTER TABLE metrics ADD COLUMN risk_score_before INTEGER' },
         { table: 'metrics', column: 'risk_score_after', query: 'ALTER TABLE metrics ADD COLUMN risk_score_after INTEGER' },
+        { table: 'metrics', column: 'telemetry_json', query: 'ALTER TABLE metrics ADD COLUMN telemetry_json JSON' },
+        { table: 'metrics', column: 'outcome', query: 'ALTER TABLE metrics ADD COLUMN outcome VARCHAR(20) DEFAULT \'SUCCESS\'' },
 
         // Batches table: ROI aggregations (Phase 17.2)
         { table: 'batches', column: 'risk_score_before_avg', query: 'ALTER TABLE batches ADD COLUMN risk_score_before_avg DECIMAL(5,2)' },

@@ -134,8 +134,16 @@ export const IssuesPanel: React.FC<Props> = ({
 
     const sev = getSeverity(iss);
     const sevLabel = severityLabel(sev);
-    const categoryLabel = (iss.category && ISSUE_CATEGORY_LABELS[iss.category as keyof typeof ISSUE_CATEGORY_LABELS]) || iss.category || (t('other' as any) || 'Other');
-    const sevColorClass = (iss.severity && SEVERITY_COLORS[iss.severity]) || '';
+
+    // Fallback logic for V2 fields
+    const displayCategory = (iss.category as any) || iss.type || 'other';
+    const categoryLabel = (ISSUE_CATEGORY_LABELS[displayCategory as keyof typeof ISSUE_CATEGORY_LABELS]) || displayCategory;
+    const displayMessage = iss.user_message || iss.message || iss.title || (iss as any).description || 'Issue';
+
+    // Severity color handling
+    const rawSev = (iss.severity || '').toLowerCase();
+    const sevColorKey = rawSev.includes('error') ? 'error' : rawSev.includes('warn') ? 'warning' : 'info';
+    const sevColorClass = SEVERITY_COLORS[sevColorKey as keyof typeof SEVERITY_COLORS] || '';
 
     return (
       <div style={style} className="px-3 border-b border-gray-100 last:border-b-0 flex items-center">
@@ -150,12 +158,12 @@ export const IssuesPanel: React.FC<Props> = ({
                 {sevLabel}
               </span>
               <span className="ppp-issues-row-title text-xs font-semibold text-gray-800 line-clamp-2 leading-tight">
-                {iss.message || iss.title || (iss as any).description || 'Issue'}
+                {displayMessage}
               </span>
               <span className="text-[10px] text-gray-400 leading-none">{categoryLabel}</span>
             </div>
             <span className="ppp-issues-row-page text-[10px] text-gray-400 whitespace-nowrap shrink-0 mt-0.5">
-              {t('page')} {iss.page ?? '—'}
+              {iss.page !== undefined ? `${t('page')} ${iss.page}` : t('documentWide')}
             </span>
           </div>
         </button>

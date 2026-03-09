@@ -4,7 +4,8 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { PDFDocument, PDFName, PDFArray, PDFDict, pushGraphicsState, concatTransformationMatrix, popGraphicsState } = require('pdf-lib');
 const { runGs, acquireGsSlot, releaseGsSlot, resolveGsCmd } = require('./ghostscript');
-const { getPdfInfoGS } = require('../utils-server/pdfInfo');
+const { getPdfInfoGS, getPdfGeometryGS } = require('../utils-server/pdfInfo');
+const { auditBleed, classifyDocument } = require('./geometryAuditService');
 
 // Use consistent GS resolution
 const GS_CMD = resolveGsCmd();
@@ -97,10 +98,48 @@ async function execCmd(cmd, args, opts = {}) {
             resolve({ ok: false, code: -1, stdout: out, stderr: `${err}\nSpawn error: ${e.message}`, killed: false, stdout_truncated: outTruncated, stderr_truncated: errTruncated });
         });
 
-        p.on('close', (code) => {
+        p.on('close', async (code) => {
             if (finished) return;
             cleanup();
-            resolve({ ok: (code === 0 || code === null), code, stdout: out, stderr: err, killed: false, stdout_truncated: outTruncated, stderr_truncated: errTruncated });
+
+            try {
+                let geometry = null;
+                let bleedAudit = null;
+                let classification = 'UNKNOWN';
+
+                if (opts.pdfPath) { // Only attempt geometry extraction if pdfPath is provided in opts
+                    geometry = await getPdfGeometryGS(opts.pdfPath);
+                    bleedAudit = auditBleed(geometry);
+                    classification = classifyDocument(geometry, opts.metadata?.pageCount || 1);
+                }
+
+                resolve({
+                    ok: (code === 0 || code === null),
+                    code,
+                    stdout: out,
+                    stderr: err,
+                    killed: false,
+                    stdout_truncated: outTruncated,
+                    stderr_truncated: errTruncated,
+                    geometry,
+                    bleedAudit,
+                    classification
+                });
+            } catch (geomErr) {
+                console.error('[EXEC-CMD] Geometry extraction failed:', geomErr);
+                resolve({
+                    ok: (code === 0 || code === null),
+                    code,
+                    stdout: out,
+                    stderr: err,
+                    killed: false,
+                    stdout_truncated: outTruncated,
+                    stderr_truncated: errTruncated,
+                    geometry: null,
+                    bleedAudit: { status: 'ERROR', message: geomErr.message },
+                    classification: 'UNKNOWN'
+                });
+            }
         });
     });
 }

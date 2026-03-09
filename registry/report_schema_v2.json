@@ -1,0 +1,120 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "PrintPrice Report V2 (Federated)",
+    "type": "object",
+    "required": [
+        "document",
+        "findings",
+        "risk_score",
+        "engines"
+    ],
+    "properties": {
+        "document": {
+            "type": "object",
+            "required": [
+                "fileName",
+                "pageCount"
+            ],
+            "properties": {
+                "fileName": {
+                    "type": "string"
+                },
+                "fileSize": {
+                    "type": "number"
+                },
+                "pageCount": {
+                    "type": "integer"
+                },
+                "pdfVersion": {
+                    "type": "string"
+                }
+            }
+        },
+        "findings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "severity",
+                    "user_message"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "error_code": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "severity": {
+                        "enum": [
+                            "ERROR",
+                            "WARNING",
+                            "INFO",
+                            "CRITICAL"
+                        ]
+                    },
+                    "user_message": {
+                        "type": "string"
+                    },
+                    "developer_message": {
+                        "type": "string"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "evidence": {
+                        "type": "object"
+                    },
+                    "fix": {
+                        "type": "object",
+                        "properties": {
+                            "available": {
+                                "type": "boolean"
+                            },
+                            "applied": {
+                                "type": "boolean"
+                            },
+                            "step": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "risk_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+        },
+        "engines": {
+            "type": "object",
+            "properties": {
+                "server_engine_version": {
+                    "type": "string"
+                },
+                "policy_version": {
+                    "type": "string"
+                }
+            }
+        },
+        "delta": {
+            "type": "object",
+            "properties": {
+                "fixed_count": {
+                    "type": "integer"
+                },
+                "remaining_count": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}
