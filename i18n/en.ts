@@ -55,6 +55,9 @@ export const en = {
   complianceCertified: 'Compliance Certified',
   txtSummary: 'TXT Summary',
   productionTools: 'Production Tools',
+  aiMagicApplied: 'AI Magic Applied!',
+  aiMagicDescription: 'Our AI Wizard has automatically optimized your colors, resolution, and margins for professional printing.',
+  processedSuccessfully: 'Document processed successfully{{count, plural, =0 {} other { ({{count}} issue(s) addressed)}}}',
 
   // Summary
   issuesSummary: 'Issues Summary',

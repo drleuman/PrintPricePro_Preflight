@@ -53,6 +53,9 @@ export const es = {
   complianceCertified: 'Certificado de Cumplimiento',
   txtSummary: 'Resumen TXT',
   productionTools: 'Herramientas de Producción',
+  aiMagicApplied: '¡Magia de IA Aplicada!',
+  aiMagicDescription: 'Nuestro Asistente IA ha optimizado automáticamente tus colores, resolución y márgenes para impresión profesional.',
+  processedSuccessfully: 'Documento procesado exitosamente{{count, plural, =0 {} other { ({{count}} incidencia(s) resuelta(s))}}}',
 
   // Summary
   issuesSummary: 'Resumen de Incidencias',

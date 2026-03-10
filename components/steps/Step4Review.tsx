@@ -71,15 +71,15 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
     // If result is null, we are NOT ready (still analyzing or failed).
     const isReadyForPrint = !!result && issuesCount === 0;
     const statusTitle = appMode === 'ai'
-        ? <span className="flex items-center gap-2">AI Magic Applied! <SparklesIcon className="w-6 h-6 text-amber-400" /></span>
+        ? <span className="flex items-center gap-2">{t('aiMagicApplied')} <SparklesIcon className="w-6 h-6 text-amber-400" /></span>
         : isReadyForPrint
             ? t('readyForPrint')
             : t('reviewRequired');
 
     const statusText = appMode === 'ai'
-        ? 'Our AI Wizard has automatically optimized your colors, resolution, and margins for professional printing.'
+        ? t('aiMagicDescription')
         : hasBeenProcessed
-            ? `Document processed successfully${issuesCount > 0 ? ` (${issuesCount} issue${issuesCount !== 1 ? 's' : ''} addressed)` : ''}`
+            ? t('processedSuccessfully', { count: issuesCount })
             : hasIssues
                 ? t('issuesFoundApplyOrDownload', { count: issuesCount })
                 : t('noIssuesPdf');
