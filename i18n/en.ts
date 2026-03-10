@@ -29,7 +29,8 @@ export const en = {
   fixIssuesDescription: 'Review and fix the {{count}} issue(s) found in your PDF',
   fixIssuesRemaing: '{{count}} issue(s) remaining',
   reviewAndDownload: 'Review & Download',
-  pdfProcessedReady: 'Your PDF has been processed and is ready',
+  pdfProcessedReady: 'Your print-ready PDF is ready! Review and download below.',
+  reviewAndApplyCorrections: 'Review your document and apply corrections if needed.',
 
   // Navigation
   back: '← Back',
@@ -46,6 +47,14 @@ export const en = {
   checkingDetails: 'Checking fonts, colors, images, and more...',
   perfectNoIssues: 'Perfect! No issues found',
   readyForPrinting: 'Your PDF is ready for printing',
+  readyForPrint: 'Ready for Print!',
+  reviewRequired: 'Review Required',
+  readyForProduction: 'Ready for Production',
+  actionRequired: 'Action Required',
+  availableReports: 'Available Reports',
+  complianceCertified: 'Compliance Certified',
+  txtSummary: 'TXT Summary',
+  productionTools: 'Production Tools',
 
   // Summary
   issuesSummary: 'Issues Summary',
@@ -53,6 +62,7 @@ export const en = {
   issueCategories: 'Issue Categories',
   fileLabel: 'File',
   downloadReport: 'Download Report',
+  downloadOriginal: 'Download Original',
   reanalyzePdf: '🔄 Re-analyze PDF',
 
   // Viewer
@@ -87,7 +97,9 @@ export const en = {
   noIssuesToDisplay: 'No issues to display.',
   noIssuesFound: 'No issues found. Your PDF looks perfect!',
   noIssues: 'No issues',
+  noIssuesPdf: 'No issues found in your PDF',
   totalIssues: 'total issues',
+  issuesFoundApplyOrDownload: '{{count}} issue(s) found - apply corrections or download the original file',
 
   // Issues panel
   issuesFound: 'Issues Found',

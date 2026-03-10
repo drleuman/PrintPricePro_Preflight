@@ -73,16 +73,16 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
     const statusTitle = appMode === 'ai'
         ? <span className="flex items-center gap-2">AI Magic Applied! <SparklesIcon className="w-6 h-6 text-amber-400" /></span>
         : isReadyForPrint
-            ? 'Ready for Print!'
-            : 'Review Required';
+            ? t('readyForPrint')
+            : t('reviewRequired');
 
     const statusText = appMode === 'ai'
         ? 'Our AI Wizard has automatically optimized your colors, resolution, and margins for professional printing.'
         : hasBeenProcessed
             ? `Document processed successfully${issuesCount > 0 ? ` (${issuesCount} issue${issuesCount !== 1 ? 's' : ''} addressed)` : ''}`
             : hasIssues
-                ? `${issuesCount} issue${issuesCount !== 1 ? 's' : ''} found - apply corrections or download original`
-                : 'No issues found in your PDF';
+                ? t('issuesFoundApplyOrDownload', { count: issuesCount })
+                : t('noIssuesPdf');
 
     return (
         <div className="step step--review max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-in fade-in duration-1000 slide-in-from-bottom-4">
@@ -93,8 +93,8 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                 </h2>
                 <p className="text-lg text-gray-500 max-w-2xl mx-auto font-medium">
                     {isReadyForPrint
-                        ? 'Your print-ready PDF is ready! Review and download below.'
-                        : 'Review your document and apply corrections if needed.'}
+                        ? t('pdfProcessedReady')
+                        : t('reviewAndApplyCorrections')}
                 </p>
             </div>
 
@@ -121,7 +121,7 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                             <div>
                                 <h3 className="text-2xl font-black text-gray-900 tracking-tight leading-none">{statusTitle}</h3>
                                 <p className={`text-[10px] font-black uppercase tracking-[0.2em] mt-2 ${isReadyForPrint ? 'text-green-600' : 'text-amber-600'}`}>
-                                    {isReadyForPrint ? 'Ready for Production' : 'Action Required'}
+                                    {isReadyForPrint ? t('readyForProduction') : t('actionRequired')}
                                 </p>
                             </div>
                         </div>
@@ -200,7 +200,7 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
 
                     {/* 4. Secondary Actions Card */}
                     <div className="p-8 bg-white rounded-[2.5rem] border border-gray-100 shadow-sm space-y-4">
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Available Reports</span>
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t('availableReports')}</span>
 
                         <button
                             className="flex items-center justify-between w-full p-5 rounded-2xl border border-gray-100 hover:border-red-100 hover:bg-red-50/30 transition-all group"
@@ -215,7 +215,7 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                 </div>
                                 <div className="text-left">
                                     <span className="block text-sm font-black text-gray-900 tracking-tight">{t('technicalNoteTitle')}</span>
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Compliance certified</span>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('complianceCertified')}</span>
                                 </div>
                             </div>
                             <svg className="w-4 h-4 text-gray-300 group-hover:text-red-600 group-hover:translate-x-1 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4">
@@ -272,7 +272,7 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                 </div>
                                 <div className="text-left">
                                     <span className="block text-sm font-black text-gray-600 tracking-tight">{t('downloadReport')}</span>
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">TXT Summary</span>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('txtSummary')}</span>
                                 </div>
                             </div>
                         </button>
@@ -280,14 +280,14 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
 
                     {/* 5. Tools & Optimizations Card */}
                     <div className="p-8 bg-white rounded-[2.5rem] border border-gray-100 shadow-sm">
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 block">Production Tools</span>
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 block">{t('productionTools')}</span>
 
                         <div className="space-y-3">
                             {[
-                                { icon: <ArrowPathIcon className="w-5 h-5" />, text: 'To Grayscale', action: onConvertGrayscale, color: 'bg-gray-100' },
-                                { icon: <PaintBrushIcon className="w-5 h-5" />, text: 'To CMYK', action: onConvertColors, color: 'bg-amber-50' },
-                                { icon: <RocketLaunchIcon className="w-5 h-5" />, text: 'Rebuild High-Res', action: onRebuildPdf, color: 'bg-blue-50', badge: '300DPI' },
-                                { icon: <BookOpenIcon className="w-5 h-5" />, text: 'Make Booklet', action: onMakeBooklet, color: 'bg-purple-50' }
+                                { icon: <ArrowPathIcon className="w-5 h-5" />, text: t('convertToGrayscale'), action: onConvertGrayscale, color: 'bg-gray-100' },
+                                { icon: <PaintBrushIcon className="w-5 h-5" />, text: t('convertColorsToCMYK'), action: onConvertColors, color: 'bg-amber-50' },
+                                { icon: <RocketLaunchIcon className="w-5 h-5" />, text: t('rebuildPdfHighRes'), action: onRebuildPdf, color: 'bg-blue-50', badge: '300DPI' },
+                                { icon: <BookOpenIcon className="w-5 h-5" />, text: t('createBooklet'), action: onMakeBooklet, color: 'bg-purple-50' }
                             ].map((tool, idx) => (
                                 <button
                                     key={idx}
@@ -368,17 +368,17 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                         <div className="flex gap-6">
                             {appMode !== 'ai' && (
                                 <button className="px-10 py-5 text-xs font-black uppercase tracking-[0.2em] text-gray-400 hover:text-gray-900 transition-all hover:-translate-x-1" onClick={onBack}>
-                                    ← Back
+                                    {t('back')}
                                 </button>
                             )}
                             <button className="px-10 py-5 text-xs font-black uppercase tracking-[0.2em] text-red-600 hover:bg-red-50 rounded-2xl transition-all flex items-center gap-2" onClick={onStartOver}>
-                                <ArrowPathIcon className="w-4 h-4" /> Start Over
+                                <ArrowPathIcon className="w-4 h-4" /> {t('startOver')}
                             </button>
                         </div>
 
                         {!lastPdfUrl && (
                             <button className="px-12 py-5 bg-gray-100 text-gray-300 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] cursor-not-allowed flex items-center gap-2" disabled>
-                                <ArrowDownTrayIcon className="w-4 h-4" /> Download Original
+                                <ArrowDownTrayIcon className="w-4 h-4" /> {t('downloadOriginal')}
                             </button>
                         )}
                     </div>

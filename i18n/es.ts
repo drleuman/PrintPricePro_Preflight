@@ -27,7 +27,8 @@ export const es = {
   fixIssuesDescription: 'Revisa y corrige las {{count}} incidencia(s) encontradas en tu PDF',
   fixIssuesRemaing: '{{count}} incidencia(s) pendiente(s)',
   reviewAndDownload: 'Revisar y Descargar',
-  pdfProcessedReady: 'Tu PDF ha sido procesado y está listo',
+  pdfProcessedReady: 'Tu PDF listo para imprimir está listo. Revísalo y descárgalo a continuación.',
+  reviewAndApplyCorrections: 'Revisa tu documento y aplica correcciones si es necesario.',
 
   // Navigation
   back: '← Atrás',
@@ -44,6 +45,14 @@ export const es = {
   checkingDetails: 'Verificando fuentes, colores, imágenes y más...',
   perfectNoIssues: '¡Perfecto! No se encontraron incidencias',
   readyForPrinting: 'Tu PDF está listo para imprimir',
+  readyForPrint: 'Listo para Imprimir!',
+  reviewRequired: 'Requiere Revisión',
+  readyForProduction: 'Listo para Producción',
+  actionRequired: 'Acción Requerida',
+  availableReports: 'Reportes Disponibles',
+  complianceCertified: 'Certificado de Cumplimiento',
+  txtSummary: 'Resumen TXT',
+  productionTools: 'Herramientas de Producción',
 
   // Summary
   issuesSummary: 'Resumen de Incidencias',
@@ -51,6 +60,7 @@ export const es = {
   issueCategories: 'Categorías de Incidencias',
   fileLabel: 'Archivo',
   downloadReport: 'Descargar Informe',
+  downloadOriginal: 'Descargar Original',
   reanalyzePdf: '🔄 Volver a analizar PDF',
   noPdfLoaded: 'Ningún PDF cargado. Por favor, sube un archivo para empezar.',
 
@@ -85,7 +95,9 @@ export const es = {
   noIssuesToDisplay: 'No hay incidencias para mostrar.',
   noIssuesFound: '¡No se encontraron incidencias. Tu PDF se ve perfecto!',
   noIssues: 'No hay incidencias',
+  noIssuesPdf: 'No se encontraron incidencias en tu PDF',
   totalIssues: 'incidencias en total',
+  issuesFoundApplyOrDownload: 'Se encontraron {{count}} incidencia(s) - aplica correcciones o descarga el archivo original',
 
   // Issues panel
   issuesFound: 'Incidencias Encontradas',
