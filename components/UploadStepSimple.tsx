@@ -15,6 +15,9 @@ type Props = {
   onFileDrop?: (file: File | null) => void;
   onContinue: () => void;
   canContinue: boolean;
+  selectedPolicy?: string;
+  onPolicyChange?: (p: string) => void;
+  policies?: { slug: string; name: string }[];
 };
 
 const I = {
@@ -57,6 +60,9 @@ export const UploadStepSimple = forwardRef<PreflightDropzoneRef, Props>(({
   onFileDrop,
   onContinue,
   canContinue,
+  selectedPolicy,
+  onPolicyChange,
+  policies = [],
 }, ref) => {
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -265,6 +271,40 @@ export const UploadStepSimple = forwardRef<PreflightDropzoneRef, Props>(({
               </div>
               {mode === 'manual' && <div style={{ position: 'absolute', top: '15px', right: '15px' }}><I.Check style={{ width: '18px', height: '18px', color: '#dc0000' }} /></div>}
             </div>
+
+            {/* Policy Selector (only if magic/ai mode) */}
+            {mode === 'magic' && policies.length > 0 && (
+              <div style={{ marginTop: '10px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 900, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '10px' }}>
+                  Target Production Profile
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
+                  {policies.map(p => (
+                    <div
+                      key={p.slug}
+                      onClick={() => onPolicyChange?.(p.slug)}
+                      style={{
+                        padding: '12px 20px',
+                        borderRadius: '16px',
+                        border: `1px solid ${selectedPolicy === p.slug ? '#10b981' : '#e5e7eb'}`,
+                        background: selectedPolicy === p.slug ? '#f0fdf4' : '#fff',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: selectedPolicy === p.slug ? '#166534' : '#374151',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {p.name}
+                      {selectedPolicy === p.slug && <I.Check style={{ width: '14px', height: '14px' }} />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action Bar */}

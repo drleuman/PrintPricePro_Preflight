@@ -2,7 +2,15 @@
   "name": "pdf-preflight-check",
   "private": true,
   "version": "1.0.0",
+  "author": {
+    "name": "Manuel Enrique Morales",
+    "url": "https://manuelenriquemorales.com/"
+  },
+  "description": "PrintPrice Pro - Production Intelligence Platform",
   "main": "server.js",
+  "engines": {
+    "node": ">=20 <21"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -17,18 +25,26 @@
   "dependencies": {
     "@google/generative-ai": "^0.16.0",
     "@heroicons/react": "^2.2.0",
+    "adm-zip": "^0.5.16",
     "axios": "^1.13.2",
+    "bullmq": "^5.70.1",
+    "compression": "^1.7.5",
     "cors": "^2.8.5",
     "dompurify": "^3.3.0",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
+    "fuse.js": "^7.1.0",
     "helmet": "^8.0.0",
+    "ioredis": "^5.10.0",
     "marked": "^16.4.1",
     "multer": "^2.0.2",
+    "mysql2": "^3.18.2",
+    "nodemailer": "^8.0.1",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^4.6.82",
-    "pg": "^8.11.0",
+    "pino-http": "^10.4.0",
+    "puppeteer": "^24.37.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-window": "^1.8.10",
@@ -36,22 +52,23 @@
     "ws": "^8.19.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.2.1",
+    "@testing-library/jest-dom": "^6.4.8",
+    "@testing-library/react": "^16.0.0",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0",
-    "eslint": "^8.57.0",
-    "eslint-plugin-react": "^7.34.4",
     "@typescript-eslint/eslint-plugin": "^7.17.0",
     "@typescript-eslint/parser": "^7.17.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-react": "^7.34.4",
+    "jsdom": "^24.1.1",
     "prettier": "^3.3.3",
-    "vitest": "^2.0.0",
-    "@testing-library/react": "^16.0.0",
-    "@testing-library/jest-dom": "^6.4.8",
-    "jsdom": "^24.1.1"
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0",
+    "vitest": "^2.0.0"
   }
 }

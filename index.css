@@ -1,3 +1,5 @@
+@import 'tailwindcss';
+
 /* ===================== */
 /* Variables CSS          */
 /* ===================== */
@@ -52,9 +54,14 @@
   --shadow-xl: 0 10px 25px rgba(15, 23, 42, 0.15);
 
   /* Transiciones */
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.2s ease;
-  --transition-slow: 0.3s ease;
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Glassmorphism / Premium effects */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
 }
 
 /* ===================== */
@@ -158,10 +165,48 @@ div[role="button"]:focus:not(:focus-visible),
   0%,
   100% {
     opacity: 1;
+    transform: scale(1);
   }
 
   50% {
-    opacity: 0.7;
+    opacity: 0.8;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes pulse-glow-red {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 0, 0, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 15px 5px rgba(220, 0, 0, 0.2);
+  }
+}
+
+@keyframes pulse-glow-green {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 15px 5px rgba(16, 185, 129, 0.2);
+  }
+}
+
+@keyframes slide-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -175,6 +220,18 @@ div[role="button"]:focus:not(:focus-visible),
 
 .animate-pulse {
   animation: pulse 2s infinite ease-in-out;
+}
+
+.animate-pulse-glow-red {
+  animation: pulse-glow-red 2s infinite ease-in-out;
+}
+
+.animate-pulse-glow-green {
+  animation: pulse-glow-green 2s infinite ease-in-out;
+}
+
+.animate-slide-fade {
+  animation: slide-fade 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .loader {
@@ -697,16 +754,51 @@ div[role="button"]:focus:not(:focus-visible),
   border-radius: var(--border-radius-full);
 }
 
-.shadow-sm {
-  box-shadow: var(--shadow-sm);
-}
-
-.shadow {
-  box-shadow: var(--shadow-md);
-}
-
 .shadow-xl {
   box-shadow: var(--shadow-xl);
+}
+
+/* Glass & Premium Utilities */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-dark {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.premium-gradient {
+  background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%);
+}
+
+.premium-gradient-dark {
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+}
+
+.danger-glow {
+  border: 1px solid rgba(220, 0, 0, 0.3);
+  box-shadow: 0 0 10px rgba(220, 0, 0, 0.1);
+}
+
+.danger-glow:hover {
+  border: 1px solid rgba(220, 0, 0, 0.5);
+  box-shadow: 0 0 20px rgba(220, 0, 0, 0.2);
+}
+
+.hover-slide {
+  transition: transform var(--transition-normal);
+}
+
+.hover-slide:hover {
+  transform: translateY(-2px);
 }
 
 /* Texto */

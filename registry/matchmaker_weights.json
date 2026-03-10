@@ -1,0 +1,12 @@
+{
+    "weights": {
+        "physical": 0.45,
+        "operative": 0.35,
+        "commercial": 0.20
+    },
+    "score_thresholds": {
+        "minimum_overall": 0.6,
+        "minimum_physical": 0.8
+    },
+    "tie_breaker": "cost_lowest"
+}

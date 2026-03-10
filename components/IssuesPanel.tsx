@@ -16,6 +16,8 @@ import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
   BoltIcon,
+  CheckCircleIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
 
 type Props = {
@@ -88,6 +90,7 @@ export const IssuesPanel: React.FC<Props> = ({
     let warning = 0;
     let info = 0;
     for (const it of issues) {
+      if (!it) continue;
       const s = getSeverity(it);
       if (s === 'error') error++;
       else if (s === 'warning') warning++;
@@ -98,7 +101,7 @@ export const IssuesPanel: React.FC<Props> = ({
 
   const filtered = useMemo(() => {
     if (tab === 'all') return issues;
-    return issues.filter((it) => getSeverity(it) === tab);
+    return issues.filter((it) => it && getSeverity(it) === tab);
   }, [issues, tab]);
 
   // Se remueve grouped para usar filtered directamente con FixedSizeList
@@ -131,31 +134,37 @@ export const IssuesPanel: React.FC<Props> = ({
 
     const sev = getSeverity(iss);
     const sevLabel = severityLabel(sev);
-    const categoryLabel = ISSUE_CATEGORY_LABELS[iss.category as keyof typeof ISSUE_CATEGORY_LABELS] || iss.category || t('other');
-    const sevColorClass = SEVERITY_COLORS[iss.severity] || ''; // Clase de color basada en la severidad
+
+    // Fallback logic for V2 fields
+    const displayCategory = (iss.category as any) || iss.type || 'other';
+    const categoryLabel = (ISSUE_CATEGORY_LABELS[displayCategory as keyof typeof ISSUE_CATEGORY_LABELS]) || displayCategory;
+    const displayMessage = iss.user_message || iss.message || iss.title || (iss as any).description || 'Issue';
+
+    // Severity color handling
+    const rawSev = (iss.severity || '').toLowerCase();
+    const sevColorKey = rawSev.includes('error') ? 'error' : rawSev.includes('warn') ? 'warning' : 'info';
+    const sevColorClass = SEVERITY_COLORS[sevColorKey as keyof typeof SEVERITY_COLORS] || '';
 
     return (
-      <div style={style} className="px-3 py-1 border-b border-gray-200 last:border-b-0">
+      <div style={style} className="px-3 border-b border-gray-100 last:border-b-0 flex items-center">
         <button
           type="button"
-          onClick={() => onSelectIssue(iss)}
-          className={`w-full text-left ppp-issues-row ppp-issues-row--${sev} !py-1 !px-2`}
+          onClick={() => iss && onSelectIssue(iss)}
+          className={`w-full text-left ppp-issues-row ppp-issues-row--${sev} py-2 px-2`}
         >
-          <div className="ppp-issues-row-main flex items-center justify-between !gap-0">
-            <div className="flex flex-col min-w-0 flex-1">
-              <span className={`text-[10px] uppercase tracking-wider font-bold ${sevColorClass.split(' ')[0]} ${sevColorClass.split(' ')[1].replace('100', '200')}`}>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-col min-w-0 flex-1 gap-0.5">
+              <span className={`text-[9px] uppercase tracking-wider font-black ${sevColorClass.split(' ')[0]} ${(sevColorClass.split(' ')[1] || '').replace('100', '200')}`}>
                 {sevLabel}
               </span>
-              <span className="ppp-issues-row-title text-xs font-semibold text-gray-800 truncate">
-                {iss.message || iss.title || iss.description || 'Issue'}
+              <span className="ppp-issues-row-title text-xs font-semibold text-gray-800 line-clamp-2 leading-tight">
+                {displayMessage}
               </span>
+              <span className="text-[10px] text-gray-400 leading-none">{categoryLabel}</span>
             </div>
-            <span className="ppp-issues-row-page text-[10px] text-gray-500 ml-2 whitespace-nowrap">
-              {t('page')} {iss.page ?? '—'}
+            <span className="ppp-issues-row-page text-[10px] text-gray-400 whitespace-nowrap shrink-0 mt-0.5">
+              {iss.page !== undefined ? `${t('page')} ${iss.page}` : t('documentWide')}
             </span>
-          </div>
-          <div className="text-[10px] text-gray-400 mt-0.5 leading-none">
-            {categoryLabel}
           </div>
         </button>
       </div>
@@ -220,8 +229,8 @@ export const IssuesPanel: React.FC<Props> = ({
           </div>
           {diff.issueChanges.newIssues.length > 0 && (
             <div className="mt-2 text-center">
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                ⚠️ New issues detected: +{diff.issueChanges.newIssues.length}
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                <ExclamationTriangleIcon className="w-4 h-4" /> New issues detected: +{diff.issueChanges.newIssues.length}
               </span>
             </div>
           )}
@@ -276,7 +285,7 @@ export const IssuesPanel: React.FC<Props> = ({
 
           {diff.issueChanges.fixedIssues.length > 0 && (
             <div>
-              <h5 className="font-semibold text-green-700 mb-2">✅ Fixed Issues ({diff.issueChanges.fixedIssues.length})</h5>
+              <h5 className="font-semibold text-green-700 mb-2 flex items-center gap-2"><CheckCircleIcon className="w-5 h-5" /> Fixed Issues ({diff.issueChanges.fixedIssues.length})</h5>
               <ul className="space-y-1 max-h-40 overflow-y-auto">
                 {diff.issueChanges.fixedIssues.slice(0, 10).map((issue, i) => (
                   <li key={i} className="text-sm text-gray-700">
@@ -292,7 +301,7 @@ export const IssuesPanel: React.FC<Props> = ({
 
           {diff.issueChanges.remainingIssues.length > 0 && (
             <div>
-              <h5 className="font-semibold text-red-700 mb-2">🔄 Remaining Issues ({diff.issueChanges.remainingIssues.length})</h5>
+              <h5 className="font-semibold text-red-700 mb-2 flex items-center gap-2"><ArrowPathIcon className="w-5 h-5" /> Remaining Issues ({diff.issueChanges.remainingIssues.length})</h5>
               <ul className="space-y-1 max-h-40 overflow-y-auto">
                 {diff.issueChanges.remainingIssues.slice(0, 10).map((issue, i) => (
                   <li key={i} className="text-sm text-gray-700">
@@ -308,7 +317,7 @@ export const IssuesPanel: React.FC<Props> = ({
 
           {diff.issueChanges.newIssues.length > 0 && (
             <div>
-              <h5 className="font-semibold text-red-700 mb-2">⚠️ New Issues ({diff.issueChanges.newIssues.length})</h5>
+              <h5 className="font-semibold text-red-700 mb-2 flex items-center gap-2"><ExclamationTriangleIcon className="w-5 h-5" /> New Issues ({diff.issueChanges.newIssues.length})</h5>
               <ul className="space-y-1 max-h-40 overflow-y-auto">
                 {diff.issueChanges.newIssues.slice(0, 10).map((issue, i) => (
                   <li key={i} className="text-sm text-gray-700">
@@ -344,7 +353,7 @@ export const IssuesPanel: React.FC<Props> = ({
             </div>
             <p className="text-xs text-gray-500">
               {counts.total
-                ? `${counts.total} issues · ${counts.error} errors · ${counts.warning} warnings · ${counts.info} info`
+                ? `${counts.total} ${t('issues')} · ${counts.error} ${t('errors')} · ${counts.warning} ${t('warnings')} · ${counts.info} ${t('info')}`
                 : t('noIssuesToDisplay')}
             </p>
           </div>
@@ -420,10 +429,10 @@ export const IssuesPanel: React.FC<Props> = ({
 
         {counts.total > 0 && (
           <FixedSizeList
-            height={580} // Altura fija razonable para el panel lateral
+            height={560}
             width="100%"
             itemCount={filtered.length}
-            itemSize={62} // Más compacto
+            itemSize={76}
             className="ppp-issues-list-virtualizada"
           >
             {Row}

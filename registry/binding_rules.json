@@ -1,0 +1,71 @@
+{
+    "policy": {
+        "mismatch_severities": {
+            "page_count_delta_threshold": 2,
+            "page_count_mismatch": "warning",
+            "trim_size_delta_mm_threshold": 5.0,
+            "trim_size_mismatch": "warning",
+            "intent_binding_mismatch": "warning",
+            "intent_binding_mismatch_high_confidence": "warning"
+        },
+        "status_mapping": {
+            "has_blocking_error": "incompatible",
+            "has_warnings_only": "conditionally_ready",
+            "no_issues": "ready"
+        }
+    },
+    "binding_types": {
+        "perfect": {
+            "min_pages": 40,
+            "max_pages": 800,
+            "min_spine_mm": 3.0,
+            "max_spine_mm": 50.0,
+            "tolerances": {
+                "spine_delta_mm": {
+                    "green": 0.3,
+                    "attention": 0.8,
+                    "blocking": 1.5
+                }
+            }
+        },
+        "saddle": {
+            "min_pages": 4,
+            "max_pages": 64,
+            "max_spine_mm": 3.5,
+            "tolerances": {
+                "spine_delta_mm": {
+                    "green": 0.5,
+                    "attention": 2.0,
+                    "blocking": 5.0
+                }
+            }
+        },
+        "hardcover_casebound": {
+            "min_pages": 60,
+            "max_pages": 1000,
+            "min_spine_mm": 8.0,
+            "max_spine_mm": 60.0,
+            "hinge_gap_mm": 8.0,
+            "tolerances": {
+                "spine_delta_mm": {
+                    "green": 0.2,
+                    "attention": 0.5,
+                    "blocking": 1.0
+                }
+            }
+        }
+    },
+    "paper_calipers": {
+        "uncoated": {
+            "80": 0.100,
+            "90": 0.110,
+            "default": 0.105
+        },
+        "coated": {
+            "115": 0.088,
+            "130": 0.100,
+            "150": 0.115,
+            "default": 0.102
+        }
+    }
+}

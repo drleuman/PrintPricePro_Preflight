@@ -40,22 +40,10 @@ export function analyzeInkOptimization(pageStats: PageInkStats[]): InkOptimizati
 
         // --- CLASSIFICATION RULES ---
 
-        // Grayscale candidate: page coverage < 20% AND no color pixels detected
-        if (stat.avgCoverage < 20 && stat.isGrayscale) {
-            grayscaleCandidatesCount++;
-            opportunities.add('Print as grayscale page');
-            issues.push({
-                id: `ink-gray-${stat.pageIndex}`,
-                page: stat.pageIndex,
-                category: ISSUE_CATEGORY.INK_SAVING,
-                severity: Severity.INFO,
-                message: 'Grayscale candidate detected.',
-                details: 'This page has low coverage and no color pixels. Printing as grayscale can reduce click costs in digital printing.'
-            });
-        }
+        // Grayscale candidate removed per client feedback
 
-        // Heavy background: > 40% page area above 180% TAC
-        if (stat.heavyBackgroundArea > 40) {
+        // Heavy background: only show if TAC > 300
+        if (stat.heavyBackgroundArea > 40 && stat.peakTac > 300) {
             totalHeavyBg++;
             opportunities.add('Consider lighter tint or paper change');
             issues.push({
@@ -64,7 +52,7 @@ export function analyzeInkOptimization(pageStats: PageInkStats[]): InkOptimizati
                 category: ISSUE_CATEGORY.INK_SAVING,
                 severity: Severity.WARNING,
                 message: 'Heavy ink background detected.',
-                details: `${stat.heavyBackgroundArea.toFixed(1)}% of the page area exceeds 180% TAC. This increases cost and drying time.`
+                details: `${stat.heavyBackgroundArea.toFixed(1)}% of the page area exceeds 180% TAC, with a peak of ${stat.peakTac}%. This increases cost and drying time.`
             });
         }
 
@@ -83,8 +71,8 @@ export function analyzeInkOptimization(pageStats: PageInkStats[]): InkOptimizati
             });
         }
 
-        // Photo heavy: > 60% area continuous tone image
-        if (stat.isPhotoHeavy) {
+        // Photo heavy: only show if TAC > 300
+        if (stat.isPhotoHeavy && stat.peakTac > 300) {
             totalPhotoHeavyCount++;
             opportunities.add('Paper coating may affect drying and cost');
             issues.push({
@@ -93,23 +81,11 @@ export function analyzeInkOptimization(pageStats: PageInkStats[]): InkOptimizati
                 category: ISSUE_CATEGORY.INK_SAVING,
                 severity: Severity.INFO,
                 message: 'Photo-heavy page detected.',
-                details: 'High coverage photographic content detected. Ensure paper substrate is suitable for high ink loads.'
+                details: `High coverage photographic content detected with peak TAC ${stat.peakTac}%. Ensure paper substrate is suitable for high ink loads.`
             });
         }
 
-        // Low ink page: < 5% coverage (risk of banding on coated)
-        if (stat.isLowInk) {
-            totalLowInkCount++;
-            opportunities.add('Add subtle background to stabilize print');
-            issues.push({
-                id: `ink-low-${stat.pageIndex}`,
-                page: stat.pageIndex,
-                category: ISSUE_CATEGORY.INK_SAVING,
-                severity: Severity.INFO,
-                message: 'Extremely low ink coverage.',
-                details: 'Coverage is under 5%. On some digital presses, this may cause banding or unstable color reproduction.'
-            });
-        }
+        // Low ink page removed per client feedback
     });
 
     const pageCount = pageStats.length || 1;

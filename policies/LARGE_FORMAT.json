@@ -1,0 +1,53 @@
+{
+    "slug": "LARGE_FORMAT",
+    "name": "Large Format / Signage",
+    "description": "Banners, signage, and large format printing. RGB accepted. Relaxed resolution requirements (effective DPI at print size). Extended bleed for finishing.",
+    "category": "large_format",
+    "tier": "standard",
+    "color": {
+        "mode": "any",
+        "icc_profile": null,
+        "convert_rgb": false,
+        "tac_limit": 999,
+        "allow_spot_colors": false,
+        "spot_color_whitelist": [],
+        "require_output_intent": false,
+        "flatten_transparency": true,
+        "render_intent": 1
+    },
+    "document": {
+        "bleed_mm_required": 5,
+        "min_resolution_dpi": 72,
+        "max_pages": 50,
+        "max_file_mb": 1000,
+        "max_spot_colors": 0,
+        "allowed_pdf_versions": [
+            "1.3",
+            "1.4",
+            "1.5",
+            "1.6",
+            "1.7",
+            "2.0"
+        ]
+    },
+    "processing": {
+        "job_timeout_ms": 600000,
+        "gs_concurrency": 1,
+        "dpi_rebuild": null
+    },
+    "autofix": {
+        "actions": [
+            "flatten_transparency",
+            "add_bleed"
+        ],
+        "allow_lossy": true
+    },
+    "checks": {
+        "error_on_rgb": false,
+        "error_on_missing_bleed": true,
+        "error_on_tac_exceeded": false,
+        "warn_on_low_resolution": false,
+        "warn_on_spot_colors": false,
+        "warn_on_type3_fonts": false
+    }
+}

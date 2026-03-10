@@ -1,0 +1,2198 @@
+{
+  "T01_bleed_0mm.pdf": {
+    "filename": "T01_bleed_0mm.pdf",
+    "preflight_before": {
+      "score": 71,
+      "summary": "Found 1 errors, 2 warnings and 5 info issues on the sampled pages.",
+      "issues": [
+        {
+          "id": "non-standard-size",
+          "page": 1,
+          "category": "metadata",
+          "severity": "info",
+          "message": "Page size detected: 105.8 × 105.8 mm",
+          "details": "The document uses a non-standard size for offset printing. Double-check that chosen print house supports it efficiently.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "missing-bleed-info",
+          "page": 1,
+          "category": "bleed_margins",
+          "severity": "warning",
+          "message": "Missing bleed information in the PDF.",
+          "details": "The document lacks explicit bleed box information. For professional printing, ensure proper bleed settings (typically 3mm on all edges).",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "no-images-detected",
+          "page": 1,
+          "category": "images",
+          "severity": "info",
+          "message": "No bitmap images detected in sampled pages.",
+          "details": "The engine did not detect any painted bitmap images (XObjects) in sampled pages. This is common for text-only interiors.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "error",
+          "category": "production_geometry",
+          "message": "Missing TrimBox in some pages. Precise cutting cannot be guaranteed.",
+          "id": "imposition-th11a",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "info",
+          "category": "production_geometry",
+          "message": "Some pages have zero bleed. White borders may appear after cutting.",
+          "id": "imposition-hbp3l",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "ink-heavy-bg-1",
+          "page": 1,
+          "category": "ink_saving",
+          "severity": "warning",
+          "message": "Heavy ink background detected.",
+          "details": "100.0% of the page area exceeds 180% TAC, with a peak of 514.607032895803%. This increases cost and drying time."
+        },
+        {
+          "id": "ink-photo-1",
+          "page": 1,
+          "category": "ink_saving",
+          "severity": "info",
+          "message": "Photo-heavy page detected.",
+          "details": "High coverage photographic content detected with peak TAC 514.607032895803%. Ensure paper substrate is suitable for high ink loads."
+        },
+        {
+          "id": "print-edition-intent",
+          "page": 1,
+          "category": "print_edition_intent",
+          "severity": "info",
+          "message": "Detected Intent: MIXED",
+          "details": "Mixed patterns detected. Output behavior may be inconsistent across different presses. (Confidence: 50%)"
+        }
+      ],
+      "pages": [
+        {
+          "pageNumber": 1,
+          "issuesCount": 8
+        }
+      ],
+      "categorySummaries": [
+        {
+          "category": "metadata",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "bleed_margins",
+          "errors": 0,
+          "warnings": 1,
+          "info": 0
+        },
+        {
+          "category": "images",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "production_geometry",
+          "errors": 1,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "ink_saving",
+          "errors": 0,
+          "warnings": 1,
+          "info": 1
+        },
+        {
+          "category": "print_edition_intent",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        }
+      ],
+      "meta": {
+        "fileName": "T01_bleed_0mm.pdf",
+        "fileSize": 749,
+        "pageCount": 1
+      },
+      "productionReport": {
+        "spine": {
+          "coverType": "single_page",
+          "expectedSpineMm": 0.05,
+          "detectedSpineMm": 0,
+          "deviationMm": 0,
+          "classification": "GREEN"
+        },
+        "imposition": {
+          "score": 65,
+          "classification": "ATTENTION"
+        },
+        "substrate": {
+          "warnings": [],
+          "riskLevel": "GREEN"
+        },
+        "inkOptimization": {
+          "score": 90,
+          "inkUsageIndex": 100,
+          "costCategory": "HIGH",
+          "opportunities": [
+            "Consider lighter tint or paper change",
+            "Paper coating may affect drying and cost"
+          ],
+          "totalCoverageAvg": 514.6070328957212
+        },
+        "editionIntent": {
+          "intent": "MIXED",
+          "confidence": 50,
+          "offsetScore": 35,
+          "digitalScore": 35,
+          "recommendation": "Mixed patterns detected. Output behavior may be inconsistent across different presses."
+        }
+      }
+    },
+    "autofix_report": null,
+    "preflight_after": null,
+    "fix_applied": false,
+    "fix_success": false,
+    "error": "{\"ok\":false,\"error\":\"UNKNOWN_ERROR\",\"step\":\"convert_cmyk\",\"message\":\"GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\",\"details\":\"Error: GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\\n    at gsConvertColor (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\services\\\\pdfPipeline.js:204:19)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async executeAutofixWorkflow (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1117:31)\\n    at async C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1390:39\"}"
+  },
+  "T02_bleed_1mm.pdf": {
+    "filename": "T02_bleed_1mm.pdf",
+    "preflight_before": {
+      "score": 86,
+      "summary": "Found 0 errors, 2 warnings and 4 info issues on the sampled pages.",
+      "issues": [
+        {
+          "id": "non-standard-size",
+          "page": 1,
+          "category": "metadata",
+          "severity": "info",
+          "message": "Page size detected: 107.8 × 107.8 mm",
+          "details": "The document uses a non-standard size for offset printing. Double-check that chosen print house supports it efficiently.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "insufficient-bleed",
+          "page": 1,
+          "category": "bleed_margins",
+          "severity": "warning",
+          "message": "Insufficient bleed margins detected.",
+          "details": "The document has bleed margins smaller than the recommended 3mm. This may result in white edges after trimming.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "no-images-detected",
+          "page": 1,
+          "category": "images",
+          "severity": "info",
+          "message": "No bitmap images detected in sampled pages.",
+          "details": "The engine did not detect any painted bitmap images (XObjects) in sampled pages. This is common for text-only interiors.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "ink-heavy-bg-1",
+          "page": 1,
+          "category": "ink_saving",
+          "severity": "warning",
+          "message": "Heavy ink background detected.",
+          "details": "100.0% of the page area exceeds 180% TAC, with a peak of 514.607032895803%. This increases cost and drying time."
+        },
+        {
+          "id": "ink-photo-1",
+          "page": 1,
+          "category": "ink_saving",
+          "severity": "info",
+          "message": "Photo-heavy page detected.",
+          "details": "High coverage photographic content detected with peak TAC 514.607032895803%. Ensure paper substrate is suitable for high ink loads."
+        },
+        {
+          "id": "print-edition-intent",
+          "page": 1,
+          "category": "print_edition_intent",
+          "severity": "info",
+          "message": "Detected Intent: MIXED",
+          "details": "Mixed patterns detected. Output behavior may be inconsistent across different presses. (Confidence: 50%)"
+        }
+      ],
+      "pages": [
+        {
+          "pageNumber": 1,
+          "issuesCount": 6
+        }
+      ],
+      "categorySummaries": [
+        {
+          "category": "metadata",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "bleed_margins",
+          "errors": 0,
+          "warnings": 1,
+          "info": 0
+        },
+        {
+          "category": "images",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "ink_saving",
+          "errors": 0,
+          "warnings": 1,
+          "info": 1
+        },
+        {
+          "category": "print_edition_intent",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        }
+      ],
+      "meta": {
+        "fileName": "T02_bleed_1mm.pdf",
+        "fileSize": 774,
+        "pageCount": 1
+      },
+      "productionReport": {
+        "spine": {
+          "coverType": "single_page",
+          "expectedSpineMm": 0.05,
+          "detectedSpineMm": 0,
+          "deviationMm": 0,
+          "classification": "GREEN"
+        },
+        "imposition": {
+          "score": 100,
+          "classification": "GREEN"
+        },
+        "substrate": {
+          "warnings": [],
+          "riskLevel": "GREEN"
+        },
+        "inkOptimization": {
+          "score": 90,
+          "inkUsageIndex": 100,
+          "costCategory": "HIGH",
+          "opportunities": [
+            "Consider lighter tint or paper change",
+            "Paper coating may affect drying and cost"
+          ],
+          "totalCoverageAvg": 514.6070328957212
+        },
+        "editionIntent": {
+          "intent": "MIXED",
+          "confidence": 50,
+          "offsetScore": 35,
+          "digitalScore": 35,
+          "recommendation": "Mixed patterns detected. Output behavior may be inconsistent across different presses."
+        }
+      }
+    },
+    "autofix_report": null,
+    "preflight_after": null,
+    "fix_applied": false,
+    "fix_success": false,
+    "error": "{\"ok\":false,\"error\":\"UNKNOWN_ERROR\",\"step\":\"convert_cmyk\",\"message\":\"GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\",\"details\":\"Error: GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\\n    at gsConvertColor (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\services\\\\pdfPipeline.js:204:19)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async executeAutofixWorkflow (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1117:31)\\n    at async C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1390:39\"}"
+  },
+  "T03_rgb_images.pdf": {
+    "filename": "T03_rgb_images.pdf",
+    "preflight_before": {
+      "score": 71,
+      "summary": "Found 1 errors, 2 warnings and 5 info issues on the sampled pages.",
+      "issues": [
+        {
+          "id": "non-standard-size",
+          "page": 1,
+          "category": "metadata",
+          "severity": "info",
+          "message": "Page size detected: 105.8 × 105.8 mm",
+          "details": "The document uses a non-standard size for offset printing. Double-check that chosen print house supports it efficiently.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "missing-bleed-info",
+          "page": 1,
+          "category": "bleed_margins",
+          "severity": "warning",
+          "message": "Missing bleed information in the PDF.",
+          "details": "The document lacks explicit bleed box information. For professional printing, ensure proper bleed settings (typically 3mm on all edges).",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "no-images-detected",
+          "page": 1,
+          "category": "images",
+          "severity": "info",
+          "message": "No bitmap images detected in sampled pages.",
+          "details": "The engine did not detect any painted bitmap images (XObjects) in sampled pages. This is common for text-only interiors.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "error",
+          "category": "production_geometry",
+          "message": "Missing TrimBox in some pages. Precise cutting cannot be guaranteed.",
+          "id": "imposition-hpghi",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "info",
+          "category": "production_geometry",
+          "message": "Some pages have zero bleed. White borders may appear after cutting.",
+          "id": "imposition-nzlpq",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "ink-heavy-bg-1",
+          "page": 1,
+          "category": "ink_saving",
+          "severity": "warning",
+          "message": "Heavy ink background detected.",
+          "details": "44.4% of the page area exceeds 180% TAC, with a peak of 398.4313725490196%. This increases cost and drying time."
+        },
+        {
+          "id": "ink-photo-1",
+          "page": 1,
+          "category": "ink_saving",
+          "severity": "info",
+          "message": "Photo-heavy page detected.",
+          "details": "High coverage photographic content detected with peak TAC 398.4313725490196%. Ensure paper substrate is suitable for high ink loads."
+        },
+        {
+          "id": "print-edition-intent",
+          "page": 1,
+          "category": "print_edition_intent",
+          "severity": "info",
+          "message": "Detected Intent: MIXED",
+          "details": "Mixed patterns detected. Output behavior may be inconsistent across different presses. (Confidence: 50%)"
+        }
+      ],
+      "pages": [
+        {
+          "pageNumber": 1,
+          "issuesCount": 8
+        }
+      ],
+      "categorySummaries": [
+        {
+          "category": "metadata",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "bleed_margins",
+          "errors": 0,
+          "warnings": 1,
+          "info": 0
+        },
+        {
+          "category": "images",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "production_geometry",
+          "errors": 1,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "ink_saving",
+          "errors": 0,
+          "warnings": 1,
+          "info": 1
+        },
+        {
+          "category": "print_edition_intent",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        }
+      ],
+      "meta": {
+        "fileName": "T03_rgb_images.pdf",
+        "fileSize": 1154,
+        "pageCount": 1
+      },
+      "productionReport": {
+        "spine": {
+          "coverType": "single_page",
+          "expectedSpineMm": 0.05,
+          "detectedSpineMm": 0,
+          "deviationMm": 0,
+          "classification": "GREEN"
+        },
+        "imposition": {
+          "score": 65,
+          "classification": "ATTENTION"
+        },
+        "substrate": {
+          "warnings": [],
+          "riskLevel": "GREEN"
+        },
+        "inkOptimization": {
+          "score": 90,
+          "inkUsageIndex": 59,
+          "costCategory": "MEDIUM",
+          "opportunities": [
+            "Consider lighter tint or paper change",
+            "Paper coating may affect drying and cost"
+          ],
+          "totalCoverageAvg": 177.08061002175484
+        },
+        "editionIntent": {
+          "intent": "MIXED",
+          "confidence": 50,
+          "offsetScore": 15,
+          "digitalScore": 35,
+          "recommendation": "Mixed patterns detected. Output behavior may be inconsistent across different presses."
+        }
+      }
+    },
+    "autofix_report": null,
+    "preflight_after": null,
+    "fix_applied": false,
+    "fix_success": false,
+    "error": "{\"ok\":false,\"error\":\"UNKNOWN_ERROR\",\"step\":\"convert_cmyk\",\"message\":\"GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\",\"details\":\"Error: GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\\n    at gsConvertColor (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\services\\\\pdfPipeline.js:204:19)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async executeAutofixWorkflow (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1117:31)\\n    at async C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1390:39\"}"
+  },
+  "T04_rgb_vector.pdf": {
+    "filename": "T04_rgb_vector.pdf",
+    "preflight_before": {
+      "score": 71,
+      "summary": "Found 1 errors, 2 warnings and 5 info issues on the sampled pages.",
+      "issues": [
+        {
+          "id": "non-standard-size",
+          "page": 1,
+          "category": "metadata",
+          "severity": "info",
+          "message": "Page size detected: 105.8 × 105.8 mm",
+          "details": "The document uses a non-standard size for offset printing. Double-check that chosen print house supports it efficiently.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "missing-bleed-info",
+          "page": 1,
+          "category": "bleed_margins",
+          "severity": "warning",
+          "message": "Missing bleed information in the PDF.",
+          "details": "The document lacks explicit bleed box information. For professional printing, ensure proper bleed settings (typically 3mm on all edges).",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "no-images-detected",
+          "page": 1,
+          "category": "images",
+          "severity": "info",
+          "message": "No bitmap images detected in sampled pages.",
+          "details": "The engine did not detect any painted bitmap images (XObjects) in sampled pages. This is common for text-only interiors.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "error",
+          "category": "production_geometry",
+          "message": "Missing TrimBox in some pages. Precise cutting cannot be guaranteed.",
+          "id": "imposition-izflm",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "info",
+          "category": "production_geometry",
+          "message": "Some pages have zero bleed. White borders may appear after cutting.",
+          "id": "imposition-47bk9",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "ink-heavy-bg-1",
+          "page": 1,
+          "category": "ink_saving",
+          "severity": "warning",
+          "message": "Heavy ink background detected.",
+          "details": "44.4% of the page area exceeds 180% TAC, with a peak of 800%. This increases cost and drying time."
+        },
+        {
+          "id": "ink-photo-1",
+          "page": 1,
+          "category": "ink_saving",
+          "severity": "info",
+          "message": "Photo-heavy page detected.",
+          "details": "High coverage photographic content detected with peak TAC 800%. Ensure paper substrate is suitable for high ink loads."
+        },
+        {
+          "id": "print-edition-intent",
+          "page": 1,
+          "category": "print_edition_intent",
+          "severity": "info",
+          "message": "Detected Intent: MIXED",
+          "details": "Mixed patterns detected. Output behavior may be inconsistent across different presses. (Confidence: 50%)"
+        }
+      ],
+      "pages": [
+        {
+          "pageNumber": 1,
+          "issuesCount": 8
+        }
+      ],
+      "categorySummaries": [
+        {
+          "category": "metadata",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "bleed_margins",
+          "errors": 0,
+          "warnings": 1,
+          "info": 0
+        },
+        {
+          "category": "images",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "production_geometry",
+          "errors": 1,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "ink_saving",
+          "errors": 0,
+          "warnings": 1,
+          "info": 1
+        },
+        {
+          "category": "print_edition_intent",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        }
+      ],
+      "meta": {
+        "fileName": "T04_rgb_vector.pdf",
+        "fileSize": 751,
+        "pageCount": 1
+      },
+      "productionReport": {
+        "spine": {
+          "coverType": "single_page",
+          "expectedSpineMm": 0.05,
+          "detectedSpineMm": 0,
+          "deviationMm": 0,
+          "classification": "GREEN"
+        },
+        "imposition": {
+          "score": 65,
+          "classification": "ATTENTION"
+        },
+        "substrate": {
+          "warnings": [],
+          "riskLevel": "GREEN"
+        },
+        "inkOptimization": {
+          "score": 90,
+          "inkUsageIndex": 100,
+          "costCategory": "HIGH",
+          "opportunities": [
+            "Consider lighter tint or paper change",
+            "Paper coating may affect drying and cost"
+          ],
+          "totalCoverageAvg": 355.55555555555554
+        },
+        "editionIntent": {
+          "intent": "MIXED",
+          "confidence": 50,
+          "offsetScore": 35,
+          "digitalScore": 35,
+          "recommendation": "Mixed patterns detected. Output behavior may be inconsistent across different presses."
+        }
+      }
+    },
+    "autofix_report": null,
+    "preflight_after": null,
+    "fix_applied": false,
+    "fix_success": false,
+    "error": "{\"ok\":false,\"error\":\"UNKNOWN_ERROR\",\"step\":\"convert_cmyk\",\"message\":\"GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\",\"details\":\"Error: GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\\n    at gsConvertColor (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\services\\\\pdfPipeline.js:204:19)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async executeAutofixWorkflow (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1117:31)\\n    at async C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1390:39\"}"
+  },
+  "T05_transparency_overlay.pdf": {
+    "filename": "T05_transparency_overlay.pdf",
+    "preflight_before": {
+      "score": 78,
+      "summary": "Found 1 errors, 1 warnings and 4 info issues on the sampled pages.",
+      "issues": [
+        {
+          "id": "non-standard-size",
+          "page": 1,
+          "category": "metadata",
+          "severity": "info",
+          "message": "Page size detected: 105.8 × 105.8 mm",
+          "details": "The document uses a non-standard size for offset printing. Double-check that chosen print house supports it efficiently.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "missing-bleed-info",
+          "page": 1,
+          "category": "bleed_margins",
+          "severity": "warning",
+          "message": "Missing bleed information in the PDF.",
+          "details": "The document lacks explicit bleed box information. For professional printing, ensure proper bleed settings (typically 3mm on all edges).",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "no-images-detected",
+          "page": 1,
+          "category": "images",
+          "severity": "info",
+          "message": "No bitmap images detected in sampled pages.",
+          "details": "The engine did not detect any painted bitmap images (XObjects) in sampled pages. This is common for text-only interiors.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "error",
+          "category": "production_geometry",
+          "message": "Missing TrimBox in some pages. Precise cutting cannot be guaranteed.",
+          "id": "imposition-ti6lr",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "info",
+          "category": "production_geometry",
+          "message": "Some pages have zero bleed. White borders may appear after cutting.",
+          "id": "imposition-66szu",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "print-edition-intent",
+          "page": 1,
+          "category": "print_edition_intent",
+          "severity": "info",
+          "message": "Detected Intent: MIXED",
+          "details": "Mixed patterns detected. Output behavior may be inconsistent across different presses. (Confidence: 50%)"
+        }
+      ],
+      "pages": [
+        {
+          "pageNumber": 1,
+          "issuesCount": 6
+        }
+      ],
+      "categorySummaries": [
+        {
+          "category": "metadata",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "bleed_margins",
+          "errors": 0,
+          "warnings": 1,
+          "info": 0
+        },
+        {
+          "category": "images",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "production_geometry",
+          "errors": 1,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "print_edition_intent",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        }
+      ],
+      "meta": {
+        "fileName": "T05_transparency_overlay.pdf",
+        "fileSize": 804,
+        "pageCount": 1
+      },
+      "productionReport": {
+        "spine": {
+          "coverType": "single_page",
+          "expectedSpineMm": 0.05,
+          "detectedSpineMm": 0,
+          "deviationMm": 0,
+          "classification": "GREEN"
+        },
+        "imposition": {
+          "score": 65,
+          "classification": "ATTENTION"
+        },
+        "substrate": {
+          "warnings": [],
+          "riskLevel": "GREEN"
+        },
+        "inkOptimization": {
+          "score": 100,
+          "inkUsageIndex": 50,
+          "costCategory": "MEDIUM",
+          "opportunities": [],
+          "totalCoverageAvg": 149.24809791950938
+        },
+        "editionIntent": {
+          "intent": "MIXED",
+          "confidence": 50,
+          "offsetScore": 15,
+          "digitalScore": 35,
+          "recommendation": "Mixed patterns detected. Output behavior may be inconsistent across different presses."
+        }
+      }
+    },
+    "autofix_report": null,
+    "preflight_after": null,
+    "fix_applied": false,
+    "fix_success": false,
+    "error": "{\"ok\":false,\"error\":\"UNKNOWN_ERROR\",\"step\":\"convert_cmyk\",\"message\":\"GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\",\"details\":\"Error: GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\\n    at gsConvertColor (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\services\\\\pdfPipeline.js:204:19)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async executeAutofixWorkflow (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1117:31)\\n    at async C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1390:39\"}"
+  },
+  "T06_spot_color_objects.pdf": {
+    "filename": "T06_spot_color_objects.pdf",
+    "preflight_before": {
+      "score": 78,
+      "summary": "Found 1 errors, 1 warnings and 6 info issues on the sampled pages.",
+      "issues": [
+        {
+          "id": "non-standard-size",
+          "page": 1,
+          "category": "metadata",
+          "severity": "info",
+          "message": "Page size detected: 105.8 × 105.8 mm",
+          "details": "The document uses a non-standard size for offset printing. Double-check that chosen print house supports it efficiently.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "color-content-detected",
+          "page": 1,
+          "category": "color",
+          "severity": "info",
+          "message": "Color operations detected in the document.",
+          "details": "This document contains color elements. If you intended to print in grayscale, please review your color settings.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "missing-bleed-info",
+          "page": 1,
+          "category": "bleed_margins",
+          "severity": "warning",
+          "message": "Missing bleed information in the PDF.",
+          "details": "The document lacks explicit bleed box information. For professional printing, ensure proper bleed settings (typically 3mm on all edges).",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "rgb-only-content",
+          "page": 1,
+          "category": "color",
+          "severity": "info",
+          "message": "RGB color space detected.",
+          "details": "The document uses RGB color operators. This is usually fine for digital viewing and POD workflows, but traditional offset presses expect CMYK data.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "no-images-detected",
+          "page": 1,
+          "category": "images",
+          "severity": "info",
+          "message": "No bitmap images detected in sampled pages.",
+          "details": "The engine did not detect any painted bitmap images (XObjects) in sampled pages. This is common for text-only interiors.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "error",
+          "category": "production_geometry",
+          "message": "Missing TrimBox in some pages. Precise cutting cannot be guaranteed.",
+          "id": "imposition-9sw8f",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "info",
+          "category": "production_geometry",
+          "message": "Some pages have zero bleed. White borders may appear after cutting.",
+          "id": "imposition-es395",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "print-edition-intent",
+          "page": 1,
+          "category": "print_edition_intent",
+          "severity": "info",
+          "message": "Detected Intent: DIGITAL",
+          "details": "Digital/POD intent detected. Large solid areas may show banding on coated paper. (Confidence: 85%)"
+        }
+      ],
+      "pages": [
+        {
+          "pageNumber": 1,
+          "issuesCount": 8
+        }
+      ],
+      "categorySummaries": [
+        {
+          "category": "metadata",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "color",
+          "errors": 0,
+          "warnings": 0,
+          "info": 2
+        },
+        {
+          "category": "bleed_margins",
+          "errors": 0,
+          "warnings": 1,
+          "info": 0
+        },
+        {
+          "category": "images",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "production_geometry",
+          "errors": 1,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "print_edition_intent",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        }
+      ],
+      "meta": {
+        "fileName": "T06_spot_color_objects.pdf",
+        "fileSize": 898,
+        "pageCount": 1
+      },
+      "productionReport": {
+        "spine": {
+          "coverType": "single_page",
+          "expectedSpineMm": 0.05,
+          "detectedSpineMm": 0,
+          "deviationMm": 0,
+          "classification": "GREEN"
+        },
+        "imposition": {
+          "score": 65,
+          "classification": "ATTENTION"
+        },
+        "substrate": {
+          "warnings": [],
+          "riskLevel": "GREEN"
+        },
+        "inkOptimization": {
+          "score": 100,
+          "inkUsageIndex": 15,
+          "costCategory": "LOW",
+          "opportunities": [],
+          "totalCoverageAvg": 44.44444444444444
+        },
+        "editionIntent": {
+          "intent": "DIGITAL",
+          "confidence": 85,
+          "offsetScore": 0,
+          "digitalScore": 85,
+          "recommendation": "Digital/POD intent detected. Large solid areas may show banding on coated paper."
+        }
+      }
+    },
+    "autofix_report": null,
+    "preflight_after": null,
+    "fix_applied": false,
+    "fix_success": false,
+    "error": "{\"ok\":false,\"error\":\"UNKNOWN_ERROR\",\"step\":\"convert_cmyk\",\"message\":\"GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\",\"details\":\"Error: GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\\n    at gsConvertColor (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\services\\\\pdfPipeline.js:204:19)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async executeAutofixWorkflow (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1117:31)\\n    at async C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1390:39\"}"
+  },
+  "T07_spot_color_text.pdf": {
+    "filename": "T07_spot_color_text.pdf",
+    "preflight_before": {
+      "score": 78,
+      "summary": "Found 1 errors, 1 warnings and 6 info issues on the sampled pages.",
+      "issues": [
+        {
+          "id": "non-standard-size",
+          "page": 1,
+          "category": "metadata",
+          "severity": "info",
+          "message": "Page size detected: 105.8 × 105.8 mm",
+          "details": "The document uses a non-standard size for offset printing. Double-check that chosen print house supports it efficiently.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "color-content-detected",
+          "page": 1,
+          "category": "color",
+          "severity": "info",
+          "message": "Color operations detected in the document.",
+          "details": "This document contains color elements. If you intended to print in grayscale, please review your color settings.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "missing-bleed-info",
+          "page": 1,
+          "category": "bleed_margins",
+          "severity": "warning",
+          "message": "Missing bleed information in the PDF.",
+          "details": "The document lacks explicit bleed box information. For professional printing, ensure proper bleed settings (typically 3mm on all edges).",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "rgb-only-content",
+          "page": 1,
+          "category": "color",
+          "severity": "info",
+          "message": "RGB color space detected.",
+          "details": "The document uses RGB color operators. This is usually fine for digital viewing and POD workflows, but traditional offset presses expect CMYK data.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "no-images-detected",
+          "page": 1,
+          "category": "images",
+          "severity": "info",
+          "message": "No bitmap images detected in sampled pages.",
+          "details": "The engine did not detect any painted bitmap images (XObjects) in sampled pages. This is common for text-only interiors.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "error",
+          "category": "production_geometry",
+          "message": "Missing TrimBox in some pages. Precise cutting cannot be guaranteed.",
+          "id": "imposition-1g3i2",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "info",
+          "category": "production_geometry",
+          "message": "Some pages have zero bleed. White borders may appear after cutting.",
+          "id": "imposition-ytyv7",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "print-edition-intent",
+          "page": 1,
+          "category": "print_edition_intent",
+          "severity": "info",
+          "message": "Detected Intent: DIGITAL",
+          "details": "Digital/POD intent detected. Large solid areas may show banding on coated paper. (Confidence: 85%)"
+        }
+      ],
+      "pages": [
+        {
+          "pageNumber": 1,
+          "issuesCount": 8
+        }
+      ],
+      "categorySummaries": [
+        {
+          "category": "metadata",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "color",
+          "errors": 0,
+          "warnings": 0,
+          "info": 2
+        },
+        {
+          "category": "bleed_margins",
+          "errors": 0,
+          "warnings": 1,
+          "info": 0
+        },
+        {
+          "category": "images",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "production_geometry",
+          "errors": 1,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "print_edition_intent",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        }
+      ],
+      "meta": {
+        "fileName": "T07_spot_color_text.pdf",
+        "fileSize": 945,
+        "pageCount": 1
+      },
+      "productionReport": {
+        "spine": {
+          "coverType": "single_page",
+          "expectedSpineMm": 0.05,
+          "detectedSpineMm": 0,
+          "deviationMm": 0,
+          "classification": "GREEN"
+        },
+        "imposition": {
+          "score": 65,
+          "classification": "ATTENTION"
+        },
+        "substrate": {
+          "warnings": [],
+          "riskLevel": "GREEN"
+        },
+        "inkOptimization": {
+          "score": 100,
+          "inkUsageIndex": 0,
+          "costCategory": "LOW",
+          "opportunities": [],
+          "totalCoverageAvg": 0
+        },
+        "editionIntent": {
+          "intent": "DIGITAL",
+          "confidence": 85,
+          "offsetScore": 0,
+          "digitalScore": 85,
+          "recommendation": "Digital/POD intent detected. Large solid areas may show banding on coated paper."
+        }
+      }
+    },
+    "autofix_report": null,
+    "preflight_after": null,
+    "fix_applied": false,
+    "fix_success": false,
+    "error": "{\"ok\":false,\"error\":\"UNKNOWN_ERROR\",\"step\":\"convert_cmyk\",\"message\":\"GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\",\"details\":\"Error: GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\\n    at gsConvertColor (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\services\\\\pdfPipeline.js:204:19)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async executeAutofixWorkflow (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1117:31)\\n    at async C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1390:39\"}"
+  },
+  "T08_tac_over_limit.pdf": {
+    "filename": "T08_tac_over_limit.pdf",
+    "preflight_before": {
+      "score": 71,
+      "summary": "Found 1 errors, 2 warnings and 6 info issues on the sampled pages.",
+      "issues": [
+        {
+          "id": "non-standard-size",
+          "page": 1,
+          "category": "metadata",
+          "severity": "info",
+          "message": "Page size detected: 105.8 × 105.8 mm",
+          "details": "The document uses a non-standard size for offset printing. Double-check that chosen print house supports it efficiently.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "missing-bleed-info",
+          "page": 1,
+          "category": "bleed_margins",
+          "severity": "warning",
+          "message": "Missing bleed information in the PDF.",
+          "details": "The document lacks explicit bleed box information. For professional printing, ensure proper bleed settings (typically 3mm on all edges).",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "no-images-detected",
+          "page": 1,
+          "category": "images",
+          "severity": "info",
+          "message": "No bitmap images detected in sampled pages.",
+          "details": "The engine did not detect any painted bitmap images (XObjects) in sampled pages. This is common for text-only interiors.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "error",
+          "category": "production_geometry",
+          "message": "Missing TrimBox in some pages. Precise cutting cannot be guaranteed.",
+          "id": "imposition-ngwon",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "info",
+          "category": "production_geometry",
+          "message": "Some pages have zero bleed. White borders may appear after cutting.",
+          "id": "imposition-rad6r",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "ink-heavy-bg-1",
+          "page": 1,
+          "category": "ink_saving",
+          "severity": "warning",
+          "message": "Heavy ink background detected.",
+          "details": "44.4% of the page area exceeds 180% TAC, with a peak of 737.4509803921571%. This increases cost and drying time."
+        },
+        {
+          "id": "ink-rich-black-1",
+          "page": 1,
+          "category": "ink_saving",
+          "severity": "info",
+          "message": "Rich black overuse detected.",
+          "details": "Large areas use C+M+Y+K for black. Converting text and small elements to K-only black reduces cost and registration risks."
+        },
+        {
+          "id": "ink-photo-1",
+          "page": 1,
+          "category": "ink_saving",
+          "severity": "info",
+          "message": "Photo-heavy page detected.",
+          "details": "High coverage photographic content detected with peak TAC 737.4509803921571%. Ensure paper substrate is suitable for high ink loads."
+        },
+        {
+          "id": "print-edition-intent",
+          "page": 1,
+          "category": "print_edition_intent",
+          "severity": "info",
+          "message": "Detected Intent: MIXED",
+          "details": "Mixed patterns detected. Output behavior may be inconsistent across different presses. (Confidence: 60%)"
+        }
+      ],
+      "pages": [
+        {
+          "pageNumber": 1,
+          "issuesCount": 9
+        }
+      ],
+      "categorySummaries": [
+        {
+          "category": "metadata",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "bleed_margins",
+          "errors": 0,
+          "warnings": 1,
+          "info": 0
+        },
+        {
+          "category": "images",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "production_geometry",
+          "errors": 1,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "ink_saving",
+          "errors": 0,
+          "warnings": 1,
+          "info": 2
+        },
+        {
+          "category": "print_edition_intent",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        }
+      ],
+      "meta": {
+        "fileName": "T08_tac_over_limit.pdf",
+        "fileSize": 757,
+        "pageCount": 1
+      },
+      "productionReport": {
+        "spine": {
+          "coverType": "single_page",
+          "expectedSpineMm": 0.05,
+          "detectedSpineMm": 0,
+          "deviationMm": 0,
+          "classification": "GREEN"
+        },
+        "imposition": {
+          "score": 65,
+          "classification": "ATTENTION"
+        },
+        "substrate": {
+          "warnings": [],
+          "riskLevel": "GREEN"
+        },
+        "inkOptimization": {
+          "score": 85,
+          "inkUsageIndex": 100,
+          "costCategory": "HIGH",
+          "opportunities": [
+            "Consider lighter tint or paper change",
+            "Replace with K-only black for text areas",
+            "Paper coating may affect drying and cost"
+          ],
+          "totalCoverageAvg": 327.7559912854377
+        },
+        "editionIntent": {
+          "intent": "MIXED",
+          "confidence": 60,
+          "offsetScore": 60,
+          "digitalScore": 35,
+          "recommendation": "Mixed patterns detected. Output behavior may be inconsistent across different presses."
+        }
+      }
+    },
+    "autofix_report": null,
+    "preflight_after": null,
+    "fix_applied": false,
+    "fix_success": false,
+    "error": "{\"ok\":false,\"error\":\"UNKNOWN_ERROR\",\"step\":\"convert_cmyk\",\"message\":\"GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\",\"details\":\"Error: GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\\n    at gsConvertColor (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\services\\\\pdfPipeline.js:204:19)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async executeAutofixWorkflow (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1117:31)\\n    at async C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1390:39\"}"
+  },
+  "T09_overprint_objects.pdf": {
+    "filename": "T09_overprint_objects.pdf",
+    "preflight_before": {
+      "score": 71,
+      "summary": "Found 1 errors, 2 warnings and 5 info issues on the sampled pages.",
+      "issues": [
+        {
+          "id": "non-standard-size",
+          "page": 1,
+          "category": "metadata",
+          "severity": "info",
+          "message": "Page size detected: 105.8 × 105.8 mm",
+          "details": "The document uses a non-standard size for offset printing. Double-check that chosen print house supports it efficiently.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "missing-bleed-info",
+          "page": 1,
+          "category": "bleed_margins",
+          "severity": "warning",
+          "message": "Missing bleed information in the PDF.",
+          "details": "The document lacks explicit bleed box information. For professional printing, ensure proper bleed settings (typically 3mm on all edges).",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "no-images-detected",
+          "page": 1,
+          "category": "images",
+          "severity": "info",
+          "message": "No bitmap images detected in sampled pages.",
+          "details": "The engine did not detect any painted bitmap images (XObjects) in sampled pages. This is common for text-only interiors.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "error",
+          "category": "production_geometry",
+          "message": "Missing TrimBox in some pages. Precise cutting cannot be guaranteed.",
+          "id": "imposition-09u9t",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "info",
+          "category": "production_geometry",
+          "message": "Some pages have zero bleed. White borders may appear after cutting.",
+          "id": "imposition-g11af",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "ink-heavy-bg-1",
+          "page": 1,
+          "category": "ink_saving",
+          "severity": "warning",
+          "message": "Heavy ink background detected.",
+          "details": "44.4% of the page area exceeds 180% TAC, with a peak of 514.607032895803%. This increases cost and drying time."
+        },
+        {
+          "id": "ink-photo-1",
+          "page": 1,
+          "category": "ink_saving",
+          "severity": "info",
+          "message": "Photo-heavy page detected.",
+          "details": "High coverage photographic content detected with peak TAC 514.607032895803%. Ensure paper substrate is suitable for high ink loads."
+        },
+        {
+          "id": "print-edition-intent",
+          "page": 1,
+          "category": "print_edition_intent",
+          "severity": "info",
+          "message": "Detected Intent: MIXED",
+          "details": "Mixed patterns detected. Output behavior may be inconsistent across different presses. (Confidence: 50%)"
+        }
+      ],
+      "pages": [
+        {
+          "pageNumber": 1,
+          "issuesCount": 8
+        }
+      ],
+      "categorySummaries": [
+        {
+          "category": "metadata",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "bleed_margins",
+          "errors": 0,
+          "warnings": 1,
+          "info": 0
+        },
+        {
+          "category": "images",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "production_geometry",
+          "errors": 1,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "ink_saving",
+          "errors": 0,
+          "warnings": 1,
+          "info": 1
+        },
+        {
+          "category": "print_edition_intent",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        }
+      ],
+      "meta": {
+        "fileName": "T09_overprint_objects.pdf",
+        "fileSize": 815,
+        "pageCount": 1
+      },
+      "productionReport": {
+        "spine": {
+          "coverType": "single_page",
+          "expectedSpineMm": 0.05,
+          "detectedSpineMm": 0,
+          "deviationMm": 0,
+          "classification": "GREEN"
+        },
+        "imposition": {
+          "score": 65,
+          "classification": "ATTENTION"
+        },
+        "substrate": {
+          "warnings": [],
+          "riskLevel": "GREEN"
+        },
+        "inkOptimization": {
+          "score": 90,
+          "inkUsageIndex": 75,
+          "costCategory": "HIGH",
+          "opportunities": [
+            "Consider lighter tint or paper change",
+            "Paper coating may affect drying and cost"
+          ],
+          "totalCoverageAvg": 225.35369532157898
+        },
+        "editionIntent": {
+          "intent": "MIXED",
+          "confidence": 50,
+          "offsetScore": 35,
+          "digitalScore": 35,
+          "recommendation": "Mixed patterns detected. Output behavior may be inconsistent across different presses."
+        }
+      }
+    },
+    "autofix_report": null,
+    "preflight_after": null,
+    "fix_applied": false,
+    "fix_success": false,
+    "error": "{\"ok\":false,\"error\":\"UNKNOWN_ERROR\",\"step\":\"convert_cmyk\",\"message\":\"GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\",\"details\":\"Error: GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\\n    at gsConvertColor (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\services\\\\pdfPipeline.js:204:19)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async executeAutofixWorkflow (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1117:31)\\n    at async C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1390:39\"}"
+  },
+  "T10_rich_black_text.pdf": {
+    "filename": "T10_rich_black_text.pdf",
+    "preflight_before": {
+      "score": 63,
+      "summary": "Found 2 errors, 1 warnings and 5 info issues on the sampled pages.",
+      "issues": [
+        {
+          "id": "non-standard-size",
+          "page": 1,
+          "category": "metadata",
+          "severity": "info",
+          "message": "Page size detected: 105.8 × 105.8 mm",
+          "details": "The document uses a non-standard size for offset printing. Double-check that chosen print house supports it efficiently.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "missing-bleed-info",
+          "page": 1,
+          "category": "bleed_margins",
+          "severity": "warning",
+          "message": "Missing bleed information in the PDF.",
+          "details": "The document lacks explicit bleed box information. For professional printing, ensure proper bleed settings (typically 3mm on all edges).",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "fonts-used-summary",
+          "page": 1,
+          "category": "fonts",
+          "severity": "info",
+          "message": "Fonts used in the document: Helvetica",
+          "details": "This is a summary of the font families detected on sampled pages. WARNING: These fonts are NOT embedded: Helvetica. This can lead to substitution errors during print.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "fonts-not-embedded",
+          "page": 1,
+          "category": "fonts",
+          "severity": "error",
+          "message": "Non-embedded fonts detected.",
+          "details": "The following fonts are not embedded in the PDF: Helvetica. For professional printing, all fonts MUST be embedded to ensure visual consistency.",
+          "tags": [
+            "critical",
+            "error",
+            "font-embedding"
+          ]
+        },
+        {
+          "id": "no-images-detected",
+          "page": 1,
+          "category": "images",
+          "severity": "info",
+          "message": "No bitmap images detected in sampled pages.",
+          "details": "The engine did not detect any painted bitmap images (XObjects) in sampled pages. This is common for text-only interiors.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "error",
+          "category": "production_geometry",
+          "message": "Missing TrimBox in some pages. Precise cutting cannot be guaranteed.",
+          "id": "imposition-qok2h",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "info",
+          "category": "production_geometry",
+          "message": "Some pages have zero bleed. White borders may appear after cutting.",
+          "id": "imposition-0h8gu",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "print-edition-intent",
+          "page": 1,
+          "category": "print_edition_intent",
+          "severity": "info",
+          "message": "Detected Intent: DIGITAL",
+          "details": "Digital/POD intent detected. Large solid areas may show banding on coated paper. (Confidence: 85%)"
+        }
+      ],
+      "pages": [
+        {
+          "pageNumber": 1,
+          "issuesCount": 8
+        }
+      ],
+      "categorySummaries": [
+        {
+          "category": "metadata",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "bleed_margins",
+          "errors": 0,
+          "warnings": 1,
+          "info": 0
+        },
+        {
+          "category": "fonts",
+          "errors": 1,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "images",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "production_geometry",
+          "errors": 1,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "print_edition_intent",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        }
+      ],
+      "meta": {
+        "fileName": "T10_rich_black_text.pdf",
+        "fileSize": 873,
+        "pageCount": 1
+      },
+      "productionReport": {
+        "spine": {
+          "coverType": "single_page",
+          "expectedSpineMm": 0.05,
+          "detectedSpineMm": 0,
+          "deviationMm": 0,
+          "classification": "GREEN"
+        },
+        "imposition": {
+          "score": 65,
+          "classification": "ATTENTION"
+        },
+        "substrate": {
+          "warnings": [],
+          "riskLevel": "GREEN"
+        },
+        "inkOptimization": {
+          "score": 100,
+          "inkUsageIndex": 1,
+          "costCategory": "LOW",
+          "opportunities": [],
+          "totalCoverageAvg": 4.3330568413056705
+        },
+        "editionIntent": {
+          "intent": "DIGITAL",
+          "confidence": 85,
+          "offsetScore": 0,
+          "digitalScore": 85,
+          "recommendation": "Digital/POD intent detected. Large solid areas may show banding on coated paper."
+        }
+      }
+    },
+    "autofix_report": null,
+    "preflight_after": null,
+    "fix_applied": false,
+    "fix_success": false,
+    "error": "{\"ok\":false,\"error\":\"UNKNOWN_ERROR\",\"step\":\"convert_cmyk\",\"message\":\"GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\",\"details\":\"Error: GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\\n    at gsConvertColor (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\services\\\\pdfPipeline.js:204:19)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async executeAutofixWorkflow (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1117:31)\\n    at async C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1390:39\"}"
+  },
+  "T11_fonts_not_embedded.pdf": {
+    "filename": "T11_fonts_not_embedded.pdf",
+    "preflight_before": {
+      "score": 78,
+      "summary": "Found 1 errors, 1 warnings and 4 info issues on the sampled pages.",
+      "issues": [
+        {
+          "id": "non-standard-size",
+          "page": 1,
+          "category": "metadata",
+          "severity": "info",
+          "message": "Page size detected: 105.8 × 105.8 mm",
+          "details": "The document uses a non-standard size for offset printing. Double-check that chosen print house supports it efficiently.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "missing-bleed-info",
+          "page": 1,
+          "category": "bleed_margins",
+          "severity": "warning",
+          "message": "Missing bleed information in the PDF.",
+          "details": "The document lacks explicit bleed box information. For professional printing, ensure proper bleed settings (typically 3mm on all edges).",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "no-images-detected",
+          "page": 1,
+          "category": "images",
+          "severity": "info",
+          "message": "No bitmap images detected in sampled pages.",
+          "details": "The engine did not detect any painted bitmap images (XObjects) in sampled pages. This is common for text-only interiors.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "error",
+          "category": "production_geometry",
+          "message": "Missing TrimBox in some pages. Precise cutting cannot be guaranteed.",
+          "id": "imposition-kvjdu",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "info",
+          "category": "production_geometry",
+          "message": "Some pages have zero bleed. White borders may appear after cutting.",
+          "id": "imposition-tuu3j",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "print-edition-intent",
+          "page": 1,
+          "category": "print_edition_intent",
+          "severity": "info",
+          "message": "Detected Intent: DIGITAL",
+          "details": "Digital/POD intent detected. Large solid areas may show banding on coated paper. (Confidence: 85%)"
+        }
+      ],
+      "pages": [
+        {
+          "pageNumber": 1,
+          "issuesCount": 6
+        }
+      ],
+      "categorySummaries": [
+        {
+          "category": "metadata",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "bleed_margins",
+          "errors": 0,
+          "warnings": 1,
+          "info": 0
+        },
+        {
+          "category": "images",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "production_geometry",
+          "errors": 1,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "print_edition_intent",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        }
+      ],
+      "meta": {
+        "fileName": "T11_fonts_not_embedded.pdf",
+        "fileSize": 807,
+        "pageCount": 1
+      },
+      "productionReport": {
+        "spine": {
+          "coverType": "single_page",
+          "expectedSpineMm": 0.05,
+          "detectedSpineMm": 0,
+          "deviationMm": 0,
+          "classification": "GREEN"
+        },
+        "imposition": {
+          "score": 65,
+          "classification": "ATTENTION"
+        },
+        "substrate": {
+          "warnings": [],
+          "riskLevel": "GREEN"
+        },
+        "inkOptimization": {
+          "score": 100,
+          "inkUsageIndex": 0,
+          "costCategory": "LOW",
+          "opportunities": [],
+          "totalCoverageAvg": 0
+        },
+        "editionIntent": {
+          "intent": "DIGITAL",
+          "confidence": 85,
+          "offsetScore": 0,
+          "digitalScore": 85,
+          "recommendation": "Digital/POD intent detected. Large solid areas may show banding on coated paper."
+        }
+      }
+    },
+    "autofix_report": null,
+    "preflight_after": null,
+    "fix_applied": false,
+    "fix_success": false,
+    "error": "{\"ok\":false,\"error\":\"UNKNOWN_ERROR\",\"step\":\"convert_cmyk\",\"message\":\"GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\",\"details\":\"Error: GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\\n    at gsConvertColor (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\services\\\\pdfPipeline.js:204:19)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async executeAutofixWorkflow (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1117:31)\\n    at async C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1390:39\"}"
+  },
+  "T12_type3_fonts.pdf": {
+    "filename": "T12_type3_fonts.pdf",
+    "preflight_before": {
+      "score": 78,
+      "summary": "Found 1 errors, 1 warnings and 4 info issues on the sampled pages.",
+      "issues": [
+        {
+          "id": "non-standard-size",
+          "page": 1,
+          "category": "metadata",
+          "severity": "info",
+          "message": "Page size detected: 105.8 × 105.8 mm",
+          "details": "The document uses a non-standard size for offset printing. Double-check that chosen print house supports it efficiently.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "missing-bleed-info",
+          "page": 1,
+          "category": "bleed_margins",
+          "severity": "warning",
+          "message": "Missing bleed information in the PDF.",
+          "details": "The document lacks explicit bleed box information. For professional printing, ensure proper bleed settings (typically 3mm on all edges).",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "no-images-detected",
+          "page": 1,
+          "category": "images",
+          "severity": "info",
+          "message": "No bitmap images detected in sampled pages.",
+          "details": "The engine did not detect any painted bitmap images (XObjects) in sampled pages. This is common for text-only interiors.",
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "error",
+          "category": "production_geometry",
+          "message": "Missing TrimBox in some pages. Precise cutting cannot be guaranteed.",
+          "id": "imposition-pz44f",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "severity": "info",
+          "category": "production_geometry",
+          "message": "Some pages have zero bleed. White borders may appear after cutting.",
+          "id": "imposition-mbgn9",
+          "page": 1,
+          "bbox": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          }
+        },
+        {
+          "id": "print-edition-intent",
+          "page": 1,
+          "category": "print_edition_intent",
+          "severity": "info",
+          "message": "Detected Intent: DIGITAL",
+          "details": "Digital/POD intent detected. Large solid areas may show banding on coated paper. (Confidence: 85%)"
+        }
+      ],
+      "pages": [
+        {
+          "pageNumber": 1,
+          "issuesCount": 6
+        }
+      ],
+      "categorySummaries": [
+        {
+          "category": "metadata",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "bleed_margins",
+          "errors": 0,
+          "warnings": 1,
+          "info": 0
+        },
+        {
+          "category": "images",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "production_geometry",
+          "errors": 1,
+          "warnings": 0,
+          "info": 1
+        },
+        {
+          "category": "print_edition_intent",
+          "errors": 0,
+          "warnings": 0,
+          "info": 1
+        }
+      ],
+      "meta": {
+        "fileName": "T12_type3_fonts.pdf",
+        "fileSize": 873,
+        "pageCount": 1
+      },
+      "productionReport": {
+        "spine": {
+          "coverType": "single_page",
+          "expectedSpineMm": 0.05,
+          "detectedSpineMm": 0,
+          "deviationMm": 0,
+          "classification": "GREEN"
+        },
+        "imposition": {
+          "score": 65,
+          "classification": "ATTENTION"
+        },
+        "substrate": {
+          "warnings": [],
+          "riskLevel": "GREEN"
+        },
+        "inkOptimization": {
+          "score": 100,
+          "inkUsageIndex": 0,
+          "costCategory": "LOW",
+          "opportunities": [],
+          "totalCoverageAvg": 0
+        },
+        "editionIntent": {
+          "intent": "DIGITAL",
+          "confidence": 85,
+          "offsetScore": 0,
+          "digitalScore": 85,
+          "recommendation": "Digital/POD intent detected. Large solid areas may show banding on coated paper."
+        }
+      }
+    },
+    "autofix_report": null,
+    "preflight_after": null,
+    "fix_applied": false,
+    "fix_success": false,
+    "error": "{\"ok\":false,\"error\":\"UNKNOWN_ERROR\",\"step\":\"convert_cmyk\",\"message\":\"GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\",\"details\":\"Error: GS color conversion failed (code -1): \\nSpawn error: spawn gswin64c ENOENT\\n    at gsConvertColor (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\services\\\\pdfPipeline.js:204:19)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async executeAutofixWorkflow (C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1117:31)\\n    at async C:\\\\Users\\\\KIKE\\\\Desktop\\\\PrintPricePro_Preflight-master (7)\\\\PrintPricePro_Preflight-master\\\\routes\\\\pdf.js:1390:39\"}"
+  }
+}

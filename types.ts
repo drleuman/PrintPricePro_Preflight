@@ -11,6 +11,18 @@ export enum Severity {
 }
 
 /**
+ * Unified job statuses for the system.
+ */
+export enum JobStatus {
+  QUEUED = 'QUEUED',
+  RUNNING = 'RUNNING',
+  SUCCEEDED = 'SUCCEEDED',
+  FAILED = 'FAILED',
+  CANCELED = 'CANCELED',
+  CANCEL_REQUESTED = 'CANCEL_REQUESTED',
+}
+
+/**
  * Enum-like object containing all possible IssueCategory values.
  * This provides the runtime values and allows for type derivation.
  * Exported as 'const' to ensure it's available for Vite/Rollup to resolve
@@ -82,22 +94,24 @@ export interface Bbox {
  */
 export interface Issue {
   id: string;
-  page: number; // 1-based page number
-  bbox?: Bbox; // Optional bounding box for visual indication
-  severity: Severity;
-  category: IssueCategory;
+  page?: number; // Optional in V2 (can be document-wide)
+  bbox?: Bbox;
+  severity: Severity | string;
+  category?: IssueCategory | string;
+  type?: string; // V2 equivalent of category
   title?: string;
-  message: string;
-  details?: string; // More detailed explanation of the issue
-  /**
-   * Optional tags used internally to infer severity or classify issues.
-   * Ej: ['critical', 'warn', 'low-res', 'font-embedding']
-   */
+  message?: string; // Legacy
+  user_message?: string; // V2
+  details?: string; // Legacy
+  developer_message?: string; // V2
   tags?: string[];
-  /**
-   * Optional key-value payload for structured data extraction.
-   */
   payload?: any;
+  evidence?: any; // V2
+  fix?: {
+    available: boolean;
+    applied: boolean;
+    step?: string;
+  }; // V2
 }
 
 /**
@@ -110,7 +124,7 @@ export interface CategorySummary {
   info: number;
 }
 
-export type AppMode = 'manual' | 'ai' | null;
+export type AppMode = 'manual' | 'ai' | 'demo' | null;
 
 /**
  * The overall result of a PDF preflight analysis.

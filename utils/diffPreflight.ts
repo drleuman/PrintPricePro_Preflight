@@ -27,10 +27,11 @@ function normalizeMessage(msg: string): string {
 }
 
 function createIssueFingerprint(issue: Issue): string {
+  if (!issue) return 'null';
   const category = issue.category || 'other';
   const severity = issue.severity;
   const page = issue.page;
-  const message = normalizeMessage(issue.message);
+  const message = normalizeMessage(issue.message || '');
   const details = issue.details ? normalizeMessage(issue.details) : '';
 
   const tags = (issue.tags ?? [])
@@ -44,6 +45,7 @@ function createIssueFingerprint(issue: Issue): string {
 function countIssuesBySeverity(issues: Issue[]): { error: number; warning: number; info: number } {
   const counts = { error: 0, warning: 0, info: 0 };
   for (const issue of issues ?? []) {
+    if (!issue) continue;
     if (issue.severity === 'error') counts.error++;
     else if (issue.severity === 'warning') counts.warning++;
     else counts.info++;
@@ -78,15 +80,18 @@ function takeOne(map: Map<string, Issue[]>, fp: string): Issue | null {
 }
 
 function sortIssues(issues: Issue[]): Issue[] {
-  return issues.slice().sort((a, b) => {
-    if (a.page !== b.page) return a.page - b.page;
-    const severityOrder = { error: 0, warning: 1, info: 2 } as const;
-    const aSev = severityOrder[a.severity as keyof typeof severityOrder] ?? 99;
-    const bSev = severityOrder[b.severity as keyof typeof severityOrder] ?? 99;
-    if (aSev !== bSev) return aSev - bSev;
-    if (a.category !== b.category) return a.category.localeCompare(b.category);
-    return a.message.localeCompare(b.message);
-  });
+  return (issues ?? [])
+    .filter(Boolean)
+    .slice()
+    .sort((a, b) => {
+      if (a.page !== b.page) return (a.page || 0) - (b.page || 0);
+      const severityOrder = { error: 0, warning: 1, info: 2 } as const;
+      const aSev = severityOrder[a.severity as keyof typeof severityOrder] ?? 99;
+      const bSev = severityOrder[b.severity as keyof typeof severityOrder] ?? 99;
+      if (aSev !== bSev) return aSev - bSev;
+      if (a.category !== b.category) return (a.category || '').localeCompare(b.category || '');
+      return (a.message || '').localeCompare(b.message || '');
+    });
 }
 
 export function diffPreflight(before: PreflightResult, after: PreflightResult): DiffResult {

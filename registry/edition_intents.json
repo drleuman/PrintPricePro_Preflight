@@ -1,0 +1,56 @@
+{
+    "hardcover_photo_book": {
+        "positive_signals": {
+            "cover_spread_detected": 20,
+            "image_area_ratio_gte_0_60": 18,
+            "spine_zone_present": 18,
+            "trim_family_large_or_square": 12,
+            "photo_reproduction_priority": 8
+        },
+        "negative_signals": {
+            "text_area_ratio_gte_0_70": -15,
+            "trim_family_pocket": -15,
+            "binding_candidate_saddle": -20
+        },
+        "thresholds": {
+            "candidate": 45,
+            "strong": 65,
+            "primary": 80
+        }
+    },
+    "paperback_novel": {
+        "positive_signals": {
+            "page_bucket_medium_to_very_high": 15,
+            "text_area_ratio_gte_0_65": 15,
+            "trim_family_pocket_or_trade": 12,
+            "image_area_ratio_lte_0_15": 10,
+            "primary_language_text_dominant": 8
+        },
+        "negative_signals": {
+            "image_area_ratio_gte_0_40": -12,
+            "trim_family_large_format": -15,
+            "full_bleed_page_ratio_gte_0_10": -10
+        },
+        "thresholds": {
+            "candidate": 45,
+            "strong": 60,
+            "primary": 80
+        }
+    },
+    "booklet_saddle_stitch": {
+        "positive_signals": {
+            "page_bucket_very_low_to_low": 25,
+            "binding_candidate_saddle": 15,
+            "spine_width_estimated_mm_lte_2": 10
+        },
+        "negative_signals": {
+            "page_bucket_high_to_very_high": -30,
+            "spine_zone_present": -15
+        },
+        "thresholds": {
+            "candidate": 40,
+            "strong": 60,
+            "primary": 75
+        }
+    }
+}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Issue, Bbox, FileMeta, HeatmapData } from '../types';
-import { ChevronLeftIcon, ChevronRightIcon, FireIcon } from '@heroicons/react/24/outline'; // FireIcon for Heatmap
+import { ChevronLeftIcon, ChevronRightIcon, FireIcon, EyeIcon } from '@heroicons/react/24/outline'; // FireIcon for Heatmap
 import { t } from '../i18n';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -82,13 +82,21 @@ export const PageViewer: React.FC<PageViewerProps> = ({
       fileReader.onload = async () => {
         const typedArray = new Uint8Array(fileReader.result as ArrayBuffer);
         try {
-          const loadingTask = pdfjsLib.getDocument({ data: typedArray });
+          const loadingTask = pdfjsLib.getDocument({
+            data: typedArray,
+            // Ensure we use the worker even if it's served as a module
+            isEvalSupported: false,
+          });
           const pdf = await loadingTask.promise;
           pdfRef.current = pdf;
           onNumPagesChange(pdf.numPages);
           onPageChange(1);
-        } catch (error) {
-          console.error("Error loading PDF:", error);
+        } catch (error: any) {
+          console.error("[PDF-LOAD-ERROR]", error);
+          // Detect worker failure (often MIME mismatch in production)
+          if (error.message?.includes('worker') || error.message?.includes('MIME')) {
+            console.error("Critical: PDF.js worker failed to initialize. Check PROD_CONFIG.md for MIME type settings.");
+          }
           onNumPagesChange(0);
         }
       };
@@ -282,7 +290,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
             max={numPages > 0 ? numPages : 1}
             disabled={numPages === 0}
           />
-          <span className="text-gray-700">of {numPages}</span>
+          <span className="text-gray-700">{t('of')} {numPages}</span>
         </div>
         <button
           onClick={handleNextPage}
@@ -298,94 +306,100 @@ export const PageViewer: React.FC<PageViewerProps> = ({
         <button
           onClick={toggleHeatmap}
           className={`p-2 rounded-lg flex items-center gap-2 transition-colors ${showHeatmap ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-transparent'}`}
-          title="Toggle TAC Heatmap (Total Area Coverage)"
+          title={t('toggleTacHeatmap')}
         >
           <FireIcon className="h-5 w-5" />
-          <span className="text-sm font-medium">Heatmap</span>
+          <span className="text-sm font-medium">{t('heatmap')}</span>
         </button>
 
         {onRunVisualCheck && (
           <button
             onClick={onRunVisualCheck}
             className="p-2 rounded-lg flex items-center gap-2 bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 transition-colors"
-            title="AI Visual Quality Check"
+            title={t('aiVisualQualityCheck')}
           >
-            <span className="text-lg">👁️</span>
-            <span className="text-sm font-medium">AI Visual Check</span>
+            <EyeIcon className="w-5 h-5" />
+            <span className="text-sm font-medium">{t('aiVisualCheck')}</span>
           </button>
         )}
       </div>
 
-      <div className="pdf-viewer-container relative">
+      <div className="pdf-viewer-container relative w-full h-[70vh] min-h-[500px] bg-gray-50/50 rounded-2xl border border-gray-100 shadow-inner overflow-hidden flex flex-col items-center justify-center p-8">
         {previewLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-20 backdrop-blur-sm rounded-lg">
-            <div className="flex flex-col items-center gap-3">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-              <p className="text-sm font-medium text-blue-800">Generating High-Quality Preview...</p>
+          <div className="absolute inset-0 flex items-center justify-center bg-white/90 z-20 backdrop-blur-md rounded-2xl">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-red-600 border-t-transparent"></div>
+              <p className="text-sm font-black text-red-600 uppercase tracking-widest">Optimizing Preview...</p>
             </div>
           </div>
         )}
 
-        {/* The PDF.js Canvas (fallback or base for overlays) */}
-        {!ldmMode && (
-          <canvas
-            ref={canvasRef}
-            className="shadow-lg border border-gray-300 max-w-full h-auto block"
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              display: previewPages?.[currentPage - 1] ? 'none' : 'block'
-            }}
-          />
-        )}
-
-        {/* The Server-side PNG (high-quality CMYK + Transparency) */}
-        {previewPages?.[currentPage - 1] && !ldmMode && (
-          <img
-            src={previewPages[currentPage - 1]}
-            alt={`Page ${currentPage}`}
-            className="shadow-lg border border-gray-300 max-w-full h-auto block"
-            style={{ position: 'relative', zIndex: 1 }}
-          />
-        )}
-
-        {/* LDM On-demand Page Preview */}
-        {ldmMode && ldmJobId && (
-          <img
-            src={`/api/convert/preview/${ldmJobId}/${currentPage}`}
-            key={`ldm-${ldmJobId}-${currentPage}`}
-            alt={`LDM Page ${currentPage}`}
-            className="shadow-lg border border-gray-300 max-w-full h-auto block"
-            style={{ position: 'relative', zIndex: 1, minHeight: '400px', backgroundColor: '#f3f4f6' }}
-            onLoad={(e) => {
-              // Ensure we inform parent about page dimensions if needed
-            }}
-          />
-        )}
-
-        {showHeatmap && (
-          <>
-            {isHeatmapLoading && (
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/50 text-white px-3 py-1 rounded" style={{ zIndex: 20 }}>
-                {t('analyzingInk')}
-              </div>
+        {/* The PDF Stage (constrained box) */}
+        <div className="relative w-full h-full flex overflow-auto custom-scrollbar p-4">
+          <div
+            id="pdf-stage"
+            className="relative shadow-2xl border border-gray-200 bg-white inline-block m-auto"
+            style={{ minWidth: '100px', minHeight: '100px' }}
+          >
+            {/* The PDF.js Canvas */}
+            {!ldmMode && (
+              <canvas
+                ref={canvasRef}
+                className="block max-w-[90vw] max-h-[80vh] h-auto w-auto"
+                style={{
+                  zIndex: 1,
+                  display: previewPages?.[currentPage - 1] ? 'none' : 'block'
+                }}
+              />
             )}
-            <canvas
-              ref={heatmapLayerRef}
-              className="absolute top-0 left-0 pointer-events-none"
-              style={{ zIndex: 10, opacity: 0.6, mixBlendMode: 'multiply', width: '100%', height: '100%' }}
-            />
-          </>
-        )}
+
+            {/* The Server-side PNG */}
+            {previewPages?.[currentPage - 1] && !ldmMode && (
+              <img
+                src={previewPages[currentPage - 1]}
+                alt={`Page ${currentPage}`}
+                className="block max-w-full h-auto"
+                style={{ position: 'relative', zIndex: 1 }}
+              />
+            )}
+
+            {/* LDM On-demand Page Preview */}
+            {ldmMode && ldmJobId && (
+              <img
+                src={`/api/convert/preview/${ldmJobId}/${currentPage}`}
+                key={`ldm-${ldmJobId}-${currentPage}`}
+                alt={`LDM Page ${currentPage}`}
+                className="block max-w-[90vw] max-h-[80vh] h-auto w-auto"
+                style={{ position: 'relative', zIndex: 1, minHeight: '400px', backgroundColor: '#f3f4f6' }}
+              />
+            )}
+
+            {showHeatmap && (
+              <>
+                {isHeatmapLoading && (
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest z-30 shadow-2xl">
+                    {t('analyzingInk')}
+                  </div>
+                )}
+                <canvas
+                  ref={heatmapLayerRef}
+                  className="absolute top-0 left-0 pointer-events-none w-full h-full"
+                  style={{ zIndex: 10, opacity: 0.6, mixBlendMode: 'multiply' }}
+                />
+
+                {/* Integrated Legend inside the PDF stage */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 p-3 bg-white/90 backdrop-blur-md rounded-2xl border border-gray-100 shadow-xl flex gap-4 items-center z-30 animate-in slide-in-from-bottom-2 duration-300 scale-90">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">TAC Legend</span>
+                  <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500"></span> <span className="text-[10px] font-bold text-gray-600">{'<'}280%</span></div>
+                  <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400"></span> <span className="text-[10px] font-bold text-gray-600">280-300%</span></div>
+                  <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> <span className="text-[10px] font-bold text-gray-600">{'>'}300%</span></div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
-      {showHeatmap && (
-        <div className="mt-2 text-xs text-gray-500 flex gap-4 items-center">
-          <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500"></span> {'<'}280%</div>
-          <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-yellow-400"></span> 280-300%</div>
-          <div className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500"></span> {'>'}300%</div>
-        </div>
-      )}
     </div>
   );
 };

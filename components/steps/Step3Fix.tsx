@@ -6,6 +6,7 @@ import { FixDrawer } from '../FixDrawer';
 import { AIAuditModal } from '../AIAuditModal';
 import { EfficiencyAuditModal } from '../EfficiencyAuditModal';
 import { AutoFixProPanel } from '../AutoFixProPanel';
+import { t } from '../../i18n';
 
 interface Step3FixProps {
     file: File | null;
@@ -173,7 +174,7 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
                                     <Icon.Refresh className="w-6 h-6 animate-spin" />
                                 </div>
                                 <div className="text-left">
-                                    <h3 className="text-lg font-bold">Large Document Mode Active</h3>
+                                    <h3 className="text-lg font-bold">AI Magic Fix Active</h3>
                                     <p className="text-red-100 text-sm">{ldmStatus || 'Processing sequential pages to optimize RAM...'}</p>
                                 </div>
                             </div>
@@ -193,11 +194,14 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
                     </div>
                 </div>
             )}
-            <div className="step__header">
-                <h2 className="step__title">Fix Issues</h2>
-                <p className="step__description">
-                    Review and fix the {issuesCount} issue{issuesCount !== 1 ? 's' : ''} found in your PDF
-                </p>
+            {/* Header omitted on desktop to save space (since Stepper already says it), but keep visually hidden or small */}
+            <div className="step__header mb-2 py-1 flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-100 px-4">
+                <div className="flex items-baseline gap-2">
+                    <h2 className="text-sm font-black text-gray-900 tracking-tight">{t('fixIssuesTitle')}</h2>
+                    <p className="text-[10px] text-gray-500 font-medium">
+                        {t('fixIssuesRemaing', { count: issuesCount })}
+                    </p>
+                </div>
             </div>
 
             <div className="step__content step__content--split">
@@ -218,7 +222,7 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
                         onClick={onRunAnalysis}
                         disabled={isRunning}
                     >
-                        <Icon.Refresh className="h-4 w-4" /> Re-analyze PDF
+                        {t('reanalyzePdf')}
                     </button>
                 </div>
 
@@ -242,21 +246,20 @@ export const Step3Fix: React.FC<Step3FixProps> = ({
                 </div>
             </div>
 
-            <div className="step__actions">
-                <button
-                    className="btn btn--primary flex items-center gap-2"
-                    onClick={() => onAutoFix(autoFixOptions)}
-                    disabled={!file || isRunning}
-                >
-                    <Icon.Sparkles className="h-4 w-4" />
-                    {isRunning ? 'Running AutoFix...' : 'Run AutoFix Agent (PRO)'}
-                </button>
-                <button className="btn btn--secondary flex items-center gap-2" onClick={onBack}>
-                    <Icon.ArrowLeft className="h-4 w-4" /> Back to Analysis
-                </button>
-                <button className="btn btn--primary btn--large flex items-center gap-2" onClick={onNext}>
-                    Continue to Review <Icon.ArrowRight className="h-4 w-4" />
-                </button>
+            <div className="step__actions sticky bottom-0 bg-white/80 backdrop-blur-md p-4 border-t border-gray-100 mt-6 z-20 flex justify-between items-center rounded-t-2xl shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+                <div className="flex gap-3">
+                    <button className="btn btn--secondary btn--sm flex items-center gap-2" onClick={onBack}>
+                        {t('back')}
+                    </button>
+                </div>
+                <div className="flex gap-4 items-center">
+                    <button
+                        className="btn btn--primary btn--large px-10 py-3 shadow-xl shadow-red-900/10 flex items-center gap-2"
+                        onClick={onNext}
+                    >
+                        {t('continueToReview')}
+                    </button>
+                </div>
             </div>
 
             <FixDrawer

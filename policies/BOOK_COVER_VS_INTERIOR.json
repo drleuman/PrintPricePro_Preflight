@@ -1,0 +1,42 @@
+{
+    "slug": "BOOK_COVER_VS_INTERIOR",
+    "name": "Book Print (Cover vs Interior Rules)",
+    "color": {
+        "mode": "cmyk",
+        "icc_profile": "PSO_Coated_v3.icc",
+        "convert_rgb": true,
+        "tac_limit": 280,
+        "allow_spot_colors": false,
+        "require_output_intent": true,
+        "flatten_transparency": true,
+        "render_intent": 1
+    },
+    "document": {
+        "bleed_mm_required": 3,
+        "min_resolution_dpi": 300,
+        "max_pages": 1500,
+        "max_file_mb": 2048,
+        "max_spot_colors": 0
+    },
+    "processing": {
+        "job_timeout_ms": 1200000,
+        "gs_concurrency": 4,
+        "dpi_rebuild": 300
+    },
+    "autofix": {
+        "actions": [
+            "convert_cmyk",
+            "flatten_transparency",
+            "add_bleed"
+        ],
+        "allow_lossy": false
+    },
+    "checks": {
+        "error_on_rgb": true,
+        "error_on_missing_bleed": true,
+        "error_on_tac_exceeded": true,
+        "warn_on_low_resolution": true,
+        "warn_on_spot_colors": true,
+        "warn_on_type3_fonts": true
+    }
+}

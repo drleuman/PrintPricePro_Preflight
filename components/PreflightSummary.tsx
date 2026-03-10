@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import type { FileMeta, Issue, PreflightResult } from '../types';
 import { t, useLocale } from '../i18n';
+import type { TranslationKeys } from '../i18n';
 import { ISSUE_CATEGORY_LABELS } from '../constants';
 import { generatePreflightReport } from '../utils/reportGenerator';
 import { formatBytes } from '../components/PreflightDropzone';
@@ -37,6 +38,27 @@ type CategoryBucket = {
   info: number;
 };
 
+// Map constants.ts category key (snake_case) to i18n key (camelCase)
+const categoryKeyToI18nKey = (key: string): TranslationKeys => {
+  const map: Record<string, TranslationKeys> = {
+    images: 'categoryImages',
+    color: 'categoryColor',
+    fonts: 'categoryFonts',
+    metadata: 'categoryMetadata',
+    transparency: 'categoryTransparency',
+    bleed_margins: 'categoryBleedMargins',
+    resolution: 'categoryResolution',
+    compliance: 'categoryCompliance',
+    page_setup: 'categoryPageSetup',
+    annotations: 'categoryAnnotations',
+    form_fields: 'categoryFormFields',
+    multimedia: 'categoryMultimedia',
+    layers: 'categoryLayers',
+    other: 'categoryOther',
+  };
+  return map[key] ?? 'categoryOther';
+};
+
 // Helper function to get icon component for category
 const getCategoryIcon = (key: string) => {
   const iconStyle = { width: '24px', height: '24px' };
@@ -45,19 +67,19 @@ const getCategoryIcon = (key: string) => {
       return <PhotoIcon style={iconStyle} />;
     case 'fonts':
       return <DocumentTextIcon style={iconStyle} />;
-    case 'colors':
+    case 'color':
       return <SwatchIcon style={iconStyle} />;
     case 'transparency':
       return <EyeIcon style={iconStyle} />;
     case 'resolution':
       return <ArrowsPointingOutIcon style={iconStyle} />;
-    case 'bleed':
+    case 'bleed_margins':
       return <ScissorsIcon style={iconStyle} />;
-    case 'pageSetup':
+    case 'page_setup':
       return <DocumentIcon style={iconStyle} />;
     case 'annotations':
       return <ChatBubbleLeftIcon style={iconStyle} />;
-    case 'formFields':
+    case 'form_fields':
       return <ClipboardDocumentListIcon style={iconStyle} />;
     case 'multimedia':
       return <FilmIcon style={iconStyle} />;
@@ -104,9 +126,10 @@ export const PreflightSummary: React.FC<Props> = ({
     const buckets: Record<string, CategoryBucket> = {};
 
     for (const key of keys) {
+      const i18nKey = categoryKeyToI18nKey(key);
       buckets[key] = {
         key,
-        label: (ISSUE_CATEGORY_LABELS as any)[key] || key,
+        label: t(i18nKey) || (ISSUE_CATEGORY_LABELS as Record<string, string>)[key] || key,
         errors: 0,
         warnings: 0,
         info: 0,
@@ -114,7 +137,8 @@ export const PreflightSummary: React.FC<Props> = ({
     }
 
     for (const iss of issues) {
-      const catKey = iss.category && buckets[iss.category] ? iss.category : keys[0] || 'images';
+      if (!iss) continue;
+      const catKey = (iss.category && buckets[iss.category]) ? iss.category : keys[0] || 'images';
       const sev = String(iss.severity || '').toLowerCase();
       const bucket = buckets[catKey];
 
@@ -124,7 +148,7 @@ export const PreflightSummary: React.FC<Props> = ({
     }
 
     return Object.values(buckets);
-  }, [issues]);
+  }, [issues, currentLocale]);
 
   const score = result?.score ?? null;
 
@@ -152,63 +176,48 @@ export const PreflightSummary: React.FC<Props> = ({
   return (
     <section className="space-y-4">
       {/* Overall Score card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-4 sm:px-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-2">
-          {t('issuesSummary')}
-        </h2>
-
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="ppp-score-circle">
-              {hasPdf && score !== null ? score : '–'}
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-gray-900">
-                {t('overallScore')}
-              </p>
-              <p className="text-sm text-gray-700">
-                {!hasPdf
-                  ? t('noPdfLoaded')
-                  : result?.summary ||
-                  `Preflight check for "${fileMeta?.name}" identified ${issues.length} potential issues. Review them carefully.`}
-              </p>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-2 sm:px-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="ppp-score-circle w-10 h-10 text-lg shrink-0">
+            {hasPdf && score !== null ? score : '–'}
+          </div>
+          <div className="space-y-0.5">
+            <div className="flex items-baseline gap-2">
+              <p className="text-sm font-bold text-gray-900">{t('overallScore') || 'Overall Score'}</p>
               {hasPdf && (
-                <p className="text-xs text-gray-500">
-                  File: {fileMeta?.name}{' '}
-                  {fileMeta?.size
-                    ? `— ${formatBytes(fileMeta.size, currentLocale)}`
-                    : null}
-                </p>
-              )}
-              {hasPdf && (
-                <p className="text-xs text-gray-500">
-                  {errors} errors · {warnings} warnings · {info} info
+                <p className="text-[11px] text-gray-500 font-medium">
+                  {errors} {t('errors')} · {warnings} {t('warnings')} · {info} {t('info')}
                 </p>
               )}
             </div>
+            <p className="text-[10px] text-gray-500 truncate max-w-sm">
+              {!hasPdf
+                ? t('noPdfLoaded')
+                : `${t('fileLabel')}: ${fileMeta?.name} ${fileMeta?.size ? `— ${formatBytes(fileMeta.size, currentLocale)}` : ''}`}
+            </p>
           </div>
+        </div>
 
-          <div>
-            <button
-              type="button"
-              onClick={handleDownloadReport}
-              disabled={!hasPdf || !result}
-              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-            >
-              Download Report
-            </button>
-          </div>
+        <div>
+          <button
+            type="button"
+            onClick={handleDownloadReport}
+            disabled={!hasPdf || !result}
+            className="inline-flex items-center justify-center px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none disabled:opacity-50"
+          >
+            {t('downloadReport')}
+          </button>
         </div>
       </div>
 
       {/* Issue Categories Dashboard */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-4 sm:px-6 space-y-3">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-900">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-2 sm:px-4 space-y-1.5">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
             {t('issueCategories')}
           </h3>
-          <div className="text-xs text-gray-500">
-            {categories.reduce((sum, cat) => sum + cat.errors + cat.warnings + cat.info, 0)} total issues
+          <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+            {categories.reduce((sum, cat) => sum + cat.errors + cat.warnings + cat.info, 0)} {t('totalIssues')}
           </div>
         </div>
 
@@ -223,21 +232,26 @@ export const PreflightSummary: React.FC<Props> = ({
             return (
               <div
                 key={cat.key}
-                className={`relative rounded-xl border-2 transition-all ${hasErrors
+                className={`relative rounded-lg border-2 flex flex-col transition-all ${hasErrors
                   ? 'border-red-200 bg-red-50/50'
                   : hasWarnings
                     ? 'border-amber-200 bg-amber-50/50'
                     : hasIssues
                       ? 'border-blue-200 bg-blue-50/50'
                       : 'border-gray-200 bg-gray-50'
-                  } p-3 hover:shadow-md`}
+                  } p-2 hover:shadow-md`}
               >
-                {/* Icon & Total Badge */}
-                <div className="flex items-start justify-between mb-2">
-                  <div className="text-gray-600">
-                    {getCategoryIcon(cat.key)}
+                {/* Icon & Label ROW */}
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5 text-gray-700">
+                    <div className="[&>svg]:w-3.5 [&>svg]:h-3.5">
+                      {getCategoryIcon(cat.key)}
+                    </div>
+                    <h4 className="text-[10px] font-semibold text-gray-900 leading-none truncate max-w-[65px]">
+                      {cat.label}
+                    </h4>
                   </div>
-                  <div className={`flex items-center justify-center min-w-[28px] h-7 px-2 rounded-full text-xs font-bold ${hasErrors
+                  <div className={`flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold ${hasErrors
                     ? 'bg-red-600 text-white'
                     : hasWarnings
                       ? 'bg-amber-500 text-white'
@@ -249,36 +263,28 @@ export const PreflightSummary: React.FC<Props> = ({
                   </div>
                 </div>
 
-                {/* Category Label */}
-                <h4 className="text-xs font-semibold text-gray-900 mb-2 leading-tight">
-                  {cat.label}
-                </h4>
-
                 {/* Issue Breakdown */}
                 {hasIssues ? (
-                  <div>
+                  <div className="flex flex-wrap gap-1 mt-auto pt-1 border-t border-gray-900/5">
                     {cat.errors > 0 && (
-                      <span className="ppp-issue-pill ppp-issue-pill--error">
-                        <span className="ppp-issue-pill__number">{cat.errors}</span>
-                        <span className="ppp-issue-pill__label">err</span>
+                      <span className="text-[8px] font-bold text-red-700 bg-red-100 px-1 rounded uppercase tracking-wider">
+                        {cat.errors} {t('errAbbr')}
                       </span>
                     )}
                     {cat.warnings > 0 && (
-                      <span className="ppp-issue-pill ppp-issue-pill--warning">
-                        <span className="ppp-issue-pill__number">{cat.warnings}</span>
-                        <span className="ppp-issue-pill__label">warn</span>
+                      <span className="text-[8px] font-bold text-amber-700 bg-amber-100 px-1 rounded uppercase tracking-wider">
+                        {cat.warnings} {t('warnAbbr')}
                       </span>
                     )}
                     {cat.info > 0 && (
-                      <span className="ppp-issue-pill ppp-issue-pill--info">
-                        <span className="ppp-issue-pill__number">{cat.info}</span>
-                        <span className="ppp-issue-pill__label">info</span>
+                      <span className="text-[8px] font-bold text-blue-700 bg-blue-100 px-1 rounded uppercase tracking-wider">
+                        {cat.info} {t('infoAbbr')}
                       </span>
                     )}
                   </div>
                 ) : (
-                  <div className="text-[10px] text-gray-400 font-medium">
-                    ✓ No issues
+                  <div className="text-[9px] text-gray-400 font-medium flex items-center gap-1 mt-auto pt-1 border-t border-gray-900/5">
+                    <CheckCircleIcon className="w-3 h-3 text-green-500" /> {t('noIssues')}
                   </div>
                 )}
               </div>

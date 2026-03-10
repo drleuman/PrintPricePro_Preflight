@@ -2,6 +2,7 @@ import { t } from '../../i18n';
 import React, { useState } from 'react';
 import { PreflightResult, FileMeta } from '../../types';
 import { PageViewer } from '../PageViewer';
+import { SparklesIcon, ArrowPathIcon, PaintBrushIcon, RocketLaunchIcon, BookOpenIcon, ArrowDownTrayIcon, Square3Stack3DIcon, BeakerIcon } from '@heroicons/react/24/outline';
 
 interface Step4ReviewProps {
     file: File | null;
@@ -66,138 +67,192 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
     const displayFile = showBeforeAfter === 'before' && originalFile ? originalFile : file;
 
     // Determine status
-    const isReadyForPrint = !hasIssues || hasBeenProcessed;
-    const statusIcon = isReadyForPrint ? '✅' : '⚠️';
+    // Only ready if we have a result AND it has zero issues. 
+    // If result is null, we are NOT ready (still analyzing or failed).
+    const isReadyForPrint = !!result && issuesCount === 0;
     const statusTitle = appMode === 'ai'
-        ? 'AI Magic Applied! ✨'
+        ? <span className="flex items-center gap-2">{t('aiMagicApplied')} <SparklesIcon className="w-6 h-6 text-amber-400" /></span>
         : isReadyForPrint
-            ? 'Ready for Print!'
-            : 'Review Required';
+            ? t('readyForPrint')
+            : t('reviewRequired');
 
     const statusText = appMode === 'ai'
-        ? 'Our AI Wizard has automatically optimized your colors, resolution, and margins for professional printing.'
+        ? t('aiMagicDescription')
         : hasBeenProcessed
-            ? `Document processed successfully${issuesCount > 0 ? ` (${issuesCount} issue${issuesCount !== 1 ? 's' : ''} addressed)` : ''}`
+            ? t('processedSuccessfully', { count: issuesCount })
             : hasIssues
-                ? `${issuesCount} issue${issuesCount !== 1 ? 's' : ''} found - apply corrections or download original`
-                : 'No issues found in your PDF';
+                ? t('issuesFoundApplyOrDownload', { count: issuesCount })
+                : t('noIssuesPdf');
 
     return (
-        <div className="step step--review">
-            <div className="step__header">
-                <h2 className="step__title">Review & Download</h2>
-                <p className="step__description">
+        <div className="step step--review max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-in fade-in duration-1000 slide-in-from-bottom-4">
+            {/* Header Section */}
+            <div className="mb-12 text-center animate-in fade-in slide-in-from-top-4 duration-700 delay-150">
+                <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-3">
+                    {t('reviewAndDownload')}
+                </h2>
+                <p className="text-lg text-gray-500 max-w-2xl mx-auto font-medium">
                     {isReadyForPrint
-                        ? 'Your print-ready PDF is ready! Review and download below.'
-                        : 'Review your document and apply corrections if needed.'}
+                        ? t('pdfProcessedReady')
+                        : t('reviewAndApplyCorrections')}
                 </p>
             </div>
 
-            <div className="step__content step__content--split">
-                <div className="step__sidebar">
-                    <div className={`review-summary ${!isReadyForPrint ? 'review-summary--warning' : ''}`}>
-                        <div className="review-summary__header">
-                            <div className="review-summary__badge">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+                {/* Sidebar - Actions & Summary */}
+                <div className="lg:col-span-4 space-y-8 sticky top-8 animate-in fade-in slide-in-from-left-4 duration-700 delay-300">
+
+                    {/* 1. Status Dashboard Card */}
+                    <div className={`p-8 rounded-[2.5rem] border transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 ${isReadyForPrint ? 'bg-white border-gray-100 shadow-xl shadow-gray-100' : 'bg-amber-50 border-amber-100 shadow-xl shadow-amber-100'}`}>
+                        <div className="flex items-center gap-5 mb-6">
+                            <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center shrink-0 transition-transform duration-500 hover:rotate-3 ${isReadyForPrint ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
                                 {isReadyForPrint ? (
-                                    <svg className="review-summary__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                                         <polyline points="20 6 9 17 4 12"></polyline>
                                     </svg>
                                 ) : (
-                                    <svg className="review-summary__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                                         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                                         <line x1="12" y1="9" x2="12" y2="13"></line>
                                         <line x1="12" y1="17" x2="12.01" y2="17"></line>
                                     </svg>
                                 )}
                             </div>
-                            <h3 className="review-summary__title">{statusTitle}</h3>
-                            <p className="review-summary__subtitle">
-                                {isReadyForPrint ? 'Professional print-ready file generated' : 'Action required to proceed'}
-                            </p>
+                            <div>
+                                <h3 className="text-2xl font-black text-gray-900 tracking-tight leading-none">{statusTitle}</h3>
+                                <p className={`text-[10px] font-black uppercase tracking-[0.2em] mt-2 ${isReadyForPrint ? 'text-green-600' : 'text-amber-600'}`}>
+                                    {isReadyForPrint ? t('readyForProduction') : t('actionRequired')}
+                                </p>
+                            </div>
                         </div>
 
-                        <div className="review-summary__content">
-                            <p className="review-summary__description">
-                                {statusText}
-                            </p>
+                        <p className="text-gray-600 text-sm font-medium leading-relaxed mb-8">
+                            {statusText}
+                        </p>
 
-                            {appMode === 'ai' && hasBeenProcessed && (
-                                <div className="review-summary__specs">
-                                    <div className="spec-row">
-                                        <span className="spec-label">Color Profile</span>
-                                        <span className="spec-value spec-value--highlight">
-                                            {autoFixReport?.prepress_summary?.output_profile || 'ISO Coated v3 (FOGRA51)'}
-                                        </span>
-                                    </div>
-                                    <div className="spec-row">
-                                        <span className="spec-label">Output Intent</span>
-                                        <span className="spec-value">
-                                            <span className="status-badge status-badge--success">
-                                                <span className="status-dot"></span>
-                                                {autoFixReport?.prepress_summary?.outputintent_valid ? t('verified') : t('embedded')}
-                                            </span>
-                                        </span>
-                                    </div>
-                                    <div className="spec-row">
-                                        <span className="spec-label">Resolution</span>
-                                        <span className="spec-value">300 DPI</span>
-                                    </div>
-                                    <div className="spec-row">
-                                        <span className="spec-label">Bleed</span>
-                                        <span className="spec-value">
-                                            {autoFixReport?.applied?.some(a => a.action === 'add_bleed_canvas') ? '3mm applied' : 'Verified'}
-                                        </span>
-                                    </div>
+                        {/* 2. Technical Specs Grid */}
+                        {appMode === 'ai' && hasBeenProcessed && (
+                            <div className="grid grid-cols-2 gap-4 p-6 bg-gray-50/50 rounded-3xl border border-gray-100/50 backdrop-blur-sm">
+                                <div className="space-y-1">
+                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Color Profile</span>
+                                    <p className="text-[11px] font-black text-gray-900 truncate" title={autoFixReport?.prepress_summary?.output_profile}>
+                                        {autoFixReport?.prepress_summary?.output_profile || 'FOGRA51'}
+                                    </p>
                                 </div>
-                            )}
-                        </div>
+                                <div className="space-y-1 text-right">
+                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Resolution</span>
+                                    <p className="text-[11px] font-black text-gray-900">300 DPI</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Bleed</span>
+                                    <p className="text-[11px] font-black text-green-600">
+                                        {autoFixReport?.applied?.some(a => a.action === 'add_bleed_canvas') ? '3mm Applied' : 'Verified'}
+                                    </p>
+                                </div>
+                                <div className="space-y-1 text-right">
+                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Output Intent</span>
+                                    <p className="text-[11px] font-black text-blue-600">Embedded</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
-                        <div className="review-summary__actions">
-                            <button className="btn btn--primary" onClick={() => setShowTechNote(true)}>
-                                <svg className="btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                                    <polyline points="10 9 9 9 8 9"></polyline>
+                    {/* 3. Primary Download Card */}
+                    {lastPdfUrl && (
+                        <div className="p-8 bg-gray-900 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] text-white relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-8 opacity-10 scale-[2] rotate-12 group-hover:rotate-0 group-hover:scale-[2.2] transition-all duration-700 ease-out pointer-events-none">
+                                <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
                                 </svg>
-                                {t('technicalNoteTitle')}
-                            </button>
-                            <button className="btn btn--secondary" onClick={() => {
+                            </div>
+
+                            <div className="relative z-10">
+                                <h4 className="text-xl font-black mb-1 tracking-tight">Download Final PDF</h4>
+                                <p className="text-gray-400 text-[11px] font-bold uppercase tracking-widest mb-10">Production-Ready Build</p>
+
+                                <a
+                                    href={lastPdfUrl}
+                                    download={lastPdfName || 'output.pdf'}
+                                    className="flex items-center justify-center gap-3 w-full py-6 bg-red-600 hover:bg-red-500 text-white rounded-[1.5rem] font-black text-sm uppercase tracking-[0.15em] transition-all shadow-xl shadow-red-900/40 active:scale-[0.97] hover:shadow-2xl hover:shadow-red-900/50"
+                                >
+                                    <svg className="w-5 h-5 animate-bounce" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                    Get Your File
+                                </a>
+
+                                <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Verified Stable</span>
+                                    </div>
+                                    <span className="text-[10px] font-mono text-gray-500 truncate max-w-[140px] opacity-60">
+                                        {lastPdfName || 'optimized_output.pdf'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 4. Secondary Actions Card */}
+                    <div className="p-8 bg-white rounded-[2.5rem] border border-gray-100 shadow-sm space-y-4">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t('availableReports')}</span>
+
+                        <button
+                            className="flex items-center justify-between w-full p-5 rounded-2xl border border-gray-100 hover:border-red-100 hover:bg-red-50/30 transition-all group"
+                            onClick={() => setShowTechNote(true)}
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                    </svg>
+                                </div>
+                                <div className="text-left">
+                                    <span className="block text-sm font-black text-gray-900 tracking-tight">{t('technicalNoteTitle')}</span>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('complianceCertified')}</span>
+                                </div>
+                            </div>
+                            <svg className="w-4 h-4 text-gray-300 group-hover:text-red-600 group-hover:translate-x-1 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
+
+                        <button
+                            className="flex items-center justify-between w-full p-5 rounded-2xl border border-dotted border-gray-200 hover:border-solid hover:border-gray-300 hover:bg-gray-50 transition-all group"
+                            onClick={() => {
                                 const summary = autoFixReport?.prepress_summary;
                                 const tac = summary?.tac_summary;
                                 const op = summary?.overprint_summary;
                                 const spot = summary?.spot_summary;
                                 const bleedApplied = autoFixReport?.applied?.some(a => a.action === 'add_bleed_canvas');
 
-                                const content = `PREPRESS COMPLIANCE REPORT\n` +
+                                let content = `PREPRESS COMPLIANCE REPORT\n` +
                                     `==========================\n` +
-                                    `NOTE: This certificate describes the processed output file, not the original uploaded document.\n\n` +
                                     `Certificate ID: ${summary?.certificate_id || 'PENDING'}\n` +
-                                    `Engine Version: ${summary?.engine_version || '2.4.0'}\n` +
                                     `Date: ${new Date().toISOString()}\n\n` +
                                     `Result: ${(summary?.risk_level || 'UNKNOWN').toUpperCase()}\n` +
                                     `Profile: ${summary?.output_profile || 'ISO Coated v3 (FOGRA51)'}\n` +
-                                    `Structure: Verified (GTS_PDFX)\n` +
-                                    `Mode: ${summary?.gs_mode || 'AutoFix Pro'}\n` +
-                                    `CMYK Conversion: ${summary?.conversion_bypassed ? 'Bypassed' : 'Applied'}\n` +
-                                    `Rewritten by GS: ${summary?.rewritten_by_gs ? 'Yes' : 'No'}\n` +
-                                    `Bleed Method: ${bleedApplied ? 'Centered Scaling (V3)' : 'Verified/Skipped'}\n` +
-                                    `Max Ink Density (TAC): ${tac?.max_tac ?? '---'}% (Page ${tac?.worst_page || '---'})\n` +
-                                    `Black Overprint: ${op?.risk === 'green' ? 'OK' : 'RISK DETECTED'} (${op?.issues_count ?? 0} objects)\n` +
-                                    `Spot Color Policy: ${spot?.risk?.toUpperCase() || 'GREEN'} (${spot?.spot_count ?? 0} colors)\n` +
-                                    `Policy Name: ${spot?.policy || 'AUTO'}\n\n` +
-                                    `Production Geometry & Imposition:\n` +
-                                    `Spine Fit: ${result?.productionReport?.spine?.classification || 'GREEN'} (Expected: ${result?.productionReport?.spine?.expectedSpineMm || 0}mm, Detected: ${result?.productionReport?.spine?.detectedSpineMm || 0}mm)\n` +
-                                    `Imposition Score: ${result?.productionReport?.imposition?.score || 100}/100\n` +
-                                    `Paper Suitability Warnings: ${result?.productionReport?.substrate?.warnings?.length || 0}\n\n` +
-                                    `INK EFFICIENCY:\n` +
-                                    `Cost Category: ${result?.productionReport?.inkOptimization?.costCategory || 'LOW'}\n` +
-                                    `Ink Usage Index: ${result?.productionReport?.inkOptimization?.inkUsageIndex || 0}/100\n` +
-                                    `Avg Coverage: ${result?.productionReport?.inkOptimization?.totalCoverageAvg?.toFixed(1) || 0}%\n` +
-                                    `Opportunities: ${result?.productionReport?.inkOptimization?.opportunities?.length || 0} detected\n\n` +
-                                    `SECURITY STATEMENT:\n` +
-                                    `No further color transformations were performed after OutputIntent finalization.`;
+                                    `TAC: ${tac?.max_tac ?? '---'}%\n` +
+                                    `Overprint: ${op?.risk === 'green' ? 'OK' : 'RISK'}\n` +
+                                    `Spots: ${spot?.spot_count ?? 0}\n\n` +
+                                    `Bleed Method: ${bleedApplied ? 'Centered Scaling' : 'Verified'}\n` +
+                                    `Production Imposition Score: ${result?.productionReport?.imposition?.score || 100}/100`;
+
+                                if (result?.issues && result.issues.length > 0) {
+                                    content += `\n\nISSUES FOUND:\n`;
+                                    for (const iss of result.issues) {
+                                        if (!iss) continue;
+                                        const sev = String(iss.severity || '').toLowerCase();
+                                        content += `- [${sev.toUpperCase()}] ${iss.message || 'Unknown issue'}\n`;
+                                    }
+                                }
+
                                 const blob = new Blob([content], { type: 'text/plain' });
                                 const url = URL.createObjectURL(blob);
                                 const a = document.createElement('a');
@@ -205,199 +260,154 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                 a.download = `Prepress_Report_${summary?.certificate_id || 'unverified'}.txt`;
                                 a.click();
                                 URL.revokeObjectURL(url);
-                            }}>
-                                <svg className="btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <polyline points="7 10 12 15 17 10"></polyline>
-                                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                                </svg>
-                                {t('downloadReport')}
-                            </button>
-                        </div>
-                    </div>
-
-                    {lastPdfUrl && (
-                        <div className="card card--download">
-                            <div className="card__header">
-                                <h4 className="card__title">Download Your PDF</h4>
-                                <p className="card__subtitle">Your optimized file is ready</p>
-                            </div>
-                            <div className="card__content">
-                                <a
-                                    href={lastPdfUrl}
-                                    download={lastPdfName || 'output.pdf'}
-                                    className="btn btn--primary btn--large btn--block"
-                                >
-                                    <svg className="btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            }}
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-gray-50 text-gray-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                         <polyline points="7 10 12 15 17 10"></polyline>
                                         <line x1="12" y1="15" x2="12" y2="3"></line>
                                     </svg>
-                                    Download PDF
-                                </a>
-                                <div className="file-info">
-                                    <svg className="file-info__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                        <polyline points="14 2 14 8 20 8"></polyline>
-                                    </svg>
-                                    <span className="file-info__name">{lastPdfName || 'output.pdf'}</span>
+                                </div>
+                                <div className="text-left">
+                                    <span className="block text-sm font-black text-gray-600 tracking-tight">{t('downloadReport')}</span>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('txtSummary')}</span>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        </button>
+                    </div>
 
-                    {/* Compare Before/After Toggle */}
-                    {appMode === 'ai' && lastPdfUrl && file && (
-                        <div className="card card--compare">
-                            <div className="compare-control">
-                                <span className="compare-control__label">View comparison</span>
-                                <div className="toggle-group">
-                                    <button
-                                        className={`toggle-btn ${showBeforeAfter === 'before' ? 'toggle-btn--active' : ''}`}
-                                        onClick={() => setShowBeforeAfter('before')}
-                                    >
-                                        <svg className="toggle-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                            <polyline points="14 2 14 8 20 8"></polyline>
-                                        </svg>
-                                        Before
-                                    </button>
-                                    <button
-                                        className={`toggle-btn ${showBeforeAfter === 'after' ? 'toggle-btn--active' : ''}`}
-                                        onClick={() => setShowBeforeAfter('after')}
-                                    >
-                                        <svg className="toggle-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                                        </svg>
-                                        After
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {/* 5. Tools & Optimizations Card */}
+                    <div className="p-8 bg-white rounded-[2.5rem] border border-gray-100 shadow-sm">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 block">{t('productionTools')}</span>
 
-                    <div className="card card--tools">
-                        <div className="card__header">
-                            <h4 className="card__title">Optional Optimizations</h4>
-                            <p className="card__subtitle">Apply additional processing if needed</p>
-                        </div>
-
-                        <div className="tools-list">
-                            <button className="tool-btn" onClick={onConvertGrayscale} disabled={isRunning}>
-                                <div className="tool-btn__icon tool-btn__icon--gray">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <circle cx="12" cy="12" r="10"></circle>
+                        <div className="space-y-3">
+                            {[
+                                { icon: <ArrowPathIcon className="w-5 h-5" />, text: t('convertToGrayscale'), action: onConvertGrayscale, color: 'bg-gray-100' },
+                                { icon: <PaintBrushIcon className="w-5 h-5" />, text: t('convertColorsToCMYK'), action: onConvertColors, color: 'bg-amber-50' },
+                                { icon: <RocketLaunchIcon className="w-5 h-5" />, text: t('rebuildPdfHighRes'), action: onRebuildPdf, color: 'bg-blue-50', badge: '300DPI' },
+                                { icon: <BookOpenIcon className="w-5 h-5" />, text: t('createBooklet'), action: onMakeBooklet, color: 'bg-purple-50' }
+                            ].map((tool, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={tool.action}
+                                    disabled={isRunning}
+                                    className="flex items-center justify-between w-full p-4 rounded-[1.25rem] border border-transparent hover:border-red-100 hover:bg-red-50/50 transition-all group disabled:opacity-50"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-xl group-hover:scale-125 transition-transform duration-300">{tool.icon}</span>
+                                        <span className="text-sm font-bold text-gray-700">{tool.text}</span>
+                                        {tool.badge && (
+                                            <span className="px-2 py-0.5 bg-gray-900 text-white text-[8px] font-black rounded-full uppercase tracking-widest">{tool.badge}</span>
+                                        )}
+                                    </div>
+                                    <svg className="w-3 h-3 text-gray-300 group-hover:text-red-600 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4">
+                                        <polyline points="9 18 15 12 9 6"></polyline>
                                     </svg>
-                                </div>
-                                <span className="tool-btn__text">Convert to Grayscale</span>
-                                <svg className="tool-btn__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polyline points="9 18 15 12 9 6"></polyline>
-                                </svg>
-                            </button>
-
-                            <button className="tool-btn" onClick={onConvertColors} disabled={isRunning}>
-                                <div className="tool-btn__icon tool-btn__icon--color">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="12" y1="8" x2="12" y2="16"></line>
-                                        <line x1="8" y1="12" x2="16" y2="12"></line>
-                                    </svg>
-                                </div>
-                                <span className="tool-btn__text">Convert to CMYK</span>
-                                <svg className="tool-btn__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polyline points="9 18 15 12 9 6"></polyline>
-                                </svg>
-                            </button>
-
-                            <button className="tool-btn" onClick={onRebuildPdf} disabled={isRunning}>
-                                <div className="tool-btn__icon tool-btn__icon--blue">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-                                    </svg>
-                                </div>
-                                <span className="tool-btn__text">Rebuild High-Res <span className="tool-btn__badge">300 DPI</span></span>
-                                <svg className="tool-btn__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polyline points="9 18 15 12 9 6"></polyline>
-                                </svg>
-                            </button>
-
-                            <button className="tool-btn" onClick={onMakeBooklet} disabled={isRunning}>
-                                <div className="tool-btn__icon tool-btn__icon--purple">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                                    </svg>
-                                </div>
-                                <span className="tool-btn__text">Make Booklet</span>
-                                <svg className="tool-btn__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polyline points="9 18 15 12 9 6"></polyline>
-                                </svg>
-                            </button>
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </div>
 
-                <div className="step__main">
-                    <PageViewer
-                        file={displayFile}
-                        numPages={numPages}
-                        currentPage={currentPage}
-                        onPageChange={onPageChange}
-                        onNumPagesChange={onNumPagesChange}
-                        selectedIssue={null}
-                        heatmapData={heatmapData || null}
-                        onRunHeatmap={onRunHeatmap || (() => { })}
-                        isHeatmapLoading={isHeatmapLoading}
-                        previewPages={previewPages}
-                        previewLoading={previewLoading}
-                    />
-                </div>
-            </div>
+                {/* Main Content - Preview Area */}
+                <div className="lg:col-span-8 animate-in fade-in slide-in-from-right-4 duration-700 delay-500">
+                    {/* Comparison Control */}
+                    {appMode === 'ai' && lastPdfUrl && file && (
+                        <div className="mb-8 flex items-center justify-between p-5 bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-50/50 backdrop-blur-md">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <span className="block text-xs font-black text-gray-900 uppercase tracking-widest leading-none">Visual Comparison</span>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Check applied changes</span>
+                                </div>
+                            </div>
 
-            <div className="step__actions">
-                {appMode !== 'ai' && (
-                    <button className="btn btn--secondary" onClick={onBack}>
-                        ← Back
-                    </button>
-                )}
-                <button className="btn btn--outline" onClick={onStartOver}>
-                    🔄 Start Over
-                </button>
-                {lastPdfUrl ? (
-                    <a
-                        href={lastPdfUrl}
-                        download={lastPdfName || 'output.pdf'}
-                        className="btn btn--primary"
-                    >
-                        ⬇️ Download PDF
-                    </a>
-                ) : (
-                    <button className="btn btn--primary" disabled>
-                        ⬇️ Download PDF
-                    </button>
-                )}
+                            <div className="flex bg-gray-100/80 p-1.5 rounded-2xl">
+                                <button
+                                    className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-300 ${showBeforeAfter === 'before' ? 'bg-white text-gray-900 shadow-md scale-[1.05]' : 'text-gray-400 hover:text-gray-600'}`}
+                                    onClick={() => setShowBeforeAfter('before')}
+                                >
+                                    Before
+                                </button>
+                                <button
+                                    className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-300 ${showBeforeAfter === 'after' ? 'bg-red-600 text-white shadow-xl shadow-red-200 scale-[1.05]' : 'text-gray-400 hover:text-gray-600'}`}
+                                    onClick={() => setShowBeforeAfter('after')}
+                                >
+                                    After
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PDF Viewer Container */}
+                    <div className="group/viewer relative transition-all duration-500 hover:shadow-2xl hover:shadow-gray-200 rounded-[2rem] overflow-hidden">
+                        <PageViewer
+                            file={displayFile}
+                            numPages={numPages}
+                            currentPage={currentPage}
+                            onPageChange={onPageChange}
+                            onNumPagesChange={onNumPagesChange}
+                            selectedIssue={null}
+                            heatmapData={heatmapData || null}
+                            onRunHeatmap={onRunHeatmap || (() => { })}
+                            isHeatmapLoading={isHeatmapLoading}
+                            previewPages={previewPages}
+                            previewLoading={previewLoading}
+                        />
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="mt-16 flex items-center justify-between border-t border-gray-100 pt-10">
+                        <div className="flex gap-6">
+                            {appMode !== 'ai' && (
+                                <button className="px-10 py-5 text-xs font-black uppercase tracking-[0.2em] text-gray-400 hover:text-gray-900 transition-all hover:-translate-x-1" onClick={onBack}>
+                                    {t('back')}
+                                </button>
+                            )}
+                            <button className="px-10 py-5 text-xs font-black uppercase tracking-[0.2em] text-red-600 hover:bg-red-50 rounded-2xl transition-all flex items-center gap-2" onClick={onStartOver}>
+                                <ArrowPathIcon className="w-4 h-4" /> {t('startOver')}
+                            </button>
+                        </div>
+
+                        {!lastPdfUrl && (
+                            <button className="px-12 py-5 bg-gray-100 text-gray-300 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] cursor-not-allowed flex items-center gap-2" disabled>
+                                <ArrowDownTrayIcon className="w-4 h-4" /> {t('downloadOriginal')}
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Prepress Technical Note Modal */}
             {showTechNote && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-300 border border-gray-100">
-                        <div className="p-8">
-                            <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center text-red-600 mb-6 mx-auto">
-                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-xl w-full overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
+                        <div className="p-10">
+                            <div className="w-20 h-20 bg-red-600 rounded-3xl flex items-center justify-center text-white mb-8 mx-auto shadow-2xl shadow-red-200">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
                                     <polyline points="14 2 14 8 20 8" />
                                 </svg>
                             </div>
-                            <h3 className="text-2xl font-black text-gray-900 mb-2 text-center">{t('technicalNoteTitle')}</h3>
-                            <p className="text-sm text-gray-500 mb-8 text-center">{t('technicalNoteDesc')}</p>
+                            <h3 className="text-3xl font-black text-gray-900 mb-2 text-center">{t('technicalNoteTitle')}</h3>
+                            <p className="text-sm text-gray-500 mb-10 text-center font-medium max-w-sm mx-auto">{t('technicalNoteDesc')}</p>
 
-                            <div className="space-y-4">
+                            <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                                 {/* Risk Level Badge */}
-                                <div className={`p-4 rounded-2xl flex items-center justify-between font-black text-xs uppercase tracking-widest ${autoFixReport?.prepress_summary?.risk_level === 'green' ? 'bg-green-100 text-green-800' :
+                                <div className={`p-6 rounded-[1.5rem] flex items-center justify-between font-black text-sm uppercase tracking-widest ${autoFixReport?.prepress_summary?.risk_level === 'green' ? 'bg-green-100 text-green-800' :
                                     autoFixReport?.prepress_summary?.risk_level === 'attention' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'
                                     }`}>
-                                    <span>{t('labelRiskLevel')}</span>
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-3 h-3 rounded-full animate-pulse ${autoFixReport?.prepress_summary?.risk_level === 'green' ? 'bg-green-600' : 'bg-red-600'}`}></div>
+                                        {t('labelRiskLevel')}
+                                    </div>
                                     <span>{
                                         autoFixReport?.prepress_summary?.risk_level === 'green' ? t('riskGreen') :
                                             autoFixReport?.prepress_summary?.risk_level === 'attention' ? t('riskAttention') : t('riskBlocking')
@@ -405,286 +415,63 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
                                 </div>
 
                                 {/* Structured Certificate Block */}
-                                <div className="p-5 bg-gray-900 rounded-2xl text-white shadow-inner">
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-4 border-b border-gray-800 pb-2">
+                                <div className="p-8 bg-gray-900 rounded-[2rem] text-white shadow-2xl">
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-6 border-b border-white/5 pb-4">
                                         {t('complianceSummaryTitle')}
                                     </h4>
-                                    <div className="space-y-2 text-[11px] font-mono">
-                                        <div className="flex justify-between border-b border-gray-800/50 pb-1.5 align-middle">
-                                            <span className="text-gray-500 uppercase text-[9px]">{t('labelCertificateId')}</span>
-                                            <span className="text-white font-bold">{autoFixReport?.prepress_summary?.certificate_id}</span>
-                                        </div>
-                                        <div className="flex justify-between border-b border-gray-800/50 pb-1.5">
-                                            <span className="text-gray-500 uppercase text-[9px]">{t('labelEngineVersion')}</span>
-                                            <span className="text-gray-400">{autoFixReport?.prepress_summary?.engine_version}</span>
-                                        </div>
-                                        <div className="flex justify-between border-b border-gray-800/50 pb-1.5">
-                                            <span className="text-gray-500">{t('labelOutputIntent')}</span>
-                                            <span className="text-red-400 font-bold">{autoFixReport?.policy?.icc || 'ISO Coated v3 (FOGRA51)'}</span>
-                                        </div>
-                                        <div className="flex justify-between border-b border-gray-800/50 pb-1.5">
-                                            <span className="text-gray-500">{t('labelStructure')}</span>
-                                            <span className="text-green-400 font-bold">{t('statusVerified')}</span>
-                                        </div>
-                                        <div className="flex justify-between border-b border-gray-800/50 pb-1.5">
-                                            <span className="text-gray-500">{t('labelConversion')}</span>
-                                            <span className={autoFixReport?.prepress_summary?.conversion_bypassed ? 'text-red-400 font-bold' : 'text-green-400 font-bold'}>
-                                                {autoFixReport?.prepress_summary?.conversion_bypassed ? t('statusSkipped') : t('statusApplied')}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between border-b border-gray-800/50 pb-1.5">
-                                            <span className="text-gray-500">{t('labelProcessing')}</span>
-                                            <span className="text-gray-300">{autoFixReport?.prepress_summary?.gs_mode === 'finalize_only' ? t('statusStabilized') : t('statusApplied')}</span>
-                                        </div>
-                                        <div className="flex justify-between border-b border-gray-800/50 pb-1.5">
-                                            <span className="text-gray-500">{t('labelInkCoverage')}</span>
-                                            <span className={autoFixReport?.prepress_summary?.tac_summary?.max_tac > autoFixReport?.prepress_summary?.tac_summary?.limit ? 'text-amber-400 font-bold' : 'text-green-400 font-bold'}>
-                                                {autoFixReport?.prepress_summary?.tac_summary?.max_tac || 0}%
-                                                {autoFixReport?.prepress_summary?.tac_summary?.confirmation_pass && ' (Verified High-Res)'}
-                                                {autoFixReport?.prepress_summary?.tac_summary?.spot_colors_detected && ' [Spots Included]'}
-                                                <span className="text-[10px] ml-1 opacity-60">Pg. {autoFixReport?.prepress_summary?.tac_summary?.worst_page || 1}</span>
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between border-b border-gray-800/50 pb-1.5">
-                                            <span className="text-gray-500">{t('labelOverprint')}</span>
-                                            <span className={autoFixReport?.prepress_summary?.overprint_summary?.risk === 'green' ? 'text-green-400' : 'text-amber-400 font-bold'}>
-                                                {autoFixReport?.prepress_summary?.overprint_summary?.risk === 'green' ? t('statusOverprintOk') : t('statusOverprintRisk')}
-                                                {autoFixReport?.prepress_summary?.overprint_summary?.worst_page > 0 && (
-                                                    <span className="text-[10px] ml-1 opacity-60">Pg. {autoFixReport?.prepress_summary?.overprint_summary?.worst_page}</span>
-                                                )}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between border-b border-gray-800/50 pb-1.5">
-                                            <span className="text-gray-500">{t('spotLabelDetected')}</span>
-                                            <span className={autoFixReport?.prepress_summary?.spot_summary?.risk === 'blocking' ? 'text-red-400 font-bold' : (autoFixReport?.prepress_summary?.spot_summary?.risk === 'attention' ? 'text-amber-400 font-bold' : 'text-green-400')}>
-                                                {autoFixReport?.prepress_summary?.spot_summary?.spots_detected
-                                                    ? `${autoFixReport?.prepress_summary?.spot_summary?.spot_count} (${autoFixReport?.prepress_summary?.spot_summary?.spot_names?.slice(0, 3).join(', ')}${autoFixReport?.prepress_summary?.spot_summary?.spot_count > 3 ? '...' : ''})`
-                                                    : t('spotStatusNone')}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-500">{t('labelBleed')}</span>
-                                            <span className="text-gray-400">
-                                                {autoFixReport?.applied?.some(a => a.action === 'add_bleed_canvas')
-                                                    ? t('bleedMethodScale')
-                                                    : t('statusSkipped')}
-                                            </span>
-                                        </div>
+                                    <div className="space-y-4 text-xs font-mono">
+                                        {[
+                                            { label: t('labelCertificateId'), value: autoFixReport?.prepress_summary?.certificate_id, color: 'text-white' },
+                                            { label: t('labelOutputIntent'), value: autoFixReport?.policy?.icc || 'ISO Coated v3', color: 'text-red-500 font-black' },
+                                            { label: t('labelStructure'), value: t('statusVerified'), color: 'text-green-500 font-black' },
+                                            { label: t('labelInkCoverage'), value: `${autoFixReport?.prepress_summary?.tac_summary?.max_tac || 0}%`, color: 'text-amber-500' },
+                                            { label: t('labelOverprint'), value: autoFixReport?.prepress_summary?.overprint_summary?.risk === 'green' ? 'VERIFIED' : 'RISK', color: 'text-white' }
+                                        ].map((row, i) => (
+                                            <div key={i} className="flex justify-between items-center border-b border-white/5 pb-4">
+                                                <span className="text-gray-500 uppercase text-[9px] tracking-widest">{row.label}</span>
+                                                <span className={`${row.color} truncate max-w-[200px]`}>{row.value || 'N/A'}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 
-                                {/* PRODUCTION GEOMETRY SECTION */}
-                                <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4 border-b border-gray-50 pb-2">
-                                        Production Geometry & Imposition
-                                    </h4>
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-gray-700">Spine Fit</span>
-                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${result?.productionReport?.spine?.classification === 'GREEN' ? 'bg-green-100 text-green-700' :
-                                                result?.productionReport?.spine?.classification === 'ATTENTION' ? 'bg-amber-100 text-amber-700' :
-                                                    'bg-red-100 text-red-700'
-                                                }`}>
-                                                {result?.productionReport?.spine?.classification || 'GREEN'}
-                                            </span>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-2 text-[10px]">
-                                            <div className="flex flex-col">
-                                                <span className="text-gray-400 uppercase">Expected</span>
-                                                <span className="font-mono font-bold text-gray-900">{result?.productionReport?.spine?.expectedSpineMm || '0.00'}mm</span>
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-gray-400 uppercase">Detected</span>
-                                                <span className="font-mono font-bold text-gray-900">{result?.productionReport?.spine?.detectedSpineMm || '0.00'}mm</span>
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-gray-400 uppercase">Deviation</span>
-                                                <span className={`font-mono font-bold ${result?.productionReport?.spine?.deviationMm > 0.8 ? 'text-red-600' : 'text-gray-900'}`}>{result?.productionReport?.spine?.deviationMm || '0.00'}mm</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-2 border-t border-gray-50 flex items-center justify-between">
-                                            <span className="text-xs font-bold text-gray-700">Imposition Compatibility</span>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden">
-                                                    <div className="bg-red-500 h-full" style={{ width: `${result?.productionReport?.imposition?.score || 100}%` }}></div>
-                                                </div>
-                                                <span className="text-[10px] font-black">{result?.productionReport?.imposition?.score || 100}/100</span>
-                                            </div>
-                                        </div>
-
-                                        {result?.productionReport?.substrate?.warnings?.length > 0 && (
-                                            <div className="pt-2 border-t border-gray-50">
-                                                <span className="text-[9px] font-black uppercase text-amber-600 block mb-1">Paper Suitability Warnings</span>
-                                                {result.productionReport.substrate.warnings.map((w: string, idx: number) => (
-                                                    <div key={idx} className="text-[10px] text-amber-800 flex gap-1 items-start">
-                                                        <span className="shrink-0">⚠️</span>
-                                                        <span>{w}</span>
+                                {/* Detailed Data Loops (Production, Ink, Edition) */}
+                                <div className="space-y-4">
+                                    {[
+                                        {
+                                            title: 'Production Geometry', icon: <Square3Stack3DIcon className="w-4 h-4" />, rows: [
+                                                { l: 'Spine Class', v: result?.productionReport?.spine?.classification || 'OK' },
+                                                { l: 'Expected', v: `${result?.productionReport?.spine?.expectedSpineMm || 0}mm` },
+                                                { l: 'Detected', v: `${result?.productionReport?.spine?.detectedSpineMm || 0}mm` }
+                                            ]
+                                        },
+                                        {
+                                            title: 'Ink & Efficiency', icon: <BeakerIcon className="w-4 h-4" />, rows: [
+                                                { l: 'Cost Class', v: result?.productionReport?.inkOptimization?.costCategory || 'LOW' },
+                                                { l: 'Avg Coverage', v: `${result?.productionReport?.inkOptimization?.totalCoverageAvg?.toFixed(1) || 0}%` }
+                                            ]
+                                        }
+                                    ].map((section, idx) => (
+                                        <div key={idx} className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
+                                            <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
+                                                <span>{section.icon}</span> {section.title}
+                                            </h5>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                {section.rows.map((row, rIdx) => (
+                                                    <div key={rIdx}>
+                                                        <span className="block text-[9px] text-gray-400 uppercase font-black tracking-widest mb-1">{row.l}</span>
+                                                        <span className="text-xs font-bold text-gray-900">{row.v}</span>
                                                     </div>
                                                 ))}
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* INK EFFICIENCY SECTION */}
-                                <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4 border-b border-gray-50 pb-2">
-                                        Ink Efficiency & Cost Optimization
-                                    </h4>
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-gray-700">Cost Category</span>
-                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${result?.productionReport?.inkOptimization?.costCategory === 'LOW' ? 'bg-green-100 text-green-700' :
-                                                result?.productionReport?.inkOptimization?.costCategory === 'MEDIUM' ? 'bg-amber-100 text-amber-700' :
-                                                    'bg-red-100 text-red-700'
-                                                }`}>
-                                                {result?.productionReport?.inkOptimization?.costCategory || 'LOW'}
-                                            </span>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2 text-[10px]">
-                                            <div className="flex flex-col">
-                                                <span className="text-gray-400 uppercase">Ink Usage Index</span>
-                                                <span className="font-mono font-bold text-gray-900">{result?.productionReport?.inkOptimization?.inkUsageIndex || 0}/100</span>
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-gray-400 uppercase">Avg Coverage</span>
-                                                <span className="font-mono font-bold text-gray-900">{result?.productionReport?.inkOptimization?.totalCoverageAvg?.toFixed(1) || 0}%</span>
-                                            </div>
-                                        </div>
-
-                                        {result?.productionReport?.inkOptimization?.opportunities?.length > 0 && (
-                                            <div className="pt-2 border-t border-gray-50">
-                                                <span className="text-[9px] font-black uppercase text-green-600 block mb-1">Optimization Opportunities</span>
-                                                {result.productionReport.inkOptimization.opportunities.map((opt: string, idx: number) => (
-                                                    <div key={idx} className="text-[10px] text-green-800 flex gap-1 items-start">
-                                                        <span className="shrink-0">💡</span>
-                                                        <span>{opt}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* EDITION INTENT SECTION */}
-                                <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4 border-b border-gray-50 pb-2">
-                                        Print Edition Intent Detection
-                                    </h4>
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-gray-700">Detected Intent</span>
-                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${result?.productionReport?.editionIntent?.intent === 'OFFSET' ? 'bg-blue-100 text-blue-700' :
-                                                result?.productionReport?.editionIntent?.intent === 'DIGITAL' ? 'bg-purple-100 text-purple-700' :
-                                                    'bg-gray-100 text-gray-700'
-                                                }`}>
-                                                {result?.productionReport?.editionIntent?.intent || 'UNKNOWN'}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-gray-700">Confidence</span>
-                                            <span className="text-[10px] font-black font-mono">
-                                                {Math.round(result?.productionReport?.editionIntent?.confidence || 0)}%
-                                            </span>
-                                        </div>
-                                        {result?.productionReport?.editionIntent?.recommendation && (
-                                            <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                                <p className="text-[10px] font-medium text-gray-600 leading-relaxed italic">
-                                                    " {result.productionReport.editionIntent.recommendation} "
-                                                </p>
-                                            </div>
-                                        )}
-                                        <div className="grid grid-cols-2 gap-2 pt-2 text-[9px] uppercase tracking-wider text-gray-400 font-bold">
-                                            <div className="flex justify-between">
-                                                <span>Offset Index</span>
-                                                <span className="text-gray-900">{Math.round(result?.productionReport?.editionIntent?.offsetScore || 0)}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span>Digital Index</span>
-                                                <span className="text-gray-900">{Math.round(result?.productionReport?.editionIntent?.digitalScore || 0)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                    <div className="text-green-500 shrink-0">✅</div>
-                                    <p className="text-xs font-medium text-gray-700 leading-relaxed">{t('outputIntentExplain')}</p>
-                                </div>
-
-                                {autoFixReport?.prepress_summary?.tac_summary?.max_tac > autoFixReport?.prepress_summary?.tac_summary?.limit && (
-                                    <div className="flex gap-4 p-4 bg-amber-50 rounded-2xl border border-amber-100">
-                                        <div className="text-amber-500 shrink-0">⚠️</div>
-                                        <p className="text-xs font-medium text-amber-800 leading-relaxed">{t('tacWarningDrying')}</p>
-                                    </div>
-                                )}
-
-                                {autoFixReport?.prepress_summary?.spot_summary?.spots_detected && (
-                                    <div className={autoFixReport?.prepress_summary?.spot_summary?.risk === 'blocking' ? "flex gap-4 p-4 bg-red-50 rounded-2xl border border-red-100" : "flex gap-4 p-4 bg-amber-50 rounded-2xl border border-amber-100"}>
-                                        <div className={autoFixReport?.prepress_summary?.spot_summary?.risk === 'blocking' ? "text-red-500 shrink-0" : "text-amber-500 shrink-0"}>
-                                            {autoFixReport?.prepress_summary?.spot_summary?.risk === 'blocking' ? '🚫' : '⚠️'}
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <p className={`text-xs font-bold leading-relaxed ${autoFixReport?.prepress_summary?.spot_summary?.risk === 'blocking' ? 'text-red-800' : 'text-amber-800'}`}>
-                                                {t('spotLabelPolicy')} {autoFixReport?.prepress_summary?.spot_summary?.policy === 'OFFSET_CMYK_STRICT' ? t('spotPolicyStrict') : t('spotPolicyConvert')}
-                                            </p>
-                                            <p className={`text-xs font-medium leading-relaxed ${autoFixReport?.prepress_summary?.spot_summary?.risk === 'blocking' ? 'text-red-700' : 'text-amber-700'}`}>
-                                                {autoFixReport?.prepress_summary?.spot_summary?.non_whitelisted_spots?.length > 0 ? t('spotWarnNonWhitelist') : t('spotWarnWhitelistOnly')}
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {autoFixReport?.prepress_summary?.spot_summary?.spots_in_text && (
-                                    <div className="flex gap-4 p-4 bg-red-50 rounded-2xl border border-red-100">
-                                        <div className="text-red-500 shrink-0">ℹ️</div>
-                                        <p className="text-xs font-medium text-blue-800 leading-relaxed">{t('spotNoteSpotsInText')}</p>
-                                    </div>
-                                )}
-
-                                {autoFixReport?.prepress_summary?.overprint_summary?.black_text_knockout_detected && (
-                                    <div className="flex gap-4 p-4 bg-amber-50 rounded-2xl border border-amber-100">
-                                        <div className="text-amber-500 shrink-0">⚠️</div>
-                                        <p className="text-xs font-medium text-amber-800 leading-relaxed">{t('overprintWarningKnockout')}</p>
-                                    </div>
-                                )}
-
-                                {autoFixReport?.prepress_summary?.overprint_summary?.rich_black_text_detected && (
-                                    <div className="flex gap-4 p-4 bg-red-50 rounded-2xl border border-red-100">
-                                        <div className="text-red-500 shrink-0">ℹ️</div>
-                                        <p className="text-xs font-medium text-red-800 leading-relaxed">{t('overprintWarningRichBlack')}</p>
-                                    </div>
-                                )}
-
-                                {autoFixReport?.prepress_summary?.overprint_summary?.registration_color_detected && (
-                                    <div className="flex gap-4 p-4 bg-red-50 rounded-2xl border border-red-100">
-                                        <div className="text-red-500 shrink-0">🚫</div>
-                                        <p className="text-xs font-medium text-red-800 leading-relaxed">{t('overprintWarningRegistration')}</p>
-                                    </div>
-                                )}
-
-                                {autoFixReport?.prepress_summary?.conversion_bypassed && (
-                                    <div className="flex gap-4 p-4 bg-red-50 rounded-2xl border border-red-100">
-                                        <div className="text-red-500 shrink-0">ℹ️</div>
-                                        <p className="text-xs font-medium text-red-800 leading-relaxed">{t('bypassExplain')}</p>
-                                    </div>
-                                )}
-
-                                <div className="flex gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                    <div className="text-gray-400 shrink-0">🛠️</div>
-                                    <p className="text-xs font-medium text-gray-600 leading-relaxed">{t('rewriteExplain')}</p>
-                                </div>
-
-                                <div className="flex gap-4 p-4 bg-amber-50 rounded-2xl border border-amber-100">
-                                    <div className="text-amber-500 shrink-0">🛡️</div>
-                                    <p className="text-xs font-bold text-amber-900 leading-relaxed italic">{t('negativeStatement')}</p>
+                                    ))}
                                 </div>
                             </div>
 
                             <button
                                 onClick={() => setShowTechNote(false)}
-                                className="mt-8 w-full py-4 bg-gray-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-gray-800 transition-colors shadow-lg active:scale-[0.98]"
+                                className="mt-10 w-full py-5 bg-gray-900 text-white rounded-[1.5rem] font-black text-sm uppercase tracking-widest hover:bg-gray-800 transition-all shadow-xl active:scale-[0.98]"
                             >
                                 {t('closeNote')}
                             </button>
@@ -695,3 +482,5 @@ export const Step4Review: React.FC<Step4ReviewProps> = ({
         </div>
     );
 };
+
+export default Step4Review;

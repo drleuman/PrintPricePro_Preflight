@@ -1,0 +1,61 @@
+{
+    "policies": [
+        {
+            "slug": "OFFSET_CMYK_STRICT",
+            "name": "Offset CMYK Strict (FOGRA51)",
+            "description": "Commercial offset printing. Full CMYK conversion, strict compliance.",
+            "category": "offset",
+            "tier": "professional"
+        },
+        {
+            "slug": "DIGITAL_POD",
+            "name": "Digital Print-on-Demand",
+            "description": "Print-on-demand for books and short runs. Flexible color acceptance.",
+            "category": "digital",
+            "tier": "standard"
+        },
+        {
+            "slug": "DIGITAL_PREMIUM",
+            "name": "Digital Premium Color",
+            "description": "Premium digital printing for color books and marketing materials.",
+            "category": "digital",
+            "tier": "professional"
+        },
+        {
+            "slug": "SCREEN_PRINT",
+            "name": "Screen Print / Garment",
+            "description": "Screen printing for garments and merchandise. Spot color enforcement.",
+            "category": "screen",
+            "tier": "professional"
+        },
+        {
+            "slug": "LARGE_FORMAT",
+            "name": "Large Format / Signage",
+            "description": "Banners, signage, and large format printing. Relaxed resolution requirements.",
+            "category": "large_format",
+            "tier": "standard"
+        },
+        {
+            "slug": "LARGE_FORMAT_RGB_SAFE",
+            "name": "Large Format RGB Safe (Signage)",
+            "description": "Banners and signage. RGB allowed, lower DPI threshold.",
+            "category": "large_format",
+            "tier": "standard"
+        },
+        {
+            "slug": "PACKAGING_SPOT_ALLOWED",
+            "name": "Packaging (Spot/Diecut Allowed)",
+            "description": "Packaging printing. Spot color whitelists for CutContour, Varnish, etc.",
+            "category": "packaging",
+            "tier": "professional"
+        },
+        {
+            "slug": "BOOK_COVER_VS_INTERIOR",
+            "name": "Book Print (Cover vs Interior Rules)",
+            "description": "Book printing. Stricter rules for interior text blacks, fonts, and overprinting.",
+            "category": "books",
+            "tier": "professional"
+        }
+    ],
+    "default": "OFFSET_CMYK_STRICT"
+}

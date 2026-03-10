@@ -11,6 +11,11 @@ import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
+  LightBulbIcon,
+  WrenchScrewdriverIcon,
+  SwatchIcon,
+  ArrowPathIcon,
+  DocumentArrowDownIcon
 } from '@heroicons/react/24/outline';
 
 type Props = {
@@ -347,22 +352,12 @@ export const FixDrawer: React.FC<Props> = ({
       {/* Header */}
       <div className="pl-6 pr-4 py-4 border-b border-gray-200 flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-            {t('selectedIssueDetails') || 'Selected Issue Details'}
-          </p>
-          <h2 className="mt-1 text-base font-semibold text-gray-900">
-            {issue.title || t('issue')}
+          <h2 className="text-lg font-semibold text-gray-900 leading-tight">
+            {issue.title || (issue as any).message || hint?.shortTitle || t('issue')}
           </h2>
-          <p className="mt-1 text-xs text-gray-500">
-            {t('currentIssue') || 'Current Issue'} ·{' '}
-            {t('pageLabel', { page: issue.page || 1 })}
+          <p className="mt-1.5 text-xs font-medium text-gray-500 bg-gray-100 inline-block px-2 py-0.5 rounded-md">
+            📄 {t('pageLabel', { page: issue.page || 1 })}
           </p>
-          {/* mini resumen del tipo de issue */}
-          {hint && (
-            <p className="mt-1 text-[11px] text-gray-500">
-              {hint.shortTitle} — {hint.userFriendlySummary}
-            </p>
-          )}
         </div>
 
         <button
@@ -391,40 +386,20 @@ export const FixDrawer: React.FC<Props> = ({
           )}
         </div>
 
-        {/* Hint del helper (Suggested Fix real o Summary) */}
-        {hint && (
-          <div className="bg-gray-50 border border-dashed border-gray-200 rounded-lg px-4 py-3">
-            <p className="text-xs font-medium text-gray-500 mb-1">
-              {hint.suggestedFix ? (t('suggestedFix') || 'Suggested fix') : (t('issueSummary') || 'Issue Summary')}
-            </p>
-            <p className="text-sm text-gray-700 whitespace-pre-line">
-              {hint.suggestedFix || hint.userFriendlySummary}
-            </p>
-          </div>
-        )}
+        {/* Main Issue Explanation */}
+        <div>
+          <p className="text-[15px] font-medium text-gray-900 mb-3 leading-relaxed">
+            {hint?.userFriendlySummary || (issue as any).message || "Issue Overview"}
+          </p>
 
-        {/* Details básicos del issue (engine) */}
-        {issue.details && (
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-1">
-              {t('details')}
-            </h3>
-            <p className="text-sm text-gray-700 whitespace-pre-line">
-              {issue.details}
-            </p>
-          </div>
-        )}
-
-        {(issue as any).hint && (
-          <div className="bg-gray-50 border border-dashed border-gray-200 rounded-lg px-3 py-2">
-            <p className="text-xs font-medium text-gray-500 mb-1">
-              {t('engineHint') || t('suggestedFix') || 'Engine Hint'}
-            </p>
-            <p className="text-sm text-gray-700 whitespace-pre-line">
-              {(issue as any).hint}
-            </p>
-          </div>
-        )}
+          {(issue.details || (issue as any).hint || hint?.suggestedFix) && (
+            <div className="text-[13px] text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
+              {hint?.suggestedFix && <p><strong className="text-gray-900">💡 Tip:</strong> {hint.suggestedFix}</p>}
+              {issue.details && <p className="whitespace-pre-line text-gray-600">{issue.details}</p>}
+              {(issue as any).hint && !hint?.suggestedFix && <p className="whitespace-pre-line text-gray-600"><strong>Hint:</strong> {(issue as any).hint}</p>}
+            </div>
+          )}
+        </div>
 
         {/* Quick Fix Actions */}
         <div>
@@ -450,8 +425,8 @@ export const FixDrawer: React.FC<Props> = ({
                     <option value="aggressive">{t('bleedAggressive') || 'Aggressive (Scale-fill)'}</option>
                   </select>
                   {bleedMode === 'safe' && (
-                    <p className="mt-2 text-[11px] text-amber-600 bg-amber-50 p-2 rounded border border-amber-100 italic">
-                      ℹ️ {t('bleedSafeHint') || 'Safe mode adds margin without stretching.'}
+                    <p className="mt-2 text-[11px] text-amber-600 bg-amber-50 p-2 rounded border border-amber-100 italic flex items-center gap-1">
+                      <InformationCircleIcon className="w-4 h-4 inline-block" /> {t('bleedSafeHint') || 'Safe mode adds margin without stretching.'}
                     </p>
                   )}
                 </div>
@@ -461,7 +436,10 @@ export const FixDrawer: React.FC<Props> = ({
                   disabled={isFixing}
                   className="btn btn--bleed btn--block"
                 >
-                  {isFixing ? t('fixing') || 'Fixing...' : t('add3mmBleed') || '🔧 Fix: Add 3mm Bleed'}
+                  <div className="flex items-center justify-center gap-2">
+                    {isFixing ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <WrenchScrewdriverIcon className="w-4 h-4" />}
+                    {isFixing ? t('fixing') || 'Fixing...' : t('add3mmBleed') || 'Fix: Add 3mm Bleed'}
+                  </div>
                 </button>
               </div>
             )}
@@ -513,7 +491,10 @@ export const FixDrawer: React.FC<Props> = ({
                       disabled={isFixing || !serverAvailable}
                       className={`btn btn--cmyk btn--block ${!serverAvailable ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                     >
-                      {isFixing ? 'Converting...' : '🎨 Convert to CMYK'}
+                      <div className="flex items-center justify-center gap-2">
+                        {isFixing ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <SwatchIcon className="w-4 h-4" />}
+                        {isFixing ? 'Converting...' : 'Convert to CMYK'}
+                      </div>
                     </button>
                   </>
                 )}
@@ -524,7 +505,10 @@ export const FixDrawer: React.FC<Props> = ({
                     disabled={isFixing || !serverAvailable}
                     className={`btn btn--grayscale btn--block ${!serverAvailable ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                   >
-                    {isFixing ? 'Converting...' : '⚫ Convert to Grayscale'}
+                    <div className="flex items-center justify-center gap-2">
+                      {isFixing ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <DocumentArrowDownIcon className="w-4 h-4" />}
+                      {isFixing ? 'Converting...' : 'Convert to Grayscale'}
+                    </div>
                   </button>
                 )}
               </>
@@ -538,7 +522,10 @@ export const FixDrawer: React.FC<Props> = ({
                 disabled={isFixing}
                 className="btn btn--rebuild btn--block"
               >
-                {isFixing ? 'Rebuilding...' : '🛠️ Rebuild High-Res (300 DPI Native)'}
+                <div className="flex items-center justify-center gap-2">
+                  {isFixing ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <WrenchScrewdriverIcon className="w-4 h-4" />}
+                  {isFixing ? 'Rebuilding...' : 'Rebuild High-Res (300 DPI Native)'}
+                </div>
               </button>
             )}
           </div>

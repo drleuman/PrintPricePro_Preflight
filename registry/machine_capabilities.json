@@ -1,0 +1,89 @@
+{
+    "types": {
+        "offset_sheetfed": {
+            "format": {
+                "minWidthMm": 100,
+                "minHeightMm": 140,
+                "maxWidthMm": 720,
+                "maxHeightMm": 1020
+            },
+            "binding": {
+                "perfect": {
+                    "supported": true,
+                    "minPages": 40,
+                    "maxPages": 800
+                },
+                "saddle": {
+                    "supported": true,
+                    "minPages": 4,
+                    "maxPages": 80
+                },
+                "hardcover_casebound": {
+                    "supported": true,
+                    "minPages": 60,
+                    "maxPages": 1000
+                }
+            },
+            "constraints": {
+                "maxTac": 300,
+                "minDpi": 300,
+                "requiresBleed": true
+            }
+        },
+        "digital_toner": {
+            "format": {
+                "minWidthMm": 90,
+                "minHeightMm": 120,
+                "maxWidthMm": 330,
+                "maxHeightMm": 480
+            },
+            "binding": {
+                "perfect": {
+                    "supported": true,
+                    "minPages": 20,
+                    "maxPages": 500
+                },
+                "saddle": {
+                    "supported": true,
+                    "minPages": 4,
+                    "maxPages": 60
+                },
+                "hardcover_casebound": {
+                    "supported": true,
+                    "minPages": 40,
+                    "maxPages": 600
+                }
+            },
+            "constraints": {
+                "maxTac": 240,
+                "minDpi": 600,
+                "requiresBleed": true
+            }
+        },
+        "digital_inkjet": {
+            "format": {
+                "minWidthMm": 100,
+                "minHeightMm": 140,
+                "maxWidthMm": 500,
+                "maxHeightMm": 700
+            },
+            "binding": {
+                "perfect": {
+                    "supported": true,
+                    "minPages": 40,
+                    "maxPages": 1000
+                },
+                "saddle": {
+                    "supported": true,
+                    "minPages": 4,
+                    "maxPages": 120
+                }
+            },
+            "constraints": {
+                "maxTac": 220,
+                "minDpi": 600,
+                "requiresBleed": true
+            }
+        }
+    }
+}
