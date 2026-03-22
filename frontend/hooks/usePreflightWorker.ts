@@ -1,0 +1,219 @@
+import { useEffect, useRef, useState, useCallback } from 'react';
+import {
+    PreflightResult,
+    PreflightWorkerCommand,
+    PreflightWorkerMessage,
+    FileMeta,
+} from '../types';
+
+type WorkerCallbacks = {
+    onAnalysisResult?: (result: PreflightResult) => void;
+    onTransformResult?: (blob: Blob, meta: FileMeta, operation: string) => void;
+    onError?: (error: string) => void;
+    onHeatmapResult?: (data: { values: Uint8Array; width: number; height: number; maxTac: number }) => void;
+    onRenderPageResult?: (base64: string) => void;
+};
+
+export function usePreflightWorker(callbacks: WorkerCallbacks) {
+    const workerRef = useRef<Worker | null>(null);
+    const [isWorkerReady, setIsWorkerReady] = useState(false);
+    const [isWorkerRunning, setIsWorkerRunning] = useState(false);
+
+    const callbacksRef = useRef(callbacks);
+    callbacksRef.current = callbacks;
+
+    useEffect(() => {
+        let w: Worker;
+        try {
+            w = new Worker(new URL('../workers/preflight.worker.ts', import.meta.url), {
+                type: 'module',
+            });
+            workerRef.current = w;
+            setIsWorkerReady(true);
+
+            w.onmessage = (ev: MessageEvent<PreflightWorkerMessage>) => {
+                const data = ev.data;
+                if (!data) return;
+
+                const cb = callbacksRef.current;
+
+                if (data.type === 'analysisProgress') {
+                    // Optional: expose progress
+                } else if (data.type === 'analysisResult') {
+                    setIsWorkerRunning(false);
+                    cb.onAnalysisResult?.(data.result);
+                } else if (data.type === 'analysisError') {
+                    setIsWorkerRunning(false);
+                    cb.onError?.(data.message);
+                } else if (data.type === 'transformResult') {
+                    setIsWorkerRunning(false);
+                    const blob = new Blob([data.buffer], { type: 'application/pdf' });
+                    cb.onTransformResult?.(blob, data.fileMeta, data.operation);
+                } else if (data.type === 'transformError') {
+                    setIsWorkerRunning(false);
+                    cb.onError?.(`${data.operation} failed: ${data.message}`);
+                } else if (data.type === 'tacHeatmapResult') {
+                    setIsWorkerRunning(false);
+                    cb.onHeatmapResult?.({
+                        values: data.values,
+                        width: data.width,
+                        height: data.height,
+                        maxTac: data.maxTac
+                    });
+                } else if (data.type === 'tacHeatmapError') {
+                    setIsWorkerRunning(false);
+                    cb.onError?.(`Heatmap failed: ${data.message}`);
+                } else if (data.type === 'renderPageResult') {
+                    setIsWorkerRunning(false);
+                    cb.onRenderPageResult?.(data.base64);
+                } else if (data.type === 'renderError') {
+                    setIsWorkerRunning(false);
+                    cb.onError?.(`Render failed: ${data.message}`);
+                }
+            };
+        } catch (e) {
+            console.error('Error creating worker', e);
+            callbacksRef.current.onError?.('Failed to create worker');
+        }
+
+        return () => {
+            if (w) w.terminate();
+            workerRef.current = null;
+            setIsWorkerReady(false);
+        };
+    }, []);
+
+    const runAnalysis = useCallback(async (file: File, fileMeta: FileMeta, config?: any) => {
+        if (!workerRef.current) return;
+        try {
+            setIsWorkerRunning(true);
+            const buffer = await file.arrayBuffer();
+            const cmd: PreflightWorkerCommand = {
+                type: 'analyze',
+                fileMeta,
+                buffer,
+                config,
+            };
+            workerRef.current.postMessage(cmd, [buffer]);
+        } catch (e) {
+            setIsWorkerRunning(false);
+            callbacks.onError?.((e as Error).message);
+        }
+    }, [callbacks.onError]);
+
+    const runClientGrayscale = useCallback(async (file: File, fileMeta: FileMeta) => {
+        if (!workerRef.current) return;
+        try {
+            setIsWorkerRunning(true);
+            const buffer = await file.arrayBuffer();
+            const cmd: PreflightWorkerCommand = {
+                type: 'convertToGrayscale',
+                fileMeta,
+                buffer,
+            };
+            workerRef.current.postMessage(cmd, [buffer]);
+        } catch (e) {
+            setIsWorkerRunning(false);
+            callbacks.onError?.((e as Error).message);
+        }
+    }, []);
+
+    const runClientUpscale = useCallback(async (file: File, fileMeta: FileMeta, minDpi: number = 150) => {
+        if (!workerRef.current) return;
+        try {
+            setIsWorkerRunning(true);
+            const buffer = await file.arrayBuffer();
+            const cmd: PreflightWorkerCommand = {
+                type: 'upscaleLowResImages',
+                fileMeta,
+                buffer,
+                minDpi,
+            };
+            workerRef.current.postMessage(cmd, [buffer]);
+        } catch (e) {
+            setIsWorkerRunning(false);
+            callbacks.onError?.((e as Error).message);
+        }
+    }, []);
+
+    const runFixBleed = useCallback(async (file: File, fileMeta: FileMeta, mode: 'safe' | 'aggressive' = 'safe') => {
+        if (!workerRef.current) return;
+        try {
+            setIsWorkerRunning(true);
+            const buffer = await file.arrayBuffer();
+            const cmd: PreflightWorkerCommand = {
+                type: 'fixBleed',
+                fileMeta,
+                buffer,
+                mode,
+            };
+            workerRef.current.postMessage(cmd, [buffer]);
+        } catch (e) {
+            setIsWorkerRunning(false);
+            callbacks.onError?.((e as Error).message);
+        }
+    }, []);
+
+    const runTacHeatmap = useCallback(async (file: File, fileMeta: FileMeta, pageIndex: number) => {
+        if (!workerRef.current) return;
+        try {
+            // Note: Generating a heatmap is fast enough we might not want to block full UI,
+            // but for now let's set running.
+            setIsWorkerRunning(true);
+            const buffer = await file.arrayBuffer();
+            const cmd: PreflightWorkerCommand = {
+                type: 'tacHeatmap',
+                fileMeta,
+                buffer,
+                pageIndex
+            };
+            workerRef.current.postMessage(cmd, [buffer]);
+        } catch (e) {
+            setIsWorkerRunning(false);
+            callbacks.onError?.((e as Error).message);
+        }
+    }, []);
+
+    const runRenderPageAsImage = useCallback(async (file: File, fileMeta: FileMeta, pageIndex: number) => {
+        if (!workerRef.current) return;
+        try {
+            setIsWorkerRunning(true);
+            const buffer = await file.arrayBuffer();
+            const cmd: PreflightWorkerCommand = {
+                type: 'renderPageAsImage',
+                fileMeta,
+                buffer,
+                pageIndex
+            };
+            workerRef.current.postMessage(cmd, [buffer]);
+        } catch (e) {
+            setIsWorkerRunning(false);
+            callbacks.onError?.((e as Error).message);
+        }
+    }, []);
+
+    const [error, setError] = useState<string | null>(null);
+
+    // Update the existing ref set at the top
+    useEffect(() => {
+        callbacksRef.current = {
+            ...callbacks,
+            onError: (err: string) => {
+                setError(err);
+                callbacks.onError?.(err);
+            }
+        };
+    }, [callbacks]);
+
+    return {
+        isWorkerReady,
+        isWorkerRunning,
+        error,
+        runAnalysis,
+        runClientGrayscale,
+        runClientUpscale,
+        runFixBleed,
+        runTacHeatmap,
+        runRenderPageAsImage,
+    };
+}

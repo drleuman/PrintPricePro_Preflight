@@ -1,0 +1,255 @@
+version: "3.8"
+
+services:
+
+  # ──────────────────────────────────────────────
+  # 1. INFRAESTRUCTURA COMPARTIDA
+  # ──────────────────────────────────────────────
+
+  ppos-mysql:
+    image: mysql:8.0
+    container_name: ppos-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: printprice_os
+      MYSQL_USER: ppos_user
+      MYSQL_PASSWORD: ppos_pass
+    volumes:
+      - ppos-mysql-data:/var/lib/mysql
+      - ./ppos-shared-infra/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "ppos_user", "-pppos_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ppos-network
+
+  ppos-redis:
+    image: redis:7
+    container_name: ppos-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ppos-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ppos-network
+
+  ppos-rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ppos-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"   # Management UI → http://server:15672
+    environment:
+      RABBITMQ_DEFAULT_USER: ppos_user
+      RABBITMQ_DEFAULT_PASS: ppos_pass
+    volumes:
+      - ppos-rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ppos-network
+
+  # ──────────────────────────────────────────────
+  # 2. TEMPORAL (Workflow Orchestration)
+  # ──────────────────────────────────────────────
+
+  ppos-temporal:
+    image: temporalio/auto-setup:1.25.2
+    container_name: ppos-temporal
+    restart: unless-stopped
+    depends_on:
+      ppos-mysql:
+        condition: service_healthy
+    ports:
+      - "7233:7233"   # gRPC frontend
+    environment:
+      - DB=mysql8
+      - DB_PORT=3306
+      - MYSQL_USER=ppos_user
+      - MYSQL_PWD=ppos_pass
+      - MYSQL_SEEDS=ppos-mysql
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+    networks:
+      - ppos-network
+
+  ppos-temporal-ui:
+    image: temporalio/ui:2.31.2
+    container_name: ppos-temporal-ui
+    restart: unless-stopped
+    depends_on:
+      - ppos-temporal
+    ports:
+      - "8233:8080"   # Temporal Web UI → http://server:8233
+    environment:
+      - TEMPORAL_ADDRESS=ppos-temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    networks:
+      - ppos-network
+
+  # ──────────────────────────────────────────────
+  # 3. OBSERVABILIDAD (OpenTelemetry)
+  # ──────────────────────────────────────────────
+
+  ppos-otel:
+    image: otel/opentelemetry-collector-contrib:0.103.1
+    container_name: ppos-otel
+    restart: unless-stopped
+    volumes:
+      - ./ppos-shared-infra/observability/otel-config.yaml:/etc/otel-collector.yaml:ro
+    command: ["--config=/etc/otel-collector.yaml"]
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # Prometheus metrics
+    networks:
+      - ppos-network
+
+  # ──────────────────────────────────────────────
+  # 4. STACK PREFLIGHT (Aplicación Principal)
+  # ──────────────────────────────────────────────
+
+  ppos-preflight-engine:
+    build:
+      context: .
+      dockerfile: ppos-preflight-engine/Dockerfile
+    image: ppos/preflight-engine:staging
+    container_name: ppos-preflight-engine
+    restart: unless-stopped
+    environment:
+      GS_COMMAND: gs
+      PPOS_TEMP_DIR: /tmp/ppos-preflight
+    networks:
+      - ppos-network
+
+  ppos-preflight-service:
+    build:
+      context: .
+      dockerfile: ppos-preflight-service/Dockerfile
+    image: ppos/preflight-service:staging
+    container_name: ppos-preflight-service
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      PPOS_SERVICE_PORT: 8001
+      GS_COMMAND: gs
+      PPOS_TEMP_DIR: /tmp/ppos-preflight
+      PPOS_UPLOADS_DIR: /tmp/ppos-preflight/uploads
+      REDIS_HOST: ppos-redis
+      REDIS_PORT: 6379
+      PPOS_QUEUE_NAME: preflight_async_queue
+      DATABASE_URL: mysql://ppos_user:ppos_pass@ppos-mysql:3306/printprice_os
+      MYSQL_HOST: ppos-mysql
+      MYSQL_USER: ppos_user
+      MYSQL_PASSWORD: ppos_pass
+      MYSQL_DATABASE: printprice_os
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-ppos-staging-token-2026}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://ppos-otel:4318
+    volumes:
+      - ppos-uploads:/tmp/ppos-preflight
+    depends_on:
+      ppos-redis:
+        condition: service_healthy
+      ppos-mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8001/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    networks:
+      - ppos-network
+
+  ppos-preflight-worker:
+    build:
+      context: .
+      dockerfile: ppos-preflight-worker/Dockerfile
+    image: ppos/preflight-worker:staging
+    container_name: ppos-preflight-worker
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    environment:
+      HEALTH_PORT: 8002
+      GS_COMMAND: gs
+      PPOS_TEMP_DIR: /tmp/ppos-preflight
+      REDIS_HOST: ppos-redis
+      REDIS_PORT: 6379
+      PPOS_QUEUE_NAME: preflight_async_queue
+      DATABASE_URL: mysql://ppos_user:ppos_pass@ppos-mysql:3306/printprice_os
+      MYSQL_HOST: ppos-mysql
+      MYSQL_USER: ppos_user
+      MYSQL_PASSWORD: ppos_pass
+      MYSQL_DATABASE: printprice_os
+      LOG_LEVEL: info
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://ppos-otel:4318
+    volumes:
+      - ppos-uploads:/tmp/ppos-preflight
+    depends_on:
+      ppos-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8002/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    networks:
+      - ppos-network
+
+#   ppos-app:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     image: ppos/product-app:staging
+#     container_name: ppos-app
+#     restart: unless-stopped
+#     ports:
+#       - "3000:3000"
+#     environment:
+#       NODE_ENV: production
+#       PORT: 3000
+#       DATABASE_URL: mysql://ppos_user:ppos_pass@ppos-mysql:3306/printprice_os
+#       PPOS_SERVICE_URL: http://ppos-preflight-service:8001
+#       REDIS_HOST: ppos-redis
+#       REDIS_PORT: 6379
+#       ADMIN_API_KEY: ${ADMIN_API_KEY:-ppos-staging-token-2026}
+#     depends_on:
+#       ppos-mysql:
+#         condition: service_healthy
+#       ppos-redis:
+#         condition: service_healthy
+#       ppos-preflight-service:
+#         condition: service_healthy
+#     networks:
+#       - ppos-network
+
+# ──────────────────────────────────────────────
+# VOLÚMENES PERSISTENTES
+# ──────────────────────────────────────────────
+volumes:
+  ppos-mysql-data:
+  ppos-redis-data:
+  ppos-rabbitmq-data:
+  ppos-uploads:
+
+# ──────────────────────────────────────────────
+# RED INTERNA
+# ──────────────────────────────────────────────
+networks:
+  ppos-network:
+    driver: bridge

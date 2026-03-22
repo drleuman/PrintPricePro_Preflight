@@ -1,0 +1,47 @@
+# PrintPrice Pro - Preflight App (.gitignore con Lista Blanca)
+
+# 1. Ignorar TODO por defecto
+/*
+.*
+
+# 2. Permitir Archivos de Configuración del Repo
+!/.gitignore
+!/README.md
+!/LICENSE
+!/package.json
+!/package-lock.json
+!/.env.example
+!/ecosystem-prod.config.js
+!/Dockerfile
+!/docker-compose*.yml
+
+# 3. Permitir Carpetas Esenciales de la APP
+!/app/
+!/frontend/
+!/config/
+!/workspace/
+!/*.sql
+
+# 4. Ignorar explícitamente dentro de las carpetas permitidas
+# --- PPOS OS LEAKS EXCLUSIONS ---
+workspace/
+PrintPriceOS_Workspace/
+PrintPriceOS/
+ppos-shared-infra/
+ppos-preflight-worker/
+ppos-preflight-engine/
+tarballs/
+*.tgz
+node_modules/
+dist/
+build/
+.env
+*.log
+.DS_Store
+
+# 5. Ignorar carpetas de datos (en caso de que existan)
+/jobs/
+/reports/
+/uploads/
+/runtime-logs/
+/antigravity/

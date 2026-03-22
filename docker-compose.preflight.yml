@@ -1,0 +1,137 @@
+version: "3.8"
+
+services:
+
+  ppos-mysql:
+    image: mysql:8.0
+    container_name: ppos-mysql
+    restart: unless-stopped
+    ports:
+      - "3310:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: printprice_os
+      MYSQL_USER: ppos_user
+      MYSQL_PASSWORD: ppos_pass
+    volumes:
+      - ppos-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "ppos_user", "-pppos_pass" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ppos-network
+
+  ppos-redis:
+    image: redis:7
+    container_name: ppos-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - ppos-redis-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ppos-network
+
+  ppos-preflight-engine:
+    build:
+      context: .
+      dockerfile: ppos-preflight-engine/Dockerfile
+    image: ppos/preflight-engine:production
+    container_name: ppos-preflight-engine
+    restart: "no"
+    environment:
+      GS_COMMAND: gs
+      PPOS_TEMP_DIR: /tmp/ppos-preflight
+    networks:
+      - ppos-network
+
+  ppos-preflight-service:
+    build:
+      context: .
+      dockerfile: ppos-preflight-service/Dockerfile
+    image: ppos/preflight-service:production
+    container_name: ppos-preflight-service
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      NODE_ENV: production
+      PPOS_SERVICE_PORT: 8001
+      DATABASE_URL: mysql://ppos_user:ppos_pass@ppos-mysql:3306/printprice_os
+      MYSQL_HOST: ppos-mysql
+      MYSQL_USER: ppos_user
+      MYSQL_PASSWORD: ppos_pass
+      MYSQL_DATABASE: printprice_os
+      REDIS_HOST: ppos-redis
+      REDIS_PORT: 6379
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-ppos-staging-token-2026}
+      PPOS_REGION_ID: "ppos-local-1"
+      PPOS_ENVIRONMENT: production
+      LOG_LEVEL: info
+    volumes:
+      - ppos-uploads:/tmp/ppos-preflight
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      ppos-mysql:
+        condition: service_healthy
+      ppos-redis:
+        condition: service_healthy
+    networks:
+      - ppos-network
+
+  ppos-preflight-worker:
+    build:
+      context: .
+      dockerfile: ppos-preflight-worker/Dockerfile
+    image: ppos/preflight-worker:production
+    container_name: ppos-preflight-worker
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    environment:
+      NODE_ENV: production
+      HEALTH_PORT: 8002
+      DATABASE_URL: mysql://ppos_user:ppos_pass@ppos-mysql:3306/printprice_os
+      MYSQL_HOST: ppos-mysql
+      MYSQL_USER: ppos_user
+      MYSQL_PASSWORD: ppos_pass
+      MYSQL_DATABASE: printprice_os
+      REDIS_HOST: ppos-redis
+      REDIS_PORT: 6379
+      PPOS_REGION_ID: "ppos-local-1"
+      PPOS_ENVIRONMENT: production
+      LOG_LEVEL: info
+    volumes:
+      - ppos-uploads:/tmp/ppos-preflight
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      ppos-mysql:
+        condition: service_healthy
+      ppos-redis:
+        condition: service_healthy
+    networks:
+      - ppos-network
+
+volumes:
+  ppos-mysql-data:
+  ppos-redis-data:
+  ppos-uploads:
+
+networks:
+  ppos-network:
+    driver: bridge
