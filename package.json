@@ -8,9 +8,9 @@
   },
   "scripts": {
     "start": "node app/server.js",
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
+    "dev": "vite frontend",
+    "build": "vite build frontend --base /",
+    "preview": "vite preview frontend",
     "test": "vitest",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "format": "prettier --write ."
