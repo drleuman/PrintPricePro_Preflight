@@ -11,11 +11,11 @@ const router = express.Router();
 /**
  * PPOS Preflight Proxy Router
  * 
- * Proxies requests from /api/preflight/* to the internal PPOS Service.
+ * Proxies requests from /api/preflight to the internal PPOS Service.
  * Phase 4.1: Internal Reverse Proxy.
  */
 
-router.use(async (req, res) => {
+router.use('/', async (req, res) => {
     // Correctly reconstruct the target URL including the mandatory /api/preflight prefix
     const targetUrl = `${pposConfig.preflightServiceUrl.replace(/\/$/, '')}/api/preflight${req.url}`;
     
