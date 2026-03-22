@@ -19,8 +19,6 @@
     "@google/generative-ai": "^0.16.1",
     "@heroicons/react": "^2.2.0",
     "@pdf-lib/upng": "^1.0.1",
-    "@ppos/preflight-engine": "^2.1.2",
-    "@ppos/shared-infra": "^2.1.2",
     "axios": "^1.7.9",
     "canvas": "^3.1.0",
     "clsx": "^2.1.1",
