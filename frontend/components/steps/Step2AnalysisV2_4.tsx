@@ -72,10 +72,6 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                         </div>
                     ) : result ? (
                         <div className="space-y-4">
-                            {!hasIssues && (
-                                <div className="border border-[var(--border-color)] bg-[var(--bg-panel)] p-10 flex flex-col items-center text-center">
-                                    <div className="h-16 w-16 bg-[var(--accent-color)] mb-6 flex items-center justify-center">
-                                        <CheckCircleIcon className="h-10 w-10 text-white" />
                             {issues.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center p-12 text-center opacity-40">
                                     <ShieldCheckIcon className="h-12 w-12 mb-4 text-[var(--accent-color)]" />
