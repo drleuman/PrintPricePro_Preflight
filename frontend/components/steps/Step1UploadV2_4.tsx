@@ -40,7 +40,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
     React.useEffect(() => {
         if (!user) return;
         
-        pposFetch<{ ok: boolean, policies: any[] }>('/api/v2/preflight/policies')
+        pposFetch<{ ok: boolean, policies: any[] }>('/api/v2/jobs/policies')
             .then(res => {
                 if (res.ok && res.policies) setPolicies(res.policies);
             })
