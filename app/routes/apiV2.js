@@ -8,6 +8,8 @@ const { v4: uuidv4 } = require('uuid');
 
 const queue = require('../services/queue');
 const ppos = require('../../config/ppos');
+const identityService = require('../services/identityService');
+const { pposRequest } = require('../services/apiClient');
 const licenseGuard = require('../middleware/licenseGuard');
 
 const router = express.Router();
@@ -36,7 +38,7 @@ function getTenantId(req) {
 }
 
 router.post(
-    '/jobs',
+    '/',
     upload.single('file'),
     licenseGuard({ action: 'analyze' }),
     async (req, res) => {
@@ -157,6 +159,79 @@ router.get('/policies', (req, res) => {
         ok: true,
         policies
     });
+});
+
+/**
+ * GET /api/v2/jobs/:jobId
+ * Returns the status of a specific job from PPOS.
+ */
+router.get('/:jobId', async (req, res) => {
+  try {
+    const response = await pposRequest(
+      ppos.routes.jobStatus(req.params.jobId),
+      {
+        method: 'GET',
+        headers: {
+          ...identityService.getAuthHeaders()
+        }
+      }
+    );
+
+    const raw = await response.text();
+    let data = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      data = { raw };
+    }
+
+    return res.status(response.status).json(data);
+
+  } catch (error) {
+    return res.status(502).json({
+      error: 'Bad Gateway',
+      message: 'Failed to fetch job status from PPOS',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/v2/jobs/:jobId/artifacts/:artifactId
+ * Proxy artifact streaming from PPOS.
+ */
+router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
+  try {
+    const response = await pposRequest(
+      ppos.routes.jobArtifact(req.params.jobId, req.params.artifactId),
+      {
+        method: 'GET',
+        headers: {
+          ...identityService.getAuthHeaders()
+        }
+      }
+    );
+
+    response.headers.forEach((value, key) => {
+      res.setHeader(key, value);
+    });
+
+    res.status(response.status);
+
+    if (!response.body) {
+      return res.end();
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    return res.end(Buffer.from(arrayBuffer));
+
+  } catch (error) {
+    return res.status(502).json({
+      error: 'Bad Gateway',
+      message: 'Failed to fetch artifact from PPOS',
+      details: error.message
+    });
+  }
 });
 
 module.exports = router;
