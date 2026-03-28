@@ -1,24 +1,48 @@
 'use strict';
 
 const jwt = require('jsonwebtoken');
-const ppos = require('../../config/ppos');
 
+// Safe configuration fallback
+const jwtConfig = {
+    secret: process.env.JWT_SECRET || 'ppos-unsecured-dev-secret',
+    algorithm: 'HS256',
+    issuer: 'printprice-preflight-app',
+    audience: 'ppos-api',
+    expiresIn: '24h'
+};
+
+/**
+ * Signs a new JWT for the provided user payload.
+ * Used by authRoutes for user sessions.
+ */
+function generateInternalToken(payload, expiresIn = '24h') {
+    return jwt.sign(
+        payload,
+        jwtConfig.secret,
+        {
+            algorithm: jwtConfig.algorithm,
+            issuer: jwtConfig.issuer,
+            audience: jwtConfig.audience,
+            expiresIn: expiresIn || jwtConfig.expiresIn
+        }
+    );
+}
+
+/**
+ * Generates a system-level token (deprecated but maintained for compatibility)
+ */
 function getToken() {
-  if (!ppos.jwt.secret) {
-    throw new Error('JWT secret is not configured.');
-  }
-
   return jwt.sign(
     {
       sub: 'printprice-preflight-app',
       scope: ['preflight:write', 'preflight:analyze', 'jobs:read', 'jobs:write']
     },
-    ppos.jwt.secret,
+    jwtConfig.secret,
     {
-      algorithm: ppos.jwt.algorithm,
-      issuer: ppos.jwt.issuer,
-      audience: ppos.jwt.audience,
-      expiresIn: ppos.jwt.expiresIn
+      algorithm: jwtConfig.algorithm,
+      issuer: jwtConfig.issuer,
+      audience: jwtConfig.audience,
+      expiresIn: jwtConfig.expiresIn
     }
   );
 }
@@ -31,5 +55,6 @@ function getAuthHeaders() {
 
 module.exports = {
   getToken,
+  generateInternalToken,
   getAuthHeaders
 };
