@@ -4,16 +4,27 @@ const { pposRequest } = require('./apiClient');
 const identityService = require('./identityService');
 const pposConfig = require('../../config/ppos');
 
-const isProduction = process.env.NODE_ENV === 'production';
-
+/**
+ * Normalizes tenantId from various possible payload formats.
+ */
 function normalizeTenantId(payload = {}) {
+  // Check authContext first (canonical source)
+  if (payload.authContext2?.tenantId) return payload.authContext2.tenantId;
+  if (payload.authContext?.tenantId) return payload.authContext.tenantId;
+  
   return payload.tenantId || payload.tenant_id || 'default';
 }
 
+/**
+ * Normalizes jobId.
+ */
 function normalizeJobId(payload = {}) {
   return payload.jobId || payload.job_id || payload.id;
 }
 
+/**
+ * Validates and normalizes input for PPOS V2 contract.
+ */
 function normalizeInput(payload = {}) {
   const fileUrl = payload.fileUrl || payload.file_url;
   const filename = payload.filename || payload.original_filename || 'document.pdf';
@@ -31,10 +42,18 @@ function normalizeInput(payload = {}) {
   };
 }
 
+/**
+ * Enqueues a job to PPOS asynchronously.
+ * Ensures the outgoing request identity is always a BFF-signed internal JWT,
+ * propagating the user context safely without using raw frontend tokens.
+ */
 async function enqueueJob(type, payload = {}) {
   const tenantId = normalizeTenantId(payload);
   const jobId = normalizeJobId(payload);
   const input = normalizeInput(payload);
+
+  // Use authContext2 (canonical) or authContext (legacy) for identity propagation
+  const userIdentity = payload.authContext2 || payload.authContext || {};
 
   const body = {
     id: jobId,
@@ -50,25 +69,29 @@ async function enqueueJob(type, payload = {}) {
     }
   };
 
-  const authHeader = payload.userToken || identityService.getAuthHeaders().Authorization;
-  const hasAuthHeader = !!authHeader;
-  const scheme = hasAuthHeader ? authHeader.split(' ')[0] : 'None';
-  
+  /**
+   * REFACTOR: Never use raw payload.userToken for PPOS communication.
+   * We always sign a fresh internal JWT withbff -> ppos trust.
+   */
+  const authHeaders = identityService.getAuthHeaders(userIdentity);
+  const authHeader = authHeaders.Authorization;
+
+  // Debug outgoing contract context (Safe logs)
+  const decoded = identityService.buildInternalAuthPayload(userIdentity);
   console.log('[PPOS-OUTBOUND-AUTH]', {
-    hasAuthHeader,
-    scheme,
-    sub: payload.authContext?.sub || payload.authContext?.id,
-    aud: payload.authContext?.aud,
-    role: payload.authContext?.role || payload.authContext?.roles
+    hasAuthHeader: !!authHeader,
+    scheme: authHeader ? authHeader.split(' ')[0] : 'None',
+    sub: decoded.sub,
+    role: decoded.role,
+    scopes: decoded.scopes,
+    email: decoded.email
   });
 
   try {
     const headers = {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Authorization': authHeader
     };
-    if (authHeader) {
-      headers['Authorization'] = authHeader;
-    }
 
     const response = await pposRequest(pposConfig.routes.jobs, {
       method: 'POST',
