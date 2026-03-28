@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { PreflightResult, FileMeta } from '../../types';
 import { StatusBadge, CertificationPanel, IssueRow, ActionBar } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
-import { RocketLaunchIcon, ArrowPathIcon, ChevronLeftIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { RocketLaunchIcon, ArrowPathIcon, ChevronLeftIcon, CheckCircleIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import { t } from '../../i18n';
 
 interface Step2AnalysisV2_4Props {
@@ -58,7 +58,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                 />
             </div>
 
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_0.7fr]">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_0.7fr] items-start">
                 {/* Results Zone */}
                 <div className="space-y-6 min-h-[400px]">
                     {isRunning ? (

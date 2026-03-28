@@ -98,7 +98,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.1fr_0.9fr] items-start">
                 {/* Upload Zone */}
                 <div 
                     onDragOver={(e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); }}

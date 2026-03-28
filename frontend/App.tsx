@@ -96,7 +96,7 @@ export default function App() {
   const { isWorkerRunning, error: workerError, runAnalysis } = usePreflightWorker({
     onAnalysisResult: (res: PreflightResult) => {
       setResult(res);
-      setCurrentStep(3);
+      setCurrentStep(2); // Analysis
     },
     onError: (err: string) => { console.error('[WORKER-ERROR]', err); }
   });
@@ -115,7 +115,7 @@ export default function App() {
     onStatus: (st: string) => { setLdmStatus(st); },
     onComplete: (res: any) => {
       setResult(res);
-      setCurrentStep(3);
+      setCurrentStep(2); // Analysis
       setLdmActive(false);
     }
   });
@@ -312,10 +312,9 @@ export default function App() {
                     onFileSelect={onFileSelect}
                     onNext={(mode) => {
                       setAppMode(mode);
+                      setCurrentStep(2); // Ensure we go to Analysis (Step 2)
                       if (mode === 'ai' && file) {
                         handleV2Start();
-                      } else if (file) {
-                        setCurrentStep(2);
                       }
                     }}
                     selectedPolicy={selectedPolicy}
