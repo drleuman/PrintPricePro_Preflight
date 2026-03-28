@@ -3,6 +3,7 @@ import { BookPriceForm } from '../Pricing/BookPriceForm';
 import { AssistantChat } from '../Pricing/AssistantChat';
 import { BookConfig, QuoteOffer, FileMeta } from '../../types';
 import { useEffect } from 'react';
+import { t } from '../../i18n';
 
 interface Step5QuoteProps {
     fileMeta?: FileMeta | null;
@@ -65,9 +66,9 @@ export const Step5Quote: React.FC<Step5QuoteProps> = ({
     return (
         <div className="step step--quote animate-fade-in">
             <div className="step__header">
-                <h2 className="step__title">Get a Custom Quote</h2>
+                <h2 className="step__title">{t('step.quote.title')}</h2>
                 <p className="step__description">
-                    Adjust your book specifications and chat with our AI assistant to find the best pricing for your project.
+                    {t('step.quote.desc')}
                 </p>
             </div>
 
@@ -101,10 +102,10 @@ export const Step5Quote: React.FC<Step5QuoteProps> = ({
 
             <div className="step__actions">
                 <button className="btn btn--secondary flex items-center gap-2" onClick={onBack}>
-                    <Icon.ArrowLeft className="h-4 w-4" /> Back to Review
+                    <Icon.ArrowLeft className="h-4 w-4" /> {t('back')}
                 </button>
                 <button className="btn btn--outline flex items-center gap-2" onClick={onStartOver}>
-                    <Icon.Refresh className="h-4 w-4" /> Start Over
+                    <Icon.Refresh className="h-4 w-4" /> {t('startOver')}
                 </button>
             </div>
         </div>

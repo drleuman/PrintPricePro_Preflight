@@ -372,4 +372,7 @@ export const es = {
   'step.review.download': 'Descargar PDF Certificado',
   'step.review.note': 'NOTAS TÉCNICAS',
   'step.review.hardening': 'Aseguramiento Final',
+  'step.quote.title': 'Obtener Presupuesto Personalizado',
+  'step.quote.desc': 'Ajusta las especificaciones de tu libro y chatea con nuestro asistente IA para encontrar el mejor precio.',
+  'step.quote.selected': 'Selección Confirmada',
 } as const;

@@ -374,6 +374,9 @@ export const en = {
   'step.review.download': 'Download Certified PDF',
   'step.review.note': 'INSPECT TECHNICAL NOTE',
   'step.review.hardening': 'Production Hardening',
+  'step.quote.title': 'Get a Custom Quote',
+  'step.quote.desc': 'Adjust your book specifications and chat with our AI assistant to find the best pricing for your project.',
+  'step.quote.selected': 'Selection Confirmed',
 } as const;
 
 export type TranslationKeys = keyof typeof en;
