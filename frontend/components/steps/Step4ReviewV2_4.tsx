@@ -88,12 +88,12 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-[var(--border-color)] pb-6 gap-4">
                 <div>
                     <div className="ppp-phase-tag text-[var(--accent-color)] mb-1">
-                        PHASE 04 / {formatLabel('FINAL_CERTIFICATION')}
+                        {t('step.review.phase')}
                     </div>
-                    <h2 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">SYSTEM EXIT & DELIVERY</h2>
+                    <h2 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">{t('step.review.title')}</h2>
                 </div>
                 <StatusBadge 
-                    label={isReadyForPrint ? "Ready For Production" : "Review Required"} 
+                    label={isReadyForPrint ? t('readyForPrinting') : t('issuesFoundMessage')} 
                     variant={isReadyForPrint ? "certified" : "warning"} 
                 />
             </div>
@@ -142,7 +142,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             onClick={onStartOver}
                             className="bg-[var(--hover-bg)] text-[var(--text-secondary)] p-5 text-[0.85rem] font-black uppercase tracking-[0.2em] hover:text-[var(--text-primary)] transition-all border border-[var(--border-color)] flex items-center justify-center gap-2"
                         >
-                            <ArrowPathIcon className="h-4 w-4" /> Start Over
+                            <ArrowPathIcon className="h-4 w-4" /> {t('startOver')}
                         </button>
                         
                         {lastPdfUrl && (
@@ -163,7 +163,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 }}
                                 className="bg-[var(--accent-color)] text-white p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)] flex items-center justify-center gap-2 w-full"
                             >
-                                <ArrowDownTrayIcon className="h-4 w-4" /> Download Certified PDF
+                                <ArrowDownTrayIcon className="h-4 w-4" /> {t('step.review.download')}
                             </button>
                         )}
                     </div>
@@ -179,7 +179,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         </div>
 
                         <CertificationPanel 
-                            title={isReadyForPrint ? "Ready for Production" : "Manual Review Required"} 
+                            title={isReadyForPrint ? t('readyForPrinting') : t('analysisWaitMessage')} 
                             riskStatus={isReadyForPrint ? "certified" : "warning"} 
                         />
 
@@ -198,13 +198,13 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             onClick={() => setShowTechNote(true)}
                             className="w-full py-4 bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] text-[0.8rem] font-black uppercase tracking-[0.2em] transition-all shadow-[0_5px_15px_rgba(220,0,0,0.15)]"
                         >
-                            INSPECT TECHNICAL NOTE
+                            {t('step.review.note').toUpperCase()}
                         </button>
                     </div>
 
                     {/* Production Hardening Tools */}
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8 space-y-6">
-                        <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Production Hardening</div>
+                        <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">{t('step.review.hardening')}</div>
                         <div className="space-y-2">
                            {[
                                 { icon: <ArrowPathIcon className="h-4 w-4" />, text: 'Force Grayscale', action: onConvertGrayscale },

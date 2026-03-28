@@ -117,13 +117,13 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-[var(--border-color)] pb-6 gap-4">
                 <div>
                     <div className="ppp-phase-tag text-[var(--accent-color)] mb-1">
-                        PHASE 03 / RADIOLOGICAL FIX
+                        {t('step.fix.phase')}
                     </div>
-                    <h2 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">TECHNICAL CORRECTION</h2>
+                    <h2 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">{t('step.fix.title')}</h2>
                 </div>
                 <div className="flex flex-wrap gap-4">
-                    <StatusBadge label={`${errorCount} ERRORS`} variant={errorCount > 0 ? "warning" : "certified"} />
-                    <StatusBadge label={`${warningCount} WARNINGS`} variant="processing" />
+                    <StatusBadge label={`${errorCount} ${t('errors').toUpperCase()}`} variant={errorCount > 0 ? "warning" : "certified"} />
+                    <StatusBadge label={`${warningCount} ${t('warnings').toUpperCase()}`} variant="processing" />
                 </div>
             </div>
 
@@ -133,7 +133,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                             <SparklesIcon className="h-5 w-5 text-[var(--accent-color)] animate-pulse" />
-                             <span className="ppp-phase-tag text-[var(--accent-color)] !tracking-[0.4em] !text-[0.65rem]">AI MAGIC FIX IN PROGRESS</span>
+                             <span className="ppp-phase-tag text-[var(--accent-color)] !tracking-[0.4em] !text-[0.65rem]">{t('step.fix.magic')}</span>
                         </div>
                         <span className="font-mono text-xs text-[var(--text-primary)] font-bold">{ldmProgress}%</span>
                     </div>
@@ -161,8 +161,8 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                 <div className="flex flex-col gap-6">
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] flex flex-col h-[650px]">
                         <div className="p-4 border-b border-[var(--border-color)] flex items-center justify-between bg-[var(--hover-bg)]">
-                            <span className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Trace Inventory</span>
-                            <span className="text-[0.62rem] font-mono text-[var(--text-muted)]">{issues.length} DETECTED</span>
+                            <span className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">{t('step.fix.inventory')}</span>
+                            <span className="text-[0.62rem] font-mono text-[var(--text-muted)]">{issues.length} {t('issues').toUpperCase()}</span>
                         </div>
                         
                         <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4 custom-scrollbar break-words">
@@ -193,7 +193,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                                 className="w-full py-3 border border-[var(--border-color)] hover:border-[var(--accent-color)]/20 transition-all text-[0.6rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center justify-center gap-2"
                             >
                                 <ArrowPathIcon className={`h-3.5 w-3.5 ${isRunning ? 'animate-spin' : ''}`} />
-                                Re-Scan Document
+                                {t('step.fix.rescan')}
                             </button>
                         </div>
                     </div>
@@ -298,7 +298,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                             onClick={onBack}
                             className="w-full md:w-auto text-[0.6rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-4 md:p-0 text-center"
                         >
-                            Back to diagnostic
+                            {t('back')}
                         </button>
                         <button 
                             onClick={onNext}

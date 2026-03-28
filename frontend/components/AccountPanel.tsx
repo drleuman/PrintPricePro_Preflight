@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { t } from '../i18n';
 import { 
     ShieldCheckIcon, 
     KeyIcon, 
@@ -99,11 +100,11 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose 
 
     const getViewTitle = () => {
         switch (activeView) {
-            case 'profile': return 'Profile Settings';
-            case 'license': return 'License & Usage';
-            case 'api': return 'API Access Configuration';
-            case 'security': return 'Security & Audit State';
-            default: return 'Account Panel';
+            case 'profile': return t('account.profile.title');
+            case 'license': return t('account.license.title');
+            case 'api': return t('account.api.title');
+            case 'security': return t('account.security.title');
+            default: return t('appName');
         }
     };
 
@@ -133,10 +134,10 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose 
                     <button 
                         ref={initialFocusRef}
                         onClick={onClose} 
-                        aria-label="Close panel"
+                        aria-label={t('close')}
                         className="px-3 py-1.5 border border-[var(--border-color)] shrink-0 hover:border-[var(--accent-color)] hover:bg-[var(--accent-color)]/10 hover:text-[var(--accent-color)] text-[var(--text-muted)] text-[0.65rem] uppercase tracking-widest transition-all font-mono focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]"
                     >
-                        Close
+                        {t('close')}
                     </button>
                 </div>
 
@@ -168,17 +169,17 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose 
 
 const ProfilePanel = ({ user }: { user: any }) => (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
-        <SectionTitle title="Account Identity" icon={<IdentificationIcon className="w-5 h-5" />} />
+        <SectionTitle title={t('account.identity')} icon={<IdentificationIcon className="w-5 h-5" />} />
         
         <div className="grid gap-6">
             <IdentityField 
-                label="Primary Email Address" 
+                label={t('account.email.label')} 
                 value={user.email} 
                 icon={<AtSymbolIcon className="w-4 h-4 shrink-0" />} 
                 readOnly 
             />
             <IdentityField 
-                label="Assigned System Role" 
+                label={t('account.role.label')} 
                 value={user.role} 
                 icon={<ShieldCheckIcon className="w-4 h-4 shrink-0" />} 
                 readOnly 
@@ -186,13 +187,13 @@ const ProfilePanel = ({ user }: { user: any }) => (
             
             {user.organization_name ? (
                 <IdentityField 
-                    label="Organization Binding" 
+                    label={t('account.org.label')} 
                     value={user.organization_name} 
                     readOnly 
                 />
             ) : (
                 <div className="p-4 border border-dashed border-[var(--border-color)] bg-[var(--bg-tertiary)]/10">
-                    <span className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest">No Organization Binding</span>
+                    <span className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest">{t('account.org.none')}</span>
                 </div>
             )}
         </div>
@@ -212,12 +213,12 @@ const ProfilePanel = ({ user }: { user: any }) => (
 
 const LicensePanel = ({ user }: { user: any }) => (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
-        <SectionTitle title="System Quotas & Limits" icon={<CreditCardIcon className="w-5 h-5" />} />
+        <SectionTitle title={t('account.quotas')} icon={<CreditCardIcon className="w-5 h-5" />} />
         
         <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-6 space-y-6 relative overflow-hidden">
             <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
                 <div>
-                    <span className="block text-[0.65rem] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] mb-1">Service Tier</span>
+                    <span className="block text-[0.65rem] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] mb-1">{t('account.service.tier')}</span>
                     <span className="text-xl font-black text-[var(--text-primary)] uppercase tracking-tight truncate max-w-full block">{user.plan}</span>
                 </div>
                 <div className={`h-2 w-2 rounded-full shrink-0 ${user.plan === 'FREE' ? 'bg-[var(--text-muted)]' : 'bg-[#50fa7b] shadow-[0_0_15px_#50fa7b]'}`} />
@@ -244,7 +245,7 @@ const LicensePanel = ({ user }: { user: any }) => (
 
 const ApiAccessPanel = ({ user }: { user: any }) => (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
-        <SectionTitle title="Machine-To-Machine Bridge" icon={<KeyIcon className="w-5 h-5" />} />
+        <SectionTitle title={t('account.m2m.bridge')} icon={<KeyIcon className="w-5 h-5" />} />
         
         {user.role === 'DEVELOPER' || user.plan !== 'FREE' ? (
             <div className="space-y-6 max-w-full">
@@ -282,7 +283,7 @@ const ApiAccessPanel = ({ user }: { user: any }) => (
 
 const SecurityPanel = ({ user }: { user: any }) => (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
-        <SectionTitle title="Session Integrity" icon={<ShieldCheckIcon className="w-5 h-5" />} />
+        <SectionTitle title={t('account.session.integrity')} icon={<ShieldCheckIcon className="w-5 h-5" />} />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-5 border border-[var(--border-color)] bg-[var(--bg-tertiary)] flex flex-col min-w-0">

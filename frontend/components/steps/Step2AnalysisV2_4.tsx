@@ -46,14 +46,14 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-[var(--border-color)] pb-6 gap-4">
                 <div>
                     <div className="ppp-phase-tag text-[var(--accent-color)] mb-1">
-                        PHASE 02 / {formatLabel('FORENSIC_VALIDATION')}
+                        {t('stepNumber', { number: 2 })} / {formatLabel('FORENSIC_VALIDATION')}
                     </div>
                     <h2 className="text-3xl font-extrabold tracking-tight">
-                        {isRunning ? "VALIDATION IN PROGRESS" : "DIAGNOSTIC COMPLETE"}
+                        {isRunning ? t('analyzingYourPdf').toUpperCase() : t('analysisComplete').toUpperCase()}
                     </h2>
                 </div>
                 <StatusBadge 
-                    label={isRunning ? "Engine Active" : hasIssues ? "Validation Failed" : "Certified Ready"} 
+                    label={isRunning ? t('analyzingPDF') : hasIssues ? t('analysis').toUpperCase() + " " + t('error').toUpperCase() : t('verified').toUpperCase()} 
                     variant={isRunning ? "processing" : hasIssues ? "warning" : "certified"} 
                 />
             </div>
@@ -67,8 +67,8 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                                 <div className="absolute inset-0 animate-pulse border-2 border-[var(--accent-color)]/50" />
                                 <div className="h-2 w-2 bg-[var(--accent-color)] animate-ping" />
                             </div>
-                            <h3 className="text-xl font-bold mb-2 text-[var(--text-primary)]">Analyzing Signal Architecture</h3>
-                            <p className="text-sm text-[var(--text-secondary)] max-w-[280px]">Deconstructing PDF layers and production rules...</p>
+                            <h3 className="text-xl font-bold mb-2 text-[var(--text-primary)]">{t('analysis.loading')}</h3>
+                            <p className="text-sm text-[var(--text-secondary)] max-w-[280px]">{t('analysis.loading.desc')}</p>
                         </div>
                     ) : result ? (
                         <div className="space-y-4">
@@ -95,7 +95,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full border border-[var(--border-color)] p-20 text-center">
                             <ArrowPathIcon className="h-12 w-12 text-[var(--text-muted)] animate-spin mb-4" />
-                            <p className="text-[var(--text-secondary)] text-sm">Initializing Validation Node...</p>
+                            <p className="text-[var(--text-secondary)] text-sm">{t('analysis.initializing')}</p>
                         </div>
                     )}
                 </div>

@@ -4,6 +4,7 @@ import { FileMeta, AppMode } from '../../types';
 import { StatusBadge, DiagnosticCard } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
 import { CloudArrowUpIcon, DocumentCheckIcon, AdjustmentsHorizontalIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { t } from '../../i18n';
 
 interface Step1UploadV2_4Props {
     file: File | null;
@@ -85,9 +86,9 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
             <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-6">
                 <div>
                     <div className="ppp-phase-tag text-[var(--accent-color)] mb-1">
-                        PHASE 01 / INPUT UPLOAD
+                        {t('stepNumber', { number: 1 })} / {t('uploadPdf').toUpperCase()}
                     </div>
-                    <h2 className="text-3xl font-extrabold tracking-tight underline decoration-[var(--accent-color)]/30 decoration-4 underline-offset-8">SYSTEM INGRESS</h2>
+                    <h2 className="text-3xl font-extrabold tracking-tight underline decoration-[var(--accent-color)]/30 decoration-4 underline-offset-8">{t('uploadYourPdf').toUpperCase()}</h2>
                 </div>
                 <div className="flex items-center gap-4">
                     <div className="h-10 w-px bg-[var(--border-color)] mx-2"></div>
@@ -131,18 +132,18 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                                     <div className="h-2 w-2 bg-[var(--accent-color)]" />
                                 </div>
                             </div>
-                            <div className="mb-2 text-[0.8rem] font-black text-[var(--accent-color)] uppercase tracking-[0.3em]">Carrier Staged</div>
+                            <div className="mb-2 text-[0.8rem] font-black text-[var(--accent-color)] uppercase tracking-[0.3em]">{t('selectedLabel')}</div>
                             <h3 className="text-2xl font-black mb-2 max-w-full truncate px-4">{fileMeta?.name || file.name}</h3>
                             <div className="text-[0.85rem] font-mono text-[var(--text-muted)] uppercase tracking-widest flex flex-wrap justify-center items-center gap-3">
                                 <span>{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
                                 <span className="h-1 w-1 bg-[var(--border-color)] rounded-full" />
-                                <span>Technical PDF Carrier</span>
+                                <span>{t('pdfProcessedReady')}</span>
                             </div>
                             <button 
                                 onClick={(e) => { e.stopPropagation(); onFileSelect(null); }}
                                 className="mt-10 px-6 py-3 border border-[var(--border-color)] bg-[var(--hover-bg)] text-[0.8rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-color)]/20 transition-all font-bold"
                             >
-                                Change Production File
+                                {t('changeLabel')} {t('fileLabel')}
                             </button>
                         </div>
                     ) : (
@@ -150,11 +151,11 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                             <div className="h-20 w-20 mb-8 flex items-center justify-center border border-[var(--border-color)] bg-[var(--hover-bg)] group-hover:border-[var(--accent-color)] group-hover:bg-[var(--accent-color)]/5 transition-all duration-500 shadow-inner">
                                 <CloudArrowUpIcon className="h-10 w-10 text-[var(--text-muted)] group-hover:text-[var(--accent-color)] transition-colors" />
                             </div>
-                            <p className="text-xl font-black mb-3 tracking-tight text-[var(--text-primary)]">Upload Production PDF</p>
-                            <p className="text-[var(--text-secondary)] text-sm uppercase tracking-[0.15em] font-bold mb-8">Start validation and correction</p>
+                            <p className="text-xl font-black mb-3 tracking-tight text-[var(--text-primary)]">{t('uploadYourPdf')}</p>
+                            <p className="text-[var(--text-secondary)] text-sm uppercase tracking-[0.15em] font-bold mb-8">{t('uploadDescription')}</p>
                             
-                            <div className="px-6 py-2 border border-[var(--border-color)] bg-[var(--hover-bg)] text-[0.8rem] text-center font-mono text-[var(--text-muted)] uppercase tracking-[0.2em] w-full max-w-full overflow-hidden text-clip whitespace-normal break-words">
-                                Drag & Drop or Click to Browse / Max: 500MB
+                            <div className="px-6 py-2 border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[0.8rem] text-center font-mono text-[var(--text-muted)] uppercase tracking-[0.2em] w-full max-w-full overflow-hidden text-clip whitespace-normal break-words">
+                                {t('dragAndDropModern')} / Max: {maxMb}MB
                             </div>
                         </div>
                     )}
@@ -165,9 +166,9 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-10">
                         <div className="flex items-center justify-between mb-8">
                             <div className="ppp-phase-tag text-[var(--accent-color)] mb-1">
-                                Configuration
+                                {t('review').toUpperCase()}
                             </div>
-                            <h3 className="text-xl font-extrabold tracking-tight">Select validation mode</h3>
+                            <h3 className="text-xl font-extrabold tracking-tight">{t('chooseWorkflow')}</h3>
                         </div>
 
                         <div className="space-y-4">
@@ -246,7 +247,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                             {file && (
                                 <div className="absolute inset-0 bg-white/5 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                             )}
-                            <span className="relative z-10">Initialize Engine</span>
+                            <span className="relative z-10">{t('igniteEngine')}</span>
                         </button>
                     </div>
                 </div>
