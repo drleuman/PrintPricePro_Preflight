@@ -1,0 +1,24 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ppos_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_ppos_2026
+      MYSQL_DATABASE: preflight_
+      MYSQL_USER: Kike
+      MYSQL_PASSWORD: "L8YwOuq0i4$v&dql"
+    ports:
+      - "3307:3306"
+    volumes:
+      - ppos_mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    container_name: ppos_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  ppos_mysql_data:

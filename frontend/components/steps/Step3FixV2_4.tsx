@@ -1,0 +1,350 @@
+import React, { useState } from 'react';
+import { PreflightResult, FileMeta, Issue } from '../../types';
+import { StatusBadge, IssueRow, ActionBar } from '../../design/preflight_starter_pack';
+import { PageViewer } from '../PageViewer';
+import { FixDrawerV2_4 } from '../FixDrawerV2_4';
+import { AIAuditModalV2_4 } from '../AIAuditModalV2_4';
+import { EfficiencyAuditModalV2_4 } from '../EfficiencyAuditModalV2_4';
+import { AutoFixProPanel } from '../AutoFixProPanel';
+import { t } from '../../i18n';
+import { 
+    ChevronLeftIcon, 
+    ChevronRightIcon, 
+    SparklesIcon, 
+    ArrowPathIcon,
+    ExclamationTriangleIcon,
+    ShieldCheckIcon,
+    FireIcon,
+    EyeIcon
+} from '@heroicons/react/24/outline';
+
+interface Step3FixV2_4Props {
+    file: File | null;
+    fileMeta: FileMeta | null;
+    result: PreflightResult | null;
+    autoFixBefore?: PreflightResult | null;
+    autoFixAfter?: PreflightResult | null;
+    autoFixReport?: any | null;
+    autoFixRunId?: number | null;
+    compareEnabled?: boolean;
+    numPages: number;
+    currentPage: number;
+    selectedIssue: Issue | null;
+    heatmapData: any;
+    isHeatmapLoading: boolean;
+    isRunning: boolean;
+    selectedProfile: string;
+    onPageChange: (page: number) => void;
+    onNumPagesChange: (num: number) => void;
+    onSelectIssue: (issue: Issue | null) => void;
+    onRunAnalysis: () => void;
+    onRunHeatmap: () => void;
+    onRunVisualCheck: () => void;
+    onFixBleed: (mode: 'safe' | 'aggressive') => void;
+    onConvertGrayscale: () => void;
+    onConvertCMYK: () => void;
+    onRebuildPdf: () => void;
+    onAutoFix: (options: any) => void;
+    onToggleCompare?: (enabled: boolean) => void;
+    onProfileChange: (profile: string) => void;
+    onOpenAIAudit: (issue: Issue) => void;
+    onOpenEfficiency: (issue: Issue) => void;
+    onNext: () => void;
+    onBack: () => void;
+    serverAvailable?: boolean;
+    previewPages?: string[] | null;
+    previewLoading?: boolean;
+    ldmActive?: boolean;
+    ldmProgress?: number;
+    ldmStatus?: string | null;
+    ldmMode?: boolean;
+    ldmJobId?: string | null;
+}
+
+export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
+    file,
+    fileMeta,
+    result,
+    autoFixBefore,
+    autoFixAfter,
+    autoFixReport,
+    autoFixRunId,
+    compareEnabled,
+    numPages,
+    currentPage,
+    selectedIssue,
+    heatmapData,
+    isHeatmapLoading,
+    isRunning,
+    selectedProfile,
+    onPageChange,
+    onNumPagesChange,
+    onSelectIssue,
+    onRunAnalysis,
+    onRunHeatmap,
+    onRunVisualCheck,
+    onFixBleed,
+    onConvertGrayscale,
+    onConvertCMYK,
+    onRebuildPdf,
+    onAutoFix,
+    onToggleCompare,
+    onProfileChange,
+    onOpenAIAudit,
+    onOpenEfficiency,
+    onNext,
+    onBack,
+    serverAvailable = true,
+    previewPages = null,
+    previewLoading = false,
+    ldmActive = false,
+    ldmProgress = 0,
+    ldmStatus = null,
+    ldmMode = false,
+    ldmJobId = null,
+}) => {
+    const [aiAuditOpen, setAiAuditOpen] = useState(false);
+    const [efficiencyOpen, setEfficiencyOpen] = useState(false);
+    const [issueForAudit, setIssueForAudit] = useState<Issue | null>(null);
+
+    const issues = result?.issues || [];
+    const errorCount = issues.filter(i => i.severity === 'error').length;
+    const warningCount = issues.filter(i => i.severity === 'warning').length;
+
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 pb-24">
+            {/* Header Signal */}
+            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-6">
+                <div>
+                    <div className="ppp-phase-tag text-[var(--accent-color)] mb-1">
+                        PHASE 03 / RADIOLOGICAL FIX
+                    </div>
+                    <h2 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">TECHNICAL CORRECTION</h2>
+                </div>
+                <div className="flex gap-4">
+                    <StatusBadge label={`${errorCount} ERRORS`} variant={errorCount > 0 ? "warning" : "certified"} />
+                    <StatusBadge label={`${warningCount} WARNINGS`} variant="processing" />
+                </div>
+            </div>
+
+            {/* AI Magic Fix Progress (LDM) */}
+            {ldmActive && (
+                <div className="border border-[var(--accent-color)]/30 bg-[rgba(220,0,0,0.03)] p-6 animate-border-glow">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <SparklesIcon className="h-5 w-5 text-[var(--accent-color)] animate-pulse" />
+                             <span className="ppp-phase-tag text-[var(--accent-color)] !tracking-[0.4em] !text-[0.65rem]">AI MAGIC FIX IN PROGRESS</span>
+                        </div>
+                        <span className="font-mono text-xs text-[var(--text-primary)] font-bold">{ldmProgress}%</span>
+                    </div>
+                    <div className="h-1 bg-[var(--bg-tertiary)] w-full overflow-hidden relative">
+                        <div 
+                            className="h-full bg-[var(--accent-color)] transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(220,0,0,0.5)]" 
+                            style={{ width: `${ldmProgress}%` }} 
+                        />
+                        {/* Industrial Scanline */}
+                        <div className="absolute top-0 bottom-0 w-32 bg-gradient-to-r from-transparent via-[var(--accent-color)]/20 to-transparent animate-scanline" />
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                        <div className="text-[0.6rem] font-mono text-[var(--text-secondary)] uppercase tracking-[0.2em]">
+                           {ldmStatus || 'Analyzing sequential layers...'}
+                        </div>
+                        <div className="text-[0.55rem] font-mono text-[var(--accent-color)] uppercase animate-pulse">
+                            Hardware Acceleration: Active
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
+                {/* Vertical Sidebar: Issues List */}
+                <div className="flex flex-col gap-6">
+                    <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] flex flex-col h-[650px]">
+                        <div className="p-4 border-b border-[var(--border-color)] flex items-center justify-between bg-[var(--hover-bg)]">
+                            <span className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Trace Inventory</span>
+                            <span className="text-[0.62rem] font-mono text-[var(--text-muted)]">{issues.length} DETECTED</span>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
+                            {issues.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center p-10 text-center opacity-30">
+                                    <ShieldCheckIcon className="h-12 w-12 mb-4 text-[var(--text-muted)]" />
+                                    <p className="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)]">Clean Trace</p>
+                                </div>
+                            ) : (
+                                issues.map((issue, idx) => (
+                                    <IssueRow 
+                                        key={idx}
+                                        title={issue.message || issue.title || 'Unknown deviation'}
+                                        type={(issue.category || issue.type || 'GENERAL').toString().toUpperCase()}
+                                        severity={issue.severity === 'error' ? 'warning' : 'certified'}
+                                        fixAvailable={true}
+                                        onClick={() => onSelectIssue(issue)}
+                                        active={selectedIssue?.id === issue.id}
+                                    />
+                                ))
+                            )}
+                        </div>
+
+                        <div className="p-4 border-t border-[var(--border-color)]">
+                            <button 
+                                onClick={onRunAnalysis}
+                                disabled={isRunning}
+                                className="w-full py-3 border border-[var(--border-color)] hover:border-[var(--accent-color)]/20 transition-all text-[0.6rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center justify-center gap-2"
+                            >
+                                <ArrowPathIcon className={`h-3.5 w-3.5 ${isRunning ? 'animate-spin' : ''}`} />
+                                Re-Scan Document
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Quick Correction Panel */}
+                    <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-6 space-y-4">
+                        <div className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">System Quick-Fix</div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button onClick={() => onAutoFix({})} className="p-3 border border-[var(--border-color)] hover:border-[var(--accent-color)]/50 hover:bg-[var(--accent-color)]/5 transition-all text-[0.55rem] font-black uppercase tracking-widest flex flex-col items-center gap-2 text-[var(--text-primary)]">
+                                <SparklesIcon className="h-4 w-4 text-[var(--accent-color)]" />
+                                AI Magic
+                            </button>
+                            <button onClick={onConvertCMYK} className="p-3 border border-[var(--border-color)] hover:border-[var(--accent-color)]/30 transition-all text-[0.55rem] font-black uppercase tracking-widest flex flex-col items-center gap-2 text-[var(--text-primary)]">
+                                <ShieldCheckIcon className="h-4 w-4 text-[var(--text-secondary)]" />
+                                Force CMYK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Main Zone: Page Viewer */}
+                <div className="flex flex-col gap-6">
+                    <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden h-[750px] flex flex-col">
+                        <div className="absolute top-0 left-0 right-0 p-4 z-10 flex items-center justify-between bg-[var(--bg-primary)]/90 backdrop-blur-xl border-b border-[var(--border-color)]">
+                            {/* Pagination Cluster */}
+                            <div className="flex items-center gap-4 bg-[var(--bg-secondary)] px-4 py-2 border border-[var(--border-color)]">
+                                <button 
+                                    onClick={() => onPageChange(Math.max(1, currentPage - 1))} 
+                                    className="text-[var(--text-secondary)] hover:text-[var(--accent-color)] transition-colors"
+                                    disabled={currentPage <= 1}
+                                >
+                                    <ChevronLeftIcon className="h-4 w-4" />
+                                </button>
+                                
+                                <div className="flex items-center gap-2">
+                                    <input 
+                                        type="number"
+                                        value={currentPage}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value);
+                                            if (!isNaN(val) && val >=1 && val <= numPages) onPageChange(val);
+                                        }}
+                                        className="w-12 bg-[var(--bg-primary)]/40 border border-[var(--border-color)] text-center text-xs font-mono text-[var(--text-primary)] py-1 outline-none focus:border-[var(--accent-color)]/40"
+                                    />
+                                    <span className="text-[0.65rem] font-black text-[var(--text-muted)] uppercase tracking-widest">of {numPages}</span>
+                                </div>
+
+                                <button 
+                                    onClick={() => onPageChange(Math.min(numPages, currentPage + 1))} 
+                                    className="text-[var(--text-secondary)] hover:text-[var(--accent-color)] transition-colors"
+                                    disabled={currentPage >= numPages}
+                                >
+                                    <ChevronRightIcon className="h-4 w-4" />
+                                </button>
+                            </div>
+
+                            {/* Analysis Tools Cluster */}
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={onRunHeatmap} 
+                                    className={`flex items-center gap-3 px-5 py-2 text-[0.6rem] font-black uppercase tracking-[0.2em] transition-all border ${
+                                        heatmapData ? 'bg-[var(--accent-color)] text-white border-[var(--accent-color)] shadow-[0_0_20px_rgba(220,0,0,0.2)]' : 'bg-[var(--hover-bg)] text-[var(--text-secondary)] border-[var(--border-color)] hover:border-[var(--accent-color)]/30 hover:bg-[var(--accent-color)]/5'
+                                    }`}
+                                >
+                                    <FireIcon className={`h-3.5 w-3.5 ${heatmapData ? 'text-white' : 'text-[var(--accent-color)]'}`} />
+                                    {heatmapData ? 'Disable Heatmap' : 'Ink Heatmap'}
+                                </button>
+
+                                <button 
+                                    onClick={onRunVisualCheck} 
+                                    className="flex items-center gap-3 px-5 py-2 bg-[var(--hover-bg)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-color)]/5 hover:border-[var(--accent-color)]/30 transition-all text-[0.6rem] font-black uppercase tracking-[0.2em]"
+                                >
+                                    <EyeIcon className="h-3.5 w-3.5 text-[var(--accent-color)]" />
+                                    AI Visual Check
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 p-8 pt-16 overflow-auto custom-scrollbar flex items-center justify-center bg-[var(--bg-primary)]">
+                            <PageViewer 
+                                file={file}
+                                numPages={numPages}
+                                currentPage={currentPage}
+                                onPageChange={onPageChange}
+                                onNumPagesChange={onNumPagesChange}
+                                selectedIssue={selectedIssue}
+                                heatmapData={heatmapData}
+                                onRunHeatmap={onRunHeatmap}
+                                isHeatmapLoading={isHeatmapLoading}
+                                onRunVisualCheck={onRunVisualCheck}
+                                previewPages={previewPages}
+                                previewLoading={previewLoading}
+                                ldmMode={ldmMode}
+                                ldmJobId={ldmJobId}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Bottom Action Bar */}
+                    <div className="flex items-center justify-between">
+                        <button 
+                            onClick={onBack}
+                            className="text-[0.6rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                        >
+                            Back to diagnostic
+                        </button>
+                        <button 
+                            onClick={onNext}
+                            className="bg-[var(--accent-color)] text-white px-12 py-5 text-[0.7rem] font-black uppercase tracking-[0.3em] hover:bg-[var(--accent-hover)] transition-all shadow-[0_15px_30px_rgba(220,0,0,0.2)]"
+                        >
+                            Complete Protocol
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Floatables */}
+            <FixDrawerV2_4
+                issue={selectedIssue}
+                onClose={() => onSelectIssue(null)}
+                onOpenAIAudit={(issue) => { setIssueForAudit(issue); setAiAuditOpen(true); }}
+                onOpenEfficiencyTips={(issue) => { setIssueForAudit(issue); setEfficiencyOpen(true); }}
+                onFixBleed={onFixBleed}
+                onConvertGrayscale={onConvertGrayscale}
+                onConvertCMYK={onConvertCMYK}
+                onRebuildPdf={onRebuildPdf}
+                selectedProfile={selectedProfile}
+                onProfileChange={onProfileChange}
+                isFixing={isRunning}
+                serverAvailable={serverAvailable}
+            />
+
+            <AIAuditModalV2_4
+                isOpen={aiAuditOpen}
+                onClose={() => setAiAuditOpen(false)}
+                issue={issueForAudit}
+                fileMeta={fileMeta}
+                result={result}
+                visualImage={null}
+                isVisualMode={false}
+                cachedResponse={null}
+                onSaveResponse={() => { }}
+            />
+
+            <EfficiencyAuditModalV2_4
+                isOpen={efficiencyOpen}
+                onClose={() => setEfficiencyOpen(false)}
+                issue={issueForAudit}
+                fileMeta={fileMeta}
+                result={result}
+            />
+        </div>
+    );
+};

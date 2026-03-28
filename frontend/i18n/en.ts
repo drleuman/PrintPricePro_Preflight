@@ -1,0 +1,350 @@
+// translations.ts (o como se llame tu archivo)
+
+export const en = {
+  // App / header
+  appName: 'PDF Preflight Check',
+
+  // Dropzone / loading
+  dragDropPrompt: 'Drag & drop your PDF here, or click to select file',
+  invalidFileType: 'Invalid file type. Please upload a PDF file.',
+  loadingFile: 'Loading PDF file...',
+  preparingFileForAnalysis: 'Preparing your file for analysis.',
+  analyzingPDF: 'Analyzing PDF...',
+  thisMayTakeAMoment: 'This may take a moment.',
+  runPreflight: 'Run Preflight',
+  or: 'or',
+  of: 'of',
+  browseYourComputer: 'browse your computer',
+  pdfMaxHint: 'PDF · max. ~50 MB',
+  selectedLabel: 'Selected PDF',
+  changeLabel: 'Change',
+  uploadTipLargePdf: 'Tip: large PDFs may take a bit longer.',
+
+  // Step titles and descriptions
+  uploadYourPdf: 'Upload Your PDF',
+  uploadDescription: 'Select a PDF file to begin the preflight check',
+  analyzingYourPdf: 'Analyzing Your PDF...',
+  analysisComplete: 'Analysis Complete',
+  fixIssuesTitle: 'Fix Issues',
+  fixIssuesDescription: 'Review and fix the {{count}} issue(s) found in your PDF',
+  fixIssuesRemaing: '{{count}} issue(s) remaining',
+  reviewAndDownload: 'Review & Download',
+  pdfProcessedReady: 'Your PDF has been processed and is ready',
+
+  // Navigation
+  back: '← Back',
+  next: 'Next →',
+  igniteEngine: 'Ignite V2 Engine',
+  fixIssues: 'Fix Issues →',
+  continueToReview: 'Continue to Review →',
+  startOver: 'Start Over',
+
+  // Status messages
+  analysisWaitMessage: 'Please wait while we check your document for print readiness',
+  issuesFoundMessage: 'Review the items that need attention below',
+  pdfLooksGood: 'Great! Your PDF looks good',
+  checkingDetails: 'Checking fonts, colors, images, and more...',
+  perfectNoIssues: 'Perfect! No issues found',
+  readyForPrinting: 'Your PDF is ready for printing',
+
+  // Summary
+  issuesSummary: 'Issues Summary',
+  overallScore: 'Overall Score',
+  issueCategories: 'Issue Categories',
+  fileLabel: 'File',
+  downloadReport: 'Download Report',
+  reanalyzePdf: '🔄 Re-analyze PDF',
+
+  // Viewer
+  pdfViewer: 'PDF Viewer',
+  pageNavigation: 'Page Navigation',
+  prevPage: 'Previous Page',
+  nextPage: 'Next Page',
+  goToPage: 'Go to page',
+  typePageNumber: 'Type page number',
+
+  // Heatmap & Visual Check
+  heatmap: 'Heatmap',
+  aiVisualCheck: 'AI Visual Check',
+  toggleTacHeatmap: 'Toggle TAC Heatmap (Total Area Coverage)',
+  aiVisualQualityCheck: 'AI Visual Quality Check',
+  analyzingInk: 'Analyzing Ink...',
+  tacLessThan280: '<280%',
+  tac280to300: '280-300%',
+  tacMoreThan300: '>300%',
+
+  // Generic labels
+  severity: 'Severity',
+  page: 'Page',
+  documentWide: 'Document-wide',
+  message: 'Message',
+  details: 'Details',
+  close: 'Close',
+  error: 'Error',
+
+  // States
+  noPdfLoaded: 'No PDF loaded. Please upload a file to begin.',
+  noIssuesToDisplay: 'No issues to display.',
+  noIssuesFound: 'No issues found. Your PDF looks perfect!',
+  noIssues: 'No issues',
+  totalIssues: 'total issues',
+
+  // Issues panel
+  issuesFound: 'Issues Found',
+  issues: 'Issues',
+  errors: 'Errors',
+  warnings: 'Warnings',
+  info: 'Info',
+  errAbbr: 'err',
+  warnAbbr: 'warn',
+  infoAbbr: 'info',
+  selectAnIssue: 'Select an issue to view its details and potential fixes.',
+  selectedIssueDetails: 'Selected Issue Details',
+  currentIssue: 'Current Issue',
+  categoryImages: 'Images',
+  categoryColor: 'Color Spaces',
+  categoryFonts: 'Fonts',
+  categoryMetadata: 'Metadata',
+  categoryTransparency: 'Transparency',
+  categoryBleedMargins: 'Bleed & Margins',
+  categoryResolution: 'Resolution',
+  categoryCompliance: 'Compliance',
+  categoryPageSetup: 'Page setup',
+  categoryAnnotations: 'Annotations',
+  categoryFormFields: 'Form fields',
+  categoryMultimedia: 'Multimedia',
+  categoryLayers: 'Layers',
+  categoryOther: 'Other',
+
+  // Quick Fixes
+  quickFixes: 'Quick Fixes',
+  aiAssistance: 'AI Assistance',
+  add3mmBleed: '🔧 Add 3mm Bleed',
+  convertToCMYK: '🎨 Convert to CMYK',
+  convertToGrayscaleBtn: '⚫ Convert to Grayscale',
+  rebuildHighRes300dpi: '🛠️ Rebuild High-Res (300 DPI)',
+  converting: 'Converting...',
+  fixing: 'Fixing...',
+
+  // CMYK Profiles
+  cmykProfile: 'CMYK Profile:',
+  genericCMYK: 'Generic CMYK',
+  coatedFogra39: 'Coated FOGRA39 (ISO 12647-2:2004)',
+  coatedFogra51: 'ISO Coated v3 (FOGRA51) - Modern Standard',
+  uncoatedFogra52: 'PSO Uncoated v3 (FOGRA52)',
+  gracol2006: 'GRACoL 2006 (Coated #1)',
+  swop2006: 'SWOP 2006 (Coated #3)',
+  uncoatedFogra29: 'Uncoated FOGRA29',
+  bleedSafe: 'Safe (Box-only / Canvas)',
+  bleedAggressive: 'Aggressive (Scale-fill)',
+  bleedMode: 'Bleed Mode:',
+  bleedSafeHint: 'Safe mode adds margin without stretching. Border may appear white. Note: Interactive elements (links/annotations) might not be preserved.',
+
+  // Optional Tools (Step 4)
+  optionalTools: 'Optional Tools',
+  additionalProcessingOptions: 'Additional processing options',
+  convertToGrayscale: 'Convert to Grayscale',
+  convertColorsToCMYK: 'Convert Colors to CMYK',
+  rebuildPdfHighRes: 'Rebuild PDF (High-Res)',
+  createBooklet: 'Create Booklet',
+  downloadProcessedPdf: 'Download Processed PDF',
+
+  // Stepper
+  stepNumber: 'Step {{number}}',
+  uploadPdf: 'Upload PDF',
+  analysis: 'Analysis',
+  review: 'Review',
+
+  // AI actions (panel / drawer)
+  explainSuggestFix: 'Explain & Suggest Fix (AI Audit)',
+  explainAndSuggestFix: 'Explain & Suggest Fix (AI Audit)',
+  getEfficiencyTips: 'Get Efficiency Tips (AI Audit)',
+  aiAuditTitle: 'AI Audit: Explain & Suggest Fixes',
+  efficiencyAuditTitle: 'AI Audit: Get Efficiency Tips',
+  fetchingAIResponse: 'Fetching AI response...',
+  aiResponse: 'AI Response',
+  aiError: 'Failed to fetch AI response. Please check your API key and try again.',
+  geminiKeyMissingError:
+    'Gemini API key is missing or invalid. AI features are disabled.',
+  billingDocLink: 'See billing documentation',
+  visualMode: 'Visual Mode',
+
+  // AI helper descriptions
+  fastestFix: 'Fastest Fix',
+  bestFix: 'Best Fix',
+  timeImpact: 'Time Impact',
+  costImpact: 'Cost Impact',
+  aiDescriptionExplain:
+    'Get a detailed explanation of this issue and step-by-step suggestions on how to fix it, including specific instructions for common tools like Adobe InDesign or Acrobat.',
+  aiDescriptionEfficiency:
+    'Discover the most efficient ways to resolve this issue. Compare the fastest fix with the best-quality fix, and understand their potential time and cost impacts.',
+
+  // Drawer / issue details
+  pageLabel: 'Page {{page}}',
+  suggestedFix: 'Suggested fix',
+  issueSummary: 'Issue Summary',
+  engineHint: 'Engine Hint',
+  drawerActions: 'Actions',
+  actions: 'Actions',
+  severityError: 'Error',
+  severityWarning: 'Warning',
+  severityInfo: 'Info',
+  issue: 'Issue',
+
+  // Hint para el bloque IA dentro del drawer
+  aiHintInDrawer:
+    'Use the AI buttons to get a detailed explanation or efficiency tips for this issue.',
+
+  // UploadStepSimple (Modern headerless)
+  aiMagicFix: 'AI Magic Fix',
+  aiMagicFixDesc: 'One click. We handle everything automatically.',
+  manualMode: 'Manual',
+  manualModeDesc: 'For advanced users who want to review issues and choose fixes.',
+  recommended: 'Recommended',
+  bestWithAi: 'Best with AI Magic Fix',
+  readyForAnalysis: 'Ready for analysis',
+  browseFiles: 'Browse files',
+  processingTime: 'Processing time',
+  processingTimeVal: '~10-60 seconds',
+  pdfLimit: 'PDF up to 50 MB',
+  magicWait: 'Wait for the magic to happen',
+  dragAndDropModern: 'Drag & drop your PDF',
+  changeFile: 'Change selected file',
+  safeProcessing: 'Safe & temporary processing',
+  continue: 'Continue',
+  headerUploadTitle: 'Upload your PDF',
+  headerUploadSubset: 'Choose AI Magic Fix (recommended) or Manual.',
+  chooseWorkflow: 'Choose workflow',
+  recommendMagicHint: 'We recommend Magic Fix for most users.',
+  uploadToContinue: 'Upload a PDF to continue.',
+  magicPoint1: 'Fixes the most common print problems',
+  magicPoint2: 'Produces a print-ready PDF you can download',
+  magicPoint3: 'No technical knowledge required',
+  tempProcessNote: 'We process your file temporarily and clean it up automatically.',
+  manualControlTip: 'FULL CONTROL OVER INDIVIDUAL FIXES AND COLOR PROFILES.',
+  serverUnavailable: 'SERVER CONNECTION REQUIRED',
+  serverUnavailableDesc: 'Color conversion (CMYK/Gray) and Magic Fix are currently unavailable. Please check your internet connection or try again later.',
+  retry: 'Retry / Reload',
+
+  // Prepress / Report labels
+  profileLabel: 'Profile:',
+  outputIntentLabel: 'OutputIntent:',
+  bleedLabel: 'Bleed:',
+  standardDpiLabel: 'Standard DPI:',
+  verified: 'Verified ✅',
+  embedded: 'Embedded',
+  real3mmBox: 'Real 3mm (Box Geometry)',
+  highEndPrint: '300 (High-End Print)',
+
+  // Technical Note
+  technicalNoteTitle: 'Prepress Technical Note',
+  technicalNoteDesc: 'This document has been professionally optimized for prepress production.',
+  outputIntentExplain: 'A valid PDF/X OutputIntent (GTS_PDFX) has been embedded to guarantee color consistency across professional RIP software.',
+  bypassExplain: 'No color conversion was applied to existing compliant objects because they already matched the requested profile.',
+  rewriteExplain: 'The file has been structurally stabilized using Ghostscript pdfwrite to ensure font embedding and xref integrity.',
+  negativeStatement: 'No further color transformations were performed after OutputIntent finalization.',
+  closeNote: 'Close Note',
+
+  // Compliance Summary Labels
+  complianceSummaryTitle: 'Prepress Compliance Summary',
+  labelCertificateId: 'Certificate ID:',
+  labelEngineVersion: 'Engine Version:',
+  labelRiskLevel: 'Risk Level:',
+  labelOutputIntent: 'Output Intent:',
+  labelStructure: 'Structure:',
+  labelConversion: 'CMYK Conversion:',
+  labelProcessing: 'Processing:',
+  labelTransparency: 'Transparency:',
+  labelBleed: 'Bleed:',
+
+  statusVerified: 'Verified (GTS_PDFX)',
+  statusSkipped: 'Skipped (Compliant)',
+  statusStabilized: 'Stabilized via Rewrite',
+  statusPreserved: 'Preserved',
+  statusApplied: 'Applied',
+
+  // Risk Levels
+  riskGreen: 'GREEN (Safe for Production)',
+  riskAttention: 'ATTENTION (Review Required)',
+  riskBlocking: 'BLOCKING (Rejected by Preflight)',
+
+  // TAC Labels
+  labelInkCoverage: 'Ink Coverage (TAC):',
+  labelMaxTac: 'Max. Ink Density:',
+  labelWorstPage: 'Worst Page:',
+  labelTacLimit: 'Density Limit:',
+  tacWarningDrying: 'Ink density may cause drying or setoff issues on press.',
+  tacVerified: 'Verified within limits',
+
+  // Overprint Labels
+  labelOverprint: 'Black Overprint:',
+  statusOverprintOk: 'Verified ✅',
+  statusOverprintRisk: 'Knockout Risk',
+  overprintWarningKnockout: 'Black text may knock out underlying inks, causing halos or misregistration.',
+  overprintWarningRegistration: 'Registration color (100% CMYK) detected in artwork, which can cause artifacts.',
+  overprintWarningRichBlack: 'Rich black text detected in small font sizes; some presses recommend K-only for sharpness.',
+
+  // Spot Color Policy Labels
+  spotTitle: 'Spot Color Policy',
+  spotLabelDetected: 'Spot Colors:',
+  spotLabelPolicy: 'Policy:',
+  spotStatusNone: 'NONE',
+  spotPolicyStrict: 'Strict CMYK (Offset)',
+  spotPolicyConvert: 'Convert to CMYK (Digital)',
+  spotRiskGreen: 'GREEN',
+  spotRiskAttention: 'ATTENTION',
+  spotRiskBlocking: 'BLOCKING',
+  spotWarnWhitelistOnly: 'Only technical spot colors detected (printer whitelist).',
+  spotWarnNonWhitelist: 'Non-whitelisted spot colors detected for this profile.',
+  spotNoteTacIncluded: 'Spots are included in the TAC estimate (spot-to-CMYK conversion).',
+  spotNoteRegistration: 'Registration color detected (/All or /Registration); forbidden in artwork.',
+  spotNoteSpotsInText: 'Spot colors detected in text; conversion may affect typographic sharpness.',
+
+  bleedMethod: 'Bleed Method:',
+  bleedMethodScale: 'Centered Scaling (V3)',
+  bleedMethodBox: 'Box Adjustment (Real Margin)',
+  bleedScaleWarning: 'Aggressive scaling detected (>4%). Safety margins are compressed.',
+
+  // Admin Dashboard
+  'admin.title': 'Admin Control Center',
+  'admin.subtitle': 'SRE COCKPIT & SYSTEM HEALTH',
+  'admin.range.24h': 'Last 24 Hours',
+  'admin.range.7d': 'Last 7 Days',
+  'admin.range.30d': 'Last 30 Days',
+  'admin.refresh.off': 'Manual Refresh',
+  'admin.tabs.overview': 'Overview',
+  'admin.tabs.tenants': 'Tenants',
+  'admin.tenants.tenant': 'Tenant Identity',
+  'admin.tenants.total': 'Traffic Volume',
+  'admin.tenants.success': 'Reliability',
+  'admin.tenants.latency': 'Sync Latency',
+  'admin.tenants.last': 'Last Pulse',
+  'admin.tabs.jobs': 'Jobs',
+  'admin.tabs.errors': 'Errors',
+  'admin.tabs.audit': 'Audit Log',
+  'admin.tabs.controls': 'Controls ⚠️',
+
+  'admin.kpi.totalJobs': 'Total Jobs',
+  'admin.kpi.successRate': 'Success Rate',
+  'admin.kpi.avgLatency': 'Avg Latency',
+  'admin.kpi.deltaRate': 'Delta Improvement',
+  'admin.kpi.costProxy': 'Cost Proxy',
+  'admin.kpi.p95Latency': 'P95 Latency',
+  'admin.kpi.queueBacklog': 'Queue Backlog',
+  'admin.kpi.oldestAge': 'Oldest Job Age',
+  'admin.queue.title': 'Queue Performance Matrix',
+
+  'admin.jobs.filterTenant': 'Filter by Tenant ID...',
+  'admin.jobs.filterType': 'Filter by Process Type...',
+  'admin.jobs.all': 'All Statuses',
+  'admin.jobs.empty': 'No transactions found',
+  'admin.audit.filterTenant': 'Search audit logs...',
+  'admin.audit.empty': 'No audit events found',
+  'admin.errors.code': 'Fault Code',
+  'admin.errors.count': 'Stack Count',
+  'admin.errors.lastSeen': 'Last Observed',
+  'common.loading': 'Loading sequence...',
+  'common.na': 'N/A',
+} as const;
+
+export type TranslationKeys = keyof typeof en;

@@ -1,0 +1,97 @@
+/* PREFLIGHT UI PORTABILITY KIT v2.4 - Tokens & Foundations */
+
+:root {
+  /* Core Tokens */
+  --pp-bg-primary: #131314;
+  --pp-bg-secondary: #0e0e0f;
+  --pp-bg-elevated: #171719;
+  --pp-bg-panel: #101011;
+  
+  --pp-text-primary: #e5e2e3;
+  --pp-text-secondary: #8d8d91;
+  --pp-text-muted: #5e5e63;
+  
+  --pp-border-subtle: rgba(255, 255, 255, 0.08);
+  --pp-border-strong: rgba(255, 255, 255, 0.14);
+  
+  --pp-accent-primary: #dc0000;
+  --pp-accent-bright: #ff2a2a;
+
+  /* Validation / State Tokens */
+  --pp-state-valid: #e5e2e3;
+  --pp-state-warning: #dc0000;
+  --pp-state-error: #ff0000;
+  --pp-state-processing: #b33a3a;
+  --pp-state-certified-bg: rgba(229, 226, 227, 0.06);
+  --pp-state-warning-bg: rgba(220, 0, 0, 0.08);
+
+  /* Spacing Scale */
+  --pp-space-4: 4px;
+  --pp-space-8: 8px;
+  --pp-space-12: 12px;
+  --pp-space-16: 16px;
+  --pp-space-24: 24px;
+  --pp-space-32: 32px;
+  --pp-space-48: 48px;
+  --pp-space-64: 64px;
+  --pp-space-96: 96px;
+}
+
+/* Typography Foundations */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@700;800&family=Space+Grotesk:wght@500;600;700;900&family=JetBrains+Mono&display=swap');
+
+.font-display { font-family: 'Manrope', sans-serif; }
+.font-technical { font-family: 'Space Grotesk', sans-serif; }
+.font-body { font-family: 'Inter', sans-serif; }
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+
+/* Base Styles for Preflight v2.4 Theme */
+.preflight-v2-4-theme {
+  background-color: var(--pp-bg-primary);
+  color: var(--pp-text-primary);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+}
+
+.preflight-v2-4-theme h1, 
+.preflight-v2-4-theme h2, 
+.preflight-v2-4-theme h3 {
+  font-family: 'Manrope', sans-serif;
+  letter-spacing: -0.05em;
+}
+
+.preflight-v2-4-theme .badge {
+  font-family: 'Space Grotesk', sans-serif;
+  text-transform: uppercase;
+  font-weight: 900;
+  letter-spacing: 0.20em;
+  font-size: 0.62rem;
+  border-radius: 0;
+  padding: 4px 12px;
+  border: 1px solid;
+}
+
+.preflight-v2-4-theme .card {
+  border-radius: 0;
+  border: 1px solid var(--pp-border-subtle);
+  background-color: var(--pp-bg-secondary);
+  padding: 24px;
+}
+
+.preflight-v2-4-theme .btn-primary {
+  background-color: var(--pp-accent-primary);
+  color: white;
+  text-transform: uppercase;
+  font-weight: 800;
+  font-family: 'Manrope', sans-serif;
+  letter-spacing: 0.18em;
+  padding: 16px 32px;
+  border-radius: 0;
+  border: none;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.preflight-v2-4-theme .btn-primary:hover {
+  background-color: var(--pp-accent-bright);
+  box-shadow: 0 10px 30px rgba(220, 0, 0, 0.25);
+}
