@@ -31,6 +31,12 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
             workerRef.current = w;
             setIsWorkerReady(true);
 
+            w.onerror = (e) => {
+                console.error('Worker runtime error', e);
+                setIsWorkerRunning(false);
+                callbacksRef.current.onError?.(e.message || 'Fatal worker execution error');
+            };
+
             w.onmessage = (ev: MessageEvent<PreflightWorkerMessage>) => {
                 const data = ev.data;
                 if (!data) return;

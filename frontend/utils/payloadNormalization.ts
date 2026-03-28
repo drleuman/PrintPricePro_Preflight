@@ -9,7 +9,7 @@ export function normalizePreflightResult(payload: any): PreflightResult | null {
 
     // 1. Identify the findings array
     let findings: any[] = [];
-    
+
     // Try various canonical and legacy locations
     const candidatePaths = [
         payload.issues,

@@ -50,13 +50,29 @@ async function enqueueJob(type, payload = {}) {
     }
   };
 
+  const authHeader = payload.userToken || identityService.getAuthHeaders().Authorization;
+  const hasAuthHeader = !!authHeader;
+  const scheme = hasAuthHeader ? authHeader.split(' ')[0] : 'None';
+  
+  console.log('[PPOS-OUTBOUND-AUTH]', {
+    hasAuthHeader,
+    scheme,
+    sub: payload.authContext?.sub || payload.authContext?.id,
+    aud: payload.authContext?.aud,
+    role: payload.authContext?.role || payload.authContext?.roles
+  });
+
   try {
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
+
     const response = await pposRequest(pposConfig.routes.jobs, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...identityService.getAuthHeaders()
-      },
+      headers,
       body: JSON.stringify(body)
     });
 
@@ -70,7 +86,9 @@ async function enqueueJob(type, payload = {}) {
 
     if (!response.ok) {
       const message = data?.error || data?.message || raw || `PPOS returned HTTP ${response.status}`;
-      throw new Error(`[QUEUE-PPOS-ERROR] ${message}`);
+      const err = new Error(`[QUEUE-PPOS-ERROR] ${message}`);
+      err.status = response.status;
+      throw err;
     }
 
     return {

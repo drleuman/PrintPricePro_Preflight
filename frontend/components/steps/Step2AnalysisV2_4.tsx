@@ -43,7 +43,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
     return (
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
             {/* Header Signal */}
-            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-[var(--border-color)] pb-6 gap-4">
                 <div>
                     <div className="ppp-phase-tag text-[var(--accent-color)] mb-1">
                         PHASE 02 / {formatLabel('FORENSIC_VALIDATION')}
@@ -58,7 +58,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                 />
             </div>
 
-            <div className="grid gap-8 lg:grid-cols-[1fr_0.7fr]">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_0.7fr]">
                 {/* Results Zone */}
                 <div className="space-y-6 min-h-[400px]">
                     {isRunning ? (
@@ -138,7 +138,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                         </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-4">
                         <button 
                             onClick={onBack}
                             className="bg-[var(--hover-bg)] text-[var(--text-secondary)] p-5 text-[0.85rem] font-black uppercase tracking-[0.2em] hover:text-[var(--text-primary)] transition-all border border-[var(--border-color)] flex items-center justify-center gap-2"
@@ -161,8 +161,8 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
 
             {/* Igniter Engine Bar */}
             {!isRunning && result && (
-                <div className="pt-10 border-t border-[var(--border-color)] flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
+                <div className="pt-10 border-t border-[var(--border-color)] flex flex-col items-center justify-center text-center md:flex-row md:items-center md:justify-between md:text-left gap-6">
+                    <div className="flex flex-col md:flex-row items-center gap-4">
                         <div className="h-10 w-10 flex items-center justify-center bg-[var(--accent-color)]/10">
                             <RocketLaunchIcon className="h-5 w-5 text-[var(--accent-color)]" />
                         </div>

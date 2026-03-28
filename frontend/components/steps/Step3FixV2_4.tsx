@@ -108,20 +108,20 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
     const [issueForAudit, setIssueForAudit] = useState<Issue | null>(null);
 
     const issues = result?.issues || [];
-    const errorCount = issues.filter(i => i.severity === 'error').length;
-    const warningCount = issues.filter(i => i.severity === 'warning').length;
+    const errorCount = issues.filter((i: Issue) => i.severity === 'error').length;
+    const warningCount = issues.filter((i: Issue) => i.severity === 'warning').length;
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 pb-24">
             {/* Header Signal */}
-            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-[var(--border-color)] pb-6 gap-4">
                 <div>
                     <div className="ppp-phase-tag text-[var(--accent-color)] mb-1">
                         PHASE 03 / RADIOLOGICAL FIX
                     </div>
                     <h2 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">TECHNICAL CORRECTION</h2>
                 </div>
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-4">
                     <StatusBadge label={`${errorCount} ERRORS`} variant={errorCount > 0 ? "warning" : "certified"} />
                     <StatusBadge label={`${warningCount} WARNINGS`} variant="processing" />
                 </div>
@@ -156,7 +156,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                 </div>
             )}
 
-            <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[380px_1fr]">
                 {/* Vertical Sidebar: Issues List */}
                 <div className="flex flex-col gap-6">
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] flex flex-col h-[650px]">
@@ -165,14 +165,14 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                             <span className="text-[0.62rem] font-mono text-[var(--text-muted)]">{issues.length} DETECTED</span>
                         </div>
                         
-                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4 custom-scrollbar break-words">
                             {issues.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center p-10 text-center opacity-30">
                                     <ShieldCheckIcon className="h-12 w-12 mb-4 text-[var(--border-color)]" />
                                     <p className="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)]">Clean Trace</p>
                                 </div>
                             ) : (
-                                issues.map((issue, idx) => (
+                                issues.map((issue: Issue, idx: number) => (
                                     <IssueRow 
                                         key={issue.id || idx}
                                         title={issue.message}
@@ -201,7 +201,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                     {/* Quick Correction Panel */}
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-6 space-y-4">
                         <div className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">System Quick-Fix</div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="flex flex-col gap-2">
                             <button onClick={() => onAutoFix({})} className="p-3 border border-[var(--border-color)] hover:border-[var(--accent-color)]/50 hover:bg-[var(--accent-color)]/5 transition-all text-[0.55rem] font-black uppercase tracking-widest flex flex-col items-center gap-2 text-[var(--text-primary)]">
                                 <SparklesIcon className="h-4 w-4 text-[var(--accent-color)]" />
                                 AI Magic
@@ -217,7 +217,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                 {/* Main Zone: Page Viewer */}
                 <div className="flex flex-col gap-6">
                     <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden h-[750px] flex flex-col">
-                        <div className="absolute top-0 left-0 right-0 p-4 z-10 flex items-center justify-between bg-[var(--bg-primary)]/90 backdrop-blur-xl border-b border-[var(--border-color)]">
+                        <div className="absolute top-0 left-0 right-0 p-4 z-10 flex flex-wrap md:flex-nowrap items-center justify-between gap-4 bg-[var(--bg-primary)]/90 backdrop-blur-xl border-b border-[var(--border-color)] overflow-hidden">
                             {/* Pagination Cluster */}
                             <div className="flex items-center gap-4 bg-[var(--bg-secondary)] px-4 py-2 border border-[var(--border-color)]">
                                 <button 
@@ -251,7 +251,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                             </div>
 
                             {/* Analysis Tools Cluster */}
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <button 
                                     onClick={onRunHeatmap} 
                                     className={`flex items-center gap-3 px-5 py-2 text-[0.6rem] font-black uppercase tracking-[0.2em] transition-all border ${
@@ -293,16 +293,16 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                     </div>
 
                     {/* Bottom Action Bar */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col-reverse md:flex-row items-center justify-between gap-4 mt-4">
                         <button 
                             onClick={onBack}
-                            className="text-[0.6rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                            className="w-full md:w-auto text-[0.6rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-4 md:p-0 text-center"
                         >
                             Back to diagnostic
                         </button>
                         <button 
                             onClick={onNext}
-                            className="bg-[var(--accent-color)] text-white px-12 py-5 text-[0.7rem] font-black uppercase tracking-[0.3em] hover:bg-[var(--accent-hover)] transition-all shadow-[0_15px_30px_rgba(220,0,0,0.2)]"
+                            className="w-full md:w-auto bg-[var(--accent-color)] text-white px-12 py-5 text-[0.7rem] font-black uppercase tracking-[0.3em] hover:bg-[var(--accent-hover)] transition-all shadow-[0_15px_30px_rgba(220,0,0,0.2)] text-center"
                         >
                             Complete Protocol
                         </button>
@@ -314,8 +314,8 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
             <FixDrawerV2_4
                 issue={selectedIssue}
                 onClose={() => onSelectIssue(null)}
-                onOpenAIAudit={(issue) => { setIssueForAudit(issue); setAiAuditOpen(true); }}
-                onOpenEfficiencyTips={(issue) => { setIssueForAudit(issue); setEfficiencyOpen(true); }}
+                onOpenAIAudit={(issue: Issue) => { setIssueForAudit(issue); setAiAuditOpen(true); }}
+                onOpenEfficiencyTips={(issue: Issue) => { setIssueForAudit(issue); setEfficiencyOpen(true); }}
                 onFixBleed={onFixBleed}
                 onConvertGrayscale={onConvertGrayscale}
                 onConvertCMYK={onConvertCMYK}

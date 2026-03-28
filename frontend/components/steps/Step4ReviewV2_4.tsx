@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PreflightResult, FileMeta, AppMode } from '../../types';
 import { StatusBadge, CertificationPanel, ActionBar } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
+import { pposFetch } from '../../lib/apiClient';
 import { PageViewer } from '../PageViewer';
 import { t } from '../../i18n';
 import { 
@@ -84,7 +85,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     return (
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 pb-24">
             {/* Header Signal */}
-            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-[var(--border-color)] pb-6 gap-4">
                 <div>
                     <div className="ppp-phase-tag text-[var(--accent-color)] mb-1">
                         PHASE 04 / {formatLabel('FINAL_CERTIFICATION')}
@@ -97,10 +98,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                 />
             </div>
 
-            <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_400px]">
                 {/* Main Content: Preview & Comparison */}
-                <div className="space-y-6">
-                    <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-1 flex items-center justify-between">
+                <div className="space-y-6 max-w-full overflow-hidden">
+                    <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-1 flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex bg-[var(--bg-primary)] p-1">
                             <button 
                                 onClick={() => setShowBeforeAfter('before')}
@@ -120,7 +121,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         </div>
                     </div>
 
-                    <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden h-[650px] flex items-center justify-center p-8 bg-[var(--bg-primary)]">
+                    <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden h-[650px] flex flex-col items-center justify-center p-2 md:p-8 bg-[var(--bg-primary)]">
                         <PageViewer 
                             file={displayFile}
                             numPages={numPages}
@@ -136,7 +137,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col-reverse md:grid md:grid-cols-2 gap-4">
                         <button 
                             onClick={onStartOver}
                             className="bg-[var(--hover-bg)] text-[var(--text-secondary)] p-5 text-[0.85rem] font-black uppercase tracking-[0.2em] hover:text-[var(--text-primary)] transition-all border border-[var(--border-color)] flex items-center justify-center gap-2"
@@ -145,13 +146,25 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         </button>
                         
                         {lastPdfUrl && (
-                            <a 
-                                href={lastPdfUrl}
-                                download={lastPdfName || 'optimized_output.pdf'}
-                                className="bg-[var(--accent-color)] text-white p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)] flex items-center justify-center gap-2"
+                            <button 
+                                onClick={async () => {
+                                    try {
+                                        const blob = await pposFetch(lastPdfUrl) as Blob;
+                                        const url = window.URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = lastPdfName || 'optimized_output.pdf';
+                                        a.click();
+                                        window.URL.revokeObjectURL(url);
+                                    } catch (err) {
+                                        console.error('Download failed', err);
+                                        alert('Failed to download artifact. Ensure you have the right permissions.');
+                                    }
+                                }}
+                                className="bg-[var(--accent-color)] text-white p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)] flex items-center justify-center gap-2 w-full"
                             >
                                 <ArrowDownTrayIcon className="h-4 w-4" /> Download Certified PDF
-                            </a>
+                            </button>
                         )}
                     </div>
                 </div>

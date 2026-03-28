@@ -44,7 +44,7 @@ async function pposRequest(path, options = {}) {
         const response = await fetch(url, mergedOptions);
         
         if (!response.ok) {
-            const errorBody = await response.text();
+            const errorBody = await response.clone().text();
             console.error(`[PPOS-API] Error response from ${url}: ${response.status} - ${errorBody}`);
         }
         

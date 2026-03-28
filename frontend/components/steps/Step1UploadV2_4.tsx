@@ -98,10 +98,10 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                 </div>
             </div>
 
-            <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.1fr_0.9fr]">
                 {/* Upload Zone */}
                 <div 
-                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragOver={(e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={onDrop}
                     onClick={() => fileInputRef.current?.click()}
@@ -115,7 +115,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                         ref={fileInputRef} 
                         className="hidden" 
                         accept=".pdf" 
-                        onChange={(e) => handleFile(e.target.files?.[0] || null)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFile(e.target.files?.[0] || null)}
                     />
 
                     {/* Subtle Pulse Overlay when empty */}
@@ -132,8 +132,8 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                                 </div>
                             </div>
                             <div className="mb-2 text-[0.8rem] font-black text-[var(--accent-color)] uppercase tracking-[0.3em]">Carrier Staged</div>
-                            <h3 className="text-2xl font-black mb-2 max-w-[340px] truncate">{fileMeta?.name || file.name}</h3>
-                            <div className="text-[0.85rem] font-mono text-[var(--text-muted)] uppercase tracking-widest flex items-center gap-3">
+                            <h3 className="text-2xl font-black mb-2 max-w-full truncate px-4">{fileMeta?.name || file.name}</h3>
+                            <div className="text-[0.85rem] font-mono text-[var(--text-muted)] uppercase tracking-widest flex flex-wrap justify-center items-center gap-3">
                                 <span>{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
                                 <span className="h-1 w-1 bg-[var(--border-color)] rounded-full" />
                                 <span>Technical PDF Carrier</span>
@@ -153,7 +153,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                             <p className="text-xl font-black mb-3 tracking-tight text-[var(--text-primary)]">Upload Production PDF</p>
                             <p className="text-[var(--text-secondary)] text-sm uppercase tracking-[0.15em] font-bold mb-8">Start validation and correction</p>
                             
-                            <div className="px-6 py-2 border border-[var(--border-color)] bg-[var(--hover-bg)] text-[0.8rem] font-mono text-[var(--text-muted)] uppercase tracking-[0.2em]">
+                            <div className="px-6 py-2 border border-[var(--border-color)] bg-[var(--hover-bg)] text-[0.8rem] text-center font-mono text-[var(--text-muted)] uppercase tracking-[0.2em] w-full max-w-full overflow-hidden text-clip whitespace-normal break-words">
                                 Drag & Drop or Click to Browse / Max: 500MB
                             </div>
                         </div>

@@ -89,6 +89,9 @@ router.post(
                 fileUrl
             });
 
+            const userToken = req.headers.authorization;
+            const authContext = req.auth || req.user || {};
+
             const job = await queue.enqueueJob('PREFLIGHT', {
                 requestId,
                 jobId,
@@ -97,7 +100,9 @@ router.post(
                 policy,
                 fileUrl,
                 filename,
-                size: req.file.size
+                size: req.file.size,
+                userToken,
+                authContext
             });
 
             console.log('[BFF][JOB-CREATE]', {
@@ -133,8 +138,9 @@ router.post(
                 error: error.message
             });
 
-            return res.status(500).json({
-                error: 'Failed to create V2 preflight job.',
+            const status = error.status || 500;
+            return res.status(status).json({
+                error: status === 403 ? 'Forbidden' : 'Failed to create V2 preflight job.',
                 message: error.message
             });
         }
@@ -172,7 +178,7 @@ router.get('/:jobId', async (req, res) => {
       {
         method: 'GET',
         headers: {
-          ...identityService.getAuthHeaders()
+          Authorization: req.headers.authorization || identityService.getAuthHeaders().Authorization
         }
       }
     );
@@ -207,7 +213,7 @@ router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
       {
         method: 'GET',
         headers: {
-          ...identityService.getAuthHeaders()
+          Authorization: req.headers.authorization || identityService.getAuthHeaders().Authorization
         }
       }
     );
