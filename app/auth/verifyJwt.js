@@ -4,6 +4,7 @@
  */
 const jwt = require('jsonwebtoken');
 
+const JWT_ALGO = process.env.JWT_ALGORITHM || 'HS256';
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET && !JWT_ALGO.startsWith('RS')) {
     if (process.env.NODE_ENV === 'production') {
@@ -11,8 +12,6 @@ if (!JWT_SECRET && !JWT_ALGO.startsWith('RS')) {
     }
     console.warn('[SECURITY] JWT_SECRET missing in verifyJwt.js. JWT validation will fail for HS256.');
 }
-const JWT_PUBLIC_KEY = process.env.JWT_PUBLIC_KEY; // For RS256
-const JWT_ALGO = process.env.JWT_ALGORITHM || 'HS256';
 const JWT_ISSUER = process.env.JWT_ISSUER || 'https://auth.printprice.pro';
 const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'ppos:control';
 

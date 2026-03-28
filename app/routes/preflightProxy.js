@@ -27,9 +27,11 @@ router.use('/', async (req, res) => {
         delete headers.host;
         delete headers.connection;
         
-        // Inject Canonical Auth Headers (JWT Bearer)
-        const authHeaders = identityService.getAuthHeaders();
-        Object.assign(headers, authHeaders);
+        // Inject Canonical Auth Headers (JWT Bearer) if not present
+        if (!headers.authorization) {
+            const authHeaders = identityService.getAuthHeaders();
+            Object.assign(headers, authHeaders);
+        }
 
         // Legacy cleanup (no longer needed if OS expects JWT)
         delete headers['x-ppos-api-key'];

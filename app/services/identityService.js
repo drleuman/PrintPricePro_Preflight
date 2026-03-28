@@ -7,7 +7,7 @@ const jwtConfig = {
     secret: process.env.JWT_SECRET || 'ppos-unsecured-dev-secret',
     algorithm: 'HS256',
     issuer: 'https://auth.printprice.pro',
-    audience: 'ppos:core',
+    audience: 'ppos:control',
     expiresIn: '24h'
 };
 
@@ -16,8 +16,14 @@ const jwtConfig = {
  * Used by authRoutes for user sessions.
  */
 function generateInternalToken(payload, expiresIn = '24h') {
+    // Ensure 'sub' is present for PPOS compatibility (maps to userId)
+    const normalizedPayload = {
+      ...payload,
+      sub: payload.userId || payload.sub
+    };
+
     return jwt.sign(
-        payload,
+        normalizedPayload,
         jwtConfig.secret,
         {
             algorithm: jwtConfig.algorithm,
