@@ -14,7 +14,7 @@ if (!JWT_SECRET && !JWT_ALGO.startsWith('RS')) {
 const JWT_PUBLIC_KEY = process.env.JWT_PUBLIC_KEY; // For RS256
 const JWT_ALGO = process.env.JWT_ALGORITHM || 'HS256';
 const JWT_ISSUER = process.env.JWT_ISSUER || 'https://auth.printprice.pro';
-const JWT_AUDIENCE = process.env.JWT_AUDIENCE || ['ppos:control', 'ppos:core'];
+const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'ppos:control';
 
 /**
  * Verifies a JWT token against configured secret/public key and claims.
@@ -33,11 +33,20 @@ function verifyJwt(token) {
             audience: JWT_AUDIENCE
         });
     } catch (err) {
+        // --- DIAGNOSTIC TRACE ONLY ---
+        const decoded = jwt.decode(token) || {};
         console.error(`[JWT-AUTH-ERROR] Validation failed: ${err.message}`, {
-            issuerExpected: JWT_ISSUER,
-            audienceExpected: JWT_AUDIENCE,
-            algo: JWT_ALGO,
-            tokenSnippet: token.substring(0, 10) + '...'
+            claims: {
+                iss: decoded.iss,
+                aud: decoded.aud,
+                azp: decoded.azp,
+                client_id: decoded.client_id,
+                sub: decoded.sub ? 'present' : 'missing'
+            },
+            expected: {
+                iss: JWT_ISSUER,
+                aud: JWT_AUDIENCE
+            }
         });
         throw new Error(`JWT_VALIDATION_FAILED: ${err.message}`);
     }
