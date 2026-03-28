@@ -22,16 +22,25 @@ router.use('/', async (req, res) => {
     console.log(`[PROXY][PPOS] ${req.method} ${req.url} -> ${targetUrl}`);
 
     try {
-        const headers = { ...req.headers };
+        const headers = {
+          ...req.headers,
+          authorization: req.headers.authorization
+        };
+
         // Clean headers to avoid conflicts
         delete headers.host;
         delete headers.connection;
         
         // Inject Canonical Auth Headers (JWT Bearer) if not present
-        if (!headers.authorization) {
+        if (!req.headers.authorization) {
             const authHeaders = identityService.getAuthHeaders();
             Object.assign(headers, authHeaders);
         }
+
+        console.log('[PROXY AUTH]', {
+          incoming: req.headers.authorization?.slice(0, 30),
+          outgoing: headers.authorization?.slice(0, 30)
+        });
 
         // Legacy cleanup (no longer needed if OS expects JWT)
         delete headers['x-ppos-api-key'];

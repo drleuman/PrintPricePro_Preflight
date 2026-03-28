@@ -76,29 +76,24 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                                 <div className="border border-[var(--border-color)] bg-[var(--bg-panel)] p-10 flex flex-col items-center text-center">
                                     <div className="h-16 w-16 bg-[var(--accent-color)] mb-6 flex items-center justify-center">
                                         <CheckCircleIcon className="h-10 w-10 text-white" />
-                                    </div>
-                                    <h3 className="text-2xl font-extrabold mb-2 text-[var(--text-primary)]">Zero Deviations Detected</h3>
-                                    <p className="text-[var(--text-secondary)] text-sm">File meets all production enforcement rules.</p>
+                            {issues.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center p-12 text-center opacity-40">
+                                    <ShieldCheckIcon className="h-12 w-12 mb-4 text-[var(--accent-color)]" />
+                                    <p className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">Clean Trace</p>
+                                    <p className="text-[0.65rem] font-mono text-[var(--text-muted)] mt-2 uppercase tracking-widest">No structural issues detected</p>
                                 </div>
-                            )}
-
-                            {hasIssues && (
-                                <>
-                                    <div className="ppp-phase-tag text-[var(--accent-color)] mb-2">
-                                        Detected Variance Report
-                                    </div>
-                                    <div className="grid gap-4">
-                                        {issues.map((issue, idx) => (
-                                            <IssueRow 
-                                                key={idx} 
-                                                title={issue.message || issue.title || 'Inconsistent signal'} 
-                                                type={(issue.category || issue.type || 'GENERAL').toString()} 
-                                                severity={issue.severity === 'error' ? 'warning' : 'certified'}
-                                                fixAvailable={true}
-                                            />
-                                        ))}
-                                    </div>
-                                </>
+                            ) : (
+                                <div className="space-y-4">
+                                    {issues.map((issue, idx) => (
+                                        <IssueRow 
+                                            key={(issue as any).id || idx}
+                                            title={issue.message}
+                                            type={(issue.category || 'GENERAL').toString().toUpperCase()}
+                                            fixAvailable={issue.severity !== 'error'}
+                                            severity={issue.severity as any}
+                                        />
+                                    ))}
+                                </div>
                             )}
                         </div>
                     ) : (

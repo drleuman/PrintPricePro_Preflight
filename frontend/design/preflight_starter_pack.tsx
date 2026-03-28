@@ -10,7 +10,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
  * 3. Use this as a starter, not as the final full app
  */
 
-type BadgeVariant = 'default' | 'warning' | 'certified' | 'processing';
+type BadgeVariant = 'default' | 'warning' | 'certified' | 'processing' | 'error' | 'info';
 
 export const PPOSLogo = ({ className = "h-8 w-8" }: { className?: string }) => (
   <svg 
@@ -42,11 +42,13 @@ export const StatusBadge = ({
     warning: 'border-[var(--accent-color)] text-[var(--accent-color)] bg-[var(--accent-color)]/10',
     certified: 'border-[var(--border-color)] text-[var(--text-primary)] bg-[var(--hover-bg)]',
     processing: 'border-[var(--border-color)] text-[var(--accent-color)] bg-[var(--accent-color)]/5',
+    error: 'border-[#ff0000] text-[#ff0000] bg-[#ff0000]/10',
+    info: 'border-[var(--text-muted)] text-[var(--text-muted)] bg-[var(--bg-tertiary)]',
   };
 
   return (
     <span
-      className={`inline-flex items-center gap-2 border px-3 py-1 text-[0.82rem] leading-[1.2] font-black tracking-[0.2em] uppercase font-mono break-words whitespace-normal text-center ${styles[variant]}`}
+      className={`inline-flex items-center gap-2 border px-3 py-1 text-[0.82rem] leading-[1.2] font-black tracking-[0.2em] uppercase font-mono break-words whitespace-normal text-center ${styles[variant] || styles.default}`}
     >
       {variant === 'processing' && (
         <span className="h-1.5 w-1.5 shrink-0 animate-pulse bg-[#dc0000]" />
@@ -231,35 +233,46 @@ export const IssueRow = ({
   title: string;
   type: string;
   fixAvailable?: boolean;
-  severity?: 'warning' | 'certified';
+  severity?: BadgeVariant;
   onClick?: () => void;
   active?: boolean;
-}) => (
-  <div 
-    onClick={onClick}
-    className={`border-l-2 p-5 md:p-6 transition-all duration-300 cursor-pointer ${
-        active 
-        ? 'border-[var(--accent-color)] bg-[rgba(220,0,0,0.05)] shadow-[0_0_20px_rgba(220,0,0,0.1)]' 
-        : 'border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-[var(--text-muted)] hover:bg-[var(--hover-bg)]'
-    }`}
-  >
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-3">
-        <StatusBadge label={type} variant={severity === 'warning' ? 'warning' : 'certified'} />
-        {fixAvailable ? (
-          <StatusBadge label="FIX AVAILABLE" variant="processing" />
-        ) : (
-          <StatusBadge label="MANUAL REVIEW" variant="default" />
-        )}
-      </div>
-      <span className="text-[0.88rem] uppercase tracking-[0.16em] text-[var(--text-muted)] font-mono">
-        ISSUE / DETECTED
-      </span>
-    </div>
+}) => {
+  const borderStyles = {
+    error: 'border-l-[#ff0000]',
+    warning: 'border-l-[var(--accent-color)]',
+    info: 'border-l-[var(--text-muted)]',
+    certified: 'border-l-[var(--border-color)]',
+    default: 'border-l-[var(--border-color)]',
+    processing: 'border-l-[var(--accent-color)]'
+  };
 
-    <h4 className="text-lg font-bold tracking-tight">{title}</h4>
-  </div>
-);
+  return (
+    <div 
+      onClick={onClick}
+      className={`border-l-4 p-5 md:p-6 transition-all duration-300 cursor-pointer ${borderStyles[severity] || borderStyles.default} ${
+          active 
+          ? 'bg-[rgba(220,0,0,0.05)] shadow-[0_0_20px_rgba(220,0,0,0.1)]' 
+          : 'bg-[var(--bg-secondary)] hover:bg-[var(--hover-bg)]'
+      }`}
+    >
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <StatusBadge label={type} variant={severity} />
+          {fixAvailable ? (
+            <StatusBadge label="FIX AVAILABLE" variant="processing" />
+          ) : (
+            <StatusBadge label="MANUAL REVIEW" variant="default" />
+          )}
+        </div>
+        <span className="text-[0.88rem] uppercase tracking-[0.16em] text-[var(--text-muted)] font-mono">
+          ISSUE / {severity.toUpperCase()}
+        </span>
+      </div>
+  
+      <h4 className="text-lg font-bold tracking-tight">{title}</h4>
+    </div>
+  );
+};
 
 export const BeforeAfterPanel = () => (
   <div className="grid gap-6 lg:grid-cols-2">

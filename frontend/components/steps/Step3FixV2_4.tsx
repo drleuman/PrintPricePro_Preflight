@@ -165,22 +165,22 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                             <span className="text-[0.62rem] font-mono text-[var(--text-muted)]">{issues.length} DETECTED</span>
                         </div>
                         
-                        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
+                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4 custom-scrollbar">
                             {issues.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center p-10 text-center opacity-30">
-                                    <ShieldCheckIcon className="h-12 w-12 mb-4 text-[var(--text-muted)]" />
+                                    <ShieldCheckIcon className="h-12 w-12 mb-4 text-[var(--border-color)]" />
                                     <p className="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)]">Clean Trace</p>
                                 </div>
                             ) : (
                                 issues.map((issue, idx) => (
                                     <IssueRow 
-                                        key={idx}
-                                        title={issue.message || issue.title || 'Unknown deviation'}
-                                        type={(issue.category || issue.type || 'GENERAL').toString().toUpperCase()}
-                                        severity={issue.severity === 'error' ? 'warning' : 'certified'}
-                                        fixAvailable={true}
-                                        onClick={() => onSelectIssue(issue)}
+                                        key={issue.id || idx}
+                                        title={issue.message}
+                                        type={(issue.category || 'GENERAL').toString().toUpperCase()}
+                                        fixAvailable={issue.severity !== 'error'}
+                                        severity={issue.severity as any}
                                         active={selectedIssue?.id === issue.id}
+                                        onClick={() => onSelectIssue(issue)}
                                     />
                                 ))
                             )}

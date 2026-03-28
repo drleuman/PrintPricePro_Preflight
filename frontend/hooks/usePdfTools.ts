@@ -3,6 +3,8 @@ import { pposFetch } from '../lib/apiClient';
 import { createBooklet } from '../utils/imposition';
 import { PreflightResult } from '../types';
 
+import { normalizePreflightResult } from '../utils/payloadNormalization';
+
 type PdfToolsCallbacks = {
     onStatus?: (status: string, progress: number) => void;
     onComplete?: (result: PreflightResult) => void;
@@ -51,7 +53,15 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
     }, [startV2Preflight]);
 
     const getJobStatus = useCallback(async (jobId: string) => {
-        return await pposFetch<any>(`/api/v2/jobs/${jobId}`);
+        const res = await pposFetch<any>(`/api/v2/jobs/${jobId}`);
+        // Log job data for debugging trace inventory regression
+        console.log('[LDM] Job Data:', jobId, {
+           status: res.status,
+           hasReport: !!res.report,
+           hasFindings: !!res.findings,
+           hasIssues: !!res.issues
+        });
+        return res;
     }, []);
 
     const pollJob = useCallback(async (jobId: string, onProgress?: (p: number) => void) => {
@@ -97,9 +107,14 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
 
     const handleV2JobComplete = useCallback(async (jobId: string) => {
         const res = await pollJob(jobId);
-        if (callbacks?.onComplete && (res as any).report) {
-            callbacks.onComplete((res as any).report);
+        
+        if (callbacks?.onComplete) {
+            const normalizedResult = normalizePreflightResult(res);
+            if (normalizedResult) {
+                callbacks.onComplete(normalizedResult);
+            }
         }
+        
         return res;
     }, [pollJob, callbacks]);
 
