@@ -6,8 +6,8 @@ const jwt = require('jsonwebtoken');
 const jwtConfig = {
     secret: process.env.JWT_SECRET || 'ppos-unsecured-dev-secret',
     algorithm: 'HS256',
-    issuer: 'printprice-preflight-app',
-    audience: 'ppos-api',
+    issuer: 'https://auth.printprice.pro',
+    audience: 'ppos:core',
     expiresIn: '24h'
 };
 
