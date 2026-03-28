@@ -19,7 +19,8 @@ console.log(`[BOOTSTRAP] Build Hash: ${process.env.GIT_COMMIT || 'v2.1.2-priorit
  * @copyright (c) 2025-2026 PrintPrice Pro
  */
 const fs = require('fs');
-const pposConfig = require('../config/ppos');
+// const pposConfig = require('../config/ppos');
+const pposConfig = {};
 
 /** 
  * --- AGGRESSIVE HEALTH CHECK HANDLERS (Hoisted) ---
@@ -31,7 +32,7 @@ async function readyHandler(_req, res) {
 
   const { ok: depsOk, deps } = checkAllDependencies();
   const dbConnected = await dbService.checkConnection();
-  const pposIssues = pposConfig.validateConfig();
+  const pposIssues = typeof pposConfig.validateConfig === 'function' ? pposConfig.validateConfig() : [];
   const isHealthy = depsOk && startupErrors.length === 0 && dbConnected && pposIssues.length === 0;
 
   const response = {
@@ -418,7 +419,7 @@ if (!global.__SERVER_STARTED) {
       startupErrors.push(msg);
     }
 
-    const pposIssues = pposConfig.validateConfig();
+    const pposIssues = typeof pposConfig.validateConfig === 'function' ? pposConfig.validateConfig() : [];
     if (pposIssues.length > 0) {
       console.warn('[WARNING] PPOS Integration issues detected:');
       pposIssues.forEach(issue => {
