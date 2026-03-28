@@ -3,7 +3,7 @@ import { PreflightResult, FileMeta, Issue } from '../../types';
 import { StatusBadge, IssueRow, ActionBar } from '../../design/preflight_starter_pack';
 import { PageViewer } from '../PageViewer';
 import { FixDrawerV2_4 } from '../FixDrawerV2_4';
-import { AIAuditModalV2_4 } from '../AIAuditModalV2_4';
+import { AIInspectorPanel } from '../AIInspectorPanel';
 import { EfficiencyAuditModalV2_4 } from '../EfficiencyAuditModalV2_4';
 import { AutoFixProPanel } from '../AutoFixProPanel';
 import { t } from '../../i18n';
@@ -326,16 +326,12 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                 serverAvailable={serverAvailable}
             />
 
-            <AIAuditModalV2_4
+            <AIInspectorPanel
                 isOpen={aiAuditOpen}
                 onClose={() => setAiAuditOpen(false)}
                 issue={issueForAudit}
                 fileMeta={fileMeta}
                 result={result}
-                visualImage={null}
-                isVisualMode={false}
-                cachedResponse={null}
-                onSaveResponse={() => { }}
             />
 
             <EfficiencyAuditModalV2_4
