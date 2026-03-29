@@ -29,6 +29,11 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
                 method: 'POST',
                 body: formData,
             });
+
+            console.log('[CREATE-JOB][FRONTEND]', {
+                returnedJobId: res.jobId || res.job_id || res.id
+            });
+
             return res;
         } finally {
             setIsServerRunning(false);
@@ -37,17 +42,17 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
 
     const convertToGrayscaleServer = useCallback(async (file: File) => {
         const res = await startV2Preflight(file, 'DIGITAL_RGB');
-        return res.job_id || res.jobId;
+        return res.jobId || res.job_id || res.id;
     }, [startV2Preflight]);
 
     const convertColorServer = useCallback(async (file: File, profile: string = 'OFFSET_MODERN_COATED') => {
         const res = await startV2Preflight(file, profile);
-        return res.job_id || res.jobId;
+        return res.jobId || res.job_id || res.id;
     }, [startV2Preflight]);
 
     const rebuildPdfServer = useCallback(async (file: File, dpi: number = 300) => {
         const res = await startV2Preflight(file, 'OFFSET_MODERN_COATED');
-        return res.job_id || res.jobId;
+        return res.jobId || res.job_id || res.id;
     }, [startV2Preflight]);
 
     const autoFixServer = useCallback(async (
@@ -55,10 +60,11 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
         opts?: any
     ): Promise<{ jobId: string }> => {
         const res = await startV2Preflight(file, opts?.policy || 'OFFSET_MODERN_COATED');
-        return { jobId: res.job_id || res.jobId };
+        return { jobId: res.jobId || res.job_id || res.id };
     }, [startV2Preflight]);
 
     const getJobStatus = useCallback(async (jobId: string) => {
+        console.log('[POLL][JOB-ID]', { jobId });
         const res = await pposFetch<any>(`/api/v2/jobs/${jobId}`);
         // Log job data for debugging trace inventory regression
         console.log('[LDM] Job Data:', jobId, {

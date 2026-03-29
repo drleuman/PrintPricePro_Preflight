@@ -82,7 +82,23 @@ function AppContent() {
 
   const { isAuthenticated } = useAuth();
 
+  const activeJobIdRef = useRef<string | null>(null);
+
   // ---------- Helpers ----------
+
+  const resetResidues = useCallback(() => {
+    activeJobIdRef.current = null;
+    setResult(null);
+    setSelectedIssue(null);
+    setHeatmapData(null);
+    setHeatmapLoading(false);
+    setAutoFixBefore(null);
+    setAutoFixAfter(null);
+    setAutoFixReport(null);
+    setAutoFixRunId(null);
+    setLdmStatus('');
+    // Note: file and fileMeta are generally kept
+  }, []);
 
   const cleanupUrl = useCallback(() => {
     if (lastPdfUrlRef.current) {
@@ -125,6 +141,14 @@ function AppContent() {
   } = usePdfTools({
     onStatus: (st: string) => { setLdmStatus(st); },
     onComplete: (res: any) => {
+      // Point of Application (Validation C): Check jobId BEFORE any state change
+      const completedJobId = res.meta?.jobId;
+      if (completedJobId && activeJobIdRef.current && completedJobId !== activeJobIdRef.current) {
+        console.warn('[APP][STALE-JOB-DETECTED]', { completed: completedJobId, active: activeJobIdRef.current });
+        return;
+      }
+
+      console.log('[APP] Preflight Job Complete:', res);
       setResult(res);
       setCurrentStep(2); // Analysis
       setLdmActive(false);
@@ -135,7 +159,7 @@ function AppContent() {
     setFile(newFile);
     if (!newFile) {
       setFileMeta(null);
-      setResult(null);
+      resetResidues();
       setCurrentStep(1);
       return;
     }
@@ -150,19 +174,37 @@ function AppContent() {
   const handlePageChange = (page: number) => setCurrentPage(page);
 
   const handleV2Start = useCallback(async () => {
-    if (!file) return;
+    if (!file || ldmActive) return;
+    
+    resetResidues();
     setLdmActive(true);
     setLdmStatus('Starting PrintPrice OS Engine...');
+    
     try {
       const res = await startV2Preflight(file, selectedPolicy);
-      if (res.job_id || res.jobId) {
-        await handleV2JobComplete(res.job_id || res.jobId);
+      const jobId = res.jobId || res.job_id || res.id;
+      
+      if (jobId) {
+        activeJobIdRef.current = jobId;
+        console.log('[APP][V2-START] Job ID set to', jobId);
+        setLdmStatus('Engine Processing...');
+        await handleV2JobComplete(jobId);
+        
+        // Final guard if onComplete didn't finish or for synchronous success
+        if (activeJobIdRef.current === jobId) {
+          setLdmActive(false);
+        }
       }
     } catch (err: any) {
-      alert('Engine Start Failed: ' + err.message);
+      // Point of Application (Validation A): Protect error states
+      console.error('[APP][V2-ERROR]', err);
+      // Only show error and clear LDM if it's the current active job
+      // Note: During upload/start, jobId might be unknown yet, so we allow if ldmActive is true
       setLdmActive(false);
+      setLdmStatus('');
+      alert('Engine Processing Error: ' + err.message);
     }
-  }, [file, selectedPolicy, startV2Preflight, handleV2JobComplete]);
+  }, [file, selectedPolicy, startV2Preflight, handleV2JobComplete, resetResidues, ldmActive]);
 
   const handleAutoFix = useCallback(async (opts: any) => {
     if (!file) return;
@@ -330,6 +372,7 @@ function AppContent() {
                     onFileSelect={onFileSelect}
                     onNext={(mode) => {
                       setAppMode(mode);
+                      resetResidues(); // Clear previous residues
                       setCurrentStep(2); // Ensure we go to Analysis (Step 2)
                       if (mode === 'ai' && file) {
                         handleV2Start();
@@ -346,12 +389,16 @@ function AppContent() {
                     file={file}
                     fileMeta={fileMeta}
                     result={result}
-                    isRunning={isWorkerRunning}
+                    isRunning={isWorkerRunning || ldmActive}
+                    appMode={appMode}
                     onRunAnalysis={() => file && fileMeta && runAnalysis(file, fileMeta)}
-                    onRunV2Analysis={() => file && startV2Preflight(file, selectedPolicy)}
+                    onRunV2Analysis={handleV2Start}
                     onNext={() => setCurrentStep(3)}
                     onSkipToReview={() => setCurrentStep(4)}
-                    onBack={() => setCurrentStep(1)}
+                    onBack={() => {
+                      resetResidues();
+                      setCurrentStep(1);
+                    }}
                   />
                 )}
 

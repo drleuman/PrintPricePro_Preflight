@@ -7,8 +7,11 @@ import { PreflightResult, Issue, Severity } from '../types';
 export function normalizePreflightResult(payload: any): PreflightResult | null {
     if (!payload) return null;
 
+    console.log('[STEP2][RAW-PAYLOAD]', payload);
+
     // 1. Identify the findings array
     let findings: any[] = [];
+    let sourceFound = false;
 
     // Try various canonical and legacy locations
     const candidatePaths = [
@@ -27,13 +30,10 @@ export function normalizePreflightResult(payload: any): PreflightResult | null {
     ];
 
     for (const candidate of candidatePaths) {
-        if (Array.isArray(candidate) && candidate.length > 0) {
+        if (Array.isArray(candidate)) {
             findings = candidate;
-            break;
-        }
-        // If it's an empty array, we keep looking but treat it as a valid (but empty) source if no others found
-        if (Array.isArray(candidate) && findings.length === 0) {
-            findings = candidate;
+            sourceFound = true;
+            if (candidate.length > 0) break;
         }
     }
 
@@ -58,28 +58,36 @@ export function normalizePreflightResult(payload: any): PreflightResult | null {
         };
     });
 
+    const pageCount = payload.meta?.pageCount ?? payload.report?.meta?.pageCount ?? payload.pages?.length ?? payload.report?.pages?.length ?? null;
+
     // 3. Construct the PreflightResult
-    return {
-        score: payload.score ?? payload.report?.score ?? (normalizedIssues.length === 0 ? 100 : Math.max(0, 100 - normalizedIssues.length * 10)),
-        summary: payload.summary ?? payload.report?.summary ?? (normalizedIssues.length === 0 ? 'Clean Trace: No issues detected.' : `${normalizedIssues.length} issues identified.`),
+    const result: PreflightResult = {
+        score: payload.score ?? payload.report?.score ?? (sourceFound && normalizedIssues.length === 0 ? 100 : (normalizedIssues.length > 0 ? Math.max(0, 100 - normalizedIssues.length * 10) : 0)),
+        summary: payload.summary ?? payload.report?.summary ?? (sourceFound ? (normalizedIssues.length === 0 ? 'Clean Trace: No issues detected.' : `${normalizedIssues.length} issues identified.`) : 'Analysis data unavailable'),
         issues: normalizedIssues,
         pages: payload.pages ?? payload.report?.pages ?? [],
         categorySummaries: payload.categorySummaries ?? payload.report?.categorySummaries ?? [],
         meta: {
-            fileName: payload.meta?.fileName ?? payload.report?.meta?.fileName ?? 'unknown',
-            fileSize: payload.meta?.fileSize ?? payload.report?.meta?.fileSize ?? 0,
-            pageCount: payload.meta?.pageCount ?? payload.report?.meta?.pageCount ?? 0
+            fileName: payload.meta?.fileName ?? payload.report?.meta?.fileName ?? payload.filename ?? 'unknown',
+            fileSize: payload.meta?.fileSize ?? payload.report?.meta?.fileSize ?? payload.size ?? 0,
+            pageCount: pageCount ?? 0,
+            jobId: payload.jobId ?? payload.job_id ?? payload.id
         }
     };
+
+    // Add a flag for UI to detect missing forensic data
+    (result as any)._forensicDataMissing = !sourceFound;
+
+    console.log('[STEP2][NORMALIZED]', result);
+    return result;
 }
 
 /**
  * Maps various backend severity strings to canonical frontend Severity enum.
  */
-function mapSeverity(sev: string): Severity | string {
-    const s = sev.toLowerCase();
+function mapSeverity(sev: string): Severity {
+    const s = String(sev || 'info').toLowerCase();
     if (['error', 'critical', 'fatal', 'blocker'].includes(s)) return Severity.ERROR;
     if (['warning', 'alert', 'warn'].includes(s)) return Severity.WARNING;
-    if (['info', 'notice', 'advisory', 'low'].includes(s)) return Severity.INFO;
-    return sev; // Preserve unknown severities as requested
+    return Severity.INFO;
 }

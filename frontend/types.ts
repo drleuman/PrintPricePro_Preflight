@@ -139,6 +139,7 @@ export interface PreflightResult {
     fileName: string;
     fileSize: number;
     pageCount: number;
+    jobId?: string;
   };
   productionReport?: {
     spine?: any;

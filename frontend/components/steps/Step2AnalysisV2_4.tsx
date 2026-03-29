@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { PreflightResult, FileMeta } from '../../types';
+import { PreflightResult, FileMeta, AppMode } from '../../types';
 import { StatusBadge, IssueRow } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
-import { RocketLaunchIcon, ArrowPathIcon, ChevronLeftIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { RocketLaunchIcon, ArrowPathIcon, ChevronLeftIcon, ShieldCheckIcon, CommandLineIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '../../i18n';
 
 interface Step2AnalysisV2_4Props {
@@ -10,6 +10,7 @@ interface Step2AnalysisV2_4Props {
     fileMeta: FileMeta | null;
     result: PreflightResult | null;
     isRunning: boolean;
+    appMode: AppMode;
     onRunAnalysis: () => void;
     onRunV2Analysis: () => void;
     onNext: () => void;
@@ -22,6 +23,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
     fileMeta,
     result,
     isRunning,
+    appMode,
     onRunAnalysis,
     onRunV2Analysis,
     onNext,
@@ -30,16 +32,33 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
 }) => {
     const { t } = useTranslation();
 
-    // Auto-run analysis when entering this step
+    // Trace auto-run decisions to catch leak regression
     useEffect(() => {
-        if (file && !result && !isRunning) {
+        const canAutoRun = file && !result && !isRunning && appMode !== 'ai';
+        
+        console.log('[STEP2][AUTORUN-CHECK]', {
+            hasFile: !!file,
+            hasResult: !!result,
+            isRunning,
+            appMode,
+            canAutoRun
+        });
+
+        if (canAutoRun) {
             onRunAnalysis();
         }
-    }, [file, result, isRunning, onRunAnalysis]);
+    }, [file, result, isRunning, appMode, onRunAnalysis]);
 
     const issues = result?.issues || [];
     const hasErrors = issues.filter(i => i.severity === 'error').length > 0;
     const hasIssues = issues.length > 0;
+    const dataMissing = (result as any)?._forensicDataMissing;
+
+    console.log('[STEP2][RENDER]', {
+        issues: issues.length,
+        hasResult: !!result,
+        dataMissing
+    });
 
     return (
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
@@ -50,12 +69,12 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                         {t('stepNumber', { number: 2 })} / {t('step.analysis.forensic')}
                     </div>
                     <h2 className="text-3xl font-extrabold tracking-tight">
-                        {isRunning ? t('analyzingYourPdf').toUpperCase() : t('analysisComplete').toUpperCase()}
+                        {isRunning ? t('analyzingYourPdf').toUpperCase() : dataMissing ? (t('analysisFailed' as any) || 'ANALYSIS FAILED').toUpperCase() : t('analysisComplete').toUpperCase()}
                     </h2>
                 </div>
                 <StatusBadge 
-                    label={isRunning ? t('analyzingPDF') : hasIssues ? t('analysis').toUpperCase() + " " + t('error').toUpperCase() : t('verified').toUpperCase()} 
-                    variant={isRunning ? "processing" : hasIssues ? "warning" : "certified"} 
+                    label={isRunning ? t('analyzingPDF') : dataMissing ? (t('missingData' as any) || 'MISSING DATA').toUpperCase() : hasIssues ? t('analysis').toUpperCase() + " " + t('error').toUpperCase() : t('verified').toUpperCase()} 
+                    variant={isRunning ? "processing" : dataMissing ? "warning" : hasIssues ? "warning" : "certified"} 
                 />
             </div>
 
@@ -70,6 +89,12 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                             </div>
                             <h3 className="text-xl font-bold mb-2 text-[var(--text-primary)]">{t('analysis.loading')}</h3>
                             <p className="text-sm text-[var(--text-secondary)] max-w-[280px]">{t('analysis.loading.desc')}</p>
+                        </div>
+                    ) : dataMissing ? (
+                        <div className="flex flex-col items-center justify-center h-full border border-[var(--border-color)] bg-[var(--hover-bg)] p-12 text-center opacity-60">
+                            <CommandLineIcon className="h-12 w-12 mb-4 text-[var(--text-muted)]" />
+                            <h3 className="text-lg font-bold mb-2">{t('forensics.dataUnavailable' as any) || 'Forensics Data Unavailable'}</h3>
+                            <p className="text-xs text-[var(--text-secondary)] max-w-[320px]">{t('forensics.dataUnavailableDesc' as any) || 'Analysis completed but no forensic data could be parsed.'}</p>
                         </div>
                     ) : result ? (
                         <div className="space-y-4">
@@ -106,30 +131,30 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                     {result && !isRunning ? (
                         <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8">
                             <div className="mb-8 flex items-center justify-between">
-                                <StatusBadge label={hasIssues ? t('step.analysis.invalidCarrier') : t('step.analysis.validCarrier')} variant={hasIssues ? "warning" : "certified"} />
-                                <span className="text-[0.88rem] font-mono text-[var(--text-secondary)] uppercase tracking-widest">{formatLabel(`TRACE_V2.4_${Math.floor(Math.random() * 9999)}`)}</span>
+                                <StatusBadge label={dataMissing ? (t('step.analysis.noData' as any) || 'NO DATA') : hasIssues ? t('step.analysis.invalidCarrier') : t('step.analysis.validCarrier')} variant={dataMissing || hasIssues ? "warning" : "certified"} />
+                                <span className="text-[0.88rem] font-mono text-[var(--text-secondary)] uppercase tracking-widest">{formatLabel(`TRACE_V2.4_${result.score || 'ERR'}`)}</span>
                             </div>
 
                             <div className="space-y-6">
                                 <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
                                     <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">{t('step.analysis.criticalErrors')}</span>
                                     <span className={`text-xl font-black ${hasErrors ? 'text-[var(--accent-color)]' : 'text-[var(--text-primary)]'}`}>
-                                        {issues.filter(i => i.severity === 'error').length}
+                                        {dataMissing ? '?' : issues.filter(i => i.severity === 'error').length}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
                                     <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">{t('step.analysis.warningsFound')}</span>
                                     <span className="text-xl font-black text-[var(--text-primary)]">
-                                        {issues.filter(i => i.severity === 'warning').length}
+                                        {dataMissing ? '?' : issues.filter(i => i.severity === 'warning').length}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
                                     <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">{t('step.analysis.pageDensity')}</span>
-                                    <span className="text-xl font-black text-[var(--text-primary)]">{result.meta?.pageCount || result.pages?.length || '?'}</span>
+                                    <span className="text-xl font-black text-[var(--text-primary)]">{result.meta?.pageCount || '?'}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">{t('step.analysis.finalSignal')}</span>
-                                    <StatusBadge label={hasIssues ? t('step.analysis.actionRequired') : t('step.analysis.ready')} variant={hasIssues ? "warning" : "certified"} />
+                                    <StatusBadge label={dataMissing ? (t('missing' as any) || 'MISSING') : hasIssues ? t('step.analysis.actionRequired') : t('step.analysis.ready')} variant={dataMissing || hasIssues ? "warning" : "certified"} />
                                 </div>
                             </div>
                         </div>
@@ -174,9 +199,10 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                     </div>
                     <button 
                         onClick={onRunV2Analysis}
-                        className="border border-[var(--accent-color)]/30 px-6 py-3 text-[0.8rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)] hover:bg-[var(--accent-color)]/5 transition-all"
+                        disabled={isRunning}
+                        className="border border-[var(--accent-color)]/30 px-6 py-3 text-[0.8rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)] hover:bg-[var(--accent-color)]/5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                        {t('step.analysis.ignite')}
+                        {isRunning ? (t('processing' as any) || 'PROCESSING').toUpperCase() : (t('step.analysis.ignite' as any) || 'IGNITE').toUpperCase()}
                     </button>
                 </div>
             )}

@@ -4,7 +4,6 @@ const express = require('express');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
 
 const queue = require('../services/queue');
 const ppos = require('../../config/ppos');
@@ -51,68 +50,33 @@ router.post(
       }
 
       const policy = req.body?.policy || 'OFFSET_MODERN_COATED';
-      const jobId = uuidv4();
-      const assetId = jobId;
       const filename = safeFilename(req.file.originalname || 'document.pdf');
-
-      const inputDir = path.join(
-        ppos.storageBase,
-        'tenants',
-        tenantId,
-        'jobs',
-        jobId,
-        'input'
-      );
-
-      ensureDir(inputDir);
-
-      const finalPath = path.join(inputDir, filename);
-
-      fs.copyFileSync(req.file.path, finalPath);
-      fs.unlinkSync(req.file.path);
-
-      const fileUrl = path.posix.join(
-        ppos.storageBase,
-        'tenants',
-        tenantId,
-        'jobs',
-        jobId,
-        'input',
-        filename
-      );
-
-      console.log('[BFF][UPLOAD]', {
-        requestId,
-        tenantId,
-        tempPath: req.file.path,
-        finalPath,
-        fileUrl
-      });
 
       const authContext = req.auth || req.user || {};
       const internalToken = identityService.getAuthHeaders(authContext).Authorization;
 
       const job = await queue.enqueueJob('PREFLIGHT', {
         requestId,
-        jobId,
-        assetId,
         tenantId,
         policy,
-        fileUrl,
         filename,
-        filePath: finalPath, // Pass the physical path for multipart reconstruction
+        filePath: req.file.path, // Use the multer temp file path directly
         size: req.file.size,
         userToken: internalToken,
         authContext
       });
 
-      console.log('[BFF][JOB-CREATE]', {
+      console.log('[BFF][JOB-CREATE-SUCCESS]', {
         requestId,
         tenantId,
         jobId: job.id,
         policy,
-        fileUrl,
         status: job.status
+      });
+
+      // Cleanup the temp file from multer
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.warn(`[BFF][CLEANUP][WARN] Failed to delete temp file ${req.file.path}:`, err.message);
       });
 
       return res.status(201).json({
@@ -122,8 +86,7 @@ router.post(
         tenantId,
         policy,
         input: {
-          assetId,
-          fileUrl,
+          assetId: job.id,
           filename,
           size: req.file.size
         }

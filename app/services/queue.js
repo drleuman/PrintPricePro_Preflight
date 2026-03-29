@@ -31,13 +31,13 @@ function normalizeInput(payload = {}) {
   const filename = payload.filename || payload.original_filename || 'document.pdf';
   const assetId = payload.assetId || payload.asset_id || normalizeJobId(payload);
 
-  if (!fileUrl) {
+  if (!fileUrl && !payload.filePath) {
     throw new Error('[QUEUE-CONTRACT-ERROR] Missing required fileUrl/file_url for V2 job creation.');
   }
 
   return {
     assetId,
-    fileUrl,
+    fileUrl: fileUrl || null,
     filename,
     size: payload.size || payload.file_size || null
   };
@@ -57,9 +57,6 @@ async function enqueueJob(type, payload = {}) {
   const userIdentity = payload.authContext2 || payload.authContext || {};
 
   const body = {
-    id: jobId,
-    jobId,
-    tenantId,
     job_type: type || 'PREFLIGHT',
     policy: payload.policy || 'OFFSET_MODERN_COATED',
     input,
@@ -69,6 +66,11 @@ async function enqueueJob(type, payload = {}) {
       timestamp: new Date().toISOString()
     }
   };
+
+  if (jobId) {
+    body.id = jobId;
+    body.jobId = jobId;
+  }
 
   /**
    * REFACTOR: Never use raw payload.userToken for PPOS communication.
@@ -93,7 +95,7 @@ async function enqueueJob(type, payload = {}) {
 
     // Determine if we should send as multipart/form-data
     if (payload.filePath && fs.existsSync(payload.filePath)) {
-      console.log(`[QUEUE][MULTIPART] Reconstructing job creation request for ${jobId}`);
+      console.log(`[QUEUE][MULTIPART] Reconstructing job creation request${jobId ? ' for ' + jobId : ''}`);
       
       const fileBuffer = await fs.promises.readFile(payload.filePath);
       const fileMimeType = payload.mimeType || 'application/pdf';
@@ -103,8 +105,10 @@ async function enqueueJob(type, payload = {}) {
       const form = new FormData();
       
       // Scalar fields
-      form.append('id', jobId);
-      form.append('jobId', jobId);
+      if (jobId) {
+        form.append('id', jobId);
+        form.append('jobId', jobId);
+      }
       form.append('tenantId', tenantId);
       form.append('job_type', type || 'PREFLIGHT');
       form.append('policy', payload.policy || 'OFFSET_MODERN_COATED');
@@ -129,7 +133,6 @@ async function enqueueJob(type, payload = {}) {
         fileSize: fileBuffer.length,
         fileName,
         fileMimeType,
-        formDataType: typeof FormData,
         usingNativeFormData: true
       });
 
@@ -162,6 +165,8 @@ async function enqueueJob(type, payload = {}) {
       data = { raw };
     }
 
+    console.log('[CREATE-JOB][UPSTREAM]', data);
+
     if (!response.ok) {
       const message = data?.error || data?.message || raw || `PPOS returned HTTP ${response.status}`;
       const err = new Error(`[QUEUE-PPOS-ERROR] ${message}`);
@@ -169,8 +174,19 @@ async function enqueueJob(type, payload = {}) {
       throw err;
     }
 
+    // Extraction order as per requirements: jobId -> job_id -> id
+    const canonicalJobId = data.jobId || data.job_id || data.id;
+
+    if (!canonicalJobId) {
+      console.error('[CREATE-JOB][FAILURE] No canonical job ID in response', data);
+      throw new Error("PPOS did not return jobId");
+    }
+
+    console.log('[CREATE-JOB][BFF-RETURN]', { jobId: canonicalJobId });
+
     return {
-      id: data.id || data.jobId || jobId,
+      id: canonicalJobId,
+      jobId: canonicalJobId,
       status: data.status || 'QUEUED',
       raw: data
     };
