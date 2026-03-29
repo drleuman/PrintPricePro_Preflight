@@ -156,16 +156,16 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                 </div>
             )}
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[380px_1fr]">
+            <div className="flex flex-col lg:flex-row gap-6 w-full">
                 {/* Vertical Sidebar: Issues List */}
-                <div className="flex flex-col gap-6">
-                    <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] flex flex-col h-[650px]">
+                <div className="flex flex-col gap-6 w-full lg:w-[380px] shrink-0">
+                    <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] flex flex-col h-[550px]">
                         <div className="p-4 border-b border-[var(--border-color)] flex items-center justify-between bg-[var(--hover-bg)]">
                             <span className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">{t('step.fix.inventory')}</span>
                             <span className="text-[0.62rem] font-mono text-[var(--text-muted)]">{issues.length} {t('issues').toUpperCase()}</span>
                         </div>
                         
-                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4 custom-scrollbar break-words">
+                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 custom-scrollbar break-words">
                             {issues.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center p-10 text-center opacity-30">
                                     <ShieldCheckIcon className="h-12 w-12 mb-4 text-[var(--border-color)]" />
@@ -199,9 +199,9 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                     </div>
 
                     {/* Quick Correction Panel */}
-                    <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-6 space-y-4">
+                    <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-4 space-y-4">
                         <div className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">System Quick-Fix</div>
-                        <div className="flex flex-col gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                             <button onClick={() => onAutoFix({})} className="p-3 border border-[var(--border-color)] hover:border-[var(--accent-color)]/50 hover:bg-[var(--accent-color)]/5 transition-all text-[0.55rem] font-black uppercase tracking-widest flex flex-col items-center gap-2 text-[var(--text-primary)]">
                                 <SparklesIcon className="h-4 w-4 text-[var(--accent-color)]" />
                                 AI Magic
@@ -215,8 +215,8 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                 </div>
 
                 {/* Main Zone: Page Viewer */}
-                <div className="flex flex-col gap-6">
-                    <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden h-[750px] flex flex-col">
+                <div className="flex flex-col gap-6 flex-1 min-w-0">
+                    <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden h-[600px] flex flex-col">
                         <div className="absolute top-0 left-0 right-0 p-4 z-10 flex flex-wrap md:flex-nowrap items-center justify-between gap-4 bg-[var(--bg-primary)]/90 backdrop-blur-xl border-b border-[var(--border-color)] overflow-hidden">
                             {/* Pagination Cluster */}
                             <div className="flex items-center gap-4 bg-[var(--bg-secondary)] px-4 py-2 border border-[var(--border-color)]">

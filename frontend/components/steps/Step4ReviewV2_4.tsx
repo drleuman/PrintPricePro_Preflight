@@ -98,9 +98,9 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                 />
             </div>
 
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_400px]">
+            <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
                 {/* Main Content: Preview & Comparison */}
-                <div className="space-y-6 max-w-full overflow-hidden">
+                <div className="space-y-6 flex-1 min-w-0">
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-1 flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex bg-[var(--bg-primary)] p-1">
                             <button 
@@ -121,7 +121,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         </div>
                     </div>
 
-                    <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden h-[650px] flex flex-col items-center justify-center p-2 md:p-8 bg-[var(--bg-primary)]">
+                    <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden h-[600px] flex flex-col items-center justify-center p-2 md:p-8 bg-[var(--bg-primary)]">
                         <PageViewer 
                             file={displayFile}
                             numPages={numPages}
@@ -170,7 +170,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                 </div>
 
                 {/* Sidebar: Certification & Meta */}
-                <div className="space-y-6">
+                <div className="space-y-6 w-full lg:w-[380px] shrink-0">
                     {/* Compliance Panel */}
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8 space-y-8">
                         <div className="flex items-center justify-between">

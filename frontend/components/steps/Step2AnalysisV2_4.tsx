@@ -58,11 +58,11 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                 />
             </div>
 
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_0.7fr] items-start">
+            <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
                 {/* Results Zone */}
-                <div className="space-y-6 min-h-[400px]">
+                <div className="space-y-6 min-h-[400px] w-full lg:flex-[1.2]">
                     {isRunning ? (
-                        <div className="flex flex-col items-center justify-center h-full border border-[var(--border-color)] bg-[var(--bg-secondary)] p-20 text-center">
+                        <div className="flex flex-col items-center justify-center h-full border border-[var(--border-color)] bg-[var(--bg-secondary)] p-12 text-center">
                             <div className="h-20 w-20 mb-8 flex items-center justify-center border border-[var(--accent-color)]/30 relative">
                                 <div className="absolute inset-0 animate-pulse border-2 border-[var(--accent-color)]/50" />
                                 <div className="h-2 w-2 bg-[var(--accent-color)] animate-ping" />
@@ -93,7 +93,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                             )}
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center h-full border border-[var(--border-color)] p-20 text-center">
+                        <div className="flex flex-col items-center justify-center h-full border border-[var(--border-color)] p-12 text-center">
                             <ArrowPathIcon className="h-12 w-12 text-[var(--text-muted)] animate-spin mb-4" />
                             <p className="text-[var(--text-secondary)] text-sm">{t('analysis.initializing')}</p>
                         </div>
@@ -101,7 +101,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                 </div>
 
                 {/* Summary / Stats Zone */}
-                <div className="space-y-8">
+                <div className="space-y-8 w-full lg:flex-[0.8]">
                     {result && !isRunning ? (
                         <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8">
                             <div className="mb-8 flex items-center justify-between">
