@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { LockClosedIcon, ShieldCheckIcon, CpuChipIcon, EnvelopeIcon, UserIcon, ArrowRightIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { LockClosedIcon, ShieldCheckIcon, EnvelopeIcon, ArrowRightIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { PPOSLogo } from '../design/preflight_starter_pack';
+import { useTranslation } from '../i18n';
 
 type AuthMode = 'LOGIN' | 'INITIALIZE' | 'MAGIC';
 
 export const AuthOverlayV2_4: React.FC = () => {
+    const { t } = useTranslation();
     const { isAuthenticated, login } = useAuth();
     const [mode, setMode] = useState<AuthMode>('LOGIN');
     const [loading, setLoading] = useState(false);
@@ -38,10 +40,10 @@ export const AuthOverlayV2_4: React.FC = () => {
             if (res.ok) {
                 login(data.token, data.user);
             } else {
-                setError(data.message || 'Incorrect email or password.');
+                setError(data.message || t('auth.error.invalid'));
             }
         } catch (err) {
-            setError('Unable to connect. Please try again.');
+            setError(t('auth.error.connection'));
         } finally {
             setLoading(false);
         }
@@ -64,10 +66,10 @@ export const AuthOverlayV2_4: React.FC = () => {
                         <PPOSLogo className="w-14 h-14 border border-white/10 p-3 bg-white/5 shadow-[0_0_30px_rgba(255,255,255,0.02)]" />
                         <div className="space-y-3">
                             <h2 className="text-3xl font-black tracking-tight text-white">
-                                {mode === 'LOGIN' ? 'Welcome Back' : 'Join PrintPrice OS'}
+                                {mode === 'LOGIN' ? t('auth.welcome') : t('auth.join')}
                             </h2>
                             <p className="text-[#a0a0a5] text-[0.85rem] font-medium leading-relaxed">
-                                Secure access to your Print workspace
+                                {t('auth.secureWorkspace')}
                             </p>
                         </div>
                     </div>
@@ -84,8 +86,8 @@ export const AuthOverlayV2_4: React.FC = () => {
                         {mode === 'INITIALIZE' && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
                                 <div className="space-y-1">
-                                    <label className="text-[0.7rem] font-black text-white uppercase tracking-[0.15em]">Select your role</label>
-                                    <p className="text-[#6b6b70] text-[0.65rem]">This helps us tailor your experience</p>
+                                    <label className="text-[0.7rem] font-black text-white uppercase tracking-[0.15em]">{t('auth.selectRole')}</label>
+                                    <p className="text-[#6b6b70] text-[0.65rem]">{t('auth.roleTailor')}</p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     {['Author', 'Publisher', 'Print House', 'Developer'].map(r => {
@@ -108,7 +110,7 @@ export const AuthOverlayV2_4: React.FC = () => {
                         {/* Main Inputs */}
                         <div className="space-y-5">
                             <div className="space-y-2">
-                                <label className="text-[0.7rem] font-black text-white uppercase tracking-[0.15em]">Email</label>
+                                <label className="text-[0.7rem] font-black text-white uppercase tracking-[0.15em]">{t('auth.email')}</label>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
                                         <EnvelopeIcon className="h-4 w-4 text-[#6b6b70] group-focus-within:text-[#FF0000] transition-colors duration-300" />
@@ -119,14 +121,14 @@ export const AuthOverlayV2_4: React.FC = () => {
                                         className="h-[56px] w-full bg-[#0c0c0d] border border-white/10 pl-14 pr-6 text-[0.9rem] text-white outline-none focus:border-[#FF0000] focus:shadow-[0_0_20px_rgba(255,0,0,0.05)] transition-all duration-300 placeholder:text-[#3a3a3c] font-medium"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        placeholder="Enter your email"
+                                        placeholder={t('auth.emailPlaceholder')}
                                     />
                                 </div>
                             </div>
 
                             {mode !== 'MAGIC' && (
                                 <div className="space-y-2">
-                                    <label className="text-[0.7rem] font-black text-white uppercase tracking-[0.15em]">Password</label>
+                                    <label className="text-[0.7rem] font-black text-white uppercase tracking-[0.15em]">{t('auth.password')}</label>
                                     <div className="relative group">
                                         <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
                                             <LockClosedIcon className="h-4 w-4 text-[#6b6b70] group-focus-within:text-[#FF0000] transition-colors duration-300" />
@@ -137,7 +139,7 @@ export const AuthOverlayV2_4: React.FC = () => {
                                             className="h-[56px] w-full bg-[#0c0c0d] border border-white/10 pl-14 pr-6 text-[0.9rem] text-white outline-none focus:border-[#FF0000] focus:shadow-[0_0_20px_rgba(255,0,0,0.05)] transition-all duration-300 placeholder:text-[#3a3a3c] font-medium"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            placeholder="Enter your password"
+                                            placeholder={t('auth.passwordPlaceholder')}
                                         />
                                     </div>
                                 </div>
@@ -149,16 +151,16 @@ export const AuthOverlayV2_4: React.FC = () => {
                             <button 
                                 type="submit"
                                 disabled={loading}
-                                className={`h-[64px] w-full bg-[#FF0000] hover:bg-[#FF3333] active:bg-[#CC0000] text-white text-[0.8rem] font-black uppercase tracking-[0.3em] transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-4 shadow-[0_4px_20px_rgba(255,0,0,0.2)]`}
+                                className={`h-[64px] w-full bg-[#FF0000] hover:bg-[#FF3333] active:bg-[#CC0000] text-white text-[0.8rem] font-black uppercase tracking-[0.3em] transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-4 shadow-[0_4px_20px_rgba(255,0,0,0.2)] group`}
                             >
                                 {loading ? (
                                     <span className="animate-pulse flex items-center gap-2">
                                         <ArrowPathIcon className="w-5 h-5 animate-spin" />
-                                        Verifying...
+                                        {t('common.verifying')}
                                     </span>
                                 ) : (
                                     <>
-                                        <span>{mode === 'LOGIN' ? 'Log In' : mode === 'MAGIC' ? 'Send Link' : 'Create Account'}</span>
+                                        <span>{mode === 'LOGIN' ? t('auth.login') : mode === 'MAGIC' ? t('auth.sendLink') : t('auth.register')}</span>
                                         <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                     </>
                                 )}
@@ -166,7 +168,7 @@ export const AuthOverlayV2_4: React.FC = () => {
                             
                             <div className="flex flex-col items-center space-y-5 pt-2">
                                 <div className="flex items-center gap-3 text-[0.7rem] font-bold uppercase tracking-widest text-[#6b6b70]">
-                                    <span>{mode === 'LOGIN' ? "Don’t have an account?" : "Already have an account?"}</span>
+                                    <span>{mode === 'LOGIN' ? t('auth.noAccount') : t('auth.hasAccount')}</span>
                                     <button 
                                         type="button"
                                         onClick={() => setMode(m => {
@@ -175,7 +177,7 @@ export const AuthOverlayV2_4: React.FC = () => {
                                         })}
                                         className="text-[#FF0000] hover:text-[#FF3333] hover:underline underline-offset-4 transition-all duration-300"
                                     >
-                                        {mode === 'LOGIN' ? 'Create Account' : 'Back to login'}
+                                        {mode === 'LOGIN' ? t('auth.register') : t('auth.backToLogin')}
                                     </button>
                                 </div>
 
@@ -187,7 +189,7 @@ export const AuthOverlayV2_4: React.FC = () => {
                                     })}
                                     className="text-[0.6rem] font-bold text-[#444448] hover:text-[#88888e] transition-colors uppercase tracking-[0.2em]"
                                 >
-                                    {mode === 'MAGIC' ? 'Use standard login' : 'Request magic access link'}
+                                    {mode === 'MAGIC' ? t('auth.useStandard') : t('auth.requestMagic')}
                                 </button>
                             </div>
                         </div>
@@ -197,7 +199,7 @@ export const AuthOverlayV2_4: React.FC = () => {
                 {/* Secure Footer Indicator */}
                 <div className="px-12 py-6 bg-[#0c0c0d] border-t border-white/5 flex items-center justify-center gap-3">
                     <ShieldCheckIcon className="h-3.5 w-3.5 text-[#32D74B]" />
-                    <span className="text-[0.6rem] font-mono text-[#5e5e63] tracking-widest uppercase">Verified Secure Connection</span>
+                    <span className="text-[0.6rem] font-mono text-[#5e5e63] tracking-widest uppercase">{t('auth.secureConnection')}</span>
                 </div>
             </div>
         </div>

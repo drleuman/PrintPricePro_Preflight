@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import type { PreflightResult, Issue, Severity } from '../types';
+import type { PreflightResult, Issue } from '../types';
 import { ShieldCheckIcon, XCircleIcon, Cog6ToothIcon, RocketLaunchIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { formatLabel } from '../utils/formatters';
+import { useTranslation } from '../i18n';
 
 type Props = {
   before: PreflightResult | null;
@@ -51,14 +52,6 @@ function fmtMs(ms: any) {
   return `${(n / 1000).toFixed(2)} s`;
 }
 
-function opLabel(op: string) {
-  if (op === 'cmyk') return 'Convert → CMYK (PSO Coated v3 / FOGRA51)';
-  if (op === 'gray') return 'Convert → Grayscale';
-  if (op === 'rebuild') return 'Rebuild / Upscale';
-  if (op === 'bleed') return 'Add Bleed Canvas';
-  return op;
-}
-
 export const AutoFixProPanel: React.FC<Props> = ({
   before,
   after,
@@ -71,6 +64,7 @@ export const AutoFixProPanel: React.FC<Props> = ({
   compareEnabled,
   onToggleCompare
 }) => {
+  const { t } = useTranslation();
   const beforeCounts = useMemo(() => countBySeverity(before?.issues || []), [before]);
   const afterCounts = useMemo(() => countBySeverity(after?.issues || []), [after]);
 
@@ -102,18 +96,33 @@ export const AutoFixProPanel: React.FC<Props> = ({
   const steps = Array.isArray(report?.steps) ? report.steps : [];
   const warnings = Array.isArray(report?.warnings) ? report.warnings : [];
 
+  const opLabel = (op: string) => {
+    if (op === 'cmyk') return t('autofix.cmyk');
+    if (op === 'rebuild') return t('autofix.rebuild');
+    if (op === 'bleed') return t('autofix.bleed');
+    return op;
+  };
+
   return (
     <div className="mb-4 rounded-xl bg-[var(--bg-primary)] shadow-sm border border-[var(--border-color)] overflow-hidden">
       <div className="px-4 py-2 bg-[var(--bg-tertiary)] border-b border-[var(--border-color)] flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldCheckIcon className="w-6 h-6 text-[var(--accent-color)]" />
-          <div className="font-black text-[var(--text-primary)] text-sm uppercase tracking-tight">AI Magic Fix Engine</div>
+          <div className="font-black text-[var(--text-primary)] text-sm uppercase tracking-tight">{t('autofix.title')}</div>
         </div>
         <div className="flex items-center gap-3">
-          {report?.blocked && <div className="text-[10px] font-bold text-white bg-[var(--accent-color)] px-1.5 py-0.5 rounded-full uppercase tracking-wider">Blocked</div>}
-          {runId && <div className="text-[10px] font-medium text-[var(--accent-color)] bg-[var(--accent-color)]/10 px-1.5 py-0.5 rounded-full">Run #{runId}</div>}
+          {report?.blocked && (
+            <div className="text-[10px] font-bold text-white bg-[var(--accent-color)] px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+              {t('autofix.blocked')}
+            </div>
+          )}
+          {runId && (
+            <div className="text-[10px] font-medium text-[var(--accent-color)] bg-[var(--accent-color)]/10 px-1.5 py-0.5 rounded-full">
+               {t('autofix.runId', { id: runId })}
+            </div>
+          )}
           <div className="text-[10px] text-gray-500">
-            {report?.endedAt ? `Done: ${new Date(report.endedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+            {report?.endedAt ? t('autofix.done', { time: new Date(report.endedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }) : ''}
           </div>
         </div>
       </div>
@@ -129,7 +138,7 @@ export const AutoFixProPanel: React.FC<Props> = ({
               className="w-3.5 h-3.5 text-[var(--accent-color)] rounded border-[var(--border-color)]"
             />
             <span className="text-[11px] font-bold text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors uppercase tracking-wider">
-              Compare Before/After
+              {t('autofix.compare')}
             </span>
           </label>
         </div>
@@ -141,10 +150,9 @@ export const AutoFixProPanel: React.FC<Props> = ({
             <div className="flex items-start gap-3">
               <XCircleIcon className="w-8 h-8 text-[var(--accent-color)]" />
               <div>
-                <div className="font-bold text-[var(--text-primary)] text-lg">AI Magic Fix Blocked by Raster Guard</div>
+                <div className="font-bold text-[var(--text-primary)] text-lg">{t('autofix.rasterGuard')}</div>
                 <p className="text-[var(--text-secondary)] text-sm mt-1">
-                  The operation resulted in a rasterized PDF (images only), which violates the default strict vector policy.
-                  Rasterized text is not selectable and may print with lower quality.
+                  {t('autofix.rasterGuardDesc')}
                 </p>
                 {onToggleOption && (
                   <div className="mt-3">
@@ -155,9 +163,9 @@ export const AutoFixProPanel: React.FC<Props> = ({
                         onChange={() => onToggleOption('allowRasterOutput')}
                         className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
                       />
-                      <span className="text-sm font-bold text-red-900">Allow Raster Output (Override Guard)</span>
+                      <span className="text-sm font-bold text-red-900">{t('autofix.allowRaster')}</span>
                     </label>
-                    <p className="text-xs text-red-700 ml-6 mt-1">Check this and run again if you accept rasterization.</p>
+                    <p className="text-xs text-red-700 ml-6 mt-1">{t('autofix.allowRasterHint')}</p>
                   </div>
                 )}
               </div>
@@ -168,32 +176,32 @@ export const AutoFixProPanel: React.FC<Props> = ({
         {!report && options && onToggleOption && (
           <div className="mb-4 p-3 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-color)]">
             <div className="text-[11px] font-black text-[var(--text-muted)] mb-2 uppercase tracking-widest flex items-center gap-2">
-              <Cog6ToothIcon className="w-4 h-4 text-[var(--text-muted)]" /> Options
+              <Cog6ToothIcon className="w-4 h-4 text-[var(--text-muted)]" /> {t('autofix.options')}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2">
               <label className="flex items-center gap-2 cursor-pointer group">
                 <input type="checkbox" checked={options.safeOnly} onChange={() => onToggleOption('safeOnly')} className="w-3 h-3 text-red-600 rounded" />
-                <span className="text-[10px] font-bold text-gray-600 group-hover:text-red-900 transition-colors">Safe fixes</span>
+                <span className="text-[10px] font-bold text-gray-600 group-hover:text-red-900 transition-colors">{t('autofix.safeFixes')}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer group">
                 <input type="checkbox" checked={options.aggressive} onChange={() => onToggleOption('aggressive')} className="w-3 h-3 text-red-600 rounded" />
-                <span className="text-[10px] font-bold text-gray-600 group-hover:text-red-900 transition-colors">Aggressive</span>
+                <span className="text-[10px] font-bold text-gray-600 group-hover:text-red-900 transition-colors">{t('autofix.aggressive')}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer group">
                 <input type="checkbox" checked={options.forceBleed} onChange={() => onToggleOption('forceBleed')} className="w-3 h-3 text-red-600 rounded" />
-                <span className="text-[10px] font-bold text-gray-600 group-hover:text-red-900 transition-colors">+3mm Bleed</span>
+                <span className="text-[10px] font-bold text-gray-600 group-hover:text-red-900 transition-colors">{t('autofix.bleed')}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer group">
                 <input type="checkbox" checked={options.forceCmyk} onChange={() => onToggleOption('forceCmyk')} className="w-3 h-3 text-red-600 rounded" />
-                <span className="text-[10px] font-bold text-gray-600 group-hover:text-red-900 transition-colors">CMYK (PSO V3)</span>
+                <span className="text-[10px] font-bold text-gray-600 group-hover:text-red-900 transition-colors">{t('autofix.cmyk')}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer group">
                 <input type="checkbox" checked={options.forceRebuild} onChange={() => onToggleOption('forceRebuild')} className="w-3 h-3 text-red-600 rounded" />
-                <span className="text-[10px] font-bold text-gray-600 group-hover:text-red-900 transition-colors">300 DPI rebuild</span>
+                <span className="text-[10px] font-bold text-gray-600 group-hover:text-red-900 transition-colors">{t('autofix.rebuild')}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer group">
                 <input type="checkbox" checked={options.flatten} onChange={() => onToggleOption('flatten')} className="w-3 h-3 text-red-600 rounded" />
-                <span className="text-[10px] font-bold text-gray-600 group-hover:text-red-900 transition-colors">Flatten Transp.</span>
+                <span className="text-[10px] font-bold text-gray-600 group-hover:text-red-900 transition-colors">{t('autofix.flatten')}</span>
               </label>
             </div>
             {onRun && (
@@ -203,7 +211,7 @@ export const AutoFixProPanel: React.FC<Props> = ({
                   disabled={isRunning}
                   className="px-4 py-1.5 bg-[var(--accent-color)] hover:bg-[var(--accent-color)]/90 disabled:bg-gray-400 text-white text-[11px] font-black uppercase tracking-widest rounded-md shadow-sm transition-all active:scale-95 flex items-center gap-2"
                 >
-                  {isRunning ? 'Magic in progress...' : <><RocketLaunchIcon className="w-4 h-4" /> Start AI Magic Fix</>}
+                  {isRunning ? t('autofix.magicProgress') : <><RocketLaunchIcon className="w-4 h-4" /> {t('autofix.startMagic')}</>}
                 </button>
               </div>
             )}
@@ -215,15 +223,15 @@ export const AutoFixProPanel: React.FC<Props> = ({
           <div className="flex flex-col gap-3">
             <div className="rounded-xl bg-[var(--bg-primary)] p-3 border border-[var(--border-color)] shadow-sm relative overflow-hidden flex items-center justify-between">
               <div className="absolute top-0 left-0 w-1 h-full bg-blue-400"></div>
-              <div className="text-sm font-bold text-[var(--text-primary)]">Preflight Score</div>
+              <div className="text-sm font-bold text-[var(--text-primary)]">{t('autofix.score')}</div>
               <div className="flex items-center gap-3">
                 <div className="flex flex-col items-center">
-                  <div className="text-[9px] text-gray-400 uppercase font-bold">Before</div>
+                  <div className="text-[9px] text-gray-400 uppercase font-bold">{t('autofix.before')}</div>
                   <div className="text-xl font-bold text-gray-400">{scoreBefore ?? '—'}</div>
                 </div>
                 <div className="text-gray-300 text-lg">→</div>
                 <div className="flex flex-col items-center">
-                  <div className="text-[9px] text-red-500 uppercase font-bold">After</div>
+                  <div className="text-[9px] text-red-500 uppercase font-bold">{t('autofix.after')}</div>
                   <div className={`text-2xl font-extrabold ${scoreDelta && scoreDelta > 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {scoreAfter ?? '—'}
                   </div>
@@ -237,22 +245,22 @@ export const AutoFixProPanel: React.FC<Props> = ({
             </div>
 
             <div className="rounded-xl bg-[var(--bg-primary)] p-3 border border-[var(--border-color)] shadow-sm flex flex-col justify-center">
-              <div className="text-sm font-bold text-[var(--text-primary)] mb-2">Fix Impact</div>
+              <div className="text-sm font-bold text-[var(--text-primary)] mb-2">{t('autofix.impact')}</div>
               <div className="flex justify-between items-center gap-2">
                 <div className="flex flex-col items-center bg-gray-50 rounded px-2 py-1 flex-1">
-                  <div className="text-[9px] text-red-400 uppercase font-bold">Critical</div>
+                  <div className="text-[9px] text-red-400 uppercase font-bold">{t('autofix.critical')}</div>
                   <div className="text-sm font-bold text-gray-900">
                     {beforeCounts.error} <span className="text-gray-300">→</span> <span className={afterCounts.error < beforeCounts.error ? 'text-green-600' : ''}>{afterCounts.error}</span>
                   </div>
                 </div>
                 <div className="flex flex-col items-center bg-gray-50 rounded px-2 py-1 flex-1">
-                  <div className="text-[9px] text-amber-500 uppercase font-bold">Warn</div>
+                  <div className="text-[9px] text-amber-500 uppercase font-bold">{t('autofix.warn')}</div>
                   <div className="text-sm font-bold text-gray-900">
                     {beforeCounts.warning} <span className="text-gray-300">→</span> <span className={afterCounts.warning < beforeCounts.warning ? 'text-green-600' : ''}>{afterCounts.warning}</span>
                   </div>
                 </div>
                 <div className="flex flex-col items-center bg-gray-50 rounded px-2 py-1 flex-1">
-                  <div className="text-[9px] text-gray-400 uppercase font-bold">Info</div>
+                  <div className="text-[9px] text-gray-400 uppercase font-bold">{t('autofix.info')}</div>
                   <div className="text-sm font-bold text-gray-900">
                     {beforeCounts.info} <span className="text-gray-300">→</span> {afterCounts.info}
                   </div>
@@ -263,9 +271,9 @@ export const AutoFixProPanel: React.FC<Props> = ({
 
           {/* Category deltas */}
           <div className="rounded-xl bg-[var(--bg-primary)] p-3 border border-[var(--border-color)] shadow-sm">
-            <div className="text-sm font-bold text-[var(--text-primary)] mb-2">Improvements by Category</div>
+            <div className="text-sm font-bold text-[var(--text-primary)] mb-2">{t('autofix.improvements')}</div>
             {categoryDiffs.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-xs text-gray-400 italic">No issues detected to fix.</div>
+              <div className="h-full flex items-center justify-center text-xs text-gray-400 italic">{t('autofix.noIssues')}</div>
             ) : (
               <div className="space-y-2">
                 {categoryDiffs.filter(r => r.before > 0).map((r) => (
@@ -291,18 +299,18 @@ export const AutoFixProPanel: React.FC<Props> = ({
           {/* Steps applied */}
           <div className="rounded-xl bg-[var(--bg-primary)] p-3 border border-[var(--border-color)] shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-sm font-bold text-[var(--text-primary)]">Fix Pipeline</div>
-              {report?.duration_total_ms && <div className="text-[10px] text-gray-400">Total: {fmtMs(report.duration_total_ms)}</div>}
+              <div className="text-sm font-bold text-[var(--text-primary)]">{t('autofix.pipeline')}</div>
+              {report?.duration_total_ms && <div className="text-[10px] text-gray-400">{t('autofix.total')}: {fmtMs(report.duration_total_ms)}</div>}
             </div>
 
             {steps.length === 0 && !isRunning ? (
-              <div className="h-full flex items-center justify-center text-xs text-gray-400 italic">Queueing pipeline...</div>
+              <div className="h-full flex items-center justify-center text-xs text-gray-400 italic">{t('autofix.queueing')}</div>
             ) : (
               <div className="space-y-1.5 max-h-[140px] overflow-custom overflow-y-auto pr-1">
                 {isRunning && steps.length === 0 && (
                   <div className="flex flex-col items-center py-2 bg-indigo-50 rounded-lg animate-pulse">
                     <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mb-1"></div>
-                    <div className="text-[10px] text-indigo-700 font-bold uppercase tracking-wider">Initializing...</div>
+                    <div className="text-[10px] text-indigo-700 font-bold uppercase tracking-wider">{t('autofix.initializing')}</div>
                   </div>
                 )}
                 {steps.map((s: any, idx: number) => (
@@ -322,7 +330,7 @@ export const AutoFixProPanel: React.FC<Props> = ({
                 {isRunning && steps.length > 0 && (
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-red-50 border border-red-100 animate-pulse">
                     <div className="w-3 h-3 border border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                    <div className="text-[10px] text-red-700 font-bold">Running...</div>
+                    <div className="text-[10px] text-red-700 font-bold">{t('autofix.running')}</div>
                   </div>
                 )}
               </div>
@@ -333,7 +341,7 @@ export const AutoFixProPanel: React.FC<Props> = ({
         {warnings.length > 0 && (
           <div className="mt-6 p-4 rounded-xl bg-amber-50 border border-amber-100">
             <div className="text-xs font-bold text-amber-800 mb-2 flex items-center gap-2">
-              <ExclamationTriangleIcon className="w-4 h-4" /> Risk & Notes Summary
+              <ExclamationTriangleIcon className="w-4 h-4" /> {t('autofix.riskSummary')}
             </div>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 list-disc pl-5 text-[11px] text-amber-900/80">
               {warnings.map((w: any, idx: number) => (

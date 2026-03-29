@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Issue, ModalProps, PreflightResult, FileMeta } from '../types';
+import { Issue, PreflightResult, FileMeta } from '../types';
 import { 
-    XMarkIcon, 
     SparklesIcon, 
     CpuChipIcon, 
     CommandLineIcon, 
@@ -11,6 +10,7 @@ import {
     CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { AnalyzeCarrierReport } from './AnalyzeCarrierReport';
+import { useTranslation } from '../i18n';
 
 const API_VER = 'v1';
 
@@ -58,6 +58,7 @@ export const AIInspectorPanel: React.FC<Props> = ({
     fileMeta,
     result,
 }) => {
+    const { t } = useTranslation();
     const [state, setState] = useState<AnalysisState>('idle');
     const [aiResponse, setAiResponse] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -119,10 +120,10 @@ export const AIInspectorPanel: React.FC<Props> = ({
             analysisCache[contextKey] = { result: text, timestamp: Date.now() };
             setState('success');
         } catch (e: any) { 
-            setError(e?.message || "AI Error"); 
+            setError(e?.message || t('auth.error.connection')); 
             setState('error');
         } 
-    }, [issue, fileMeta, result, contextKey, state]);
+    }, [issue, fileMeta, result, contextKey, state, t]);
 
     if (!isOpen) return null;
 
@@ -132,7 +133,7 @@ export const AIInspectorPanel: React.FC<Props> = ({
                 className="w-full max-w-xl bg-[var(--bg-primary)] border-l border-[var(--border-color)] h-full flex flex-col shadow-[-50px_0_100px_rgba(0,0,0,0.5)] animate-in slide-in-from-right duration-500 ease-out"
                 onClick={(e) => e.stopPropagation()}
                 role="dialog"
-                aria-label="AI Carrier Inspector"
+                aria-label={t('inspector.title')}
             >
                 {/* Header Section */}
                 <div className="flex flex-col border-b border-[var(--border-color)] bg-[var(--bg-tertiary)]/30">
@@ -140,15 +141,15 @@ export const AIInspectorPanel: React.FC<Props> = ({
                         <div className="flex items-center gap-2.5">
                             <div className={`h-1.5 w-1.5 rounded-full ${state === 'loading' ? 'bg-amber-500 animate-pulse' : 'bg-[var(--accent-color)]'}`} />
                             <span className="text-[0.6rem] font-black uppercase tracking-[0.3em] text-[var(--text-muted)]">
-                                Inspector // Forensic Node 01
+                                {t('inspector.trace.kernel')} // {t('inspector.node')} 01
                             </span>
                         </div>
                         <button 
                             onClick={onClose} 
                             className="p-1 px-3 border border-[var(--border-color)] text-[0.65rem] font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--text-primary)] transition-all uppercase tracking-widest"
-                            aria-label="Close"
+                            aria-label={t('common.close')}
                         >
-                            Close
+                            {t('common.close')}
                         </button>
                     </div>
 
@@ -156,22 +157,22 @@ export const AIInspectorPanel: React.FC<Props> = ({
                         <div className="flex items-center justify-between">
                             <div>
                                 <h2 className="text-2xl font-black tracking-tight text-[var(--text-primary)] uppercase flex items-center gap-3">
-                                    AI Carrier Inspector
+                                    {t('inspector.title')}
                                     <span className="px-1.5 py-0.5 rounded-sm bg-[var(--accent-color)]/10 text-[var(--accent-color)] text-[0.6rem] font-black tracking-widest leading-none border border-[var(--accent-color)]/20 shadow-[0_0_10px_rgba(220,0,0,0.1)]">
                                         PRO 2.4
                                     </span>
                                 </h2>
                                 <p className="text-[0.75rem] text-[var(--text-muted)] mt-1 font-mono uppercase tracking-tight opacity-80">
-                                    Advanced forensic oversight // Context: {fileMeta?.name || 'system_idle'}
+                                    {t('inspector.context')} // {t('common.context')}: {fileMeta?.name || 'system_idle'}
                                 </p>
                             </div>
                         </div>
 
                         {/* Technical Tabs */}
                         <div className="flex items-center gap-8 mt-10">
-                            <TabButton active={activeTab === 'audit'} onClick={() => setActiveTab('audit')} label="Direct Audit" />
-                            <TabButton active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} label="Trace Log" />
-                            <TabButton active={activeTab === 'stats'} onClick={() => setActiveTab('stats')} label="Metrics" />
+                            <TabButton active={activeTab === 'audit'} onClick={() => setActiveTab('audit')} label={t('inspector.directAudit')} />
+                            <TabButton active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} label={t('inspector.traceLog')} />
+                            <TabButton active={activeTab === 'stats'} onClick={() => setActiveTab('stats')} label={t('inspector.metrics')} />
                         </div>
                     </div>
                 </div>
@@ -187,16 +188,16 @@ export const AIInspectorPanel: React.FC<Props> = ({
                                         <div className="h-16 w-16 bg-[var(--bg-secondary)] border border-[var(--border-color)] flex items-center justify-center mb-6 group hover:border-[var(--accent-color)]/50 transition-colors">
                                             <SparklesIcon className="h-7 w-7 text-[var(--text-muted)] group-hover:text-[var(--accent-color)] transition-colors" />
                                         </div>
-                                        <h3 className="text-[0.85rem] font-black text-[var(--text-primary)] uppercase tracking-widest mb-2">No Analysis Run Yet</h3>
+                                        <h3 className="text-[0.85rem] font-black text-[var(--text-primary)] uppercase tracking-widest mb-2">{t('inspector.noAnalysis')}</h3>
                                         <p className="text-[0.7rem] text-[var(--text-muted)] max-w-xs font-mono uppercase tracking-tighter mb-10 opacity-70">
-                                            Execute neural handshake to begin forensic inspection of the carrier payload.
+                                            {t('inspector.noAnalysisDesc')}
                                         </p>
                                         <button 
                                             onClick={() => runAnalysis()}
                                             className="px-8 py-3 bg-[var(--accent-color)] text-white text-[0.75rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-hover)] transition-all shadow-lg hover:shadow-[0_0_20px_rgba(220,0,0,0.3)] flex items-center gap-3"
                                         >
                                             <CpuChipIcon className="w-4 h-4" />
-                                            Initialize Audit
+                                            {t('inspector.initialize')}
                                         </button>
                                     </div>
                                 )}
@@ -212,13 +213,13 @@ export const AIInspectorPanel: React.FC<Props> = ({
                                                 </div>
                                             </div>
                                             <div className="space-y-3 text-center">
-                                                <div className="text-[0.65rem] font-black text-[var(--text-primary)] uppercase tracking-[0.3em]">AI Inspection in Progress</div>
+                                                <div className="text-[0.65rem] font-black text-[var(--text-primary)] uppercase tracking-[0.3em]">{t('inspector.inProgress')}</div>
                                                 <div className="flex justify-center gap-1.5">
                                                     <div className="w-1 h-1 bg-[var(--accent-color)] animate-bounce [animation-delay:-0.3s]" />
                                                     <div className="w-1 h-1 bg-[var(--accent-color)] animate-bounce [animation-delay:-0.15s]" />
                                                     <div className="w-1 h-1 bg-[var(--accent-color)] animate-bounce" />
                                                 </div>
-                                                <p className="text-[0.6rem] font-mono text-[var(--text-muted)] uppercase italic">Decoding carrier forensic data...</p>
+                                                <p className="text-[0.6rem] font-mono text-[var(--text-muted)] uppercase italic">{t('inspector.decoding')}</p>
                                             </div>
                                         </div>
                                         
@@ -235,15 +236,15 @@ export const AIInspectorPanel: React.FC<Props> = ({
                                     <div className="p-8 border-2 border-[var(--accent-color)]/20 bg-[var(--accent-color)]/5 flex flex-col gap-6 items-center text-center animate-in zoom-in-95 duration-300">
                                         <ExclamationTriangleIcon className="h-10 w-10 text-[var(--accent-color)]" />
                                         <div className="space-y-2">
-                                            <h4 className="font-black text-[0.8rem] uppercase tracking-widest text-[var(--text-primary)]">Interface Sync Fault</h4>
-                                            <p className="text-[0.7rem] font-mono text-[var(--text-secondary)] max-w-sm">{error || "Neural link dropped unexpectedly."}</p>
+                                            <h4 className="font-black text-[0.8rem] uppercase tracking-widest text-[var(--text-primary)]">{t('inspector.syncFault')}</h4>
+                                            <p className="text-[0.7rem] font-mono text-[var(--text-secondary)] max-w-sm">{error || t('inspector.syncFaultDesc')}</p>
                                         </div>
                                         <button 
                                             onClick={() => runAnalysis(true)}
                                             className="px-6 py-2.5 bg-[var(--accent-color)] text-white text-[0.7rem] font-black uppercase tracking-widest hover:opacity-90 transition-opacity flex items-center gap-2"
                                         >
                                             <ArrowPathIcon className="h-4 w-4" />
-                                            Re-establish Connection
+                                            {t('inspector.reestablish')}
                                         </button>
                                     </div>
                                 )}
@@ -256,7 +257,7 @@ export const AIInspectorPanel: React.FC<Props> = ({
                                             <div className="p-5 border-l-4 border-[var(--accent-color)] bg-[var(--bg-tertiary)]/50">
                                                 <div className="text-[0.55rem] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2 flex items-center gap-2">
                                                     <CheckCircleIcon className="w-3 h-3 text-emerald-500" />
-                                                    Targeted Node: {issue.id}
+                                                    {t('inspector.targetedNode')}: {issue.id}
                                                 </div>
                                                 <h4 className="text-[0.9rem] font-black text-[var(--text-primary)] uppercase tracking-tight">{issue.title}</h4>
                                             </div>
@@ -265,12 +266,12 @@ export const AIInspectorPanel: React.FC<Props> = ({
                                         <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
                                             <div className="text-[0.6rem] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] flex items-center gap-2">
                                                 <SparklesIcon className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-                                                Report Intelligence Gen OS
+                                                {t('inspector.reportGen')}
                                             </div>
                                             {analysisCache[contextKey] && (
                                                 <div className="text-[0.55rem] font-mono text-emerald-500/60 uppercase flex items-center gap-1.5">
                                                     <div className="h-1 w-1 bg-emerald-500/60 rounded-full animate-pulse" />
-                                                    CACHED VERSION
+                                                    {t('inspector.cached')}
                                                 </div>
                                             )}
                                         </div>
@@ -283,8 +284,8 @@ export const AIInspectorPanel: React.FC<Props> = ({
                                                 onClick={() => runAnalysis(true)}
                                                 className="flex items-center gap-2 px-4 py-2 text-[0.65rem] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] hover:text-[var(--accent-color)] hover:bg-[var(--accent-color)]/5 transition-all border border-transparent hover:border-[var(--accent-color)]/20"
                                             >
-                                                <ArrowPathIcon className="h-3.5 h-3.5" />
-                                                Run Clean Audit
+                                                <ArrowPathIcon className="h-3.5" />
+                                                {t('inspector.cleanAudit')}
                                             </button>
                                         </div>
                                     </div>
@@ -296,14 +297,14 @@ export const AIInspectorPanel: React.FC<Props> = ({
                             <div className="space-y-4 animate-in fade-in duration-300">
                                 <div className="text-[0.6rem] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                                     <CommandLineIcon className="w-3.5 h-3.5" />
-                                    Forensic Traces
+                                    {t('inspector.forensicTraces')}
                                 </div>
                                 <div className="font-mono text-[0.7rem] leading-relaxed p-6 border border-[var(--border-color)] bg-[var(--bg-secondary)]/40 rounded-sm">
-                                    <div className="flex gap-4 mb-2 opacity-40"><span>14:24:02</span> <span className="text-[var(--accent-color)]">system</span> <span>Initializing kernel link...</span></div>
-                                    <div className="flex gap-4 mb-2"><span>14:24:03</span> <span className="text-emerald-500">v2.4.0</span> <span>Forensic Node 0x01 established.</span></div>
-                                    <div className="flex gap-4 mb-2"><span>14:24:03</span> <span className="text-blue-500">model</span> <span>Connection ready: Gemini-Flash-v1</span></div>
-                                    {state === 'loading' && <div className="flex gap-4 mb-2 animate-pulse text-[var(--accent-color)]"><span>14:30:12</span> <span>inspect</span> <span>Probing carrier metadata deep segments...</span></div>}
-                                    {state === 'success' && <div className="flex gap-4 mb-2 text-emerald-500"><span>14:31:05</span> <span>output</span> <span>Carrier inspection complete. Payload stored.</span></div>}
+                                    <div className="flex gap-4 mb-2 opacity-40"><span>14:24:02</span> <span className="text-[var(--accent-color)]">system</span> <span>{t('inspector.trace.kernel')}...</span></div>
+                                    <div className="flex gap-4 mb-2"><span>14:24:03</span> <span className="text-emerald-500">v2.4.0</span> <span>{t('inspector.trace.node')}</span></div>
+                                    <div className="flex gap-4 mb-2"><span>14:24:03</span> <span className="text-blue-500">model</span> <span>{t('inspector.trace.ready')}</span></div>
+                                    {state === 'loading' && <div className="flex gap-4 mb-2 animate-pulse text-[var(--accent-color)]"><span>14:30:12</span> <span>inspect</span> <span>{t('inspector.trace.probing')}...</span></div>}
+                                    {state === 'success' && <div className="flex gap-4 mb-2 text-emerald-500"><span>14:31:05</span> <span>output</span> <span>{t('inspector.trace.complete')}</span></div>}
                                     <div className="flex gap-4 text-[var(--accent-color)] animate-pulse mt-10"><span>&gt;</span> <span>{state === 'loading' ? 'BUSY_' : 'AWAITING_COMMAND_'}</span></div>
                                 </div>
                             </div>
@@ -311,10 +312,10 @@ export const AIInspectorPanel: React.FC<Props> = ({
 
                         {activeTab === 'stats' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[var(--border-color)] border border-[var(--border-color)] animate-in fade-in duration-300">
-                                <StatBox label="Audit Confidence" value="99.2%" sub="Verified" />
-                                <StatBox label="Network Latency" value="124ms" sub="Optimal" />
-                                <StatBox label="Context Depth" value="High" sub="8k Tokens" />
-                                <StatBox label="Job Version" value="v2.4-Monolith" sub="Canonical" />
+                                <StatBox label={t('inspector.auditConfidence')} value="99.2%" sub={t('common.verified')} />
+                                <StatBox label={t('inspector.networkLatency')} value="124ms" sub={t('inspector.stat.optimal')} />
+                                <StatBox label={t('inspector.contextDepth')} value={t('inspector.stat.high')} sub="8k Tokens" />
+                                <StatBox label={t('inspector.jobVersion')} value="v2.4-Monolith" sub={t('inspector.stat.canonical')} />
                             </div>
                         )}
                     </div>
@@ -325,7 +326,7 @@ export const AIInspectorPanel: React.FC<Props> = ({
                     <div className="flex items-center justify-between opacity-50">
                         <div className="flex items-center gap-2">
                             <div className={`h-1 w-1 ${state === 'error' ? 'bg-red-500' : 'bg-[var(--accent-color)]'}`} />
-                            <span className="text-[0.6rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">State: {state.toUpperCase()}</span>
+                            <span className="text-[0.6rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">{t('inspector.state')}: {state.toUpperCase()}</span>
                         </div>
                         <span className="text-[0.6rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">
                             Monolith OS // Preflight v2.4

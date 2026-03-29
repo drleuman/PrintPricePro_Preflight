@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { t } from '../i18n';
+import { useTranslation } from '../i18n';
 import { 
     ShieldCheckIcon, 
     KeyIcon, 
@@ -19,6 +19,7 @@ interface AccountPanelProps {
 }
 
 export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose }) => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const trapRef = useRef<HTMLDivElement>(null);
     const initialFocusRef = useRef<HTMLButtonElement>(null);
@@ -125,7 +126,7 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose 
                 <div className="px-8 py-6 border-b border-[var(--border-color)] flex items-center justify-between bg-[var(--bg-tertiary)]/20 shadow-sm shrink-0">
                     <div className="overflow-hidden pr-4 flex-1">
                         <div className="text-[0.62rem] font-black text-[var(--accent-color)] uppercase tracking-[0.3em] mb-1 truncate" title={user.email}>
-                            {user.email} // Identity Context
+                            {user.email} // {t('account.identityContext')}
                         </div>
                         <h2 id="panel-title" className="text-xl md:text-2xl font-black text-[var(--text-primary)] uppercase tracking-tight truncate">
                             {getViewTitle()}
@@ -134,10 +135,10 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose 
                     <button 
                         ref={initialFocusRef}
                         onClick={onClose} 
-                        aria-label={t('close')}
+                        aria-label={t('common.close')}
                         className="px-3 py-1.5 border border-[var(--border-color)] shrink-0 hover:border-[var(--accent-color)] hover:bg-[var(--accent-color)]/10 hover:text-[var(--accent-color)] text-[var(--text-muted)] text-[0.65rem] uppercase tracking-widest transition-all font-mono focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)]"
                     >
-                        {t('close')}
+                        {t('common.close')}
                     </button>
                 </div>
 
@@ -149,10 +150,10 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose 
                 {/* Global Footer info relative to node */}
                 <div className="p-4 md:p-6 border-t border-[var(--border-color)] shrink-0 bg-[var(--bg-tertiary)]/30 text-center flex justify-between items-center text-[0.65rem]">
                     <span className="font-mono text-[var(--text-muted)] opacity-50 uppercase tracking-widest truncate max-w-[50%] pr-2">
-                        Node_ID: {user.id.split('-')[0]}
+                        {t('common.nodeId')}: {user.id.split('-')[0]}
                     </span>
                     <span className="font-mono text-[var(--text-muted)] opacity-50 uppercase tracking-widest shrink-0">
-                        Role Group: {user.role}
+                        {t('common.role')}: {user.role}
                     </span>
                 </div>
             </div>
@@ -167,158 +168,173 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose 
 // SEPARATE VIEWS COMPONENTS
 // -------------------------------------------------------------------------------- //
 
-const ProfilePanel = ({ user }: { user: any }) => (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
-        <SectionTitle title={t('account.identity')} icon={<IdentificationIcon className="w-5 h-5" />} />
-        
-        <div className="grid gap-6">
-            <IdentityField 
-                label={t('account.email.label')} 
-                value={user.email} 
-                icon={<AtSymbolIcon className="w-4 h-4 shrink-0" />} 
-                readOnly 
-            />
-            <IdentityField 
-                label={t('account.role.label')} 
-                value={user.role} 
-                icon={<ShieldCheckIcon className="w-4 h-4 shrink-0" />} 
-                readOnly 
-            />
+const ProfilePanel = ({ user }: { user: any }) => {
+    const { t } = useTranslation();
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
+            <SectionTitle title={t('account.identity')} icon={<IdentificationIcon className="w-5 h-5" />} />
             
-            {user.organization_name ? (
+            <div className="grid gap-6">
                 <IdentityField 
-                    label={t('account.org.label')} 
-                    value={user.organization_name} 
+                    label={t('account.email.label')} 
+                    value={user.email} 
+                    icon={<AtSymbolIcon className="w-4 h-4 shrink-0" />} 
                     readOnly 
                 />
-            ) : (
-                <div className="p-4 border border-dashed border-[var(--border-color)] bg-[var(--bg-tertiary)]/10">
-                    <span className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest">{t('account.org.none')}</span>
-                </div>
-            )}
-        </div>
-        
-        <div className="pt-6 mt-6 border-t border-[var(--border-color)]">
-            <button 
-                disabled={true}
-                tabIndex={-1}
-                aria-disabled="true"
-                className="px-6 py-2 border border-[var(--border-color)] text-[0.7rem] font-black uppercase tracking-widest opacity-50 cursor-not-allowed bg-[var(--bg-secondary)] text-[var(--text-muted)]"
-            >
-                Edit Identification (Coming Soon)
-            </button>
-        </div>
-    </div>
-);
-
-const LicensePanel = ({ user }: { user: any }) => (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
-        <SectionTitle title={t('account.quotas')} icon={<CreditCardIcon className="w-5 h-5" />} />
-        
-        <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-6 space-y-6 relative overflow-hidden">
-            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
-                <div>
-                    <span className="block text-[0.65rem] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] mb-1">{t('account.service.tier')}</span>
-                    <span className="text-xl font-black text-[var(--text-primary)] uppercase tracking-tight truncate max-w-full block">{user.plan}</span>
-                </div>
-                <div className={`h-2 w-2 rounded-full shrink-0 ${user.plan === 'FREE' ? 'bg-[var(--text-muted)]' : 'bg-[#50fa7b] shadow-[0_0_15px_#50fa7b]'}`} />
+                <IdentityField 
+                    label={t('account.role.label')} 
+                    value={user.role} 
+                    icon={<ShieldCheckIcon className="w-4 h-4 shrink-0" />} 
+                    readOnly 
+                />
+                
+                {user.organization_name ? (
+                    <IdentityField 
+                        label={t('account.org.label')} 
+                        value={user.organization_name} 
+                        readOnly 
+                    />
+                ) : (
+                    <div className="p-4 border border-dashed border-[var(--border-color)] bg-[var(--bg-tertiary)]/10">
+                        <span className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest">{t('account.org.none')}</span>
+                    </div>
+                )}
             </div>
             
-            <div className="space-y-4">
-                <UsageBar label="Daily Technical Parsing Jobs" current={0} total={user.daily_jobs_limit} />
-                <UsageBar label="Automated Preflight AI Magic Fix" current={user.ai_magic_fix_enabled ? 1 : 0} total={1} BooleanCap="ENABLED" />
+            <div className="pt-6 mt-6 border-t border-[var(--border-color)]">
+                <button 
+                    disabled={true}
+                    tabIndex={-1}
+                    aria-disabled="true"
+                    className="px-6 py-2 border border-[var(--border-color)] text-[0.7rem] font-black uppercase tracking-widest opacity-50 cursor-not-allowed bg-[var(--bg-secondary)] text-[var(--text-muted)]"
+                >
+                    {t('account.editSoon')}
+                </button>
             </div>
+        </div>
+    );
+};
 
-            {user.plan === 'FREE' && (
-                <div className="mt-8 pt-6 border-t border-[var(--border-color)] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <p className="text-[0.7rem] font-mono text-[var(--text-secondary)] opacity-80 flex-1">
-                        Unlock unbounded processing limits and full preflight analysis features by upgrading your node access.
+const LicensePanel = ({ user }: { user: any }) => {
+    const { t } = useTranslation();
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
+            <SectionTitle title={t('account.quotas')} icon={<CreditCardIcon className="w-5 h-5" />} />
+            
+            <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-6 space-y-6 relative overflow-hidden">
+                <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
+                    <div>
+                        <span className="block text-[0.65rem] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] mb-1">{t('account.service.tier')}</span>
+                        <span className="text-xl font-black text-[var(--text-primary)] uppercase tracking-tight truncate max-w-full block">{user.plan}</span>
+                    </div>
+                    <div className={`h-2 w-2 rounded-full shrink-0 ${user.plan === 'FREE' ? 'bg-[var(--text-muted)]' : 'bg-[#50fa7b] shadow-[0_0_15px_#50fa7b]'}`} />
+                </div>
+                
+                <div className="space-y-4">
+                    <UsageBar label={t('account.dailyParsingJobs')} current={0} total={user.daily_jobs_limit} />
+                    <UsageBar label={t('account.autoMagicFix')} current={user.ai_magic_fix_enabled ? 1 : 0} total={1} BooleanCap={t('common.active')} />
+                </div>
+
+                {user.plan === 'FREE' && (
+                    <div className="mt-8 pt-6 border-t border-[var(--border-color)] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex-1">
+                            <h4 className="text-[0.75rem] font-black text-[var(--text-primary)] uppercase tracking-widest mb-1">{t('account.upgradeTitle')}</h4>
+                            <p className="text-[0.65rem] font-mono text-[var(--text-secondary)] opacity-80">
+                                {t('account.upgradeDesc')}
+                            </p>
+                        </div>
+                        <button className="shrink-0 px-6 py-3 bg-[var(--accent-color)] text-[var(--bg-primary)] text-[0.7rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-hover)] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent-hover)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]">
+                            {t('account.upgradeBtn')}
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const ApiAccessPanel = ({ user }: { user: any }) => {
+    const { t } = useTranslation();
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
+            <SectionTitle title={t('account.m2m.bridge')} icon={<KeyIcon className="w-5 h-5" />} />
+            
+            {user.role === 'DEVELOPER' || user.plan !== 'FREE' ? (
+                <div className="space-y-6 max-w-full">
+                    <div className="p-4 md:p-6 border border-[var(--border-color)] bg-[var(--bg-tertiary)] font-mono relative overflow-hidden">
+                        <div className="text-[0.65rem] text-[var(--text-muted)] mb-3 uppercase tracking-widest truncate">{t('account.apiProvision')}</div>
+                        
+                        <div className="space-y-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-[var(--bg-secondary)] border border-[var(--border-color)] p-3 gap-3">
+                                <span className="text-sm font-bold opacity-40 select-none overflow-hidden text-ellipsis break-all max-w-full block">ppos_live_••••••••••••••••••••</span>
+                                <span className="text-[0.55rem] uppercase tracking-widest text-[#50fa7b] bg-[#50fa7b]/10 px-2 py-0.5 border border-[#50fa7b]/20 shrink-0 self-start sm:self-auto">{t('common.active')}</span>
+                            </div>
+                            
+                            <button className="flex items-center gap-2 text-[0.65rem] font-black text-[var(--accent-color)] uppercase hover:text-[var(--accent-hover)] transition-colors py-1 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] rounded-sm">
+                                <ArrowPathIcon className="w-4 h-4 shrink-0" />
+                                <span className="truncate">{t('account.apiKeyRotation')}</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <p className="border-l-2 border-[var(--accent-color)]/50 pl-4 py-2 text-[0.7rem] font-mono text-[var(--text-muted)]">
+                        {t('account.apiMechanical')}
                     </p>
-                    <button className="shrink-0 px-6 py-3 bg-[var(--accent-color)] text-[var(--bg-primary)] text-[0.7rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-hover)] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent-hover)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]">
-                        Upgrade To PRO
-                    </button>
+                </div>
+            ) : (
+                <div className="p-8 border-2 border-dashed border-[var(--border-color)] text-center bg-[var(--bg-tertiary)]/20 flex flex-col items-center">
+                    <KeyIcon className="w-8 h-8 text-[var(--text-muted)] mb-4 shrink-0" />
+                    <h4 className="text-[var(--text-primary)] font-bold uppercase tracking-wider mb-2">{t('account.apiNoAccess')}</h4>
+                    <p className="text-[0.75rem] font-mono text-[var(--text-muted)] max-w-[280px]">
+                        {t('account.apiNoAccessDesc')}
+                    </p>
                 </div>
             )}
         </div>
-    </div>
-);
+    );
+};
 
-const ApiAccessPanel = ({ user }: { user: any }) => (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
-        <SectionTitle title={t('account.m2m.bridge')} icon={<KeyIcon className="w-5 h-5" />} />
-        
-        {user.role === 'DEVELOPER' || user.plan !== 'FREE' ? (
-            <div className="space-y-6 max-w-full">
-                <div className="p-4 md:p-6 border border-[var(--border-color)] bg-[var(--bg-tertiary)] font-mono relative overflow-hidden">
-                    <div className="text-[0.65rem] text-[var(--text-muted)] mb-3 uppercase tracking-widest truncate">Active Development Provision</div>
-                    
-                    <div className="space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-[var(--bg-secondary)] border border-[var(--border-color)] p-3 gap-3">
-                            <span className="text-sm font-bold opacity-40 select-none overflow-hidden text-ellipsis break-all max-w-full block">ppos_live_••••••••••••••••••••</span>
-                            <span className="text-[0.55rem] uppercase tracking-widest text-[#50fa7b] bg-[#50fa7b]/10 px-2 py-0.5 border border-[#50fa7b]/20 shrink-0 self-start sm:self-auto">Active</span>
-                        </div>
-                        
-                        <button className="flex items-center gap-2 text-[0.65rem] font-black text-[var(--accent-color)] uppercase hover:text-[var(--accent-hover)] transition-colors py-1 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] rounded-sm">
-                            <ArrowPathIcon className="w-4 h-4 shrink-0" />
-                            <span className="truncate">Request Key Rotation</span>
-                        </button>
+const SecurityPanel = ({ user }: { user: any }) => {
+    const { t } = useTranslation();
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
+            <SectionTitle title={t('account.session.integrity')} icon={<ShieldCheckIcon className="w-5 h-5" />} />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-5 border border-[var(--border-color)] bg-[var(--bg-tertiary)] flex flex-col min-w-0">
+                    <span className="text-[0.55rem] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] mb-3 truncate block">{t('account.authContract')}</span>
+                    <div className="flex items-center gap-2 text-[var(--text-primary)] font-bold mt-auto shrink-0">
+                        <CheckCircleIcon className="w-5 h-5 text-[#50fa7b] shrink-0" />
+                        <span className="text-sm truncate block">{t('account.jwtValidated')}</span>
                     </div>
                 </div>
                 
-                <p className="border-l-2 border-[var(--accent-color)]/50 pl-4 py-2 text-[0.7rem] font-mono text-[var(--text-muted)]">
-                    API Provisioning is currently managed mechanically. If you require rotation of secrets or higher throughput keys, contact support.
-                </p>
-            </div>
-        ) : (
-            <div className="p-8 border-2 border-dashed border-[var(--border-color)] text-center bg-[var(--bg-tertiary)]/20 flex flex-col items-center">
-                <KeyIcon className="w-8 h-8 text-[var(--text-muted)] mb-4 shrink-0" />
-                <h4 className="text-[var(--text-primary)] font-bold uppercase tracking-wider mb-2">No API Access Provisioned</h4>
-                <p className="text-[0.75rem] font-mono text-[var(--text-muted)] max-w-[280px]">
-                    Your current license profile does not grant systematic headless access. Upgrade to PRO or higher to gain programmatic ingress.
-                </p>
-            </div>
-        )}
-    </div>
-);
-
-const SecurityPanel = ({ user }: { user: any }) => (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
-        <SectionTitle title={t('account.session.integrity')} icon={<ShieldCheckIcon className="w-5 h-5" />} />
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-5 border border-[var(--border-color)] bg-[var(--bg-tertiary)] flex flex-col min-w-0">
-                <span className="text-[0.55rem] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] mb-3 truncate block">Authentication Contract</span>
-                <div className="flex items-center gap-2 text-[var(--text-primary)] font-bold mt-auto shrink-0">
-                    <CheckCircleIcon className="w-5 h-5 text-[#50fa7b] shrink-0" />
-                    <span className="text-sm truncate block">JWT Validated</span>
-                </div>
-            </div>
-            
-            <div className="p-5 border border-[var(--border-color)] bg-[var(--bg-tertiary)] flex flex-col min-w-0">
-                <span className="text-[0.55rem] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] mb-3 truncate block">Login Method</span>
-                <div className="flex items-center gap-2 text-[var(--text-primary)] font-bold mt-auto shrink-0">
-                    <span className="text-sm font-mono text-[var(--text-secondary)] truncate block">Standard Flow</span>
-                </div>
-            </div>
-        </div>
-
-        <div className="mt-8 space-y-4">
-            <h4 className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)] border-b border-[var(--border-color)] pb-2 truncate max-w-full">Audit Logs</h4>
-            <div className="p-4 md:p-6 border border-dashed border-[var(--border-color)]/60 bg-[var(--bg-tertiary)]/30 flex items-start gap-4 flex-col sm:flex-row mx-auto justify-start text-left w-full overflow-hidden">
-                <ShieldCheckIcon className="w-5 h-5 text-[var(--text-muted)] shrink-0 hidden sm:block" />
-                <div className="min-w-0 flex-1 w-full">
-                    <div className="text-[0.7rem] font-black text-[var(--text-primary)] uppercase tracking-widest mb-2 flex items-center gap-2">
-                        <ShieldCheckIcon className="w-4 h-4 text-[#50fa7b] shrink-0 sm:hidden block" />
-                        State Nominal
+                <div className="p-5 border border-[var(--border-color)] bg-[var(--bg-tertiary)] flex flex-col min-w-0">
+                    <span className="text-[0.55rem] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] mb-3 truncate block">{t('account.loginMethod')}</span>
+                    <div className="flex items-center gap-2 text-[var(--text-primary)] font-bold mt-auto shrink-0">
+                        <span className="text-sm font-mono text-[var(--text-secondary)] truncate block">{t('account.standardFlow')}</span>
                     </div>
-                    <p className="text-[0.7rem] font-mono text-[var(--text-muted)] break-words w-full">
-                        No active security warnings or forensic exceptions detected for this session node. Historical audit syncing will be available in future releases.
-                    </p>
+                </div>
+            </div>
+
+            <div className="mt-8 space-y-4">
+                <h4 className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)] border-b border-[var(--border-color)] pb-2 truncate max-w-full">{t('account.auditLogs')}</h4>
+                <div className="p-4 md:p-6 border border-dashed border-[var(--border-color)]/60 bg-[var(--bg-tertiary)]/30 flex items-start gap-4 flex-col sm:flex-row mx-auto justify-start text-left w-full overflow-hidden">
+                    <ShieldCheckIcon className="w-5 h-5 text-[var(--text-muted)] shrink-0 hidden sm:block" />
+                    <div className="min-w-0 flex-1 w-full">
+                        <div className="text-[0.7rem] font-black text-[var(--text-primary)] uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <ShieldCheckIcon className="w-4 h-4 text-[#50fa7b] shrink-0 sm:hidden block" />
+                            {t('account.stateNominal')}
+                        </div>
+                        <p className="text-[0.7rem] font-mono text-[var(--text-muted)] break-words w-full">
+                            {t('account.auditDesc')}
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 // -------------------------------------------------------------------------------- //
 // COMMONS
@@ -348,7 +364,7 @@ const UsageBar: React.FC<{ label: string, current: number, total: number, Boolea
         <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center text-[0.65rem] font-black uppercase tracking-widest gap-1 sm:gap-4 overflow-hidden">
             <span className="text-[var(--text-primary)] truncate max-w-full shrink-1">{label}</span>
             {BooleanCap ? (
-                <span className="text-[#50fa7b] shrink-0">{BooleanCap}</span>
+                <span className="text-[#50fa7b] shrink-0 font-bold">{BooleanCap}</span>
             ) : (
                 <span className="text-[var(--text-muted)] font-mono shrink-0">{current} / {total}</span>
             )}
@@ -361,3 +377,4 @@ const UsageBar: React.FC<{ label: string, current: number, total: number, Boolea
         </div>
     </div>
 );
+

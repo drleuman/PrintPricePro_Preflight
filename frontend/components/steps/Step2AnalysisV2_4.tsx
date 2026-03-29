@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { PreflightResult, FileMeta } from '../../types';
-import { StatusBadge, CertificationPanel, IssueRow, ActionBar } from '../../design/preflight_starter_pack';
+import { StatusBadge, IssueRow } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
-import { RocketLaunchIcon, ArrowPathIcon, ChevronLeftIcon, CheckCircleIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
-import { t } from '../../i18n';
+import { RocketLaunchIcon, ArrowPathIcon, ChevronLeftIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { useTranslation } from '../../i18n';
 
 interface Step2AnalysisV2_4Props {
     file: File | null;
@@ -28,6 +28,8 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
     onSkipToReview,
     onBack,
 }) => {
+    const { t } = useTranslation();
+
     // Auto-run analysis when entering this step
     useEffect(() => {
         if (file && !result && !isRunning) {
@@ -37,7 +39,6 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
 
     const issues = result?.issues || [];
     const hasErrors = issues.filter(i => i.severity === 'error').length > 0;
-    const hasWarnings = issues.filter(i => i.severity === 'warning').length > 0;
     const hasIssues = issues.length > 0;
 
     return (
@@ -46,7 +47,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-[var(--border-color)] pb-6 gap-4">
                 <div>
                     <div className="ppp-phase-tag text-[var(--accent-color)] mb-1">
-                        {t('stepNumber', { number: 2 })} / {formatLabel('FORENSIC_VALIDATION')}
+                        {t('stepNumber', { number: 2 })} / {t('step.analysis.forensic')}
                     </div>
                     <h2 className="text-3xl font-extrabold tracking-tight">
                         {isRunning ? t('analyzingYourPdf').toUpperCase() : t('analysisComplete').toUpperCase()}
@@ -63,7 +64,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                 <div className="space-y-6 min-h-[400px] w-full lg:flex-[1.2]">
                     {isRunning ? (
                         <div className="flex flex-col items-center justify-center h-full border border-[var(--border-color)] bg-[var(--bg-secondary)] p-12 text-center">
-                            <div className="h-20 w-20 mb-8 flex items-center justify-center border border-[var(--accent-color)]/30 relative">
+                            <div className="h-20 w-20 mb-8 flex items-center justify-center border border-[var(--border-color)] relative">
                                 <div className="absolute inset-0 animate-pulse border-2 border-[var(--accent-color)]/50" />
                                 <div className="h-2 w-2 bg-[var(--accent-color)] animate-ping" />
                             </div>
@@ -75,8 +76,8 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                             {issues.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center p-12 text-center opacity-40">
                                     <ShieldCheckIcon className="h-12 w-12 mb-4 text-[var(--accent-color)]" />
-                                    <p className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">Clean Trace</p>
-                                    <p className="text-[0.65rem] font-mono text-[var(--text-muted)] mt-2 uppercase tracking-widest">No structural issues detected</p>
+                                    <p className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">{t('step.analysis.cleanTrace')}</p>
+                                    <p className="text-[0.65rem] font-mono text-[var(--text-muted)] mt-2 uppercase tracking-widest">{t('step.analysis.noIssuesDesc')}</p>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -105,30 +106,30 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                     {result && !isRunning ? (
                         <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8">
                             <div className="mb-8 flex items-center justify-between">
-                                <StatusBadge label={hasIssues ? "Invalid Carrier" : "Valid Carrier"} variant={hasIssues ? "warning" : "certified"} />
+                                <StatusBadge label={hasIssues ? t('step.analysis.invalidCarrier') : t('step.analysis.validCarrier')} variant={hasIssues ? "warning" : "certified"} />
                                 <span className="text-[0.88rem] font-mono text-[var(--text-secondary)] uppercase tracking-widest">{formatLabel(`TRACE_V2.4_${Math.floor(Math.random() * 9999)}`)}</span>
                             </div>
 
                             <div className="space-y-6">
                                 <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
-                                    <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">Critical Errors</span>
+                                    <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">{t('step.analysis.criticalErrors')}</span>
                                     <span className={`text-xl font-black ${hasErrors ? 'text-[var(--accent-color)]' : 'text-[var(--text-primary)]'}`}>
                                         {issues.filter(i => i.severity === 'error').length}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
-                                    <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">Warnings Found</span>
+                                    <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">{t('step.analysis.warningsFound')}</span>
                                     <span className="text-xl font-black text-[var(--text-primary)]">
                                         {issues.filter(i => i.severity === 'warning').length}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
-                                    <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">Page Density</span>
+                                    <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">{t('step.analysis.pageDensity')}</span>
                                     <span className="text-xl font-black text-[var(--text-primary)]">{result.meta?.pageCount || result.pages?.length || '?'}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">Final Signal</span>
-                                    <StatusBadge label={hasIssues ? "Action Required" : "Ready"} variant={hasIssues ? "warning" : "certified"} />
+                                    <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">{t('step.analysis.finalSignal')}</span>
+                                    <StatusBadge label={hasIssues ? t('step.analysis.actionRequired') : t('step.analysis.ready')} variant={hasIssues ? "warning" : "certified"} />
                                 </div>
                             </div>
                         </div>
@@ -143,7 +144,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                             onClick={onBack}
                             className="bg-[var(--hover-bg)] text-[var(--text-secondary)] p-5 text-[0.85rem] font-black uppercase tracking-[0.2em] hover:text-[var(--text-primary)] transition-all border border-[var(--border-color)] flex items-center justify-center gap-2"
                         >
-                            <ChevronLeftIcon className="h-4 w-4" /> Abort
+                            <ChevronLeftIcon className="h-4 w-4" /> {t('back').replace('← ', '').toUpperCase()}
                         </button>
                         
                         {result && (
@@ -152,7 +153,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                                 disabled={isRunning}
                                 className={`p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)]`}
                             >
-                                {hasIssues ? "Apply Correction" : "Finalize Trace"}
+                                {hasIssues ? t('step.analysis.applyCorrection') : t('step.analysis.finalizeTrace')}
                             </button>
                         )}
                     </div>
@@ -167,15 +168,15 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                             <RocketLaunchIcon className="h-5 w-5 text-[var(--accent-color)]" />
                         </div>
                         <div>
-                            <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">Igniter engine v2.4 initialized</div>
-                            <div className="text-[0.85rem] font-mono text-[var(--text-secondary)] uppercase tracking-[0.1em]">Bypass current results with deterministic forensic scan</div>
+                            <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">{t('step.analysis.igniter')}</div>
+                            <div className="text-[0.85rem] font-mono text-[var(--text-secondary)] uppercase tracking-[0.1em]">{t('step.analysis.igniterDesc')}</div>
                         </div>
                     </div>
                     <button 
                         onClick={onRunV2Analysis}
                         className="border border-[var(--accent-color)]/30 px-6 py-3 text-[0.8rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)] hover:bg-[var(--accent-color)]/5 transition-all"
                     >
-                        Ignite Forensic Engine
+                        {t('step.analysis.ignite')}
                     </button>
                 </div>
             )}
