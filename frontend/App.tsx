@@ -9,10 +9,8 @@ import { Step4ReviewV2_4 } from './components/steps/Step4ReviewV2_4';
 import { XMarkIcon, SparklesIcon, CpuChipIcon, CommandLineIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { PreflightShell, SignalStrip, PPOSLogo } from './design/preflight_starter_pack';
 import { ThemeProvider } from './hooks/useTheme';
-import { LocaleProvider } from './i18n';
+import { useTranslation, LocaleProvider } from './i18n';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
-
-import { t } from './i18n';
 import {
   FileMeta,
   Issue,
@@ -28,6 +26,15 @@ import { useAuth } from './hooks/useAuth';
 import { UserMenu } from './components/UserMenu';
 
 export default function App() {
+  return (
+    <LocaleProvider>
+      <AppContent />
+    </LocaleProvider>
+  );
+}
+
+function AppContent() {
+  const { t } = useTranslation();
   // ---------- Workflow State ----------
   const [currentStep, setCurrentStep] = useState(1);
   const [appMode, setAppMode] = useState<AppMode>(null);
@@ -279,10 +286,10 @@ export default function App() {
               <Stepper
                 currentStep={currentStep}
                 steps={[
-                  { number: 1, title: 'Ingress', description: 'Carriers' },
-                  { number: 2, title: 'Forensics', description: 'Scanners' },
-                  { number: 3, title: 'Engine', description: 'Policy' },
-                  { number: 4, title: 'Certify', description: 'Validated' }
+                  { number: 1, title: t('ingress'), description: 'Carriers' },
+                  { number: 2, title: t('forensics'), description: 'Scanners' },
+                  { number: 3, title: t('engine'), description: 'Policy' },
+                  { number: 4, title: t('certify'), description: 'Validated' }
                 ]}
               />
             }

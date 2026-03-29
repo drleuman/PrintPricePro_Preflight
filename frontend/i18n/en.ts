@@ -377,6 +377,16 @@ export const en = {
   'step.quote.title': 'Get a Custom Quote',
   'step.quote.desc': 'Adjust your book specifications and chat with our AI assistant to find the best pricing for your project.',
   'step.quote.selected': 'Selection Confirmed',
+
+  // System Phases
+  ingress: 'Ingress',
+  forensics: 'Forensics',
+  engine: 'Engine',
+  certify: 'Certify',
+
+  // Step 1 Specifics
+  diagnosticModeTitle: 'Diagnostic Mode',
+  diagnosticModeDesc: 'Manual inspection and control.',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

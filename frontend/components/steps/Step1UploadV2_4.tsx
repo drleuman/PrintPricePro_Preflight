@@ -4,7 +4,7 @@ import { FileMeta, AppMode } from '../../types';
 import { StatusBadge, DiagnosticCard } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
 import { CloudArrowUpIcon, DocumentCheckIcon, AdjustmentsHorizontalIcon, SparklesIcon } from '@heroicons/react/24/outline';
-import { t } from '../../i18n';
+import { useTranslation } from '../../i18n';
 
 interface Step1UploadV2_4Props {
     file: File | null;
@@ -26,6 +26,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
     selectedPolicy,
     onPolicyChange,
 }) => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const [selectedMode, setSelectedMode] = useState<'magic' | 'manual'>('magic');
     const [policies, setPolicies] = useState<{ slug: string, name: string }[]>([]);
@@ -99,14 +100,14 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
                 {/* Upload Zone */}
                 <div 
                     onDragOver={(e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={onDrop}
                     onClick={() => fileInputRef.current?.click()}
-                    className={`group relative flex flex-col items-center justify-center border-2 border-dashed transition-all duration-700 cursor-pointer min-h-[440px] ${
+                    className={`group relative flex flex-col items-center justify-center border-2 border-dashed transition-all duration-700 cursor-pointer min-h-[500px] w-full lg:flex-[1.2] ${
                         isDragging ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5 shadow-[0_0_40px_rgba(220,0,0,0.1)] scale-[1.01]' : 
                         file ? 'border-[var(--border-color)] bg-[var(--hover-bg)]' : 'border-[var(--border-color)] hover:border-[var(--accent-color)]/30 hover:bg-[var(--hover-bg)]'
                     }`}
@@ -162,8 +163,8 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                 </div>
 
                 {/* Configuration Zone */}
-                <div className="flex flex-col justify-between space-y-8">
-                    <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-10">
+                <div className="flex flex-col justify-between space-y-8 w-full lg:flex-[0.8]">
+                    <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-10 h-full">
                         <div className="flex items-center justify-between mb-8">
                             <div className="ppp-phase-tag text-[var(--accent-color)] mb-1">
                                 {t('review').toUpperCase()}
@@ -182,9 +183,9 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                                     <SparklesIcon className="h-6 w-6" />
                                 </div>
                                 <div className="text-left flex-1">
-                                    <div className="text-[0.85rem] font-black uppercase tracking-wider mb-1 text-[var(--text-primary)]">AI Magic Fix</div>
+                                    <div className="text-[0.85rem] font-black uppercase tracking-wider mb-1 text-[var(--text-primary)]">{t('aiMagicFix')}</div>
                                     <div className="text-[0.88rem] text-[var(--text-secondary)] font-medium leading-normal">
-                                        Automatic correction. No manual steps.
+                                        {t('aiMagicFixDesc')}
                                     </div>
                                 </div>
                                 {selectedMode === 'magic' && (
@@ -202,9 +203,9 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                                     <AdjustmentsHorizontalIcon className="h-6 w-6" />
                                 </div>
                                 <div className="text-left flex-1">
-                                    <div className="text-[0.85rem] font-black uppercase tracking-wider mb-1 text-[var(--text-primary)]">Diagnostic Mode</div>
+                                    <div className="text-[0.85rem] font-black uppercase tracking-wider mb-1 text-[var(--text-primary)]">{t('diagnosticModeTitle')}</div>
                                     <div className="text-[0.88rem] text-[var(--text-secondary)] font-medium leading-normal">
-                                        Manual inspection and control.
+                                        {t('diagnosticModeDesc')}
                                     </div>
                                 </div>
                                 {selectedMode === 'manual' && (

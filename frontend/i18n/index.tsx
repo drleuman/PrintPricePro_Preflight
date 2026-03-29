@@ -1,6 +1,4 @@
-// i18n/index.tsx
-
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useMemo } from 'react';
 import { en } from './en';
 import { es } from './es';
 
@@ -55,10 +53,40 @@ export function useLocale() {
 }
 
 /**
- * Standard t function
- * Usage: {t('key')}
- * Note: Components using this will re-render when the locale changes 
- * if they are inside LocaleProvider and we add a small hook or use the locale from context.
+ * useTranslation Hook
+ * Returns the 't' function which is reactive to locale changes.
+ */
+export function useTranslation() {
+  const { currentLocale } = useLocale();
+  
+  const t = useMemo(() => {
+    return (key: TranslationKeys, vars?: Record<string, string | number>): string => {
+      const dict = dictionaries[currentLocale] || en; 
+      let template = (dict as any)[key] as string;
+
+      if (typeof template !== 'string') {
+        template = key; 
+      }
+
+      if (vars) {
+        for (const [vKey, vVal] of Object.entries(vars)) {
+          const re = new RegExp(`{{\\s*${vKey}\\s*}}`, 'g');
+          template = template.replace(re, String(vVal));
+        }
+      }
+
+      return template;
+    };
+  }, [currentLocale]);
+
+  return { t, currentLocale };
+}
+
+/**
+ * Legacy t function - DO NOT USE in new components.
+ * Included for backward compatibility during migration.
+ * Note: Components using this MUST also call useLocale() or useTranslation() 
+ * to trigger a re-render when the locale changes.
  */
 export function t(
   key: TranslationKeys,
