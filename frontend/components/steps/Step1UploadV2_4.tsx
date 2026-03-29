@@ -231,8 +231,8 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                             </button>
                         </div>
 
-                        {selectedMode === 'magic' && (
-                            <div className="mt-10 space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                        {/* Show policy enforcement for any analysis mode */}
+                        <div className="mt-10 space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
                                 <div className="flex items-center justify-between">
                                     <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
                                         {t('shell.policyEnforcement')}
@@ -261,7 +261,6 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                                     })}
                                 </select>
                             </div>
-                        )}
                     </div>
 
                     <div className="space-y-4">

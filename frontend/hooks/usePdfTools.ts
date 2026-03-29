@@ -13,16 +13,18 @@ type PdfToolsCallbacks = {
 export function usePdfTools(callbacks?: PdfToolsCallbacks) {
     const [isServerRunning, setIsServerRunning] = useState(false);
 
-    const startV2Preflight = useCallback(async (file: File, policy: string) => {
+    const startV2Preflight = useCallback(async (file: File, policy: string, options?: any) => {
         setIsServerRunning(true);
         try {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('policy', policy || 'OFFSET_MODERN_COATED');
+            if (options?.mode) formData.append('intent', options.mode);
 
             console.log('[STEP1][POLICY]', {
                 selectedPolicyId: policy,
-                payloadPolicy: policy
+                payloadPolicy: policy,
+                options
             });
 
             const res = await pposFetch<any>('/api/v2/jobs', {

@@ -51,10 +51,16 @@ export function normalizePreflightResult(payload: any): PreflightResult | null {
 
         return {
             ...item,
-            id: item.id || item.uuid || `finding-${idx}`,
-            message: item.message || item.title || item.description || 'Unknown deviation',
+            id: item.id || item.uuid || item.code || item.rule || `finding-${idx}`,
+            title: item.title || item.message || item.rule || item.code || 'Technical Finding',
+            message: item.message || item.description || item.details || 'Preflight deviation detected.',
+            description: item.description || item.details || item.explanation || '',
+            recommendation: item.recommendation || item.suggested_fix || item.fixText || '',
             severity: mapSeverity(item.severity || item.level || 'warning'),
-            category: (item.category || item.type || 'GENERAL').toString().toUpperCase()
+            category: (item.category || item.type || 'General').toString().toUpperCase(),
+            page: item.page ?? item.pageNumber ?? item.metadata?.page ?? null,
+            fixable: !!(item.fixable || item.fixAvailable || item.fix?.available || item.isFixable),
+            raw: item // Keep for debugging
         };
     });
 

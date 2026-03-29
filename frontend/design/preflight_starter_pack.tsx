@@ -256,6 +256,16 @@ export const IssueRow = ({
     processing: 'border-l-[var(--accent-color)]'
   };
 
+  const getSeverityLabel = () => {
+      if (severity === 'error') return (t('error') || 'ERROR').toUpperCase();
+      if (severity === 'warning') return (t('warning') || 'WARNING').toUpperCase();
+      return (t('info') || 'INFO').toUpperCase();
+  };
+
+  const getFixLabel = () => {
+    return fixAvailable ? (t('fixAvailable') || 'FIX AVAILABLE').toUpperCase() : (t('manualReview') || 'MANUAL REVIEW').toUpperCase();
+  };
+
   return (
     <div 
       onClick={onClick}
@@ -267,15 +277,14 @@ export const IssueRow = ({
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <StatusBadge label={type} variant={severity} />
-          {fixAvailable ? (
-            <StatusBadge label="shell.fixAvailable" variant="processing" />
-          ) : (
-            <StatusBadge label="shell.manualReview" variant="default" />
-          )}
+          <StatusBadge label={type || 'GENERAL'} variant={severity} />
+          <StatusBadge 
+            label={getFixLabel()} 
+            variant={fixAvailable ? "processing" : "default"} 
+          />
         </div>
         <span className="text-[0.88rem] uppercase tracking-[0.16em] text-[var(--text-muted)] font-mono">
-          {t('issue').toUpperCase()} / {severity.toUpperCase()}
+          {t('issue')?.toUpperCase() || 'ISSUE'} / {getSeverityLabel()}
         </span>
       </div>
   

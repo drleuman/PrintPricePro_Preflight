@@ -29,6 +29,7 @@ type Props = {
   onConvertGrayscale?: () => void;
   onConvertCMYK?: () => void;
   onRebuildPdf?: () => void;
+  onApplyCorrection?: () => void;
   selectedProfile?: string;
   onProfileChange?: (profile: string) => void;
   isFixing?: boolean;
@@ -44,6 +45,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
   onConvertGrayscale,
   onConvertCMYK,
   onRebuildPdf,
+  onApplyCorrection,
   selectedProfile,
   onProfileChange,
   isFixing,
@@ -87,14 +89,40 @@ export const FixDrawerV2_4: React.FC<Props> = ({
 
       <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-10">
         {/* Status Section */}
-        <div className="space-y-4">
+        <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <StatusBadge label={((issue as any).severity || 'WARNING').toUpperCase()} variant={isError ? 'warning' : 'default'} />
-                <span className="text-[0.8rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">Page {issue.page || 1} / Internal ID: {issue.id?.substring(0,8) || 'N/A'}</span>
+                <span className="text-[0.8rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">
+                  {issue.page ? `PAGE ${issue.page}` : 'DOCUMENT'} / {issue.id?.substring(0,8) || 'N/A'}
+                </span>
             </div>
-            <p className="text-[0.8rem] font-medium text-[var(--text-secondary)] leading-relaxed uppercase tracking-widest">
-                {hint?.userFriendlySummary || (issue as any).message || "Detailed diagnostic data pending analysis."}
-            </p>
+            
+            <div className="space-y-2">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Finding Details</div>
+                <p className="text-[0.9rem] font-medium text-[var(--text-primary)] leading-relaxed">
+                    {issue.message}
+                </p>
+                {issue.description && (
+                  <p className="text-[0.8rem] text-[var(--text-secondary)] leading-relaxed">
+                    {issue.description}
+                  </p>
+                )}
+            </div>
+
+            {issue.recommendation && (
+              <div className="p-4 bg-[var(--accent-color)]/5 border-l-2 border-[var(--accent-color)] space-y-2">
+                  <div className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)]">Engine Recommendation</div>
+                  <p className="text-[0.8rem] text-[var(--text-primary)] font-medium italic">
+                    {issue.recommendation}
+                  </p>
+              </div>
+            )}
+            
+            <div className="flex items-center gap-4 text-[0.7rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">
+                <span>Category: {issue.category || 'GENERAL'}</span>
+                <span>•</span>
+                <span>Fixable: {issue.fixable ? 'YES' : 'NO'}</span>
+            </div>
         </div>
 
         {/* AI Forensic Support */}
@@ -172,6 +200,16 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                             Convert to CMYK Policy
                         </button>
                     </div>
+                )}
+                {/* General Direct Action Correction */}
+                {issue.fixable && onApplyCorrection && (
+                    <button 
+                        onClick={onApplyCorrection}
+                        className="w-full py-5 bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.85rem] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-[0_15px_30px_rgba(220,0,0,0.3)] group"
+                    >
+                        <WrenchScrewdriverIcon className="h-5 w-5 animate-bounce group-hover:animate-none" />
+                        Fix this issue
+                    </button>
                 )}
             </div>
         </div>

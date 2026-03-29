@@ -94,19 +94,23 @@ export interface Bbox {
  */
 export interface Issue {
   id: string;
-  page?: number; // Optional in V2 (can be document-wide)
+  title?: string;
+  message?: string;
+  description?: string;
+  recommendation?: string;
+  page?: number | null;
   bbox?: Bbox;
   severity: Severity | string;
   category?: IssueCategory | string;
   type?: string; // V2 equivalent of category
-  title?: string;
-  message?: string; // Legacy
   user_message?: string; // V2
   details?: string; // Legacy
   developer_message?: string; // V2
   tags?: string[];
   payload?: any;
   evidence?: any; // V2
+  fixable?: boolean;
+  raw?: any;
   fix?: {
     available: boolean;
     applied: boolean;

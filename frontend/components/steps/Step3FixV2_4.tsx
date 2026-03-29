@@ -174,9 +174,9 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                                 issues.map((issue: Issue, idx: number) => (
                                     <IssueRow 
                                         key={issue.id || idx}
-                                        title={issue.message}
+                                        title={issue.title || issue.message}
                                         type={(issue.category || 'GENERAL').toString().toUpperCase()}
-                                        fixAvailable={issue.severity !== 'error'}
+                                        fixAvailable={issue.fixable}
                                         severity={issue.severity as any}
                                         active={selectedIssue?.id === issue.id}
                                         onClick={() => onSelectIssue(issue)}

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { PreflightResult, FileMeta, AppMode } from '../../types';
+import { PreflightResult, FileMeta, AppMode, Issue } from '../../types';
 import { StatusBadge, IssueRow } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
 import { RocketLaunchIcon, ArrowPathIcon, ChevronLeftIcon, ShieldCheckIcon, CommandLineIcon } from '@heroicons/react/24/outline';
@@ -12,10 +12,10 @@ interface Step2AnalysisV2_4Props {
     isRunning: boolean;
     appMode: AppMode;
     onRunAnalysis: () => void;
-    onRunV2Analysis: () => void;
     onNext: () => void;
     onSkipToReview: () => void;
     onBack: () => void;
+    onSelectIssue: (issue: Issue | null) => void;
 }
 
 export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
@@ -25,23 +25,25 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
     isRunning,
     appMode,
     onRunAnalysis,
-    onRunV2Analysis,
     onNext,
     onSkipToReview,
     onBack,
+    onSelectIssue,
 }) => {
     const { t } = useTranslation();
 
     // Trace auto-run decisions to catch leak regression
     useEffect(() => {
-        const canAutoRun = file && !result && !isRunning && appMode !== 'ai';
+        // Universal auto-run: If we have a file but no result and aren't running yet.
+        const canAutoRun = !!file && !result && !isRunning;
         
         console.log('[STEP2][AUTORUN-CHECK]', {
             hasFile: !!file,
             hasResult: !!result,
             isRunning,
             appMode,
-            canAutoRun
+            canAutoRun,
+            ingress: 'UNIFIED-OS-BACKED'
         });
 
         if (canAutoRun) {
@@ -108,11 +110,12 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                                 <div className="space-y-4">
                                     {issues.map((issue, idx) => (
                                         <IssueRow 
-                                            key={(issue as any).id || idx}
-                                            title={issue.message}
+                                            key={issue.id || idx}
+                                            title={issue.title || issue.message}
                                             type={(issue.category || 'GENERAL').toString().toUpperCase()}
-                                            fixAvailable={issue.severity !== 'error'}
+                                            fixAvailable={issue.fixable}
                                             severity={issue.severity as any}
+                                            onClick={() => onSelectIssue(issue)}
                                         />
                                     ))}
                                 </div>
@@ -198,7 +201,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                         </div>
                     </div>
                     <button 
-                        onClick={onRunV2Analysis}
+                        onClick={onRunAnalysis}
                         disabled={isRunning}
                         className="border border-[var(--accent-color)]/30 px-6 py-3 text-[0.8rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)] hover:bg-[var(--accent-color)]/5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                     >

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Stepper } from './components/Stepper';
 import { LoaderOverlay } from './components/LoaderOverlay';
 import { AIInspectorPanel } from './components/AIInspectorPanel';
+import { FixDrawerV2_4 } from './components/FixDrawerV2_4';
 import { Step1UploadV2_4 } from './components/steps/Step1UploadV2_4';
 import { Step2AnalysisV2_4 } from './components/steps/Step2AnalysisV2_4';
 import { Step3FixV2_4 } from './components/steps/Step3FixV2_4';
@@ -114,11 +115,7 @@ function AppContent() {
     return cleanupUrl;
   }, [cleanupUrl]);
 
-  const { isWorkerRunning, error: workerError, runAnalysis, runTacHeatmap } = usePreflightWorker({
-    onAnalysisResult: (res: PreflightResult) => {
-      setResult(res);
-      setCurrentStep(2); // Analysis
-    },
+  const { isWorkerRunning, error: workerError, runTacHeatmap } = usePreflightWorker({
     onHeatmapResult: (data) => {
       setHeatmapData(data);
       setHeatmapLoading(false);
@@ -182,7 +179,7 @@ function AppContent() {
     setLdmStatus('Starting PrintPrice OS Engine...');
     
     try {
-      const res = await startV2Preflight(file, selectedPolicy);
+      const res = await startV2Preflight(file, selectedPolicy, { mode: appMode });
       
       if (res.inlineResult) {
         console.log('[APP][V2-START] Sync mode detected, using inlineResult');
@@ -384,7 +381,14 @@ function AppContent() {
                       setAppMode(mode);
                       resetResidues(); // Clear previous residues
                       setCurrentStep(2); // Ensure we go to Analysis (Step 2)
-                      if (mode === 'ai' && file) {
+                      
+                      console.log('[APP][ANALYSIS-INGRESS]', {
+                        mode,
+                        path: 'OS-BACKED (V2/BFF)',
+                        policy: selectedPolicy
+                      });
+
+                      if (file) {
                         handleV2Start();
                       }
                     }}
@@ -401,14 +405,17 @@ function AppContent() {
                     result={result}
                     isRunning={isWorkerRunning || ldmActive}
                     appMode={appMode}
-                    onRunAnalysis={() => file && fileMeta && runAnalysis(file, fileMeta)}
-                    onRunV2Analysis={handleV2Start}
+                    onRunAnalysis={() => {
+                      console.log('[APP][ANALYSIS-RE-RUN]', { mode: appMode, path: 'OS-BACKED' });
+                      handleV2Start();
+                    }}
                     onNext={() => setCurrentStep(3)}
                     onSkipToReview={() => setCurrentStep(4)}
                     onBack={() => {
                       resetResidues();
                       setCurrentStep(1);
                     }}
+                    onSelectIssue={setSelectedIssue}
                   />
                 )}
 
@@ -435,7 +442,10 @@ function AppContent() {
                     onPageChange={handlePageChange}
                     onNumPagesChange={setNumPages}
                     onSelectIssue={handleSelectIssue}
-                    onRunAnalysis={() => file && fileMeta && runAnalysis(file, fileMeta)}
+                    onRunAnalysis={() => {
+                      console.log('[APP][ANALYSIS-RE-RUN-STEP3]', { mode: appMode });
+                      handleV2Start();
+                    }}
                     onRunHeatmap={handleRunHeatmap}
                     onRunVisualCheck={() => setShowVisualModal(true)}
                     onFixBleed={() => handleAutoFix({ forceBleed: true })}
@@ -489,6 +499,18 @@ function AppContent() {
         ) : (
           <AuthOverlayV2_4 />
         )}
+
+        <FixDrawerV2_4 
+          issue={selectedIssue}
+          onClose={() => setSelectedIssue(null)}
+          onConvertGrayscale={handleConvertGrayscale}
+          onConvertCMYK={handleConvertCMYK}
+          onRebuildPdf={handleRebuildPdf}
+          onApplyCorrection={() => setCurrentStep(3)}
+          selectedProfile={selectedProfile}
+          onProfileChange={setSelectedProfile}
+          onOpenAIAudit={(issue) => { setSelectedIssue(issue); setShowVisualModal(true); }}
+        />
 
         <AIInspectorPanel
           isOpen={showVisualModal}
