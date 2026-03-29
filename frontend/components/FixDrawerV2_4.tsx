@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { Issue } from '../types';
-import { pposFetch } from '../lib/apiClient';
+import { pposFetch, getAuthToken } from '../lib/apiClient';
 import { t } from '../i18n';
 import { ISSUE_CATEGORY_LABELS } from '../constants';
 import { SafeHtmlMarkdown } from './SafeHtmlMarkdown';
@@ -55,17 +55,36 @@ export const FixDrawerV2_4: React.FC<Props> = ({
   const [policies, setPolicies] = useState<any[]>([]);
 
   useEffect(() => {
+    // Only attempt policy fetch if the component is being shown
+    if (!issue) return;
+
+    const token = getAuthToken();
+    if (!token) {
+        console.warn('[DRAWER-AUTH-OMISSION] Attempted policy fetch without token. skipping.');
+        return;
+    }
+
     pposFetch<{ policies: any[] }>('/api/v2/jobs/policies')
       .then(res => {
         if (res.policies) setPolicies(res.policies);
       })
-      .catch(err => console.error('[DRAWER-POLICIES-ERROR]', err));
-  }, []);
+      .catch(err => {
+        if (err.status === 401) {
+            console.error('[DRAWER-AUTH-REJECTION] Policy fetch returned 401 (Unauthorized). ensuring bearer token injection.');
+        } else {
+            console.error('[DRAWER-POLICIES-ERROR]', err);
+        }
+      });
+  }, [issue]);
 
   if (!issue) return null;
 
   const hint = getIssueHint(issue);
   const isError = (issue as any).severity === 'error';
+
+  // Prioritize forensic detail over generic labels
+  const displayTitle = issue.title || issue.summary || issue.message || issue.rule || issue.code || "Critical Trace Finding";
+  const displayId = issue.id || issue.uuid || issue.rule || issue.code || 'N/A';
 
   return (
     <aside className="fixed inset-y-0 right-0 w-[450px] bg-[var(--bg-secondary)] border-l border-[var(--border-color)] shadow-[-50px_0_100px_rgba(0,0,0,0.5)] flex flex-col z-[100] animate-in slide-in-from-right duration-500">
@@ -78,7 +97,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
           <div>
             <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Trace Inspector v2.4</div>
             <h2 className="text-xl font-extrabold tracking-tight text-[var(--text-primary)] uppercase truncate max-w-[260px]">
-                {issue.title || (issue as any).message || "System Deviation"}
+                {displayTitle}
             </h2>
           </div>
         </div>
@@ -93,7 +112,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
             <div className="flex items-center justify-between">
                 <StatusBadge label={((issue as any).severity || 'WARNING').toUpperCase()} variant={isError ? 'warning' : 'default'} />
                 <span className="text-[0.8rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">
-                  {issue.page ? `PAGE ${issue.page}` : 'DOCUMENT'} / {issue.id?.substring(0,8) || 'N/A'}
+                  {issue.page ? `PAGE ${issue.page}` : 'DOCUMENT'} / {displayId.substring(0,8)}
                 </span>
             </div>
             
@@ -114,6 +133,15 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                   <div className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)]">Engine Recommendation</div>
                   <p className="text-[0.8rem] text-[var(--text-primary)] font-medium italic">
                     {issue.recommendation}
+                  </p>
+              </div>
+            )}
+
+            {(issue.context || issue.source) && (
+              <div className="p-4 border-l-2 border-[var(--border-color)] bg-[var(--bg-tertiary)]/10 space-y-2">
+                  <div className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Technical Context</div>
+                  <p className="text-[0.75rem] font-mono text-[var(--text-secondary)] leading-relaxed">
+                    {issue.context || issue.source}
                   </p>
               </div>
             )}

@@ -49,19 +49,26 @@ export function normalizePreflightResult(payload: any): PreflightResult | null {
             };
         }
 
-        return {
+        const normalized = {
             ...item,
             id: item.id || item.uuid || item.code || item.rule || `finding-${idx}`,
-            title: item.title || item.message || item.rule || item.code || 'Technical Finding',
-            message: item.message || item.description || item.details || 'Preflight deviation detected.',
-            description: item.description || item.details || item.explanation || '',
-            recommendation: item.recommendation || item.suggested_fix || item.fixText || '',
+            title: item.title || item.summary || item.message || item.rule || item.code || 'Technical preflight finding',
+            message: item.message || item.user_message || item.description || item.details || 'System deviation detected.',
+            description: item.description || item.details || item.explanation || item.summary || '',
+            recommendation: item.recommendation || item.suggested_fix || item.fixText || item.hint || '',
             severity: mapSeverity(item.severity || item.level || 'warning'),
             category: (item.category || item.type || 'General').toString().toUpperCase(),
             page: item.page ?? item.pageNumber ?? item.metadata?.page ?? null,
             fixable: !!(item.fixable || item.fixAvailable || item.fix?.available || item.isFixable),
             raw: item // Keep for debugging
         };
+
+        if (idx === 0) {
+           console.log('[ISSUE][RAW]', item);
+           console.log('[ISSUE][NORMALIZED]', normalized);
+        }
+
+        return normalized;
     });
 
     const pageCount = payload.meta?.pageCount ?? payload.report?.meta?.pageCount ?? payload.pages?.length ?? payload.report?.pages?.length ?? null;

@@ -94,10 +94,16 @@ export interface Bbox {
  */
 export interface Issue {
   id: string;
+  uuid?: string;
+  rule?: string;
+  code?: string;
   title?: string;
+  summary?: string;
   message?: string;
   description?: string;
   recommendation?: string;
+  context?: string;
+  source?: string;
   page?: number | null;
   bbox?: Bbox;
   severity: Severity | string;
