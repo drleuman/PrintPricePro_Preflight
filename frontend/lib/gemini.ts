@@ -14,8 +14,8 @@ export async function pickAvailableModel(): Promise<string> {
     try {
         const response = await pposFetch<any>(`/api/gemini-proxy/${GEMINI_API_VER}/models?pageSize=200`);
         const list: any[] = Array.isArray(response?.models) ? response.models : [];
-        
-        const genPossible = list.filter((m) => 
+
+        const genPossible = list.filter((m) =>
             (m.supportedGenerationMethods || []).includes('generateContent') &&
             !m.name.includes('1.5-flash') && // Avoid 1.5-flash (NOT_FOUND)
             !m.name.includes('2.0-flash')    // Avoid 2.0-flash (Deprecated)
@@ -27,12 +27,12 @@ export async function pickAvailableModel(): Promise<string> {
 
         // Priority Logic: 2.5-flash -> 2.5-pro -> 2.5-flash-lite -> any 2.5 -> any other
         const has = (k: string) => genPossible.find((m) => m.name?.toLowerCase().includes(k));
-        
-        const candidate = has('2.5-flash') || 
-                          has('2.5-pro') || 
-                          has('2.5-flash-lite') ||
-                          has('2.5') || 
-                          genPossible[0];
+
+        const candidate = has('2.5-flash') ||
+            has('2.5-pro') ||
+            has('2.5-flash-lite') ||
+            has('2.5') ||
+            genPossible[0];
 
         return (candidate?.name || `models/${DEFAULT_GEMINI_MODEL}`).replace(/^models\//, '');
     } catch (err) {

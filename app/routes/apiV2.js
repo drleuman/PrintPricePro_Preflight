@@ -50,7 +50,7 @@ router.post(
         return res.status(400).json({ error: 'No PDF provided.' });
       }
 
-      const policy = req.body?.policy || 'OFFSET_CMYK_STRICT';
+      const policy = req.body?.policy || 'OFFSET_MODERN_COATED';
       const jobId = uuidv4();
       const assetId = jobId;
       const filename = safeFilename(req.file.originalname || 'document.pdf');
@@ -152,20 +152,29 @@ router.post(
  * GET /api/v2/jobs/policies
  * Returns available preflight policies for the frontend.
  */
-router.get('/policies', (req, res) => {
-  // Canonical policies for PrintPrice Pro Preflight
-  const policies = [
-    { slug: 'OFFSET_CMYK_STRICT', name: 'Offset CMYK (Strict)' },
-    { slug: 'DIGITAL_FOGRA39', name: 'Digital (Fogra 39)' },
-    { slug: 'ISO_COATED_V2_39L', name: 'ISO Coated v2 (39L)' },
-    { slug: 'NEWSPRINT_COLDSET', name: 'Newsprint (Coldset)' },
-    { slug: 'GENERIC_RGB_GUARD', name: 'Generic RGB Guard' }
-  ];
+router.get('/policies', async (req, res) => {
+  try {
+    const upstreamPath = ppos.routes.policies;
+    const authHeaders = identityService.getAuthHeaders(req.auth || req.user || {});
+    
+    const response = await pposRequest(upstreamPath, {
+      method: 'GET',
+      headers: authHeaders
+    });
 
-  res.json({
-    ok: true,
-    policies
-  });
+    const data = await response.json();
+
+    console.log('[BFF][POLICIES]', {
+      upstreamPath,
+      hasPreflightRead: true,
+      policyCount: data?.policies?.length || 0
+    });
+
+    res.json(data);
+  } catch (error) {
+    console.error('[BFF][POLICIES][ERROR]', error);
+    res.status(502).json({ error: 'Failed to fetch policy catalog' });
+  }
 });
 
 /**

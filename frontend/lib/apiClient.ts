@@ -27,7 +27,8 @@ export async function pposFetch<T>(path: string, options?: RequestInit): Promise
     };
 
     // P0: Strict Auth Enforcement - Do NOT allow options.headers to drop/blank the token if it exists
-    if (token) {
+    const isGeminiProxy = path.startsWith('/api/gemini-proxy/');
+    if (token && !isGeminiProxy) {
         headers['Authorization'] = `Bearer ${token}`;
     }
 
@@ -68,7 +69,9 @@ export async function pposFetch<T>(path: string, options?: RequestInit): Promise
                     setAuthToken(newToken);
                     
                     // Retry original request with new token
-                    headers['Authorization'] = `Bearer ${newToken}`;
+                    if (!isGeminiProxy) {
+                        headers['Authorization'] = `Bearer ${newToken}`;
+                    }
                     res = await fetch(path, { ...options, headers });
                 } else {
                     clearAuthTokens();

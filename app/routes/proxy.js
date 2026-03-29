@@ -2,6 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const rateLimit = require('express-rate-limit');
 const WebSocket = require('ws');
+const crypto = require('crypto');
 
 const router = express.Router();
 
@@ -75,24 +76,61 @@ router.use('/', async (req, res, next) => {
         const targetPath = req.url.startsWith('/') ? req.url.substring(1) : req.url;
         const apiUrl = `${externalApiBaseUrl}/${targetPath}`;
 
-        // Copy headers
+        const requestId = req.headers['x-request-id'] || crypto.randomUUID();
+
+        // Copy authorized headers with strict exclusion (Sanitization)
         const outgoingHeaders = {};
+        const excludedHeaders = [
+            'authorization',
+            'cookie',
+            'x-goog-api-key',
+            'host',
+            'connection',
+            'content-length',
+            'transfer-encoding',
+            'upgrade',
+            'origin',
+            'referer',
+            'sec-websocket-key',
+            'sec-websocket-version',
+            'sec-websocket-extensions',
+            'sec-websocket-protocol',
+            'sec-websocket-accept'
+        ];
+
         for (const h in req.headers) {
             const low = h.toLowerCase();
-            if (!['host', 'connection', 'content-length', 'transfer-encoding', 'upgrade', 'sec-websocket-key', 'sec-websocket-version', 'sec-websocket-extensions', 'referer', 'origin'].includes(low)) {
+            if (!excludedHeaders.includes(low) && !low.startsWith('sec-websocket-')) {
                 outgoingHeaders[h] = req.headers[h];
             }
         }
-        outgoingHeaders['X-Goog-Api-Key'] = apiKey;
+
+        // Force Gemini Authentication
+        outgoingHeaders['x-goog-api-key'] = apiKey;
+        outgoingHeaders['x-request-id'] = requestId;
 
         const method = req.method.toUpperCase();
+        
+        // Content-Type Handling
         if (['POST', 'PUT', 'PATCH'].includes(method)) {
             outgoingHeaders['Content-Type'] = req.headers['content-type'] || 'application/json';
         } else {
             delete outgoingHeaders['Content-Type'];
             delete outgoingHeaders['content-type'];
         }
+
         if (!outgoingHeaders['accept']) outgoingHeaders['accept'] = '*/*';
+
+        console.log('[GEMINI-PROXY][UPSTREAM]', {
+            requestId,
+            method,
+            url: apiUrl,
+            incomingHasAuthorization: !!req.headers.authorization,
+            incomingHasCookie: !!req.headers.cookie,
+            forwardedAuthHeader: false,
+            usingApiKey: !!apiKey,
+            contentType: outgoingHeaders['Content-Type'] || null
+        });
 
         const axiosConfig = {
             method,

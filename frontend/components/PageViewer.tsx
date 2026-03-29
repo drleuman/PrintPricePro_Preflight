@@ -47,8 +47,6 @@ export const PageViewer: React.FC<PageViewerProps> = ({
   const pdfRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
   const [scale, setScale] = useState(1.5);
 
-  // Heatmap State (local calculation trigger)
-  const [showHeatmap, setShowHeatmap] = useState(false);
   const heatmapLayerRef = useRef<HTMLCanvasElement>(null);
 
   const drawBbox = useCallback((ctx: CanvasRenderingContext2D, bbox: Bbox, canvasWidth: number, canvasHeight: number) => {
@@ -76,7 +74,6 @@ export const PageViewer: React.FC<PageViewerProps> = ({
           pdfRef.current = null;
         }
         onNumPagesChange(0);
-        setShowHeatmap(false);
         return;
       }
 
@@ -159,22 +156,8 @@ export const PageViewer: React.FC<PageViewerProps> = ({
     renderPage();
   }, [currentPage, numPages, scale, selectedIssue, drawBbox]);
 
-  // Separate effect for heatmap trigger to avoid infinite loop
-  useEffect(() => {
-    if (showHeatmap && file) {
-      const meta: FileMeta = { name: file.name, size: file.size, type: file.type };
-      onRunHeatmap(file, meta, currentPage);
-    }
-  }, [showHeatmap, currentPage]); // Only trigger when showHeatmap or currentPage changes
-
-  // Heatmap Trigger (Toggle)
-  // We don't need a separate effect for toggle, just logic.
-  // Actually, we do need an effect to watch showHeatmap changes IF we want strict separation, 
-  // but we included it in the renderPage effect dependency above, so it will re-render and trigger calculation.
-
-  // Wait, if I just toggle showHeatmap, renderPage runs again (expensive canvas render).
-  // Ideally we separate page render from heatmap trigger.
-  // But for now, simple is fine.
+  // Logic for heatmap visibility and effects derived from props
+  const heatmapVisible = !!heatmapData || isHeatmapLoading;
 
 
   // Heatmap Drawing
@@ -237,9 +220,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
   // THIS IS CRITICAL.
 
 
-  const toggleHeatmap = useCallback(() => {
-    setShowHeatmap(prev => !prev);
-  }, []);
+
 
   const handlePrevPage = useCallback(() => {
     if (currentPage > 1) {
@@ -281,7 +262,38 @@ export const PageViewer: React.FC<PageViewerProps> = ({
           </div>
         )}
 
+        {/* Page Navigation Floating Bar (RESTORED) */}
+        {!previewLoading && numPages > 0 && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-[var(--bg-primary)]/95 backdrop-blur-2xl border border-[var(--border-color)] px-6 py-2 rounded-2xl shadow-[0_15px_60px_rgba(0,0,0,0.4)] flex items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-500 hover:border-[var(--accent-color)]/30 transition-all group">
+            <button 
+                onClick={handlePrevPage} 
+                disabled={currentPage <= 1}
+                className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)] disabled:opacity-20 transition-all hover:bg-[var(--accent-color)]/5 rounded-xl border border-transparent hover:border-[var(--accent-color)]/10"
+            >
+                <ChevronLeftIcon className="h-4 w-4" />
+            </button>
+            
+            <div className="flex flex-col items-center min-w-[70px]">
+                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-[var(--text-muted)] mb-0.5 leading-none flex items-center gap-1">
+                  {t('pageNavigation')}
+                </span>
+                <span className="text-xs font-mono font-black text-[var(--text-primary)] group-hover:scale-110 transition-transform">
+                    {currentPage} <span className="text-[var(--text-muted)] mx-1">/</span> {numPages}
+                </span>
+            </div>
+
+            <button 
+                onClick={handleNextPage} 
+                disabled={currentPage >= numPages}
+                className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)] disabled:opacity-20 transition-all hover:bg-[var(--accent-color)]/5 rounded-xl border border-transparent hover:border-[var(--accent-color)]/10"
+            >
+                <ChevronRightIcon className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         {/* The PDF Stage (constrained box) */}
+
         <div className="relative w-full h-full flex overflow-auto custom-scrollbar p-4">
           <div
             id="pdf-stage"
@@ -321,7 +333,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
               />
             )}
 
-            {showHeatmap && (
+            {heatmapVisible && (
               <>
                 {isHeatmapLoading && (
                   <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[var(--bg-tertiary)]/80 text-[var(--text-primary)] px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest z-30 shadow-2xl">

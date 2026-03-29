@@ -46,6 +46,7 @@ module.exports = {
   },
   routes: {
     jobs: '/api/preflight/jobs',
+    policies: '/api/preflight/jobs/policies',
     jobStatus: (jobId) => `/api/preflight/jobs/${encodeURIComponent(jobId)}`,
     jobArtifact: (jobId, artifactId) =>
       `/api/preflight/jobs/${encodeURIComponent(jobId)}/artifacts/${encodeURIComponent(artifactId)}`

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { Issue } from '../types';
+import { pposFetch } from '../lib/apiClient';
 import { t } from '../i18n';
 import { ISSUE_CATEGORY_LABELS } from '../constants';
 import { SafeHtmlMarkdown } from './SafeHtmlMarkdown';
@@ -49,6 +50,15 @@ export const FixDrawerV2_4: React.FC<Props> = ({
   serverAvailable = true
 }) => {
   const [bleedMode, setBleedMode] = useState<'safe' | 'aggressive'>('safe');
+  const [policies, setPolicies] = useState<any[]>([]);
+
+  useEffect(() => {
+    pposFetch<{ policies: any[] }>('/api/v2/jobs/policies')
+      .then(res => {
+        if (res.policies) setPolicies(res.policies);
+      })
+      .catch(err => console.error('[DRAWER-POLICIES-ERROR]', err));
+  }, []);
 
   if (!issue) return null;
 
@@ -145,12 +155,14 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                             <span>{formatLabel('Policy_Enforcement')}</span>
                         </div>
                         <select 
-                            value={selectedProfile || 'iso_coated_v3'} 
+                            value={selectedProfile} 
                             onChange={(e) => onProfileChange?.(e.target.value)}
                             className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] p-3 text-[0.85rem] font-mono text-[var(--text-primary)] outline-none focus:border-[var(--accent-color)]/50"
                         >
-                            <option value="iso_coated_v3">FOGRA51 (PSD_V3)</option>
-                            <option value="iso_uncoated_v3">FOGRA52 (PSO_V3)</option>
+                            {policies.length === 0 && <option value="">Loading policies...</option>}
+                            {policies.map(p => (
+                                <option key={p.id} value={p.id}>{p.name.toUpperCase()}</option>
+                            ))}
                         </select>
                         <button 
                             onClick={onConvertCMYK}

@@ -218,36 +218,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                     <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden h-[600px] flex flex-col">
                         <div className="absolute top-0 left-0 right-0 p-4 z-10 flex flex-wrap md:flex-nowrap items-center justify-between gap-4 bg-[var(--bg-primary)]/90 backdrop-blur-xl border-b border-[var(--border-color)] overflow-hidden">
                             {/* Pagination Cluster */}
-                            <div className="flex items-center gap-4 bg-[var(--bg-secondary)] px-4 py-2 border border-[var(--border-color)]">
-                                <button 
-                                    onClick={() => onPageChange(Math.max(1, currentPage - 1))} 
-                                    className="text-[var(--text-secondary)] hover:text-[var(--accent-color)] transition-colors"
-                                    disabled={currentPage <= 1}
-                                >
-                                    <ChevronLeftIcon className="h-4 w-4" />
-                                </button>
-                                
-                                <div className="flex items-center gap-2">
-                                    <input 
-                                        type="number"
-                                        value={currentPage}
-                                        onChange={(e) => {
-                                            const val = parseInt(e.target.value);
-                                            if (!isNaN(val) && val >=1 && val <= numPages) onPageChange(val);
-                                        }}
-                                        className="w-12 bg-[var(--bg-primary)]/40 border border-[var(--border-color)] text-center text-xs font-mono text-[var(--text-primary)] py-1 outline-none focus:border-[var(--accent-color)]/40"
-                                    />
-                                    <span className="text-[0.65rem] font-black text-[var(--text-muted)] uppercase tracking-widest">{t('of')} {numPages}</span>
-                                </div>
 
-                                <button 
-                                    onClick={() => onPageChange(Math.min(numPages, currentPage + 1))} 
-                                    className="text-[var(--text-secondary)] hover:text-[var(--accent-color)] transition-colors"
-                                    disabled={currentPage >= numPages}
-                                >
-                                    <ChevronRightIcon className="h-4 w-4" />
-                                </button>
-                            </div>
 
                             {/* Analysis Tools Cluster */}
                             <div className="flex flex-wrap items-center gap-2">

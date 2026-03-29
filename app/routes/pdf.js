@@ -108,7 +108,7 @@ router.post('/rebuild-150dpi', upload.single('file'), apiKeyMiddleware, async (r
 router.post('/autofix', apiKeyMiddleware, async (req, res) => {
     res.status(410).json({ 
         error: 'ENDPOINT_DEPRECATED', 
-        message: 'Direct /api/convert/autofix is disabled. Use V2 Jobs API (POST /api/v2/jobs) with policy DIGITAL_AUTO_FIX instead.' 
+        message: 'Direct /api/convert/autofix is disabled. Use V2 Jobs API (POST /api/v2/jobs) with policy DIGITAL_RGB instead.' 
     });
 });
 

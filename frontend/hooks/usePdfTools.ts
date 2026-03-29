@@ -18,7 +18,13 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
         try {
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('policy', policy);
+            formData.append('policy', policy || 'OFFSET_MODERN_COATED');
+
+            console.log('[STEP1][POLICY]', {
+                selectedPolicyId: policy,
+                payloadPolicy: policy
+            });
+
             const res = await pposFetch<any>('/api/v2/jobs', {
                 method: 'POST',
                 body: formData,
@@ -30,17 +36,17 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
     }, []);
 
     const convertToGrayscaleServer = useCallback(async (file: File) => {
-        const res = await startV2Preflight(file, 'DIGITAL_AUTO_FIX');
+        const res = await startV2Preflight(file, 'DIGITAL_RGB');
         return res.job_id || res.jobId;
     }, [startV2Preflight]);
 
-    const convertColorServer = useCallback(async (file: File, profile: string = 'iso_coated_v3') => {
-        const res = await startV2Preflight(file, 'OFFSET_CMYK_STRICT');
+    const convertColorServer = useCallback(async (file: File, profile: string = 'OFFSET_MODERN_COATED') => {
+        const res = await startV2Preflight(file, profile);
         return res.job_id || res.jobId;
     }, [startV2Preflight]);
 
     const rebuildPdfServer = useCallback(async (file: File, dpi: number = 300) => {
-        const res = await startV2Preflight(file, 'BOOK_INTERIOR_STANDARD');
+        const res = await startV2Preflight(file, 'OFFSET_MODERN_COATED');
         return res.job_id || res.jobId;
     }, [startV2Preflight]);
 
@@ -48,7 +54,7 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
         file: File,
         opts?: any
     ): Promise<{ jobId: string }> => {
-        const res = await startV2Preflight(file, opts?.policy || 'DIGITAL_AUTO_FIX');
+        const res = await startV2Preflight(file, opts?.policy || 'OFFSET_MODERN_COATED');
         return { jobId: res.job_id || res.jobId };
     }, [startV2Preflight]);
 

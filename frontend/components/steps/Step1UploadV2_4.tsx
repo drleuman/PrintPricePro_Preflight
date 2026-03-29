@@ -28,7 +28,8 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
     const { t } = useTranslation();
     const { user } = useAuth();
     const [selectedMode, setSelectedMode] = useState<'magic' | 'manual'>('magic');
-    const [policies, setPolicies] = useState<{ slug: string, name: string }[]>([]);
+    const [policies, setPolicies] = useState<any[]>([]);
+    const [policyStatus, setPolicyStatus] = useState<'idle' | 'loading' | 'error'>('idle');
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -41,14 +42,31 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
     React.useEffect(() => {
         if (!user) return;
         
-        pposFetch<{ ok: boolean, policies: any[] }>('/api/v2/jobs/policies')
+        setPolicyStatus('loading');
+        pposFetch<{ policies: any[] }>('/api/v2/jobs/policies')
             .then(res => {
-                if (res.ok && res.policies) setPolicies(res.policies);
+                const loadedPolicies = res.policies || [];
+                setPolicies(loadedPolicies);
+                setPolicyStatus('idle');
+
+                if (loadedPolicies.length > 0) {
+                  // Default selection rule: OFFSET_MODERN_COATED or first available
+                  const defaultPolicy = loadedPolicies.find(p => p.id === 'OFFSET_MODERN_COATED') || loadedPolicies[0];
+                  if (defaultPolicy && !selectedPolicy) {
+                    onPolicyChange(defaultPolicy.id);
+                  }
+                }
+
+                console.log('[STEP1][POLICY]', {
+                    loadedPolicies: loadedPolicies.length,
+                    selectedPolicyId: selectedPolicy || (loadedPolicies.find(p => p.id === 'OFFSET_MODERN_COATED') || loadedPolicies[0])?.id
+                });
             })
             .catch(err => {
                 console.error('[POLICIES-FETCH-ERROR]', err);
+                setPolicyStatus('error');
             });
-    }, [user]);
+    }, [user, onPolicyChange, selectedPolicy]);
 
     const handleFile = (f: File | null) => {
         if (f && f.type === 'application/pdf') {
@@ -213,7 +231,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                             </button>
                         </div>
 
-                        {selectedMode === 'magic' && policies.length > 0 && (
+                        {selectedMode === 'magic' && (
                             <div className="mt-10 space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
                                 <div className="flex items-center justify-between">
                                     <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
@@ -225,10 +243,22 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                                     className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] p-4 text-[0.85rem] font-bold text-[var(--text-primary)] focus:border-[var(--accent-color)] outline-none appearance-none cursor-pointer hover:border-[var(--text-muted)] transition-all font-mono uppercase"
                                     value={selectedPolicy}
                                     onChange={(e) => onPolicyChange(e.target.value)}
+                                    disabled={policyStatus === 'loading'}
                                 >
-                                    {policies.map(p => (
-                                        <option key={p.slug} value={p.slug}>{p.name.toUpperCase()}</option>
-                                    ))}
+                                    {policyStatus === 'loading' && <option>Loading policy catalog...</option>}
+                                    {policyStatus === 'error' && <option>Unable to load policy catalog.</option>}
+                                    {policyStatus === 'idle' && policies.length === 0 && <option>No policies available.</option>}
+                                    {policies.map(p => {
+                                        const primaryLabel = p.name ? p.name.split(' (')[0] : p.id;
+                                        const secondaryParts = [p.profile, p.colorSpace, p.standard].filter(Boolean);
+                                        const secondaryLabel = secondaryParts.join(' · ');
+                                        
+                                        return (
+                                            <option key={p.id} value={p.id}>
+                                                {primaryLabel.toUpperCase()} {secondaryLabel ? `[ ${secondaryLabel} ]` : ''}
+                                            </option>
+                                        );
+                                    })}
                                 </select>
                             </div>
                         )}

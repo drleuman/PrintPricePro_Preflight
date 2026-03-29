@@ -1,7 +1,6 @@
 'use strict';
 
 const fs = require('fs');
-const FormData = require('form-data');
 const { pposRequest } = require('./apiClient');
 const identityService = require('./identityService');
 const pposConfig = require('../../config/ppos');
@@ -62,7 +61,7 @@ async function enqueueJob(type, payload = {}) {
     jobId,
     tenantId,
     job_type: type || 'PREFLIGHT',
-    policy: payload.policy || 'OFFSET_CMYK_STRICT',
+    policy: payload.policy || 'OFFSET_MODERN_COATED',
     input,
     metadata: {
       source: 'printprice-preflight-app',
@@ -96,35 +95,48 @@ async function enqueueJob(type, payload = {}) {
     if (payload.filePath && fs.existsSync(payload.filePath)) {
       console.log(`[QUEUE][MULTIPART] Reconstructing job creation request for ${jobId}`);
       
+      const fileBuffer = await fs.promises.readFile(payload.filePath);
+      const fileMimeType = payload.mimeType || 'application/pdf';
+      const fileName = payload.filename || input.filename || 'document.pdf';
+      const blob = new Blob([fileBuffer], { type: fileMimeType });
+
       const form = new FormData();
       
-      // We append the JSON fields individually or as nested strings
+      // Scalar fields
       form.append('id', jobId);
       form.append('jobId', jobId);
       form.append('tenantId', tenantId);
       form.append('job_type', type || 'PREFLIGHT');
-      form.append('policy', payload.policy || 'OFFSET_CMYK_STRICT');
+      form.append('policy', payload.policy || 'OFFSET_MODERN_COATED');
       
-      // Nested objects must be stringified for FormData
+      // Nested objects as JSON strings
       form.append('input', JSON.stringify(input));
       form.append('metadata', JSON.stringify({
         source: 'printprice-preflight-app',
         requestId: payload.requestId || null,
         timestamp: new Date().toISOString(),
-        ...payload.metadata // Preserve any additional metadata
+        ...payload.metadata
       }));
 
-      // The File itself - Canonical key 'file'
-      form.append('file', fs.createReadStream(payload.filePath), {
-        filename: payload.filename || 'document.pdf',
-        contentType: 'application/pdf'
+      // Canonical multipart file field
+      form.append('file', blob, fileName);
+
+      console.log('[QUEUE][MULTIPART][DEBUG]', {
+        jobId,
+        tenantId,
+        filePath: payload.filePath,
+        fileExists: true,
+        fileSize: fileBuffer.length,
+        fileName,
+        fileMimeType,
+        formDataType: typeof FormData,
+        usingNativeFormData: true
       });
 
       response = await pposRequest(pposConfig.routes.jobs, {
         method: 'POST',
         headers: {
-          ...authHeaders,
-          ...form.getHeaders() // Important: contains the multipart boundary
+          ...authHeaders
         },
         body: form
       });

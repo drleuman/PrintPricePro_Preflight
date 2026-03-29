@@ -12,10 +12,17 @@ const jwtConfig = {
 };
 
 function getScopes() {
-    return String(process.env.PPOS_INTERNAL_SCOPES || 'preflight:write,preflight:analyze,jobs:read,jobs:write')
+    const scopes = String(process.env.PPOS_INTERNAL_SCOPES || 'preflight:read,preflight:write,preflight:analyze,jobs:read,jobs:write')
         .split(',')
         .map(s => s.trim())
         .filter(Boolean);
+
+    console.log('[IDENTITY][PPOS_SCOPES]', {
+        scopes,
+        hasPreflightRead: scopes.includes('preflight:read')
+    });
+
+    return scopes;
 }
 
 /**

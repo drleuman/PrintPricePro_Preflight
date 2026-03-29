@@ -53,7 +53,7 @@ router.post('/', v2UploadLimiter, upload.single('file'), async (req, res) => {
         }
 
         const tenantId = req.auth.tenantId;
-        const policy = req.body.policy || 'OFFSET_CMYK_STRICT';
+        const policy = req.body.policy || 'OFFSET_MODERN_COATED';
         const batchId = 'batch_' + crypto.randomUUID();
 
         // Store ZIP as a batch asset

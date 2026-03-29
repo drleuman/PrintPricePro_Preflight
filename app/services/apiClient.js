@@ -9,6 +9,13 @@
 
 const pposConfig = require('../../config/ppos');
 
+function isNativeFormData(body) {
+    return (
+        typeof FormData !== 'undefined' &&
+        body instanceof FormData
+    );
+}
+
 /**
  * Standard request helper for PPOS services.
  * 
@@ -25,19 +32,32 @@ async function pposRequest(path, options = {}) {
 
     const url = `${baseUrl.replace(/\/$/, '')}${path}`;
     
-    const headers = {
-        'Content-Type': 'application/json',
-        'x-ppp-api-key': pposConfig.apiKey,
-        ...options.headers
-    };
+    const body = options.body;
+    const nativeMultipart = isNativeFormData(body);
+    const incomingHeaders = { ...(options.headers || {}) };
 
-    // If an explicit content-type was provided in ANY casing (e.g. 'content-type' from form-data),
-    // we must remove the default 'Content-Type' to avoid duplicate headers.
-    const hasExplicitContentType = Object.keys(options.headers || {}).some(
+    const hasExplicitContentType = Object.keys(incomingHeaders).some(
         h => h.toLowerCase() === 'content-type'
     );
-    if (hasExplicitContentType) {
-        delete headers['Content-Type'];
+
+    const headers = {
+        ...(pposConfig.apiKey ? { 'x-ppp-api-key': pposConfig.apiKey } : {}),
+        ...incomingHeaders
+    };
+
+    // Only inject JSON content-type for non-FormData requests that do not already define one.
+    if (!nativeMultipart && !hasExplicitContentType) {
+        headers['Content-Type'] = 'application/json';
+    }
+
+    // Never forward an explicit multipart Content-Type for native FormData.
+    // fetch/undici must generate the boundary automatically.
+    if (nativeMultipart) {
+        for (const key of Object.keys(headers)) {
+            if (key.toLowerCase() === 'content-type') {
+                delete headers[key];
+            }
+        }
     }
 
     const mergedOptions = {
@@ -46,6 +66,13 @@ async function pposRequest(path, options = {}) {
     };
 
     console.log(`[PPOS-API] Requesting: ${options.method || 'GET'} ${url}`);
+    console.log('[PPOS-API][DEBUG]', {
+        method: options.method || 'GET',
+        url,
+        nativeMultipart,
+        hasExplicitContentType,
+        headerKeys: Object.keys(headers)
+    });
 
     try {
         const response = await fetch(url, mergedOptions);

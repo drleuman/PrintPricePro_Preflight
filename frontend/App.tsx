@@ -77,8 +77,8 @@ function AppContent() {
   const lastPdfUrlRef = useRef<string | null>(null);
   const [lastPdfUrl, setLastPdfUrl] = useState<string | null>(null);
   const [lastPdfName, setLastPdfName] = useState<string | null>(null);
-  const [selectedProfile, setSelectedProfile] = useState<string>('OFFSET_CMYK_STRICT');
-  const [selectedPolicy, setSelectedPolicy] = useState<string>('OFFSET_CMYK_STRICT');
+  const [selectedProfile, setSelectedProfile] = useState<string>('');
+  const [selectedPolicy, setSelectedPolicy] = useState<string>('');
 
   const { isAuthenticated } = useAuth();
 
@@ -97,12 +97,19 @@ function AppContent() {
     return cleanupUrl;
   }, [cleanupUrl]);
 
-  const { isWorkerRunning, error: workerError, runAnalysis } = usePreflightWorker({
+  const { isWorkerRunning, error: workerError, runAnalysis, runTacHeatmap } = usePreflightWorker({
     onAnalysisResult: (res: PreflightResult) => {
       setResult(res);
       setCurrentStep(2); // Analysis
     },
-    onError: (err: string) => { console.error('[WORKER-ERROR]', err); }
+    onHeatmapResult: (data) => {
+      setHeatmapData(data);
+      setHeatmapLoading(false);
+    },
+    onError: (err: string) => { 
+      console.error('[WORKER-ERROR]', err);
+      setHeatmapLoading(false);
+    }
   });
 
   const {
@@ -260,22 +267,27 @@ function AppContent() {
     setAppMode(null);
   };
 
-  const handleRunHeatmap = () => {
-    if (heatmapData) {
+  const handleRunHeatmap = useCallback((targetPage?: number) => {
+    // If targetPage is provided, we are re-syncing due to page change
+    // If NOT provided, we are toggling
+    if (targetPage === undefined && heatmapData) {
       setHeatmapData(null);
       return;
     }
+    
+    if (!file || !fileMeta) return;
+    
     setHeatmapLoading(true);
-    setTimeout(() => {
-      setHeatmapData({
-        values: new Uint8Array(100),
-        width: 10,
-        height: 10,
-        maxTac: 300
-      });
-      setHeatmapLoading(false);
-    }, 1500);
-  };
+    const pageToAnalyze = targetPage !== undefined ? targetPage : currentPage;
+    runTacHeatmap(file, fileMeta, pageToAnalyze - 1);
+  }, [file, fileMeta, currentPage, heatmapData, runTacHeatmap]);
+
+  // Sync heatmap on page change
+  useEffect(() => {
+    if (heatmapData) {
+      handleRunHeatmap(currentPage);
+    }
+  }, [currentPage]); // Re-run if page changes and data was already visible
 
   return (
     <ThemeProvider>
