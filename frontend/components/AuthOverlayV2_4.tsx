@@ -49,6 +49,13 @@ export const AuthOverlayV2_4: React.FC = () => {
         }
     };
 
+    const roles = [
+        { id: 'AUTHOR', label: t('auth.role.author') },
+        { id: 'PUBLISHER', label: t('auth.role.publisher') },
+        { id: 'PRINT_HOUSE', label: t('auth.role.printHouse') },
+        { id: 'DEVELOPER', label: t('auth.role.developer') }
+    ];
+
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0c0c0d]/98 backdrop-blur-3xl animate-in fade-in duration-700">
             {/* Subtle Grid Pattern */}
@@ -90,19 +97,16 @@ export const AuthOverlayV2_4: React.FC = () => {
                                     <p className="text-[#6b6b70] text-[0.65rem]">{t('auth.roleTailor')}</p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
-                                    {['Author', 'Publisher', 'Print House', 'Developer'].map(r => {
-                                        const value = r.toUpperCase().replace(' ', '_');
-                                        return (
-                                            <button 
-                                                key={r}
-                                                type="button"
-                                                onClick={() => setRole(value as any)}
-                                                className={`h-[48px] text-[0.65rem] font-black uppercase tracking-widest border transition-all duration-300 ${role === value ? 'border-[#FF0000] bg-[#FF0000]/10 text-white shadow-[0_0_10px_rgba(255,0,0,0.1)]' : 'border-white/5 bg-[#0c0c0d] text-[#6b6b70] hover:border-white/20'}`}
-                                            >
-                                                {r}
-                                            </button>
-                                        );
-                                    })}
+                                    {roles.map(r => (
+                                        <button 
+                                            key={r.id}
+                                            type="button"
+                                            onClick={() => setRole(r.id as any)}
+                                            className={`h-[48px] text-[0.65rem] font-black uppercase tracking-widest border transition-all duration-300 ${role === r.id ? 'border-[#FF0000] bg-[#FF0000]/10 text-white shadow-[0_0_10px_rgba(255,0,0,0.1)]' : 'border-white/5 bg-[#0c0c0d] text-[#6b6b70] hover:border-white/20'}`}
+                                        >
+                                            {r.label}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                         )}

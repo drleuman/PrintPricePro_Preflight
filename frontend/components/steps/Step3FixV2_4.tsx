@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
 import { PreflightResult, FileMeta, Issue } from '../../types';
-import { StatusBadge, IssueRow, ActionBar } from '../../design/preflight_starter_pack';
+import { StatusBadge, IssueRow } from '../../design/preflight_starter_pack';
 import { PageViewer } from '../PageViewer';
 import { FixDrawerV2_4 } from '../FixDrawerV2_4';
 import { AIInspectorPanel } from '../AIInspectorPanel';
 import { EfficiencyAuditModalV2_4 } from '../EfficiencyAuditModalV2_4';
-import { AutoFixProPanel } from '../AutoFixProPanel';
-import { t } from '../../i18n';
+import { useTranslation } from '../../i18n';
 import { 
     ChevronLeftIcon, 
     ChevronRightIcon, 
     SparklesIcon, 
     ArrowPathIcon,
-    ExclamationTriangleIcon,
     ShieldCheckIcon,
     FireIcon,
     EyeIcon
@@ -103,6 +101,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
     ldmMode = false,
     ldmJobId = null,
 }) => {
+    const { t } = useTranslation();
     const [aiAuditOpen, setAiAuditOpen] = useState(false);
     const [efficiencyOpen, setEfficiencyOpen] = useState(false);
     const [issueForAudit, setIssueForAudit] = useState<Issue | null>(null);
@@ -147,10 +146,10 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                     </div>
                     <div className="mt-3 flex items-center justify-between">
                         <div className="text-[0.6rem] font-mono text-[var(--text-secondary)] uppercase tracking-[0.2em]">
-                           {ldmStatus || 'Analyzing sequential layers...'}
+                           {ldmStatus || t('step.fix.analyzingLayers')}
                         </div>
                         <div className="text-[0.55rem] font-mono text-[var(--accent-color)] uppercase animate-pulse">
-                            Hardware Acceleration: Active
+                            {t('step.fix.hwAccel')}
                         </div>
                     </div>
                 </div>
@@ -169,7 +168,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                             {issues.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center p-10 text-center opacity-30">
                                     <ShieldCheckIcon className="h-12 w-12 mb-4 text-[var(--border-color)]" />
-                                    <p className="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)]">Clean Trace</p>
+                                    <p className="text-xs font-bold uppercase tracking-widest text-[var(--text-primary)]">{t('step.analysis.cleanTrace')}</p>
                                 </div>
                             ) : (
                                 issues.map((issue: Issue, idx: number) => (
@@ -200,15 +199,15 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
 
                     {/* Quick Correction Panel */}
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-4 space-y-4">
-                        <div className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">System Quick-Fix</div>
+                        <div className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">{t('step.fix.quickFix')}</div>
                         <div className="grid grid-cols-2 gap-2">
                             <button onClick={() => onAutoFix({})} className="p-3 border border-[var(--border-color)] hover:border-[var(--accent-color)]/50 hover:bg-[var(--accent-color)]/5 transition-all text-[0.55rem] font-black uppercase tracking-widest flex flex-col items-center gap-2 text-[var(--text-primary)]">
                                 <SparklesIcon className="h-4 w-4 text-[var(--accent-color)]" />
-                                AI Magic
+                                {t('step.fix.aiMagicBtn')}
                             </button>
                             <button onClick={onConvertCMYK} className="p-3 border border-[var(--border-color)] hover:border-[var(--accent-color)]/30 transition-all text-[0.55rem] font-black uppercase tracking-widest flex flex-col items-center gap-2 text-[var(--text-primary)]">
                                 <ShieldCheckIcon className="h-4 w-4 text-[var(--text-secondary)]" />
-                                Force CMYK
+                                {t('step.fix.forceCmykBtn')}
                             </button>
                         </div>
                     </div>
@@ -238,7 +237,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                                         }}
                                         className="w-12 bg-[var(--bg-primary)]/40 border border-[var(--border-color)] text-center text-xs font-mono text-[var(--text-primary)] py-1 outline-none focus:border-[var(--accent-color)]/40"
                                     />
-                                    <span className="text-[0.65rem] font-black text-[var(--text-muted)] uppercase tracking-widest">of {numPages}</span>
+                                    <span className="text-[0.65rem] font-black text-[var(--text-muted)] uppercase tracking-widest">{t('of')} {numPages}</span>
                                 </div>
 
                                 <button 
@@ -259,7 +258,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                                     }`}
                                 >
                                     <FireIcon className={`h-3.5 w-3.5 ${heatmapData ? 'text-white' : 'text-[var(--accent-color)]'}`} />
-                                    {heatmapData ? 'Disable Heatmap' : 'Ink Heatmap'}
+                                    {heatmapData ? t('step.fix.disableHeatmap') : t('step.fix.inkHeatmap')}
                                 </button>
 
                                 <button 
@@ -267,7 +266,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                                     className="flex items-center gap-3 px-5 py-2 bg-[var(--hover-bg)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-color)]/5 hover:border-[var(--accent-color)]/30 transition-all text-[0.6rem] font-black uppercase tracking-[0.2em]"
                                 >
                                     <EyeIcon className="h-3.5 w-3.5 text-[var(--accent-color)]" />
-                                    AI Visual Check
+                                    {t('step.fix.aiVisualCheck')}
                                 </button>
                             </div>
                         </div>
@@ -304,7 +303,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                             onClick={onNext}
                             className="w-full md:w-auto bg-[var(--accent-color)] text-white px-12 py-5 text-[0.7rem] font-black uppercase tracking-[0.3em] hover:bg-[var(--accent-hover)] transition-all shadow-[0_15px_30px_rgba(220,0,0,0.2)] text-center"
                         >
-                            Complete Protocol
+                            {t('step.fix.completeProtocol')}
                         </button>
                     </div>
                 </div>

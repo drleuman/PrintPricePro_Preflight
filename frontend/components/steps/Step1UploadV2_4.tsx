@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { pposFetch } from '../../lib/apiClient';
 import { FileMeta, AppMode } from '../../types';
-import { StatusBadge, DiagnosticCard } from '../../design/preflight_starter_pack';
+import { StatusBadge } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
 import { CloudArrowUpIcon, DocumentCheckIcon, AdjustmentsHorizontalIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '../../i18n';
+import { useAuth } from '../../hooks/useAuth';
 
 interface Step1UploadV2_4Props {
     file: File | null;
@@ -15,8 +16,6 @@ interface Step1UploadV2_4Props {
     onPolicyChange: (p: string) => void;
     isAuthenticated?: boolean;
 }
-
-import { useAuth } from '../../hooks/useAuth';
 
 export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
     file,
@@ -55,12 +54,12 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
         if (f && f.type === 'application/pdf') {
             const sizeMb = f.size / (1024 * 1024);
             if (sizeMb > maxMb) {
-                alert(`LICENSE LIMIT: Plan ${user?.plan || 'GUEST'} supports up to ${maxMb}MB. This file is ${sizeMb.toFixed(1)}MB.`);
+                alert(`${t('appName')}: Plan ${user?.plan || 'GUEST'} supports up to ${maxMb}MB. This file is ${sizeMb.toFixed(1)}MB.`);
                 return;
             }
             onFileSelect(f);
         } else if (f) {
-            alert('Please upload a PDF file.');
+            alert(t('invalidFileType'));
         }
     };
 
@@ -74,7 +73,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
     const handleContinue = () => {
         if (!file) return;
         if (selectedMode === 'magic' && !isAiFixAllowed) {
-            alert('AI Magic Fix is restricted to PRO nodes.');
+            alert(t('account.apiNoAccessDesc'));
             return;
         }
         const appMode: AppMode = selectedMode === 'magic' ? 'ai' : 'manual';
@@ -94,7 +93,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                 <div className="flex items-center gap-4">
                     <div className="h-10 w-px bg-[var(--border-color)] mx-2"></div>
                     <StatusBadge 
-                        label={!file ? "Awaiting File" : selectedMode === 'magic' ? "Staged / AI Magic" : "Staged / Manual"} 
+                        label={!file ? "shell.awaitingFile" : selectedMode === 'magic' ? "shell.stagedMagic" : "shell.stagedManual"} 
                         variant={file ? "certified" : "processing"} 
                     />
                 </div>
@@ -218,7 +217,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                             <div className="mt-10 space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
                                 <div className="flex items-center justify-between">
                                     <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                                        Policy Enforcement
+                                        {t('shell.policyEnforcement')}
                                     </div>
                                     <span className="text-[0.85rem] font-mono text-[var(--accent-color)] opacity-50">{formatLabel('STRICT_OVERSIGHT')}</span>
                                 </div>

@@ -1,19 +1,16 @@
 import React, { useState } from 'react';
 import { PreflightResult, FileMeta, AppMode } from '../../types';
-import { StatusBadge, CertificationPanel, ActionBar } from '../../design/preflight_starter_pack';
+import { StatusBadge, CertificationPanel } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
 import { pposFetch } from '../../lib/apiClient';
 import { PageViewer } from '../PageViewer';
-import { t } from '../../i18n';
+import { useTranslation } from '../../i18n';
 import { 
-    SparklesIcon, 
     ArrowPathIcon, 
     PaintBrushIcon, 
     RocketLaunchIcon, 
     BookOpenIcon, 
     ArrowDownTrayIcon, 
-    Square3Stack3DIcon, 
-    BeakerIcon,
     ChevronLeftIcon,
     DocumentCheckIcon,
     ShieldCheckIcon,
@@ -73,12 +70,12 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     previewPages = null,
     previewLoading = false,
 }) => {
+    const { t } = useTranslation();
     const [showBeforeAfter, setShowBeforeAfter] = useState<'before' | 'after'>('after');
     const [showTechNote, setShowTechNote] = useState(false);
     
     const issuesCount = result?.issues?.length || 0;
     const isReadyForPrint = !!result && issuesCount === 0;
-    const hasBeenProcessed = !!lastPdfUrl;
 
     const displayFile = showBeforeAfter === 'before' && originalFile ? originalFile : file;
 
@@ -107,17 +104,17 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 onClick={() => setShowBeforeAfter('before')}
                                 className={`px-6 py-2 ppp-phase-tag !text-[0.8rem] !tracking-widest transition-all ${showBeforeAfter === 'before' ? 'bg-[var(--accent-color)] text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
                             >
-                                BEFORE
+                                {t('step.review.before')}
                             </button>
                             <button 
                                 onClick={() => setShowBeforeAfter('after')}
                                 className={`px-6 py-2 ppp-phase-tag !text-[0.8rem] !tracking-widest transition-all ${showBeforeAfter === 'after' ? 'bg-[var(--accent-color)] text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
                             >
-                                AFTER
+                                {t('step.review.after')}
                             </button>
                         </div>
                         <div className="px-6 text-[0.8rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">
-                            Visual Verifier v2.4
+                            {t('step.review.verifierLabel')}
                         </div>
                     </div>
 
@@ -149,7 +146,8 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             <button 
                                 onClick={async () => {
                                     try {
-                                        const blob = await pposFetch(lastPdfUrl) as Blob;
+                                        const res = await fetch(lastPdfUrl);
+                                        const blob = await res.blob();
                                         const url = window.URL.createObjectURL(blob);
                                         const a = document.createElement('a');
                                         a.href = url;
@@ -174,7 +172,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                     {/* Compliance Panel */}
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8 space-y-8">
                         <div className="flex items-center justify-between">
-                            <div className="ppp-phase-tag text-[var(--text-secondary)]">Trace Compliance</div>
+                            <div className="ppp-phase-tag text-[var(--text-secondary)]">{t('step.review.traceCompliance')}</div>
                             <ShieldCheckIcon className={`h-5 w-5 ${isReadyForPrint ? 'text-[var(--accent-color)]' : 'text-[var(--text-muted)]'}`} />
                         </div>
 
@@ -185,11 +183,11 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
 
                         <div className="pt-6 border-t border-[var(--border-color)] space-y-4">
                             <div className="flex items-center justify-between">
-                                <span className="text-[0.8rem] font-black uppercase tracking-widest text-[var(--text-muted)]">Certification ID</span>
+                                <span className="text-[0.8rem] font-black uppercase tracking-widest text-[var(--text-muted)]">{t('labelCertificateId')}</span>
                                 <span className="text-[0.8rem] font-mono text-[var(--text-secondary)]">{formatLabel(`PPOS_TX_${Math.floor(Math.random() * 90000) + 10000}`)}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-[0.8rem] font-black uppercase tracking-widest text-[var(--text-muted)]">Policy Profile</span>
+                                <span className="text-[0.8rem] font-black uppercase tracking-widest text-[var(--text-muted)]">{t('shell.policyProfile')}</span>
                                 <span className="text-[0.8rem] font-mono text-[var(--text-secondary)] italic">{formatLabel('FOGRA51 / PSO_V3')}</span>
                             </div>
                         </div>
@@ -207,10 +205,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">{t('step.review.hardening')}</div>
                         <div className="space-y-2">
                            {[
-                                { icon: <ArrowPathIcon className="h-4 w-4" />, text: 'Force Grayscale', action: onConvertGrayscale },
-                                { icon: <PaintBrushIcon className="h-4 w-4" />, text: 'Optimize CMYK', action: onConvertColors },
-                                { icon: <RocketLaunchIcon className="h-4 w-4" />, text: 'Rebuild 300DPI', action: onRebuildPdf },
-                                { icon: <BookOpenIcon className="h-4 w-4" />, text: 'Booklet Mode', action: onMakeBooklet }
+                                { icon: <ArrowPathIcon className="h-4 w-4" />, text: t('step.review.forceGrayscale'), action: onConvertGrayscale },
+                                { icon: <PaintBrushIcon className="h-4 w-4" />, text: t('step.review.optimizeCmyk'), action: onConvertColors },
+                                { icon: <RocketLaunchIcon className="h-4 w-4" />, text: t('step.review.rebuild300'), action: onRebuildPdf },
+                                { icon: <BookOpenIcon className="h-4 w-4" />, text: t('step.review.bookletMode'), action: onMakeBooklet }
                            ].map((tool, idx) => (
                                <button 
                                  key={idx}
@@ -239,8 +237,8 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                     <DocumentCheckIcon className="h-6 w-6 text-white" />
                                 </div>
                                 <div>
-                                    <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)]">Technical Certification Note</div>
-                                    <div className="text-xl font-extrabold tracking-tight text-[var(--text-primary)]">Compliance Document</div>
+                                    <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)]">{t('step.review.techCertNote')}</div>
+                                    <div className="text-xl font-extrabold tracking-tight text-[var(--text-primary)]">{t('step.review.certDocument')}</div>
                                 </div>
                             </div>
                             <button onClick={() => setShowTechNote(false)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
@@ -251,56 +249,56 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
                             <div className="grid grid-cols-2 gap-8 text-[var(--text-primary)]">
                                 <div className="space-y-4">
-                                    <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Metric Ingress</div>
+                                    <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">{t('step.review.metricIngress')}</div>
                                     <div className="space-y-2 font-mono text-[0.85rem]">
                                         <div className="flex justify-between border-b border-[var(--border-color)] pb-2">
-                                            <span className="text-[var(--text-secondary)]">File Size:</span>
+                                            <span className="text-[var(--text-secondary)]">{t('fileLabel')}:</span>
                                             <span>{(file?.size || 0) / 1024 / 1024 > 1 ? `${((file?.size || 0) / 1024 / 1024).toFixed(2)}MB` : `${((file?.size || 0) / 1024).toFixed(0)}KB`}</span>
                                         </div>
                                         <div className="flex justify-between border-b border-[var(--border-color)] pb-2">
-                                            <span className="text-[var(--text-secondary)]">Page Count:</span>
+                                            <span className="text-[var(--text-secondary)]">{t('pageNavigation')}:</span>
                                             <span>{numPages}</span>
                                         </div>
                                         <div className="flex justify-between border-b border-[var(--border-color)] pb-2">
-                                            <span className="text-[var(--text-secondary)]">Signal Status:</span>
-                                            <span className="text-[var(--accent-color)] font-black">CERTIFIED</span>
+                                            <span className="text-[var(--text-secondary)]">{t('shell.finalState')}:</span>
+                                            <span className="text-[var(--accent-color)] font-black uppercase">{t('common.verified')}</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="space-y-4 text-[var(--text-primary)]">
-                                    <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Ink Optimization</div>
+                                    <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">{t('step.review.inkOptimization')}</div>
                                     <div className="space-y-2 font-mono text-[0.85rem]">
                                         <div className="flex justify-between border-b border-[var(--border-color)] pb-2">
-                                            <span className="text-[var(--text-secondary)]">Max TAC:</span>
+                                            <span className="text-[var(--text-secondary)]">{t('labelMaxTac')}</span>
                                             <span>{autoFixReport?.prepress_summary?.tac_summary?.max_tac || '300'}%</span>
                                         </div>
                                         <div className="flex justify-between border-b border-[var(--border-color)] pb-2">
-                                            <span className="text-[var(--text-secondary)]">Profile:</span>
+                                            <span className="text-[var(--text-secondary)]">{t('profileLabel')}</span>
                                             <span>FOGRA51</span>
                                         </div>
                                         <div className="flex justify-between border-b border-[var(--border-color)] pb-2">
-                                            <span className="text-[var(--text-secondary)]">Efficiency:</span>
-                                            <span className="text-[var(--accent-color)] font-black">HIGH</span>
+                                            <span className="text-[var(--text-secondary)]">{t('account.service.tier')}:</span>
+                                            <span className="text-[var(--accent-color)] font-black">{t('step.review.highEfficiency')}</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="p-8 bg-[var(--bg-primary)] border border-[var(--border-color)]">
-                                <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)] mb-6">Trace Logs</div>
+                                <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)] mb-6">{t('step.review.traceLogs')}</div>
                                 <div className="space-y-3 font-mono text-[0.8rem] text-[var(--text-secondary)]">
                                     <div className="flex items-start gap-3">
-                                        <span className="text-[var(--accent-color)] font-black">OK</span>
-                                        <span>Production geometry verified for offset printing standards.</span>
+                                        <span className="text-[var(--accent-color)] font-black uppercase">{t('common.verified')}</span>
+                                        <span>{t('step.review.productionGeometryOk')}</span>
                                     </div>
                                     <div className="flex items-start gap-3">
-                                        <span className="text-[var(--accent-color)] font-black">OK</span>
-                                        <span>Color profiles normalized to CMYK PSO V3.</span>
+                                        <span className="text-[var(--accent-color)] font-black uppercase">{t('common.verified')}</span>
+                                        <span>{t('step.review.colorProfilesNormalized')}</span>
                                     </div>
                                     <div className="flex items-start gap-3">
-                                        <span className="text-[var(--accent-color)] font-black">OK</span>
-                                        <span>Font embedding status confirmed for all glyphs.</span>
+                                        <span className="text-[var(--accent-color)] font-black uppercase">{t('common.verified')}</span>
+                                        <span>{t('step.review.fontEmbeddingConfirmed')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -311,7 +309,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 onClick={() => setShowTechNote(false)}
                                 className="bg-[var(--accent-color)] text-white px-10 py-4 text-[0.9rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-hover)] transition-all"
                             >
-                                Acknowledge & Close
+                                {t('step.review.acknowledgeClose')}
                             </button>
                         </div>
                     </div>

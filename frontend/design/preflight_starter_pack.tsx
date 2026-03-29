@@ -1,5 +1,7 @@
 import React from 'react';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { formatLabel } from '../utils/formatters';
+import { useTranslation } from '../i18n';
 
 /**
  * PREFLIGHT UI STARTER PACK — MONOLITH FIX LAYER v2.4
@@ -27,8 +29,6 @@ export const PPOSLogo = ({ className = "h-8 w-8" }: { className?: string }) => (
     </g>
   </svg>
 );
-
-import { formatLabel } from '../utils/formatters';
 
 export const StatusBadge = ({
   label,
@@ -98,61 +98,67 @@ export const PreflightShell = ({ children, headerContent, rightContent }: { chil
             <SignalStrip compact />
             <div className="flex items-center gap-4 ml-6">
                 <div className="h-4 w-px border-[var(--border-color)] hidden md:block"></div>
-                <StatusBadge label="AUTH-SYNCED" variant="certified" />
+                <StatusBadge label="shell.authSynced" variant="certified" />
             </div>
         </div>
     </footer>
   </div>
 );
 
-export const SignalStrip = ({ compact = false }: { compact?: boolean }) => (
-  <div className={`grid gap-3 border-[var(--border-color)] bg-[var(--bg-secondary)] ${compact ? 'flex flex-row items-center justify-between border-0 p-0' : 'grid gap-3 border p-4 md:grid-cols-4 md:gap-4 md:p-6'}`}>
-    {[
-      'REAL PRODUCTION RULES',
-      'EVERY ISSUE TRACEABLE',
-      'DETERMINISTIC VALIDATION',
-      'CERTIFIED OUTPUT ONLY',
-    ].map((item, idx) => (
-      <div key={item} className="flex items-center gap-3">
-        <span
-          className={`h-1.5 w-1.5 ${
-            idx === 2 ? 'animate-pulse bg-[var(--accent-color)]' : 'bg-[var(--accent-color)]'
-          }`}
-        />
-        <span className={`${compact ? 'text-[0.8rem]' : 'text-[0.88rem]'} uppercase tracking-[0.16em] text-[var(--text-muted)] font-mono leading-none`}>
-          {item}
-        </span>
-      </div>
-    ))}
-  </div>
-);
-
-export const ValidationHero = () => (
-  <section className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
-    <div>
-      <div className="mb-4 text-[0.7rem] font-black uppercase tracking-[0.22em] text-[var(--accent-color)]">
-        FIX IT / VALIDATION ENGINE
-      </div>
-      <h1 className="max-w-[10ch] font-extrabold tracking-[-0.05em] text-5xl leading-[0.95] sm:text-6xl md:text-7xl">
-        FIX YOUR FILES BEFORE PRINTING
-      </h1>
-      <p className="mt-6 max-w-[60ch] text-base leading-7 text-[var(--text-secondary)] md:text-lg">
-        Detect, fix, and certify your print files automatically — before they reach production.
-      </p>
-
-      <div className="mt-8 flex flex-wrap gap-4">
-        <button className="bg-[var(--accent-color)] px-8 py-4 text-[0.92rem] font-extrabold uppercase tracking-[0.18em] text-white transition-all duration-300 hover:bg-[var(--accent-hover)] hover:shadow-[0_10px_30px_rgba(220,0,0,0.25)]">
-          Check My File
-        </button>
-        <button className="border border-[var(--border-color)] px-8 py-4 text-[0.92rem] font-extrabold uppercase tracking-[0.18em] text-[var(--accent-color)] transition-all duration-300 hover:bg-[var(--hover-bg)]">
-          View Report Sample
-        </button>
-      </div>
+export const SignalStrip = ({ compact = false }: { compact?: boolean }) => {
+  const { t } = useTranslation();
+  return (
+    <div className={`grid gap-3 border-[var(--border-color)] bg-[var(--bg-secondary)] ${compact ? 'flex flex-row items-center justify-between border-0 p-0' : 'grid gap-3 border p-4 md:grid-cols-4 md:gap-4 md:p-6'}`}>
+      {[
+        t('shell.footer.production'),
+        t('shell.footer.traceable'),
+        t('shell.footer.deterministic'),
+        t('shell.footer.certified'),
+      ].map((item, idx) => (
+        <div key={item} className="flex items-center gap-3">
+          <span
+            className={`h-1.5 w-1.5 ${
+              idx === 2 ? 'animate-pulse bg-[var(--accent-color)]' : 'bg-[var(--accent-color)]'
+            }`}
+          />
+          <span className={`${compact ? 'text-[0.8rem]' : 'text-[0.88rem]'} uppercase tracking-[0.16em] text-[var(--text-muted)] font-mono leading-none`}>
+            {item}
+          </span>
+        </div>
+      ))}
     </div>
+  );
+};
 
-    <CertificationPanel />
-  </section>
-);
+export const ValidationHero = () => {
+    const { t } = useTranslation();
+    return (
+        <section className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+          <div>
+            <div className="mb-4 text-[0.7rem] font-black uppercase tracking-[0.22em] text-[var(--accent-color)]">
+              {t('shell.hero.subtitle')}
+            </div>
+            <h1 className="max-w-[10ch] font-extrabold tracking-[-0.05em] text-5xl leading-[0.95] sm:text-6xl md:text-7xl">
+              {t('shell.hero.title')}
+            </h1>
+            <p className="mt-6 max-w-[60ch] text-base leading-7 text-[var(--text-secondary)] md:text-lg">
+              {t('shell.hero.desc')}
+            </p>
+      
+            <div className="mt-8 flex flex-wrap gap-4">
+              <button className="bg-[var(--accent-color)] px-8 py-4 text-[0.92rem] font-extrabold uppercase tracking-[0.18em] text-white transition-all duration-300 hover:bg-[var(--accent-hover)] hover:shadow-[0_10px_30px_rgba(220,0,0,0.25)]">
+                {t('shell.hero.button.check')}
+              </button>
+              <button className="border border-[var(--border-color)] px-8 py-4 text-[0.92rem] font-extrabold uppercase tracking-[0.18em] text-[var(--accent-color)] transition-all duration-300 hover:bg-[var(--hover-bg)]">
+                {t('shell.hero.button.report')}
+              </button>
+            </div>
+          </div>
+      
+          <CertificationPanel />
+        </section>
+    );
+};
 
 export const CertificationPanel = ({
     title = "CERTIFIED OUTPUT",
@@ -166,35 +172,38 @@ export const CertificationPanel = ({
     fixesApplied?: number;
     profile?: string;
     riskStatus?: 'certified' | 'warning' | 'processing' | 'default';
-}) => (
-  <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8">
-    <div className="mb-6 flex items-center justify-between">
-      <StatusBadge label={formatLabel(title)} variant={riskStatus} />
-      <span className="text-[0.88rem] uppercase tracking-[0.18em] text-[var(--text-secondary)] font-mono">
-        Trace 0x48a
-      </span>
-    </div>
-
-    <div className="space-y-5">
-      <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
-        <span className="text-[var(--text-secondary)] text-[0.8rem] font-black uppercase tracking-widest">Issues found</span>
-        <span className="font-bold text-xl">{issuesFound.toString().padStart(2, '0')}</span>
+}) => {
+    const { t } = useTranslation();
+    return (
+      <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8">
+        <div className="mb-6 flex items-center justify-between">
+          <StatusBadge label={title} variant={riskStatus} />
+          <span className="text-[0.88rem] uppercase tracking-[0.18em] text-[var(--text-secondary)] font-mono">
+            Trace 0x48a
+          </span>
+        </div>
+    
+        <div className="space-y-5">
+          <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
+            <span className="text-[var(--text-secondary)] text-[0.8rem] font-black uppercase tracking-widest">{t('shell.issuesFound')}</span>
+            <span className="font-bold text-xl">{issuesFound.toString().padStart(2, '0')}</span>
+          </div>
+          <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
+            <span className="text-[var(--text-secondary)] text-[0.8rem] font-black uppercase tracking-widest">{t('shell.fixesApplied')}</span>
+            <span className="font-bold text-xl">{fixesApplied.toString().padStart(2, '0')}</span>
+          </div>
+          <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
+            <span className="text-[var(--text-secondary)] text-[0.8rem] font-black uppercase tracking-widest">{t('shell.policyProfile')}</span>
+            <span className="text-[0.85rem] uppercase tracking-[0.12em] font-mono italic">{formatLabel(profile)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[var(--text-secondary)] text-[0.8rem] font-black uppercase tracking-widest">{t('shell.finalState')}</span>
+            <StatusBadge label={riskStatus === 'certified' ? 'shell.ready' : 'shell.action'} variant={riskStatus} />
+          </div>
+        </div>
       </div>
-      <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
-        <span className="text-[var(--text-secondary)] text-[0.8rem] font-black uppercase tracking-widest">Fixes applied</span>
-        <span className="font-bold text-xl">{fixesApplied.toString().padStart(2, '0')}</span>
-      </div>
-      <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
-        <span className="text-[var(--text-secondary)] text-[0.8rem] font-black uppercase tracking-widest">Policy profile</span>
-        <span className="text-[0.85rem] uppercase tracking-[0.12em] font-mono italic">{formatLabel(profile)}</span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span className="text-[var(--text-secondary)] text-[0.8rem] font-black uppercase tracking-widest">Final state</span>
-        <StatusBadge label={riskStatus === 'certified' ? 'READY' : 'ACTION'} variant={riskStatus} />
-      </div>
-    </div>
-  </div>
-);
+    );
+};
 
 export const DiagnosticCard = ({
   title,
@@ -214,7 +223,7 @@ export const DiagnosticCard = ({
       ) : (
         <div />
       )}
-      <StatusBadge label={formatLabel('ACTIVE')} variant="processing" />
+      <StatusBadge label="common.active" variant="processing" />
     </div>
 
     <h3 className="mb-3 text-2xl font-extrabold tracking-[-0.03em]">{title}</h3>
@@ -237,6 +246,7 @@ export const IssueRow = ({
   onClick?: () => void;
   active?: boolean;
 }) => {
+  const { t } = useTranslation();
   const borderStyles = {
     error: 'border-l-[#ff0000]',
     warning: 'border-l-[var(--accent-color)]',
@@ -259,13 +269,13 @@ export const IssueRow = ({
         <div className="flex items-center gap-3">
           <StatusBadge label={type} variant={severity} />
           {fixAvailable ? (
-            <StatusBadge label="FIX AVAILABLE" variant="processing" />
+            <StatusBadge label="shell.fixAvailable" variant="processing" />
           ) : (
-            <StatusBadge label="MANUAL REVIEW" variant="default" />
+            <StatusBadge label="shell.manualReview" variant="default" />
           )}
         </div>
         <span className="text-[0.88rem] uppercase tracking-[0.16em] text-[var(--text-muted)] font-mono">
-          ISSUE / {severity.toUpperCase()}
+          {t('issue').toUpperCase()} / {severity.toUpperCase()}
         </span>
       </div>
   
@@ -274,100 +284,109 @@ export const IssueRow = ({
   );
 };
 
-export const BeforeAfterPanel = () => (
-  <div className="grid gap-6 lg:grid-cols-2">
-    <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <StatusBadge label="ORIGINAL FILE" variant="warning" />
-        <span className="text-[0.88rem] uppercase tracking-[0.16em] text-[var(--text-secondary)] font-mono">
-          BEFORE
-        </span>
+export const BeforeAfterPanel = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <StatusBadge label="shell.originalFile" variant="warning" />
+          <span className="text-[0.88rem] uppercase tracking-[0.16em] text-[var(--text-secondary)] font-mono">
+            {t('shell.before').toUpperCase()}
+          </span>
+        </div>
+        <div className="space-y-3 text-sm text-[#8d8d91]">
+          <div>• Missing bleed</div>
+          <div>• RGB profile detected</div>
+          <div>• Low-resolution images</div>
+          <div>• Fonts not fully embedded</div>
+        </div>
       </div>
-      <div className="space-y-3 text-sm text-[#8d8d91]">
-        <div>• Missing bleed</div>
-        <div>• RGB profile detected</div>
-        <div>• Low-resolution images</div>
-        <div>• Fonts not fully embedded</div>
-      </div>
-    </div>
 
-    <div className="border border-[var(--border-color)] bg-[var(--bg-panel)] p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <StatusBadge label="CERTIFIED OUTPUT" variant="certified" />
-        <span className="text-[0.88rem] uppercase tracking-[0.16em] text-[var(--text-secondary)] font-mono">
-          AFTER
-        </span>
-      </div>
-      <div className="space-y-3 text-sm text-[#e5e2e3]">
-        <div>• Bleed validated</div>
-        <div>• Color profile corrected</div>
-        <div>• Output approved</div>
-        <div>• Fonts verified</div>
-      </div>
-    </div>
-  </div>
-);
-
-export const ActionBar = () => (
-  <div className="flex flex-col gap-6 border-t border-[var(--border-color)] bg-[var(--bg-secondary)] p-6 md:flex-row md:items-center md:justify-between md:p-8">
-    <div className="flex items-center gap-5">
-      <div className="flex h-12 w-12 items-center justify-center bg-[rgba(220,0,0,0.1)]">
-        <div className="h-2 w-2 animate-pulse bg-[var(--accent-color)]" />
-      </div>
-      <div>
-        <div className="text-sm font-bold tracking-tight">Validation engine ready</div>
-        <div className="mt-1 text-[0.88rem] uppercase tracking-[0.18em] text-[var(--text-secondary)] font-mono">
-          STATE: IDLE / WORKERS: 04 / POLICY: ENFORCED
+      <div className="border border-[var(--border-color)] bg-[var(--bg-panel)] p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <StatusBadge label="shell.certOutput" variant="certified" />
+          <span className="text-[0.88rem] uppercase tracking-[0.16em] text-[var(--text-secondary)] font-mono">
+            {t('shell.after').toUpperCase()}
+          </span>
+        </div>
+        <div className="space-y-3 text-sm text-[#e5e2e3]">
+          <div>• Bleed validated</div>
+          <div>• Color profile corrected</div>
+          <div>• Output approved</div>
+          <div>• Fonts verified</div>
         </div>
       </div>
     </div>
+  );
+};
 
-    <div className="flex flex-col gap-4 sm:flex-row">
-      <button className="border border-[var(--border-color)] px-8 py-4 text-[0.92rem] font-extrabold uppercase tracking-[0.18em] text-[var(--accent-color)] transition-all duration-300 hover:bg-[var(--hover-bg)]">
-        Download Report
-      </button>
-      <button className="bg-[var(--accent-color)] px-8 py-4 text-[0.92rem] font-extrabold uppercase tracking-[0.18em] text-white transition-all duration-300 hover:bg-[var(--accent-hover)] hover:shadow-[0_10px_30px_rgba(220,0,0,0.25)]">
-        Re-run Validation
-      </button>
-    </div>
-  </div>
-);
-
-export const PreflightStarterDemo = () => (
-  <PreflightShell>
-    <div className="space-y-10 md:space-y-14">
-      <SignalStrip />
-      <ValidationHero />
-
-      <section className="grid gap-6 lg:grid-cols-3">
-        <DiagnosticCard title="Detect real production issues">
-          Find color, bleed, font, and resolution problems before they become expensive failures.
-        </DiagnosticCard>
-        <DiagnosticCard title="Fix files automatically">
-          Apply policy-based corrections and generate production-ready output without manual work.
-        </DiagnosticCard>
-        <DiagnosticCard title="Prevent costly print errors">
-          Validate every file against real production rules before it reaches the press.
-        </DiagnosticCard>
-      </section>
-
-      <section className="space-y-5">
-        <div className="text-[0.92rem] font-black uppercase tracking-[0.22em] text-[#dc0000]">
-          ACTIVE ISSUES
+export const ActionBar = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col gap-6 border-t border-[var(--border-color)] bg-[var(--bg-secondary)] p-6 md:flex-row md:items-center md:justify-between md:p-8">
+      <div className="flex items-center gap-5">
+        <div className="flex h-12 w-12 items-center justify-center bg-[rgba(220,0,0,0.1)]">
+          <div className="h-2 w-2 animate-pulse bg-[var(--accent-color)]" />
         </div>
-        <IssueRow title="Missing bleed on outer edges" type="BLEED" />
-        <IssueRow title="RGB images detected in interior pages" type="COLOR" />
-        <IssueRow title="Font embedding incomplete in cover file" type="FONTS" fixAvailable={false} />
-      </section>
-
-      <section className="space-y-5">
-        <div className="text-[0.92rem] font-black uppercase tracking-[0.22em] text-[#dc0000]">
-          BEFORE / AFTER
+        <div>
+          <div className="text-sm font-bold tracking-tight">{t('shell.engineReady')}</div>
+          <div className="mt-1 text-[0.88rem] uppercase tracking-[0.18em] text-[var(--text-secondary)] font-mono">
+            {t('shell.engineState', { state: t('common.idle').toUpperCase(), workers: '04', policy: t('common.standard').toUpperCase() })}
+          </div>
         </div>
-        <BeforeAfterPanel />
-      </section>
+      </div>
 
-      <ActionBar />
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <button className="border border-[var(--border-color)] px-8 py-4 text-[0.92rem] font-extrabold uppercase tracking-[0.18em] text-[var(--accent-color)] transition-all duration-300 hover:bg-[var(--hover-bg)]">
+          {t('shell.downloadReport')}
+        </button>
+        <button className="bg-[var(--accent-color)] px-8 py-4 text-[0.92rem] font-extrabold uppercase tracking-[0.18em] text-white transition-all duration-300 hover:bg-[var(--accent-hover)] hover:shadow-[0_10px_30px_rgba(220,0,0,0.25)]">
+          {t('shell.rerunValidation')}
+        </button>
+      </div>
     </div>
-  </PreflightShell>
-);
+  );
+};
+
+export const PreflightStarterDemo = () => {
+  const { t } = useTranslation();
+  return (
+    <PreflightShell>
+      <div className="space-y-10 md:space-y-14">
+        <SignalStrip />
+        <ValidationHero />
+
+        <section className="grid gap-6 lg:grid-cols-3">
+          <DiagnosticCard title="Detect real production issues">
+            Find color, bleed, font, and resolution problems before they become expensive failures.
+          </DiagnosticCard>
+          <DiagnosticCard title="Fix files automatically">
+            Apply policy-based corrections and generate production-ready output without manual work.
+          </DiagnosticCard>
+          <DiagnosticCard title="Prevent costly print errors">
+            Validate every file against real production rules before it reaches the press.
+          </DiagnosticCard>
+        </section>
+
+        <section className="space-y-5">
+          <div className="text-[0.92rem] font-black uppercase tracking-[0.22em] text-[#dc0000]">
+            {t('shell.activeIssues')}
+          </div>
+          <IssueRow title="Missing bleed on outer edges" type="BLEED" />
+          <IssueRow title="RGB images detected in interior pages" type="COLOR" />
+          <IssueRow title="Font embedding incomplete in cover file" type="FONTS" fixAvailable={false} />
+        </section>
+
+        <section className="space-y-5">
+          <div className="text-[0.92rem] font-black uppercase tracking-[0.22em] text-[#dc0000]">
+            {t('shell.beforeAfter')}
+          </div>
+          <BeforeAfterPanel />
+        </section>
+
+        <ActionBar />
+      </div>
+    </PreflightShell>
+  );
+};
