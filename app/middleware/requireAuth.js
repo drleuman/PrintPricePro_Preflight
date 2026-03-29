@@ -24,7 +24,7 @@ module.exports = (req, res, next) => {
 
             // Attach to req.auth (Mandatory Structure)
             req.auth = {
-                userId: decoded.userId || null,
+                userId: decoded.userId || decoded.sub || null,
                 tenantId: decoded.tenantId || 'default',
                 role: decoded.role || 'GUEST',
                 scopes: decoded.scopes || [],

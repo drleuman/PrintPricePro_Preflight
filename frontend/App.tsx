@@ -1,9 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Stepper } from './components/Stepper';
-import { Step1Upload } from './components/steps/Step1Upload';
-import { Step2Analysis } from './components/steps/Step2Analysis';
-import { Step3Fix } from './components/steps/Step3Fix';
-import { Step4Review } from './components/steps/Step4Review';
 import { LoaderOverlay } from './components/LoaderOverlay';
 import { AIInspectorPanel } from './components/AIInspectorPanel';
 import { Step1UploadV2_4 } from './components/steps/Step1UploadV2_4';
@@ -13,6 +9,8 @@ import { Step4ReviewV2_4 } from './components/steps/Step4ReviewV2_4';
 import { XMarkIcon, SparklesIcon, CpuChipIcon, CommandLineIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { PreflightShell, SignalStrip, PPOSLogo } from './design/preflight_starter_pack';
 import { ThemeProvider } from './hooks/useTheme';
+import { LocaleProvider } from './i18n';
+import { LanguageSwitcher } from './components/LanguageSwitcher';
 
 import { t } from './i18n';
 import {
@@ -25,7 +23,6 @@ import {
 import { usePreflightWorker } from './hooks/usePreflightWorker';
 import { usePdfTools } from './hooks/usePdfTools';
 
-import { AuthOverlay } from './components/AuthOverlay';
 import { AuthOverlayV2_4 } from './components/AuthOverlayV2_4';
 import { useAuth } from './hooks/useAuth';
 import { UserMenu } from './components/UserMenu';
@@ -291,6 +288,8 @@ export default function App() {
             }
             rightContent={
               <div className="flex items-center gap-4">
+                <LanguageSwitcher />
+                <div className="h-6 w-px bg-[var(--border-color)] mx-1 hidden md:block"></div>
                 <button 
                   onClick={() => setShowVisualModal(true)}
                   className="flex items-center gap-2 px-3 py-1.5 border border-[var(--border-color)] bg-[var(--bg-secondary)]/50 text-[var(--text-primary)] text-[0.65rem] font-bold uppercase tracking-wider hover:bg-[var(--hover-bg)] transition-all"

@@ -1,15 +1,25 @@
-// i18n/index.ts
+// i18n/index.tsx
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { en } from './en';
 import { es } from './es';
 
 export type TranslationKeys = keyof typeof en;
 export type Locale = 'en' | 'es';
 
-const dictionaries: Record<Locale, typeof en> = {
+type Dictionary = typeof en;
+
+const dictionaries: Record<Locale, Dictionary> = {
   en,
-  es,
+  es: es as unknown as Dictionary,
+};
+
+// Global singleton for the current locale to allow use in simple functions
+let globalLocale: Locale = (localStorage.getItem('ppos_locale') as Locale) || 'en';
+let globalSubscribers: (() => void)[] = [];
+
+const notifySubscribers = () => {
+    globalSubscribers.forEach(cb => cb());
 };
 
 interface LocaleContextType {
@@ -20,10 +30,13 @@ interface LocaleContextType {
 const LocaleContext = createContext<LocaleContextType | undefined>(undefined);
 
 export const LocaleProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [currentLocale, setCurrentLocale] = useState<Locale>('en');
+  const [currentLocale, setCurrentLocale] = useState<Locale>(globalLocale);
 
   const setLocale = (newLocale: Locale) => {
+    globalLocale = newLocale;
+    localStorage.setItem('ppos_locale', newLocale);
     setCurrentLocale(newLocale);
+    notifySubscribers();
   };
 
   return (
@@ -42,21 +55,20 @@ export function useLocale() {
 }
 
 /**
- * t('issuesSummary')
- * t('pageLabel', { page: 3 }) -> sustituye {{page}}
+ * Standard t function
+ * Usage: {t('key')}
+ * Note: Components using this will re-render when the locale changes 
+ * if they are inside LocaleProvider and we add a small hook or use the locale from context.
  */
 export function t(
   key: TranslationKeys,
   vars?: Record<string, string | number>
 ): string {
-  // Para usar en componentes fuera del Provider, o si no hay Provider
-  // Se usará el 'en' por defecto, o se puede añadir un mecanismo de detección de idioma del navegador
-  const { currentLocale } = useLocale(); // Usamos el hook aquí
-  const dict = dictionaries[currentLocale] || en; 
+  const dict = dictionaries[globalLocale] || en; 
   let template = (dict as any)[key] as string;
 
   if (typeof template !== 'string') {
-    template = key; // fallback visible
+    template = key; 
   }
 
   if (vars) {
