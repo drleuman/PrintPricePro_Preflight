@@ -384,12 +384,6 @@ export const es = {
   'auth.role': 'ROL',
   'auth.upgradeLabel': 'MEJORAR',
 
-  // Roles de Registro
-  'auth.role.author': 'Autor',
-  'auth.role.publisher': 'Editor',
-  'auth.role.printHouse': 'Imprenta',
-  'auth.role.developer': 'Desarrollador',
-
   // Panel de Cuenta
   'account.profile.title': 'Configuración de Perfil',
   'account.license.title': 'Licencia y Uso',
@@ -647,8 +641,6 @@ export const es = {
   // Auth
   'auth.loading': 'Autenticando con el Nodo PPOS...',
   'auth.error.unauthorized': 'Error de autenticación. Verifique sus credenciales.',
-  'auth.error.connection': 'Error de conexión de red durante la autenticación.',
-  'auth.error.invalid': 'Credenciales de acceso no válidas.',
   'auth.role.author': 'Autor / Colaborador',
   'auth.role.publisher': 'Editorial / Publicador',
   'auth.role.printHouse': 'Imprenta / Preimpresión',

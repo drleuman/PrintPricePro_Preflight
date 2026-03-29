@@ -89,8 +89,8 @@ router.post(
                 fileUrl
             });
 
-            const userToken = req.headers.authorization;
             const authContext = req.auth || req.user || {};
+            const internalToken = identityService.getAuthHeaders(authContext).Authorization;
 
             const job = await queue.enqueueJob('PREFLIGHT', {
                 requestId,
@@ -101,7 +101,7 @@ router.post(
                 fileUrl,
                 filename,
                 size: req.file.size,
-                userToken,
+                userToken: internalToken,
                 authContext
             });
 
@@ -178,7 +178,7 @@ router.get('/:jobId', async (req, res) => {
       {
         method: 'GET',
         headers: {
-          Authorization: req.headers.authorization || identityService.getAuthHeaders().Authorization
+          Authorization: identityService.getAuthHeaders(req.auth || req.user || {}).Authorization
         }
       }
     );
@@ -213,7 +213,7 @@ router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
       {
         method: 'GET',
         headers: {
-          Authorization: req.headers.authorization || identityService.getAuthHeaders().Authorization
+          Authorization: identityService.getAuthHeaders(req.auth || req.user || {}).Authorization
         }
       }
     );

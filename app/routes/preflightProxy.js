@@ -22,30 +22,19 @@ router.use('/', async (req, res) => {
     console.log(`[PROXY][PPOS] ${req.method} ${req.url} -> ${targetUrl}`);
 
     try {
-        // CLONE HEADERS & FORCE USER AUTH
-        const headers = { 
-            ...req.headers,
-            'authorization': req.headers.authorization // Re-force the key
-        };
+        // CLONE HEADERS & FORCE INTERNAL IDENTITY
+        const headers = { ...req.headers };
 
         // Clean headers to avoid host/re-request conflicts
         delete headers.host;
         delete headers.connection;
         delete headers['content-length']; // Let axios/form-data recalculate
         
-        const hasIncoming = !!req.headers.authorization;
-        
-        // Inject Canonical Auth Headers (JWT Bearer) ONLY IF missing from host
-        if (!hasIncoming) {
-            console.log(`[PROXY][${req.id || 'system'}] No user token found, using system fallback.`);
-            const authHeaders = identityService.getAuthHeaders();
-            Object.assign(headers, authHeaders);
-        }
+        // Inject Canonical Internal Identity (JWT Bearer)
+        const authHeaders = identityService.getAuthHeaders(req.auth || req.user || {});
+        Object.assign(headers, authHeaders);
 
-        console.log(`[PROXY][${req.id || 'system'}][AUTH] Identity Check:`, {
-          incomingAuth: hasIncoming ? 'USER_JWT' : 'SYSTEM_FALLBACK',
-          tokenSnippet: headers.authorization?.slice(0, 30) + '...'
-        });
+        console.log(`[PROXY][${req.id || 'system'}][AUTH] Identity Unified: tokenSnippet: ${headers.Authorization?.slice(0, 30)}...`);
 
         // Legacy cleanup (no longer needed if OS expects JWT)
         delete headers['x-ppos-api-key'];

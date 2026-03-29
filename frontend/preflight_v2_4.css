@@ -37,9 +37,6 @@
   --pp-space-96: 96px;
 }
 
-/* Typography Foundations */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@700;800&family=Space+Grotesk:wght@500;600;700;900&family=JetBrains+Mono&display=swap');
-
 .font-display { font-family: 'Manrope', sans-serif; }
 .font-technical { font-family: 'Space Grotesk', sans-serif; }
 .font-body { font-family: 'Inter', sans-serif; }

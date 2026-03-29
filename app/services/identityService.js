@@ -19,21 +19,37 @@ function getScopes() {
 }
 
 /**
+ * Maps product-level roles to PPOS operational roles.
+ * @param {string} productRole - The original product role (e.g., 'DEVELOPER', 'AUTHOR')
+ * @returns {string} - The mapped PPOS operational role
+ */
+function mapProductRoleToPposRole(productRole = '') {
+    const role = String(productRole).toUpperCase();
+    if (role === 'DEVELOPER') return 'tenant_admin';
+    if (['AUTHOR', 'PUBLISHER', 'PRINT_HOUSE'].includes(role)) return 'member';
+    return 'member'; // Fallback
+}
+
+/**
  * Builds a normalized payload for PPOS internal consumption.
  * Ensures 'sub', 'role', 'scopes' and 'email' are present and canonical.
  */
 function buildInternalAuthPayload(user = {}) {
     const scopes = getScopes();
     
-    // Extract role safely from various possible inputs (user object, roles array, etc)
-    const role = user.role || (Array.isArray(user.roles) ? user.roles[0] : user.roles) || 'DEVELOPER';
+    // Extract product role safely from various possible inputs
+    const originalRole = user.appRole || user.role || (Array.isArray(user.roles) ? user.roles[0] : user.roles) || 'DEVELOPER';
+    
+    // Map to PPOS operational role
+    const operationalRole = mapProductRoleToPposRole(originalRole);
     
     return {
         sub: user.id || user.userId || user.sub || 'printprice-preflight-app',
         email: user.email || null,
-        role: role,
+        role: operationalRole,      // Operational role (tenant_admin, member, etc)
+        appRole: originalRole,       // Product role (DEVELOPER, AUTHOR, etc)
         scopes: scopes,
-        scope: scopes.join(' '), // Compatibility with some OAuth2 decoders
+        scope: scopes.join(' '),     // Compatibility with some OAuth2 decoders
         tenantId: user.tenantId || user.tenant_id || 'global'
     };
 }

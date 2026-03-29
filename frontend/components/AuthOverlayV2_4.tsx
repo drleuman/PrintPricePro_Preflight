@@ -24,8 +24,8 @@ export const AuthOverlayV2_4: React.FC = () => {
         setLoading(true);
 
         const endpoint = mode === 'LOGIN' ? '/api/auth/login' : '/api/auth/register';
-        const body = mode === 'LOGIN' 
-            ? { email, password } 
+        const body = mode === 'LOGIN'
+            ? { email, password }
             : { email, password, role };
 
         try {
@@ -66,7 +66,7 @@ export const AuthOverlayV2_4: React.FC = () => {
             <div className="w-full max-w-[480px] border border-white/10 bg-[#141415] shadow-[0_0_150px_rgba(220,0,0,0.15)] relative overflow-hidden">
                 {/* Brand Accent Bar */}
                 <div className="h-[2px] bg-[#FF0000] w-full shadow-[0_0_15px_#FF0000]"></div>
-                
+
                 <div className="p-12 space-y-10">
                     {/* Header Section */}
                     <div className="flex flex-col items-center text-center space-y-6">
@@ -98,7 +98,7 @@ export const AuthOverlayV2_4: React.FC = () => {
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     {roles.map(r => (
-                                        <button 
+                                        <button
                                             key={r.id}
                                             type="button"
                                             onClick={() => setRole(r.id as any)}
@@ -119,8 +119,8 @@ export const AuthOverlayV2_4: React.FC = () => {
                                     <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
                                         <EnvelopeIcon className="h-4 w-4 text-[#6b6b70] group-focus-within:text-[#FF0000] transition-colors duration-300" />
                                     </div>
-                                    <input 
-                                        type="email" 
+                                    <input
+                                        type="email"
                                         required
                                         className="h-[56px] w-full bg-[#0c0c0d] border border-white/10 pl-14 pr-6 text-[0.9rem] text-white outline-none focus:border-[#FF0000] focus:shadow-[0_0_20px_rgba(255,0,0,0.05)] transition-all duration-300 placeholder:text-[#3a3a3c] font-medium"
                                         value={email}
@@ -137,8 +137,8 @@ export const AuthOverlayV2_4: React.FC = () => {
                                         <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
                                             <LockClosedIcon className="h-4 w-4 text-[#6b6b70] group-focus-within:text-[#FF0000] transition-colors duration-300" />
                                         </div>
-                                        <input 
-                                            type="password" 
+                                        <input
+                                            type="password"
                                             required={(mode as string) !== 'MAGIC'}
                                             className="h-[56px] w-full bg-[#0c0c0d] border border-white/10 pl-14 pr-6 text-[0.9rem] text-white outline-none focus:border-[#FF0000] focus:shadow-[0_0_20px_rgba(255,0,0,0.05)] transition-all duration-300 placeholder:text-[#3a3a3c] font-medium"
                                             value={password}
@@ -152,7 +152,7 @@ export const AuthOverlayV2_4: React.FC = () => {
 
                         {/* Action Buttons */}
                         <div className="space-y-6">
-                            <button 
+                            <button
                                 type="submit"
                                 disabled={loading}
                                 className={`h-[64px] w-full bg-[#FF0000] hover:bg-[#FF3333] active:bg-[#CC0000] text-white text-[0.8rem] font-black uppercase tracking-[0.3em] transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-4 shadow-[0_4px_20px_rgba(255,0,0,0.2)] group`}
@@ -169,11 +169,11 @@ export const AuthOverlayV2_4: React.FC = () => {
                                     </>
                                 )}
                             </button>
-                            
+
                             <div className="flex flex-col items-center space-y-5 pt-2">
                                 <div className="flex items-center gap-3 text-[0.7rem] font-bold uppercase tracking-widest text-[#6b6b70]">
                                     <span>{mode === 'LOGIN' ? t('auth.noAccount') : t('auth.hasAccount')}</span>
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={() => setMode(m => {
                                             if (m === 'LOGIN') return 'INITIALIZE';
@@ -185,7 +185,7 @@ export const AuthOverlayV2_4: React.FC = () => {
                                     </button>
                                 </div>
 
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => setMode(m => {
                                         if (m === 'MAGIC') return 'LOGIN';

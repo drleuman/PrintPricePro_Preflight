@@ -642,8 +642,6 @@ export const en = {
   // Auth
   'auth.loading': 'Authenticating with PPOS Node...',
   'auth.error.unauthorized': 'Authentication failed. Please check your credentials.',
-  'auth.error.connection': 'Network connection failed while authenticating.',
-  'auth.error.invalid': 'Invalid login credentials.',
   'auth.role.author': 'Author / Contributor',
   'auth.role.publisher': 'Editorial / Publisher',
   'auth.role.printHouse': 'Printer / Prepress',
