@@ -174,20 +174,28 @@ async function enqueueJob(type, payload = {}) {
       throw err;
     }
 
-    // Extraction order as per requirements: jobId -> job_id -> id
-    const canonicalJobId = data.jobId || data.job_id || data.id;
+    // Extraction order for jobId: jobId, job_id, id, job.id
+    const canonicalJobId = data.jobId || data.job_id || data.id || data.job?.id;
 
-    if (!canonicalJobId) {
-      console.error('[CREATE-JOB][FAILURE] No canonical job ID in response', data);
-      throw new Error("PPOS did not return jobId");
+    // Detection of sync/inline mode
+    const hasInlineSigns = !!(data.analysis || data.issues || (data.status && !canonicalJobId));
+    const mode = canonicalJobId ? 'async' : (hasInlineSigns ? 'sync' : 'unknown');
+
+    console.log('[CREATE-JOB][MODE-DETECTED]', { mode, jobId: canonicalJobId });
+
+    if (mode === 'unknown') {
+      console.error('[CREATE-JOB][FAILURE] No canonical job ID OR inline result found in response', data);
+      throw new Error("PPOS did not return jobId or valid inline result");
     }
 
-    console.log('[CREATE-JOB][BFF-RETURN]', { jobId: canonicalJobId });
+    console.log('[CREATE-JOB][BFF-RETURN]', { mode, jobId: canonicalJobId });
 
     return {
       id: canonicalJobId,
       jobId: canonicalJobId,
-      status: data.status || 'QUEUED',
+      status: data.status || "QUEUED",
+      mode,
+      inlineResult: mode === 'sync' ? data : null,
       raw: data
     };
   } catch (serviceError) {

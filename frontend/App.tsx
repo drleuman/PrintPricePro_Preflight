@@ -18,6 +18,7 @@ import {
   HeatmapData,
   AppMode,
 } from './types';
+import { normalizePreflightResult } from './utils/payloadNormalization';
 import { usePreflightWorker } from './hooks/usePreflightWorker';
 import { usePdfTools } from './hooks/usePdfTools';
 
@@ -182,11 +183,20 @@ function AppContent() {
     
     try {
       const res = await startV2Preflight(file, selectedPolicy);
-      const jobId = res.jobId || res.job_id || res.id;
       
+      if (res.inlineResult) {
+        console.log('[APP][V2-START] Sync mode detected, using inlineResult');
+        const normalized = normalizePreflightResult(res.inlineResult);
+        setResult(normalized);
+        setCurrentStep(2);
+        setLdmActive(false);
+        return;
+      }
+
+      const jobId = res.jobId || res.job_id || res.id;
       if (jobId) {
         activeJobIdRef.current = jobId;
-        console.log('[APP][V2-START] Job ID set to', jobId);
+        console.log('[APP][V2-START] Async mode, Job ID set to', jobId);
         setLdmStatus('Engine Processing...');
         await handleV2JobComplete(jobId);
         

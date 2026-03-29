@@ -79,10 +79,8 @@ router.post(
         if (err) console.warn(`[BFF][CLEANUP][WARN] Failed to delete temp file ${req.file.path}:`, err.message);
       });
 
-      return res.status(201).json({
-        id: job.id,
-        jobId: job.id,
-        status: job.status,
+      const responsePayload = {
+        ok: true,
         tenantId,
         policy,
         input: {
@@ -90,7 +88,24 @@ router.post(
           filename,
           size: req.file.size
         }
+      };
+
+      if (job.mode === 'sync') {
+        responsePayload.inlineResult = job.inlineResult;
+      } else {
+        responsePayload.id = job.id;
+        responsePayload.jobId = job.id;
+        responsePayload.status = job.status || 'QUEUED';
+      }
+
+      console.log('[BFF][JOB-CREATE-RETURN]', {
+        requestId,
+        mode: job.mode,
+        jobId: job.id,
+        isInline: job.mode === 'sync'
       });
+
+      return res.status(201).json(responsePayload);
     } catch (error) {
       if (req.file?.path) {
         fs.unlink(req.file.path, () => { });
