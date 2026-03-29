@@ -25,17 +25,24 @@ async function pposRequest(path, options = {}) {
 
     const url = `${baseUrl.replace(/\/$/, '')}${path}`;
     
-    const defaultHeaders = {
+    const headers = {
         'Content-Type': 'application/json',
-        'x-ppp-api-key': pposConfig.apiKey
+        'x-ppp-api-key': pposConfig.apiKey,
+        ...options.headers
     };
+
+    // If an explicit content-type was provided in ANY casing (e.g. 'content-type' from form-data),
+    // we must remove the default 'Content-Type' to avoid duplicate headers.
+    const hasExplicitContentType = Object.keys(options.headers || {}).some(
+        h => h.toLowerCase() === 'content-type'
+    );
+    if (hasExplicitContentType) {
+        delete headers['Content-Type'];
+    }
 
     const mergedOptions = {
         ...options,
-        headers: {
-            ...defaultHeaders,
-            ...(options.headers || {})
-        }
+        headers
     };
 
     console.log(`[PPOS-API] Requesting: ${options.method || 'GET'} ${url}`);

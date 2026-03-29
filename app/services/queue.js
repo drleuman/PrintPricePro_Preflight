@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('fs');
+const FormData = require('form-data');
 const { pposRequest } = require('./apiClient');
 const identityService = require('./identityService');
 const pposConfig = require('../../config/ppos');
@@ -88,16 +90,57 @@ async function enqueueJob(type, payload = {}) {
   });
 
   try {
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': authHeader
-    };
+    let response;
 
-    const response = await pposRequest(pposConfig.routes.jobs, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body)
-    });
+    // Determine if we should send as multipart/form-data
+    if (payload.filePath && fs.existsSync(payload.filePath)) {
+      console.log(`[QUEUE][MULTIPART] Reconstructing job creation request for ${jobId}`);
+      
+      const form = new FormData();
+      
+      // We append the JSON fields individually or as nested strings
+      form.append('id', jobId);
+      form.append('jobId', jobId);
+      form.append('tenantId', tenantId);
+      form.append('job_type', type || 'PREFLIGHT');
+      form.append('policy', payload.policy || 'OFFSET_CMYK_STRICT');
+      
+      // Nested objects must be stringified for FormData
+      form.append('input', JSON.stringify(input));
+      form.append('metadata', JSON.stringify({
+        source: 'printprice-preflight-app',
+        requestId: payload.requestId || null,
+        timestamp: new Date().toISOString(),
+        ...payload.metadata // Preserve any additional metadata
+      }));
+
+      // The File itself - Canonical key 'file'
+      form.append('file', fs.createReadStream(payload.filePath), {
+        filename: payload.filename || 'document.pdf',
+        contentType: 'application/pdf'
+      });
+
+      response = await pposRequest(pposConfig.routes.jobs, {
+        method: 'POST',
+        headers: {
+          ...authHeaders,
+          ...form.getHeaders() // Important: contains the multipart boundary
+        },
+        body: form
+      });
+    } else {
+      // Legacy JSON path (used for batch orchestrate or when file is already remote)
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      };
+
+      response = await pposRequest(pposConfig.routes.jobs, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+      });
+    }
 
     const raw = await response.text();
     let data = {};

@@ -12,8 +12,7 @@ import {
 import { AnalyzeCarrierReport } from './AnalyzeCarrierReport';
 import { useTranslation } from '../i18n';
 import { pposFetch } from '../lib/apiClient';
-
-const API_VER = 'v1';
+import { pickAvailableModel, GEMINI_API_VER } from '../lib/gemini';
 
 // Internal State Machine
 type AnalysisState = 'idle' | 'loading' | 'success' | 'error';
@@ -21,17 +20,6 @@ type AnalysisState = 'idle' | 'loading' | 'success' | 'error';
 // Cache for results in memory to avoid redundant re-runs
 const analysisCache: Record<string, { result: string; timestamp: number }> = {};
 
-async function pickAvailableModel(): Promise<string> {
-    try {
-        const data = await pposFetch<any>(`/api/gemini-proxy/${API_VER}/models?pageSize=200`);
-        const list: any[] = Array.isArray(data?.models) ? data.models : [];
-        const gen = list.filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'));
-        const by = (k: string) => gen.find((m) => m.name?.toLowerCase().includes(k));
-        return (by('flash')?.name || by('pro')?.name || gen[0]?.name || '').replace(/^models\//, '');
-    } catch {
-        return 'gemini-1.5-flash'; // Hard fallback
-    }
-}
 
 function extractTextFromGenResponse(json: any): string {
     try {
@@ -102,7 +90,7 @@ export const AIInspectorPanel: React.FC<Props> = ({
                    Preflight State: ${result ? 'Validated' : 'Idle'}.
                    Provide structured overview of print-readiness and technical carrier status.`;
             
-            const data = await pposFetch<any>(`/api/gemini-proxy/${API_VER}/models/${encodeURIComponent(model)}:generateContent`, {
+            const data = await pposFetch<any>(`/api/gemini-proxy/${GEMINI_API_VER}/models/${encodeURIComponent(model)}:generateContent`, {
                 method: 'POST',
                 body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
             });

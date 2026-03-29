@@ -4,17 +4,11 @@ import { SafeHtmlMarkdown } from './SafeHtmlMarkdown';
 import { XMarkIcon, BeakerIcon } from '@heroicons/react/24/outline';
 import { t } from '../i18n';
 
-type ModelInfo = { name: string; supportedGenerationMethods?: string[] };
-const API_VER = 'v1';
+import { pposFetch } from '../lib/apiClient';
+import { pickAvailableModel, GEMINI_API_VER } from '../lib/gemini';
 
-async function pickAvailableModel(): Promise<string> {
-    const res = await fetch(`/api/gemini-proxy/${API_VER}/models?pageSize=200`);
-    const data = await res.json();
-    const list: ModelInfo[] = Array.isArray(data?.models) ? data.models : [];
-    const gen = list.filter(m => (m.supportedGenerationMethods || []).includes('generateContent'));
-    const by = (k: string) => gen.find(m => m.name?.toLowerCase().includes(k));
-    return (by('flash')?.name || by('pro')?.name || gen[0]?.name || '').replace(/^models\//, '');
-}
+type ModelInfo = { name: string; supportedGenerationMethods?: string[] };
+
 
 function extractText(json: any): string {
     try {
@@ -46,13 +40,11 @@ export const EfficiencyAuditModalV2_4: React.FC<EfficiencyAuditModalProps> = ({
         setLoading(true); setError(null); setAiResponse(null);
         try {
             const model = await pickAvailableModel();
-            const res = await fetch(`/api/gemini-proxy/${API_VER}/models/${encodeURIComponent(model)}:generateContent`, {
+            const data = await pposFetch<any>(`/api/gemini-proxy/${GEMINI_API_VER}/models/${encodeURIComponent(model)}:generateContent`, {
                 method: 'POST',
-                headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: "Efficiency checklist for " + (issue?.category || "General") }] }] }),
             });
-            const json = await res.json();
-            setAiResponse(extractText(json));
+            setAiResponse(extractText(data));
         } catch (e: any) { setError(e?.message || t('aiError')); } 
         finally { setLoading(false); }
     }, [issue]);
