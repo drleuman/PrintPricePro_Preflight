@@ -12,6 +12,13 @@ module.exports = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const requestId = req.headers['x-request-id'] || 'system';
 
+    // SERVER-DIAGNOSTIC (Temporary)
+    console.log(`[AUTH-DEBUG][${requestId}] Incoming Headers:`, {
+        url: req.originalUrl,
+        hasAuth: !!authHeader,
+        authPrefix: authHeader ? authHeader.substring(0, 15) : 'NONE'
+    });
+
     // --- 1. Extract Token ---
     if (authHeader && authHeader.startsWith('Bearer ')) {
         const tokenToken = authHeader.split(' ')[1];

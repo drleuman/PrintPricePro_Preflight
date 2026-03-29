@@ -644,4 +644,13 @@ export const es = {
 
   'common.idle': 'Inactivo',
   'common.enforced': 'Aplicada',
+  // Auth
+  'auth.loading': 'Autenticando con el Nodo PPOS...',
+  'auth.error.unauthorized': 'Error de autenticación. Verifique sus credenciales.',
+  'auth.error.connection': 'Error de conexión de red durante la autenticación.',
+  'auth.error.invalid': 'Credenciales de acceso no válidas.',
+  'auth.role.author': 'Autor / Colaborador',
+  'auth.role.publisher': 'Editorial / Publicador',
+  'auth.role.printHouse': 'Imprenta / Preimpresión',
+  'auth.role.developer': 'Desarrollador de Sistemas',
 } as const;

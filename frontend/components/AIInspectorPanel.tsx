@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { AnalyzeCarrierReport } from './AnalyzeCarrierReport';
 import { useTranslation } from '../i18n';
+import { pposFetch } from '../lib/apiClient';
 
 const API_VER = 'v1';
 
@@ -22,9 +23,7 @@ const analysisCache: Record<string, { result: string; timestamp: number }> = {};
 
 async function pickAvailableModel(): Promise<string> {
     try {
-        const res = await fetch(`/api/gemini-proxy/${API_VER}/models?pageSize=200`);
-        if (!res.ok) throw new Error("Models API error");
-        const data = await res.json();
+        const data = await pposFetch<any>(`/api/gemini-proxy/${API_VER}/models?pageSize=200`);
         const list: any[] = Array.isArray(data?.models) ? data.models : [];
         const gen = list.filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'));
         const by = (k: string) => gen.find((m) => m.name?.toLowerCase().includes(k));
@@ -103,16 +102,12 @@ export const AIInspectorPanel: React.FC<Props> = ({
                    Preflight State: ${result ? 'Validated' : 'Idle'}.
                    Provide structured overview of print-readiness and technical carrier status.`;
             
-            const res = await fetch(`/api/gemini-proxy/${API_VER}/models/${encodeURIComponent(model)}:generateContent`, {
+            const data = await pposFetch<any>(`/api/gemini-proxy/${API_VER}/models/${encodeURIComponent(model)}:generateContent`, {
                 method: 'POST',
-                headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
             });
             
-            if (!res.ok) throw new Error(`Execution error: ${res.statusText}`);
-            
-            const json = await res.json();
-            const text = extractTextFromGenResponse(json);
+            const text = extractTextFromGenResponse(data);
             
             if (!text) throw new Error("Received empty payload from inspection engine.");
             

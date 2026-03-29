@@ -4,6 +4,7 @@ import { RiskMeter } from './RiskMeter';
 import { PdfComparisonViewer } from './PdfComparisonViewer';
 import { ProductionIntelligencePanel } from './V3/ProductionIntelligencePanel';
 import { formatLabel } from '../utils/formatters';
+import { pposFetch } from '../lib/apiClient';
 
 interface V2ReportViewerProps {
     jobId: string;
@@ -24,10 +25,7 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalU
 
         const fetchStatus = async () => {
             try {
-                const res = await fetch(`/api/v2/jobs/${jobId}`);
-                if (!res.ok) throw new Error('Failed to fetch job status');
-                const data = await res.json();
-
+                const data = await pposFetch<any>(`/api/v2/jobs/${jobId}`);
                 setJob(data);
                 pollCount++;
 

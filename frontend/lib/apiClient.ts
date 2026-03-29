@@ -22,10 +22,20 @@ export async function pposFetch<T>(path: string, options?: RequestInit): Promise
     
     // Build headers
     const headers: Record<string, string> = {
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         'X-Request-ID': requestId,
         ...(options?.headers as any || {}),
     };
+
+    // P0: Strict Auth Enforcement - Do NOT allow options.headers to drop/blank the token if it exists
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`[API-FETCH][${requestId}] ${options?.method || 'GET'} ${path}`, {
+            hasToken: !!token
+        });
+    }
 
     // Idempotency for mutations
     if (['POST', 'PUT', 'PATCH'].includes(options?.method || 'GET') && !headers['Idempotency-Key']) {
