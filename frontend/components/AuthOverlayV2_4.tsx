@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { LockClosedIcon, ShieldCheckIcon, EnvelopeIcon, ArrowRightIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
-import { PPOSLogo } from '../design/preflight_starter_pack';
+import { PPOSLogo, StatusBadge } from '../design/preflight_starter_pack';
 import { useTranslation } from '../i18n';
+import { ThemeToggle } from './ThemeToggle';
 
 type AuthMode = 'LOGIN' | 'INITIALIZE' | 'MAGIC';
 
@@ -61,6 +62,11 @@ export const AuthOverlayV2_4: React.FC = () => {
             {/* Subtle Grid Pattern */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
                 <div className="h-full w-full bg-[linear-gradient(rgba(220,0,0,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(220,0,0,0.2)_1px,transparent_1px)] bg-[size:32px_32px]"></div>
+            </div>
+
+            {/* Top Right Controls */}
+            <div className="absolute top-8 right-8 z-50">
+                <ThemeToggle />
             </div>
 
             <div className="w-full max-w-[480px] border border-white/10 bg-[#141415] shadow-[0_0_150px_rgba(220,0,0,0.15)] relative overflow-hidden">
@@ -122,7 +128,7 @@ export const AuthOverlayV2_4: React.FC = () => {
                                     <input
                                         type="email"
                                         required
-                                        className="h-[56px] w-full bg-[#0c0c0d] border border-white/10 pl-14 pr-6 text-[0.9rem] text-white outline-none focus:border-[#FF0000] focus:shadow-[0_0_20px_rgba(255,0,0,0.05)] transition-all duration-300 placeholder:text-[#3a3a3c] font-medium"
+                                        className="h-[56px] w-full bg-[#0c0c0d] border border-white/10 pl-14 pr-6 text-[0.9rem] text-white caret-white outline-none focus:border-[#FF0000] focus:shadow-[0_0_20px_rgba(255,0,0,0.05)] transition-all duration-300 placeholder:text-white/20 font-medium"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         placeholder={t('auth.emailPlaceholder')}
@@ -140,7 +146,7 @@ export const AuthOverlayV2_4: React.FC = () => {
                                         <input
                                             type="password"
                                             required={(mode as string) !== 'MAGIC'}
-                                            className="h-[56px] w-full bg-[#0c0c0d] border border-white/10 pl-14 pr-6 text-[0.9rem] text-white outline-none focus:border-[#FF0000] focus:shadow-[0_0_20px_rgba(255,0,0,0.05)] transition-all duration-300 placeholder:text-[#3a3a3c] font-medium"
+                                            className="h-[56px] w-full bg-[#0c0c0d] border border-white/10 pl-14 pr-6 text-[0.9rem] text-white caret-white outline-none focus:border-[#FF0000] focus:shadow-[0_0_20px_rgba(255,0,0,0.05)] transition-all duration-300 placeholder:text-white/20 font-medium"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             placeholder={t('auth.passwordPlaceholder')}

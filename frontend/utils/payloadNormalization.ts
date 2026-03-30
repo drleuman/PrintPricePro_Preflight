@@ -115,8 +115,8 @@ export function normalizePreflightResult(payload: any): PreflightResult | null {
         };
 
         if (idx === 0) {
-           console.log('[ISSUE][RAW]', item);
-           console.log('[ISSUE][NORMALIZED]', normalized);
+            console.log('[ISSUE][RAW]', item);
+            console.log('[ISSUE][NORMALIZED]', normalized);
         }
 
         return normalized;
