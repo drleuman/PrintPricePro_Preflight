@@ -251,6 +251,13 @@ function AppContent() {
     }
   }, [file, result, autoFixBefore, autoFixServer, handleV2JobComplete, getDownloadUrl]);
 
+  const handleDownload = useCallback(() => {
+    if (lastPdfUrl) {
+      window.open(lastPdfUrl, '_blank');
+    } else {
+      alert('No certified PDF available for download yet.');
+    }
+  }, [lastPdfUrl]);
   const handleConvertCMYK = useCallback(async () => {
     if (!file) return;
     setLdmActive(true);
@@ -498,6 +505,7 @@ function AppContent() {
                     onConvertColors={handleConvertCMYK}
                     onRebuildPdf={handleRebuildPdf}
                     onMakeBooklet={handleMakeBooklet}
+                    onDownload={handleDownload}
                     onStartOver={handleStartOver}
                     onBack={() => setCurrentStep(3)}
                     appMode={appMode}

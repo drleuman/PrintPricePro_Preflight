@@ -32,6 +32,7 @@ interface Step4ReviewV2_4Props {
     onConvertColors: () => void;
     onRebuildPdf: () => void;
     onMakeBooklet: () => void;
+    onDownload: () => void;
     onStartOver: () => void;
     onBack: () => void;
     appMode?: AppMode;
@@ -62,6 +63,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     onConvertColors,
     onRebuildPdf,
     onMakeBooklet,
+    onDownload,
     onStartOver,
     onBack,
     appMode,

@@ -37,6 +37,7 @@ export const StatusBadge = ({
   label: string;
   variant?: BadgeVariant;
 }) => {
+  const { t } = useTranslation();
   const styles = {
     default: 'border-[var(--border-color)] text-[var(--text-secondary)]',
     warning: 'border-[var(--accent-color)] text-[var(--accent-color)] bg-[var(--accent-color)]/10',
@@ -53,7 +54,7 @@ export const StatusBadge = ({
       {variant === 'processing' && (
         <span className="h-1.5 w-1.5 shrink-0 animate-pulse bg-[#dc0000]" />
       )}
-      {formatLabel(label)}
+      {t(label as any).includes(label) ? formatLabel(label) : t(label as any)}
     </span>
   );
 };
@@ -176,9 +177,9 @@ export const CertificationPanel = ({
     const { t } = useTranslation();
     return (
       <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8">
-        <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="mb-6 flex items-start justify-between gap-6 overflow-hidden">
           <StatusBadge label={title} variant={riskStatus} />
-          <span className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--text-muted)] font-mono shrink-0 whitespace-nowrap pt-1">
+          <span className="text-[0.65rem] uppercase tracking-[0.25em] text-[var(--text-muted)] font-mono shrink-0 whitespace-nowrap pt-1.5 min-w-fit border-l border-[var(--border-color)] pl-4">
             Trace 0x48a
           </span>
         </div>
