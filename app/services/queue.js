@@ -12,7 +12,7 @@ function normalizeTenantId(payload = {}) {
   // Check authContext first (canonical source)
   if (payload.authContext2?.tenantId) return payload.authContext2.tenantId;
   if (payload.authContext?.tenantId) return payload.authContext.tenantId;
-  
+
   return payload.tenantId || payload.tenant_id || 'global';
 }
 
@@ -75,6 +75,15 @@ async function enqueueJob(type, payload = {}) {
     body.jobId = jobId;
   }
 
+  // Debug outgoing payload (Sanitized)
+  console.log('[JOB_PAYLOAD]', {
+    tenantId,
+    deploymentId,
+    jobId,
+    bodyKeys: Object.keys(body),
+    metadataKeys: Object.keys(body.metadata)
+  });
+
   /**
    * REFACTOR: Never use raw payload.userToken for PPOS communication.
    * We always sign a fresh internal JWT withbff -> ppos trust.
@@ -99,14 +108,14 @@ async function enqueueJob(type, payload = {}) {
     // Determine if we should send as multipart/form-data
     if (payload.filePath && fs.existsSync(payload.filePath)) {
       console.log(`[QUEUE][MULTIPART] Reconstructing job creation request${jobId ? ' for ' + jobId : ''}`);
-      
+
       const fileBuffer = await fs.promises.readFile(payload.filePath);
       const fileMimeType = payload.mimeType || 'application/pdf';
       const fileName = payload.filename || input.filename || 'document.pdf';
       const blob = new Blob([fileBuffer], { type: fileMimeType });
 
       const form = new FormData();
-      
+
       // Scalar fields
       if (jobId) {
         form.append('id', jobId);
@@ -116,7 +125,7 @@ async function enqueueJob(type, payload = {}) {
       form.append('deploymentId', deploymentId);
       form.append('job_type', type || 'PREFLIGHT');
       form.append('policy', payload.policy || 'OFFSET_MODERN_COATED');
-      
+
       // Nested objects as JSON strings
       form.append('input', JSON.stringify(input));
       form.append('metadata', JSON.stringify({
@@ -128,6 +137,13 @@ async function enqueueJob(type, payload = {}) {
 
       // Canonical multipart file field
       form.append('file', blob, fileName);
+
+      console.log('[JOB_PAYLOAD][MULTIPART]', {
+        tenantId,
+        deploymentId,
+        jobId,
+        formFields: ['id', 'jobId', 'tenantId', 'deploymentId', 'job_type', 'policy', 'input', 'metadata', 'file']
+      });
 
       console.log('[QUEUE][MULTIPART][DEBUG]', {
         jobId,
