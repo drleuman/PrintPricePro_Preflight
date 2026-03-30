@@ -19,8 +19,7 @@ console.log(`[BOOTSTRAP] Build Hash: ${process.env.GIT_COMMIT || 'v2.1.2-priorit
  * @copyright (c) 2025-2026 PrintPrice Pro
  */
 const fs = require('fs');
-// const pposConfig = require('../config/ppos');
-const pposConfig = {};
+const pposConfig = require('../config/ppos');
 
 /** 
  * --- AGGRESSIVE HEALTH CHECK HANDLERS (Hoisted) ---
@@ -61,8 +60,10 @@ function healthDepsHandler(_req, res) {
 const app = express();
 
 // --- PRIORITY #1: Health Checks (Bypass all middleware) ---
-app.get('/api/ready', readyHandler);
-app.get('/health', readyHandler);
+app.get('/ready', readyHandler);
+app.get('/healthz', readyHandler);
+app.get('/api/ready', readyHandler); // Keep for legacy compatibility
+app.get('/health', readyHandler);     // Keep for legacy compatibility
 app.get('/api/health/deps', healthDepsHandler);
 
 const WebSocket = require('ws');

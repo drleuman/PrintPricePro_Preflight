@@ -32,10 +32,12 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
 }) => {
     const { t } = useTranslation();
 
+    const hasAutoRunRef = React.useRef<File | null>(null);
+
     // Trace auto-run decisions to catch leak regression
     useEffect(() => {
         // Universal auto-run: If we have a file but no result and aren't running yet.
-        const canAutoRun = !!file && !result && !isRunning;
+        const canAutoRun = !!file && !result && !isRunning && hasAutoRunRef.current !== file;
         
         console.log('[STEP2][AUTORUN-CHECK]', {
             hasFile: !!file,
@@ -47,6 +49,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
         });
 
         if (canAutoRun) {
+            hasAutoRunRef.current = file;
             onRunAnalysis();
         }
     }, [file, result, isRunning, appMode, onRunAnalysis]);
