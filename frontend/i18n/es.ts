@@ -640,6 +640,8 @@ export const es = {
   'step.download.successTitle': 'Certificación Completada',
   'step.download.successDesc': 'Su documento ha superado todos los controles. El Carrier Forense está listo.',
   'step.download.readyForRetrival': 'LISTO PARA DESCARGA',
+  'step.download.anyOtherTaskTitle': '¿Alguna otra tarea?',
+  'step.download.anyOtherTaskDesc': 'Inicie un nuevo proceso pre-vuelo para otros archivos o aplique diferentes políticas de producción al mismo documento.',
 
   // Step 1 Specifics
   diagnosticModeTitle: 'Modo Diagnóstico',

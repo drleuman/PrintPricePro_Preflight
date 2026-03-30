@@ -642,6 +642,8 @@ export const en = {
   'step.download.successTitle': 'Certification Complete',
   'step.download.successDesc': 'Your document has passed all engine checks. The Forensic Carrier is ready.',
   'step.download.readyForRetrival': 'READY FOR DOWNLOAD',
+  'step.download.anyOtherTaskTitle': 'Any other task?',
+  'step.download.anyOtherTaskDesc': 'Start a new pre-flight process for other files or apply different production policies to the same document.',
 
   // Step 1 Specifics
   diagnosticModeTitle: 'Diagnostic Mode',

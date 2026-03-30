@@ -82,9 +82,9 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                             <SparklesIcon className="h-8 w-8 text-[var(--text-secondary)]" />
                         </div>
                         <div className="space-y-2">
-                           <h3 className="text-lg font-bold text-[var(--text-primary)]">¿Alguna otra tarea?</h3>
+                           <h3 className="text-lg font-bold text-[var(--text-primary)]">{t('step.download.anyOtherTaskTitle')}</h3>
                            <p className="text-[0.85rem] text-[var(--text-secondary)] leading-relaxed">
-                             Inicie un nuevo proceso pre-vuelo para otros archivos o aplique diferentes políticas de producción al mismo documento.
+                             {t('step.download.anyOtherTaskDesc')}
                            </p>
                         </div>
                     </div>

@@ -150,6 +150,14 @@ function AppContent() {
 
       console.log('[APP] Preflight Job Complete:', res);
       setResult(res);
+      
+      // Update download URL if available in metadata
+      if (completedJobId) {
+        const url = getDownloadUrl(completedJobId);
+        setLastPdfUrl(url);
+        lastPdfUrlRef.current = url;
+      }
+
       setCurrentStep(2); // Analysis
       setLdmActive(false);
     }
