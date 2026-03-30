@@ -43,9 +43,14 @@ export async function pposFetch<T>(path: string, options?: RequestInit): Promise
         headers['Idempotency-Key'] = crypto.randomUUID?.() || Math.random().toString(36).substring(2);
     }
 
-    // Auto-set Content-Type for JSON
-    if (options?.body && !(options.body instanceof FormData) && !headers['Content-Type']) {
+    // Auto-set Content-Type for JSON, but NEVER for FormData (let fetch handle boundary)
+    const isFormData = options?.body instanceof FormData;
+    if (options?.body && !isFormData && !headers['Content-Type']) {
         headers['Content-Type'] = 'application/json';
+    }
+
+    if (process.env.NODE_ENV === 'development' && isFormData) {
+        console.log(`[API-FETCH][${requestId}][MULTIPART] FormData detected, proceeding without Content-Type header.`);
     }
 
     let res = await fetch(path, {

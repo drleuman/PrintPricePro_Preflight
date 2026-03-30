@@ -16,27 +16,51 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
     const startV2Preflight = useCallback(async (file: File, policy: string, options?: any) => {
         setIsServerRunning(true);
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('policy', policy || 'OFFSET_MODERN_COATED');
-            if (options?.mode) formData.append('intent', options.mode);
-
-            console.log('[STEP1][POLICY]', {
-                selectedPolicyId: policy,
-                payloadPolicy: policy,
-                options
+            // DIAGNOSTIC LOGS (Requirement 5)
+            console.log('[CREATE-JOB][DIAGNOSTIC]', {
+                endpoint: '/api/v2/jobs',
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+                policy: policy || 'OFFSET_MODERN_COATED',
+                mode: options?.mode || 'N/A',
+                isFormData: true
             });
 
+            const formData = new FormData();
+            
+            // Requirement 2: Añade el PDF con la clave exacta 'file'
+            formData.append('file', file);
+            
+            // Campos adicionales
+            formData.append('policy', policy || 'OFFSET_MODERN_COATED');
+            if (options?.mode) {
+                formData.append('intent', options.mode);
+                formData.append('mode', options.mode); // Redundancy for PPOS contract safety
+            }
+            if (options?.jobMode) {
+                formData.append('jobMode', options.jobMode);
+            }
+
+            // Requirement 3: No forzar Content-Type. pposFetch lo maneja.
             const res = await pposFetch<any>('/api/v2/jobs', {
                 method: 'POST',
                 body: formData,
             });
 
-            console.log('[CREATE-JOB][FRONTEND]', {
-                returnedJobId: res.jobId || res.job_id || res.id
+            console.log('[CREATE-JOB][SUCCESS-BFF]', {
+                jobId: res.jobId || res.job_id || res.id,
+                inline: !!res.inlineResult
             });
 
             return res;
+        } catch (err: any) {
+            console.error('[CREATE-JOB][FAILURE-BFF]', {
+                message: err.message,
+                status: err.status,
+                data: err.data
+            });
+            throw err;
         } finally {
             setIsServerRunning(false);
         }

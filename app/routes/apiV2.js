@@ -45,12 +45,28 @@ router.post(
     const tenantId = getTenantId(req);
 
     try {
+      console.log(`[BFF][V2-JOB-START][${requestId}]`, {
+        hasFile: !!req.file,
+        contentType: req.get('content-type'),
+        tenantId
+      });
+
       if (!req.file) {
-        return res.status(400).json({ error: 'No PDF provided.' });
+        console.warn(`[BFF][V2-JOB-ERROR][${requestId}] Request missing PDF file.`);
+        return res.status(400).json({ 
+          error: 'BAD_REQUEST', 
+          message: 'No PDF provided. Ensure you use multipart/form-data with a "file" field.' 
+        });
       }
 
       const policy = req.body?.policy || 'OFFSET_MODERN_COATED';
       const filename = safeFilename(req.file.originalname || 'document.pdf');
+
+      console.log(`[BFF][V2-JOB-RECEIVED][${requestId}]`, {
+        filename,
+        policy,
+        size: req.file.size
+      });
 
       const authContext = req.auth || req.user || {};
       const internalToken = identityService.getAuthHeaders(authContext).Authorization;
