@@ -133,27 +133,36 @@ router.post(
 router.get('/policies', async (req, res) => {
   try {
     const upstreamPath = ppos.routes.policies;
-    const authHeaders = identityService.getAuthHeaders(req.auth || req.user || {});
-    
+
     const response = await pposRequest(upstreamPath, {
       method: 'GET',
       headers: {
-        Authorization: req.headers.authorization
-      }
+        Authorization: req.headers.authorization,
+      },
     });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const err = new Error('Upstream policy fetch failed');
+      err.response = { status: response.status, data: errorData };
+      throw err;
+    }
 
     const data = await response.json();
+    const policies = Array.isArray(data?.policies) ? data.policies : [];
 
-    console.log('[BFF][POLICIES]', {
-      upstreamPath,
-      hasPreflightRead: true,
-      policyCount: data?.policies?.length || 0
+    console.log('[POLICIES_PROXY]', {
+      upstreamCount: policies.length
     });
 
-    res.json(data);
+    return res.json({ policies });
   } catch (error) {
-    console.error('[BFF][POLICIES][ERROR]', error);
-    res.status(502).json({ error: 'Failed to fetch policy catalog' });
+    console.error('[POLICIES_ERROR]', error?.response?.data || error.message);
+
+    const status = error?.response?.status || 500;
+    return res.status(status).json(
+      error?.response?.data || { error: 'POLICY_FETCH_FAILED' }
+    );
   }
 });
 
