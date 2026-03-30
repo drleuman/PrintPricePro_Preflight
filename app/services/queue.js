@@ -13,7 +13,7 @@ function normalizeTenantId(payload = {}) {
   if (payload.authContext2?.tenantId) return payload.authContext2.tenantId;
   if (payload.authContext?.tenantId) return payload.authContext.tenantId;
   
-  return payload.tenantId || payload.tenant_id || 'default';
+  return payload.tenantId || payload.tenant_id || 'global';
 }
 
 /**
@@ -52,11 +52,14 @@ async function enqueueJob(type, payload = {}) {
   const tenantId = normalizeTenantId(payload);
   const jobId = normalizeJobId(payload);
   const input = normalizeInput(payload);
+  const deploymentId = process.env.PPOS_DEPLOYMENT_ID || process.env.DEPLOYMENT_ID || 'production';
 
   // Use authContext2 (canonical) or authContext (legacy) for identity propagation
   const userIdentity = payload.authContext2 || payload.authContext || {};
 
   const body = {
+    tenantId,
+    deploymentId,
     job_type: type || 'PREFLIGHT',
     policy: payload.policy || 'OFFSET_MODERN_COATED',
     input,
@@ -110,6 +113,7 @@ async function enqueueJob(type, payload = {}) {
         form.append('jobId', jobId);
       }
       form.append('tenantId', tenantId);
+      form.append('deploymentId', deploymentId);
       form.append('job_type', type || 'PREFLIGHT');
       form.append('policy', payload.policy || 'OFFSET_MODERN_COATED');
       

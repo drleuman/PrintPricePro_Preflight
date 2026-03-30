@@ -33,7 +33,7 @@ function ensureDir(dirPath) {
 }
 
 function getTenantId(req) {
-  return req.auth?.tenantId || req.user?.tenantId || 'default';
+  return req.auth?.tenantId || req.user?.tenantId || 'global';
 }
 
 router.post(
