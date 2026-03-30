@@ -58,7 +58,10 @@ export const AuthOverlayV2_4: React.FC = () => {
     ];
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0c0c0d]/98 backdrop-blur-3xl animate-in fade-in duration-700">
+        <div 
+            className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-3xl animate-in fade-in duration-700"
+            style={{ backgroundColor: 'var(--bg-tertiary)' }}
+        >
             {/* Subtle Grid Pattern */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
                 <div className="h-full w-full bg-[linear-gradient(rgba(220,0,0,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(220,0,0,0.2)_1px,transparent_1px)] bg-[size:32px_32px]"></div>
@@ -69,19 +72,19 @@ export const AuthOverlayV2_4: React.FC = () => {
                 <ThemeToggle />
             </div>
 
-            <div className="w-full max-w-[480px] border border-white/10 bg-[#141415] shadow-[0_0_150px_rgba(220,0,0,0.15)] relative overflow-hidden">
+            <div className="w-full max-w-[480px] border border-[var(--border-color)] bg-[var(--bg-panel)] shadow-[0_0_150px_rgba(220,0,0,0.15)] relative overflow-hidden">
                 {/* Brand Accent Bar */}
                 <div className="h-[2px] bg-[#FF0000] w-full shadow-[0_0_15px_#FF0000]"></div>
 
                 <div className="p-12 space-y-10">
                     {/* Header Section */}
                     <div className="flex flex-col items-center text-center space-y-6">
-                        <PPOSLogo className="w-14 h-14 border border-white/10 p-3 bg-white/5 shadow-[0_0_30px_rgba(255,255,255,0.02)]" />
+                        <PPOSLogo className="w-14 h-14 border border-[var(--border-color)] p-3 bg-[var(--hover-bg)] shadow-[0_0_30px_rgba(255,255,255,0.02)]" />
                         <div className="space-y-3">
-                            <h2 className="text-3xl font-black tracking-tight text-white">
+                            <h2 className="text-3xl font-black tracking-tight text-[var(--text-primary)]">
                                 {mode === 'LOGIN' ? t('auth.welcome') : t('auth.join')}
                             </h2>
-                            <p className="text-[#a0a0a5] text-[0.85rem] font-medium leading-relaxed">
+                            <p className="text-[var(--text-secondary)] text-[0.85rem] font-medium leading-relaxed">
                                 {t('auth.secureWorkspace')}
                             </p>
                         </div>
@@ -99,8 +102,8 @@ export const AuthOverlayV2_4: React.FC = () => {
                         {mode === 'INITIALIZE' && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
                                 <div className="space-y-1">
-                                    <label className="text-[0.7rem] font-black text-white uppercase tracking-[0.15em]">{t('auth.selectRole')}</label>
-                                    <p className="text-[#6b6b70] text-[0.65rem]">{t('auth.roleTailor')}</p>
+                                    <label className="text-[0.7rem] font-black text-[var(--text-primary)] uppercase tracking-[0.15em]">{t('auth.selectRole')}</label>
+                                    <p className="text-[var(--text-muted)] text-[0.65rem]">{t('auth.roleTailor')}</p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     {roles.map(r => (
@@ -108,7 +111,7 @@ export const AuthOverlayV2_4: React.FC = () => {
                                             key={r.id}
                                             type="button"
                                             onClick={() => setRole(r.id as any)}
-                                            className={`h-[48px] text-[0.65rem] font-black uppercase tracking-widest border transition-all duration-300 ${role === r.id ? 'border-[#FF0000] bg-[#FF0000]/10 text-white shadow-[0_0_10px_rgba(255,0,0,0.1)]' : 'border-white/5 bg-[#0c0c0d] text-[#6b6b70] hover:border-[#FF0000] hover:text-white'}`}
+                                            className={`h-[48px] text-[0.65rem] font-black uppercase tracking-widest border transition-all duration-300 ${role === r.id ? 'border-[#FF0000] bg-[#FF0000]/10 text-[var(--text-primary)] shadow-[0_0_10px_rgba(255,0,0,0.1)]' : 'border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:border-[#FF0000] hover:text-[var(--text-primary)]'}`}
                                         >
                                             {r.label}
                                         </button>
@@ -120,15 +123,15 @@ export const AuthOverlayV2_4: React.FC = () => {
                         {/* Main Inputs */}
                         <div className="space-y-5">
                             <div className="space-y-2">
-                                <label className="text-[0.7rem] font-black text-white uppercase tracking-[0.15em]">{t('auth.email')}</label>
+                                <label className="text-[0.7rem] font-black text-[var(--text-primary)] uppercase tracking-[0.15em]">{t('auth.email')}</label>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                                        <EnvelopeIcon className="h-4 w-4 text-[#6b6b70] group-focus-within:text-[#FF0000] transition-colors duration-300" />
+                                        <EnvelopeIcon className="h-4 w-4 text-[var(--text-muted)] group-focus-within:text-[#FF0000] transition-colors duration-300" />
                                     </div>
                                     <input
                                         type="email"
                                         required
-                                        className="h-[56px] w-full bg-[#0c0c0d] border border-white/10 pl-14 pr-6 text-[0.9rem] text-white caret-white outline-none focus:border-[#FF0000] focus:shadow-[0_0_20px_rgba(255,0,0,0.05)] transition-all duration-300 placeholder:text-white/20 font-medium"
+                                        className="h-[56px] w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] pl-14 pr-6 text-[0.9rem] text-[var(--text-primary)] caret-[var(--accent-color)] outline-none focus:border-[#FF0000] focus:shadow-[0_0_20px_rgba(255,0,0,0.05)] transition-all duration-300 placeholder:text-[var(--text-muted)] font-medium"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         placeholder={t('auth.emailPlaceholder')}
@@ -138,15 +141,15 @@ export const AuthOverlayV2_4: React.FC = () => {
 
                             {mode !== 'MAGIC' && (
                                 <div className="space-y-2">
-                                    <label className="text-[0.7rem] font-black text-white uppercase tracking-[0.15em]">{t('auth.password')}</label>
+                                    <label className="text-[0.7rem] font-black text-[var(--text-primary)] uppercase tracking-[0.15em]">{t('auth.password')}</label>
                                     <div className="relative group">
                                         <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                                            <LockClosedIcon className="h-4 w-4 text-[#6b6b70] group-focus-within:text-[#FF0000] transition-colors duration-300" />
+                                            <LockClosedIcon className="h-4 w-4 text-[var(--text-muted)] group-focus-within:text-[#FF0000] transition-colors duration-300" />
                                         </div>
                                         <input
                                             type="password"
                                             required={(mode as string) !== 'MAGIC'}
-                                            className="h-[56px] w-full bg-[#0c0c0d] border border-white/10 pl-14 pr-6 text-[0.9rem] text-white caret-white outline-none focus:border-[#FF0000] focus:shadow-[0_0_20px_rgba(255,0,0,0.05)] transition-all duration-300 placeholder:text-white/20 font-medium"
+                                            className="h-[56px] w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] pl-14 pr-6 text-[0.9rem] text-[var(--text-primary)] caret-[var(--accent-color)] outline-none focus:border-[#FF0000] focus:shadow-[0_0_20px_rgba(255,0,0,0.05)] transition-all duration-300 placeholder:text-[var(--text-muted)] font-medium"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             placeholder={t('auth.passwordPlaceholder')}
@@ -207,9 +210,9 @@ export const AuthOverlayV2_4: React.FC = () => {
                 </div>
 
                 {/* Secure Footer Indicator */}
-                <div className="px-12 py-6 bg-[#0c0c0d] border-t border-white/5 flex items-center justify-center gap-3">
+                <div className="px-12 py-6 bg-[var(--bg-tertiary)] border-t border-[var(--border-color)] flex items-center justify-center gap-3">
                     <ShieldCheckIcon className="h-3.5 w-3.5 text-[#32D74B]" />
-                    <span className="text-[0.6rem] font-mono text-[#5e5e63] tracking-widest uppercase">{t('auth.secureConnection')}</span>
+                    <span className="text-[0.6rem] font-mono text-[var(--text-muted)] tracking-widest uppercase">{t('auth.secureConnection')}</span>
                 </div>
             </div>
         </div>

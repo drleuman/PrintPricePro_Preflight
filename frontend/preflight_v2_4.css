@@ -37,6 +37,20 @@
   --pp-space-96: 96px;
 }
 
+.light {
+  --pp-bg-primary: #ffffff;
+  --pp-bg-secondary: #fdfdfd;
+  --pp-bg-elevated: #f4f4f5;
+  --pp-bg-panel: #ffffff;
+  
+  --pp-text-primary: #18181b;
+  --pp-text-secondary: #52525b;
+  --pp-text-muted: #71717a;
+  
+  --pp-border-subtle: rgba(0, 0, 0, 0.08);
+  --pp-border-strong: rgba(0, 0, 0, 0.14);
+}
+
 .font-display { font-family: 'Manrope', sans-serif; }
 .font-technical { font-family: 'Space Grotesk', sans-serif; }
 .font-body { font-family: 'Inter', sans-serif; }
