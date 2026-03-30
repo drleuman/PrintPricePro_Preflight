@@ -45,10 +45,10 @@ module.exports = {
     expiresIn: process.env.JWT_EXPIRES_IN || '5m'
   },
   routes: {
-    jobs: '/api/preflight/jobs',
-    policies: '/api/preflight/jobs/policies',
-    jobStatus: (jobId) => `/api/preflight/jobs/${encodeURIComponent(jobId)}`,
+    jobs: `${preflightServiceUrl}/api/preflight/jobs`,
+    policies: `${preflightServiceUrl}/api/preflight/jobs/policies`,
+    jobStatus: (jobId) => `${preflightServiceUrl}/api/preflight/jobs/${encodeURIComponent(jobId)}`,
     jobArtifact: (jobId, artifactId) =>
-      `/api/preflight/jobs/${encodeURIComponent(jobId)}/artifacts/${encodeURIComponent(artifactId)}`
+      `${preflightServiceUrl}/api/preflight/jobs/${encodeURIComponent(jobId)}/artifacts/${encodeURIComponent(artifactId)}`
   }
 };

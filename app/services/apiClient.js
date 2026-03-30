@@ -30,7 +30,8 @@ async function pposRequest(path, options = {}) {
         throw new Error('[API-CLIENT] PPOS_SERVICE_URL not defined');
     }
 
-    const url = `${baseUrl.replace(/\/$/, '')}${path}`;
+    const isAbsolutePath = path && (path.startsWith('http://') || path.startsWith('https://'));
+    const url = isAbsolutePath ? path : `${baseUrl.replace(/\/$/, '')}${path}`;
     
     const body = options.body;
     const nativeMultipart = isNativeFormData(body);

@@ -156,6 +156,7 @@ async function enqueueJob(type, payload = {}) {
         usingNativeFormData: true
       });
 
+      console.log('[QUEUE][TARGET]', pposConfig.routes.jobs);
       response = await pposRequest(pposConfig.routes.jobs, {
         method: 'POST',
         headers: {
@@ -170,6 +171,7 @@ async function enqueueJob(type, payload = {}) {
         'Authorization': authHeader
       };
 
+      console.log('[QUEUE][TARGET-JSON]', pposConfig.routes.jobs);
       response = await pposRequest(pposConfig.routes.jobs, {
         method: 'POST',
         headers,
