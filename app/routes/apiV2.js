@@ -137,7 +137,9 @@ router.get('/policies', async (req, res) => {
     
     const response = await pposRequest(upstreamPath, {
       method: 'GET',
-      headers: authHeaders
+      headers: {
+        Authorization: req.headers.authorization
+      }
     });
 
     const data = await response.json();
