@@ -24,6 +24,7 @@ import {
 import { normalizePreflightResult } from './utils/payloadNormalization';
 import { usePreflightWorker } from './hooks/usePreflightWorker';
 import { usePdfTools } from './hooks/usePdfTools';
+import { pposFetch } from './lib/apiClient';
 
 import { AuthOverlayV2_4 } from './components/AuthOverlayV2_4';
 import { useAuth } from './hooks/useAuth';
@@ -260,13 +261,43 @@ function AppContent() {
     }
   }, [file, result, autoFixBefore, autoFixServer, handleV2JobComplete, getDownloadUrl]);
 
-  const handleDownload = useCallback(() => {
-    if (lastPdfUrl) {
-      window.open(lastPdfUrl, '_blank');
-    } else {
+  const handleDownload = useCallback(async () => {
+    if (!lastPdfUrl) {
       alert('No certified PDF available for download yet.');
+      return;
     }
-  }, [lastPdfUrl]);
+
+    if (lastPdfUrl.startsWith('blob:')) {
+      const a = document.createElement('a');
+      a.href = lastPdfUrl;
+      a.download = lastPdfName || 'certified_document.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
+    try {
+      setLdmActive(true);
+      setLdmStatus('Downloading secure artifact...');
+      
+      const blob = await pposFetch<Blob>(lastPdfUrl);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = lastPdfName || 'certified_document.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      setLdmActive(false);
+    } catch (err: any) {
+      console.error('[DOWNLOAD_ERROR]', err);
+      alert('Download Error: ' + err.message);
+      setLdmActive(false);
+    }
+  }, [lastPdfUrl, lastPdfName]);
   const handleConvertCMYK = useCallback(async () => {
     if (!file) return;
     setLdmActive(true);
