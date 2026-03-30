@@ -166,10 +166,10 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                 </button>
                 <button 
                     onClick={() => onOpenEfficiencyTips?.(issue)}
-                    className="p-4 border border-[var(--border-color)] bg-[var(--bg-tertiary)]/30 hover:bg-[var(--accent-color)]/5 transition-all flex flex-col items-center gap-3 text-center group"
+                    className="p-4 border border-[var(--border-color)] bg-[var(--bg-secondary)]/40 hover:border-[var(--accent-color)]/30 hover:bg-[var(--accent-color)]/5 transition-all flex flex-col items-center gap-3 text-center group"
                 >
-                    <BeakerIcon className="h-5 w-5 text-[var(--text-muted)] group-hover:text-[var(--accent-color)]" />
-                    <span className="text-[0.75rem] font-black uppercase tracking-widest text-[var(--text-muted)] group-hover:text-[var(--text-primary)]">Efficiency Lab</span>
+                    <BeakerIcon className="h-5 w-5 text-[var(--text-secondary)] group-hover:text-[var(--accent-color)]" />
+                    <span className="text-[0.75rem] font-black uppercase tracking-widest text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]">Efficiency Lab</span>
                 </button>
             </div>
         </div>

@@ -3,6 +3,7 @@ import { Stepper } from './components/Stepper';
 import { LoaderOverlay } from './components/LoaderOverlay';
 import { AIInspectorPanel } from './components/AIInspectorPanel';
 import { FixDrawerV2_4 } from './components/FixDrawerV2_4';
+import { EfficiencyAuditModalV2_4 } from './components/EfficiencyAuditModalV2_4';
 import { Step1UploadV2_4 } from './components/steps/Step1UploadV2_4';
 import { Step2AnalysisV2_4 } from './components/steps/Step2AnalysisV2_4';
 import { Step3FixV2_4 } from './components/steps/Step3FixV2_4';
@@ -61,6 +62,7 @@ function AppContent() {
   const [visualPageImage, setVisualPageImage] = useState<string | null>(null);
   const [visualReports, setVisualReports] = useState<Record<number, string>>({});
   const [showVisualModal, setShowVisualModal] = useState(false);
+  const [showEfficiencyModal, setShowEfficiencyModal] = useState(false);
 
   // Heatmap State
   const [heatmapData, setHeatmapData] = useState<HeatmapData | null>(null);
@@ -510,11 +512,20 @@ function AppContent() {
           selectedProfile={selectedProfile}
           onProfileChange={setSelectedProfile}
           onOpenAIAudit={(issue) => { setSelectedIssue(issue); setShowVisualModal(true); }}
+          onOpenEfficiencyTips={(issue) => { setSelectedIssue(issue); setShowEfficiencyModal(true); }}
         />
 
         <AIInspectorPanel
           isOpen={showVisualModal}
           onClose={() => setShowVisualModal(false)}
+          issue={selectedIssue}
+          fileMeta={fileMeta}
+          result={result}
+        />
+
+        <EfficiencyAuditModalV2_4
+          isOpen={showEfficiencyModal}
+          onClose={() => setShowEfficiencyModal(false)}
           issue={selectedIssue}
           fileMeta={fileMeta}
           result={result}

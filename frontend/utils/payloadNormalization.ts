@@ -52,7 +52,7 @@ export function normalizePreflightResult(payload: any): PreflightResult | null {
         const normalized = {
             ...item,
             id: item.id || item.uuid || item.code || item.rule || `finding-${idx}`,
-            title: item.title || item.summary || item.message || item.rule || item.code || 'Technical preflight finding',
+            title: item.title || item.summary || item.rule || item.code || (item.id && !item.id.includes('finding-') ? item.id : null) || (item.message !== 'Technical preflight finding' ? item.message : null) || 'Technical preflight finding',
             message: item.message || item.user_message || item.description || item.details || 'System deviation detected.',
             description: item.description || item.details || item.explanation || item.summary || '',
             recommendation: item.recommendation || item.suggested_fix || item.fixText || item.hint || '',
