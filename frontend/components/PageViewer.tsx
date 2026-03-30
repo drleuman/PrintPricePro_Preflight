@@ -24,6 +24,7 @@ interface PageViewerProps {
   previewLoading?: boolean;
   ldmMode?: boolean;
   ldmJobId?: string | null;
+  hideNavigation?: boolean;
 }
 
 export const PageViewer: React.FC<PageViewerProps> = ({
@@ -42,6 +43,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
   previewLoading,
   ldmMode,
   ldmJobId,
+  hideNavigation = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pdfRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
@@ -263,7 +265,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
         )}
 
         {/* Page Navigation Floating Bar (RESTORED) */}
-        {!previewLoading && numPages > 0 && (
+        {!previewLoading && numPages > 0 && !hideNavigation && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-[var(--bg-primary)]/95 backdrop-blur-2xl border border-[var(--border-color)] px-6 py-2 rounded-2xl shadow-[0_15px_60px_rgba(0,0,0,0.4)] flex items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-500 hover:border-[var(--accent-color)]/30 transition-all group">
             <button 
                 onClick={handlePrevPage} 

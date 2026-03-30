@@ -218,8 +218,28 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                     <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden h-[600px] flex flex-col">
                         <div className="absolute top-0 left-0 right-0 p-4 z-10 flex flex-wrap md:flex-nowrap items-center justify-between gap-4 bg-[var(--bg-primary)]/90 backdrop-blur-xl border-b border-[var(--border-color)] overflow-hidden">
                             {/* Pagination Cluster */}
-
-
+                            <div className="flex items-center gap-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] px-4 py-1.5 rounded-xl">
+                                <button 
+                                    onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+                                    disabled={currentPage <= 1 || isRunning}
+                                    className="p-1 text-[var(--text-secondary)] hover:text-[var(--accent-color)] disabled:opacity-20 transition-all"
+                                >
+                                    <ChevronLeftIcon className="h-4 w-4" />
+                                </button>
+                                <div className="flex flex-col items-center min-w-[60px]">
+                                    <span className="text-[0.5rem] font-black uppercase tracking-widest text-[var(--text-muted)] leading-none mb-0.5">{t('pageNavigation')}</span>
+                                    <span className="text-xs font-mono font-black text-[var(--text-primary)]">
+                                        {currentPage} <span className="text-[var(--text-muted)] mx-0.5">/</span> {numPages}
+                                    </span>
+                                </div>
+                                <button 
+                                    onClick={() => onPageChange(Math.min(numPages, currentPage + 1))}
+                                    disabled={currentPage >= numPages || isRunning}
+                                    className="p-1 text-[var(--text-secondary)] hover:text-[var(--accent-color)] disabled:opacity-20 transition-all"
+                                >
+                                    <ChevronRightIcon className="h-4 w-4" />
+                                </button>
+                            </div>
                             {/* Analysis Tools Cluster */}
                             <div className="flex flex-wrap items-center gap-2">
                                 <button 
@@ -258,6 +278,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                                 previewLoading={previewLoading}
                                 ldmMode={ldmMode}
                                 ldmJobId={ldmJobId}
+                                hideNavigation={true}
                             />
                         </div>
                     </div>
