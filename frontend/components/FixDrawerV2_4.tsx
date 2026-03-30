@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import type { Issue } from '../types';
 import { pposFetch, getAuthToken } from '../lib/apiClient';
+import { pickAvailableModel, GEMINI_API_VER } from '../lib/gemini';
 import { t } from '../i18n';
 import { ISSUE_CATEGORY_LABELS } from '../constants';
 import { SafeHtmlMarkdown } from './SafeHtmlMarkdown';
@@ -53,8 +54,41 @@ export const FixDrawerV2_4: React.FC<Props> = ({
 }) => {
   const [bleedMode, setBleedMode] = useState<'safe' | 'aggressive'>('safe');
   const [policies, setPolicies] = useState<any[]>([]);
+  const [efficiencyLoading, setEfficiencyLoading] = useState(false);
+  const [efficiencyResponse, setEfficiencyResponse] = useState<string | null>(null);
+  const [efficiencyError, setEfficiencyError] = useState<string | null>(null);
+
+  const fetchEfficiencyTips = useCallback(async () => {
+    if (!issue) return;
+    setEfficiencyLoading(true);
+    setEfficiencyError(null);
+    setEfficiencyResponse(null);
+    try {
+      const model = await pickAvailableModel();
+      const prompt = `Efficiency and ink-saving checklist for print preflight issue: ${issue.title || issue.message}. Category: ${issue.category || 'General'}. Provide tactical advice for a pre-press operator.`;
+      
+      const data = await pposFetch<any>(`/api/gemini-proxy/${GEMINI_API_VER}/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST',
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
+      });
+
+      const cand = data?.candidates?.[0];
+      const parts = cand?.content?.parts;
+      const text = Array.isArray(parts) ? parts.map((p: any) => p?.text || '').join('\n\n').trim() : (data?.output_text || '');
+      setEfficiencyResponse(text);
+    } catch (e: any) {
+      setEfficiencyError(e?.message || 'AI protocol failed to initialize.');
+    } finally {
+      setEfficiencyLoading(false);
+    }
+  }, [issue]);
 
   useEffect(() => {
+    // Reset efficiency state when issue changes
+    setEfficiencyResponse(null);
+    setEfficiencyError(null);
+    setEfficiencyLoading(false);
+
     // Only attempt policy fetch if the component is being shown
     if (!issue) return;
 
@@ -165,13 +199,50 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                     <span className="text-[0.75rem] font-black uppercase tracking-widest text-[var(--accent-color)]">Deep Diagnostic</span>
                 </button>
                 <button 
-                    onClick={() => onOpenEfficiencyTips?.(issue)}
-                    className="p-4 border border-[var(--border-color)] bg-[var(--bg-secondary)]/40 hover:border-[var(--accent-color)]/30 hover:bg-[var(--accent-color)]/5 transition-all flex flex-col items-center gap-3 text-center group"
+                    onClick={fetchEfficiencyTips}
+                    disabled={efficiencyLoading}
+                    className={`p-4 border border-[var(--border-color)] bg-[var(--bg-secondary)]/40 hover:border-[var(--accent-color)]/30 hover:bg-[var(--accent-color)]/5 transition-all flex flex-col items-center gap-3 text-center group ${efficiencyLoading ? 'opacity-50 cursor-wait' : ''}`}
                 >
-                    <BeakerIcon className="h-5 w-5 text-[var(--text-secondary)] group-hover:text-[var(--accent-color)]" />
-                    <span className="text-[0.75rem] font-black uppercase tracking-widest text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]">Efficiency Lab</span>
+                    <BeakerIcon className={`h-5 w-5 ${efficiencyLoading ? 'animate-pulse text-[var(--accent-color)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--accent-color)]'}`} />
+                    <span className="text-[0.75rem] font-black uppercase tracking-widest text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]">
+                        {efficiencyLoading ? 'Running...' : 'Efficiency Lab'}
+                    </span>
                 </button>
             </div>
+
+            {/* Efficiency Lab Response Area */}
+            {(efficiencyLoading || efficiencyResponse || efficiencyError) && (
+              <div className="p-6 border border-[var(--border-color)] bg-[var(--bg-primary)]/60 animate-in fade-in slide-in-from-top-4 duration-500">
+                  <div className="flex items-center gap-3 mb-4">
+                      <BeakerIcon className="h-5 w-5 text-[var(--accent-color)]" />
+                      <span className="text-[0.7rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">Efficiency Protocol Analysis</span>
+                  </div>
+                  
+                  {efficiencyLoading ? (
+                    <div className="space-y-3 py-4">
+                        <div className="h-2 w-full bg-[var(--border-color)] overflow-hidden">
+                            <div className="h-full bg-[var(--accent-color)] animate-[shimmer_2s_infinite]"></div>
+                        </div>
+                        <div className="text-[0.65rem] font-black uppercase tracking-widest text-[var(--text-muted)] animate-pulse">Consulting AI Knowledge Base...</div>
+                    </div>
+                  ) : efficiencyError ? (
+                    <div className="p-3 bg-[var(--accent-color)]/10 border border-[var(--accent-color)]/20 text-[var(--accent-color)] text-[0.75rem] font-mono">{efficiencyError}</div>
+                  ) : (
+                    <div className="prose dark:prose-invert prose-sm max-w-none text-[var(--text-primary)] leading-relaxed">
+                        <SafeHtmlMarkdown markdown={efficiencyResponse || ""} />
+                    </div>
+                  )}
+                  
+                  {(efficiencyResponse || efficiencyError) && (
+                    <button 
+                      onClick={() => setEfficiencyResponse(null)}
+                      className="mt-6 text-[0.65rem] font-black uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                    >
+                        Reset Protocol
+                    </button>
+                  )}
+              </div>
+            )}
         </div>
 
         {/* Tactical Fixes */}

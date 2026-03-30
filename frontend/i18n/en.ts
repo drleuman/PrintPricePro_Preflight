@@ -474,6 +474,7 @@ export const en = {
   'inspector.metrics': 'Metrics',
   'inspector.noAnalysis': 'No Analysis Run Yet',
   'inspector.noAnalysisDesc': 'Execute neural handshake to begin forensic inspection of the carrier payload.',
+  'inspector.analyze': 'Analyze Carrier',
   'inspector.initialize': 'Initialize Audit',
   'inspector.inProgress': 'AI Inspection in Progress',
   'inspector.decoding': 'Decoding carrier forensic data...',
@@ -587,6 +588,8 @@ export const en = {
   'shell.issuesFound': 'Issues found',
   'shell.policyProfile': 'Policy profile',
   'shell.finalState': 'Final state',
+  'shell.ready': 'Ready',
+  'shell.action': 'Action',
   'shell.manualReview': 'Manual Review',
   'shell.fixAvailable': 'Fix Available',
   'shell.downloadReport': 'Download Report',
@@ -639,6 +642,16 @@ export const en = {
 
   'common.idle': 'Idle',
   'common.enforced': 'Enforced',
+  // Policy Info Tooltips
+  'policyInfo.title': 'Protocol Intelligence',
+  'policyInfo.desc': 'Defines the print standards your file must comply with. We validate your PDF against real production constraints (color profile, bleed, resolution, geometry). Choose the standard that matches your final printer.',
+  'policyInfo.helper': 'Ensures your file meets real printing requirements.',
+  'policyInfo.version': 'Standard Compliance v2.4',
+  'policyInfo.coatedDesc': 'Best for European offset printing with coated paper (FOGRA).',
+  'policyInfo.gracolDesc': 'Standard for North American digital and offset production.',
+  'policyInfo.digitalDesc': 'Optimized for high-end digital SRA3 production.',
+  'policyInfo.wideDesc': 'Tuned for large-scale outdoor signage and vinyl.',
+  'policyInfo.defaultDesc': 'Validated against international print production standards.',
   // Auth
   'auth.loading': 'Authenticating with PPOS Node...',
   'auth.error.unauthorized': 'Authentication failed. Please check your credentials.',

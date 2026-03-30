@@ -1,5 +1,53 @@
 import { PreflightResult, Issue, Severity } from '../types';
 
+function humanizeRule(code: string | undefined | null): string | null {
+    if (!code) return null;
+    const c = String(code).toUpperCase();
+    const mapping: Record<string, string> = {
+        'IND_GEOM': 'Geometry Violation',
+        'IND_TYPE': 'Typography Incompatibility',
+        'IND_COLOR': 'Color Space Deviation',
+        'IND_BOX': 'Dimension Mismatch',
+        'IND_IMAGE': 'Image Quality Alert',
+        'IND_BLEED': 'Bleed Margin Warning',
+        'IND_TRIM': 'Trim Box Anomaly',
+        'IND_PDF': 'PDF Version Deviation',
+        'IND_FONT': 'Font Embedding Issue',
+        'IND_BLACK': 'Rich Black Overload',
+        'IND_SPOT': 'Spot Color Alert'
+    };
+
+    // Partial match for codes like IND_GEOM_002
+    for (const [key, val] of Object.entries(mapping)) {
+        if (c.startsWith(key)) return val;
+    }
+
+    return null;
+}
+
+function humanizeDescription(code: string | undefined | null): string | null {
+    if (!code) return null;
+    const c = String(code).toUpperCase();
+    const mapping: Record<string, string> = {
+        'IND_GEOM': 'The document contains geometry variations that may affect centering and alignment during the printing process.',
+        'IND_TYPE': 'One or more fonts or text elements appear legacy or incompatible with the target print profile, which could cause rendering errors.',
+        'IND_COLOR': 'A color space deviation was detected. Some elements may use RGB or non-standard profiles that will shift when converted.',
+        'IND_BOX': 'The page boundary boxes (Trim, Bleed, Media) are inconsistent or missing, which is critical for automated imposition.',
+        'IND_IMAGE': 'Some graphical assets have a resolution lower than the 300 DPI industry standard, risking pixelation.',
+        'IND_BLEED': 'No bleed margins were detected. Background elements end exactly at the trim line, creating a risk of white edges after cutting.',
+        'IND_TRIM': 'The trim box is not correctly defined or is too close to critical content, which may result in content loss.',
+        'IND_PDF': 'The PDF version or structure does not strictly follow the PDF/X output intent standard.',
+        'IND_FONT': 'There are non-embedded fonts in the file. The printer may substitute them with generic typefaces.',
+        'IND_BLACK': 'Some black elements use a total ink coverage above 320%, which may cause smearing or drying issues.',
+        'IND_SPOT': 'Document uses spot colors (Pantones) that are not part of the standard CMYK target process.'
+    };
+
+    for (const [key, val] of Object.entries(mapping)) {
+        if (c.startsWith(key)) return val;
+    }
+    return null;
+}
+
 /**
  * Robustly extracts findings from various possible backend payload locations.
  * Aligns with V2.4 canonical OS and legacy formats.
@@ -49,12 +97,15 @@ export function normalizePreflightResult(payload: any): PreflightResult | null {
             };
         }
 
+        const hRule = humanizeRule(item.rule || item.code || item.id);
+        const hDesc = humanizeDescription(item.rule || item.code || item.id);
+
         const normalized = {
             ...item,
             id: item.id || item.uuid || item.code || item.rule || `finding-${idx}`,
-            title: item.title || item.summary || item.rule || item.code || (item.id && !item.id.includes('finding-') ? item.id : null) || (item.message !== 'Technical preflight finding' ? item.message : null) || 'Technical preflight finding',
-            message: item.message || item.user_message || item.description || item.details || 'System deviation detected.',
-            description: item.description || item.details || item.explanation || item.summary || '',
+            title: item.title || item.summary || hRule || item.rule || item.code || (item.id && !item.id.includes('finding-') ? item.id : null) || (item.message !== 'Technical preflight finding' ? item.message : null) || 'Technical preflight finding',
+            message: (item.message === 'Technical preflight finding' ? (hDesc || item.message) : (item.message || item.user_message || hDesc || 'System deviation detected.')),
+            description: item.description || item.details || item.explanation || hDesc || item.summary || '',
             recommendation: item.recommendation || item.suggested_fix || item.fixText || item.hint || '',
             severity: mapSeverity(item.severity || item.level || 'warning'),
             category: (item.category || item.type || 'General').toString().toUpperCase(),

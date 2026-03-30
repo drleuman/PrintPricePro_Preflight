@@ -586,6 +586,8 @@ export const es = {
   'shell.issuesFound': 'Incidencias encontradas',
   'shell.policyProfile': 'Perfil de política',
   'shell.finalState': 'Estado final',
+  'shell.ready': 'Listo',
+  'shell.action': 'Acción',
   'shell.manualReview': 'Revisión Manual',
   'shell.fixAvailable': 'Solución Disponible',
   'shell.downloadReport': 'Descargar Informe',
@@ -638,6 +640,16 @@ export const es = {
 
   'common.idle': 'Inactivo',
   'common.enforced': 'Aplicada',
+  // Policy Info Tooltips
+  'policyInfo.title': 'Inteligencia de Protocolo',
+  'policyInfo.desc': 'Define los estándares de impresión que debe cumplir su archivo. Validamos su PDF contra restricciones reales de producción (perfil de color, sangrado, resolución, geometría). Elija el estándar que mejor se adapte a su imprenta final.',
+  'policyInfo.helper': 'Asegura que su archivo cumpla con los requerimientos reales de impresión.',
+  'policyInfo.version': 'Cumplimiento Estándar v2.4',
+  'policyInfo.coatedDesc': 'Ideal para impresión offset europea con papel estucado (FOGRA).',
+  'policyInfo.gracolDesc': 'Estándar para producción digital y offset en Norteamérica.',
+  'policyInfo.digitalDesc': 'Optimizado para producción digital SRA3 de alta gama.',
+  'policyInfo.wideDesc': 'Ajustado para cartelería de gran formato y vinilos.',
+  'policyInfo.defaultDesc': 'Validado contra estándares internacionales de producción gráfica.',
   // Auth
   'auth.loading': 'Autenticando con el Nodo PPOS...',
   'auth.error.unauthorized': 'Error de autenticación. Verifique sus credenciales.',

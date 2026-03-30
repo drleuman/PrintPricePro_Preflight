@@ -39,9 +39,12 @@ interface Step4ReviewV2_4Props {
     isHeatmapLoading?: boolean;
     onRunHeatmap?: () => void;
     originalFile?: File | null;
+    autoFixBefore?: PreflightResult | null;
+    autoFixAfter?: PreflightResult | null;
     autoFixReport?: any;
     previewPages?: string[] | null;
     previewLoading?: boolean;
+    selectedPolicy?: string;
 }
 
 export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
@@ -66,18 +69,52 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     isHeatmapLoading = false,
     onRunHeatmap,
     originalFile,
+    autoFixBefore,
+    autoFixAfter,
     autoFixReport,
     previewPages = null,
     previewLoading = false,
+    selectedPolicy,
 }) => {
     const { t } = useTranslation();
     const [showBeforeAfter, setShowBeforeAfter] = useState<'before' | 'after'>('after');
     const [showTechNote, setShowTechNote] = useState(false);
-    
-    const issuesCount = result?.issues?.length || 0;
-    const isReadyForPrint = !!result && issuesCount === 0;
 
-    const displayFile = showBeforeAfter === 'before' && originalFile ? originalFile : file;
+    // Diagnostics
+    console.log('[STEP4][INPUTS]', { 
+        hasResult: !!result, 
+        hasBefore: !!autoFixBefore, 
+        hasAfter: !!autoFixAfter,
+        lastPdfUrl: !!lastPdfUrl,
+        lastPdfName,
+        appMode
+    });
+    
+    // Canonical calculation of issues and fixes
+    const issuesFound = autoFixBefore?.issues?.length || result?.issues?.length || 0;
+    
+    // Fixes Applied calculation logic:
+    // 1. Check direct report if available
+    // 2. Otherwise calc delta between before and after results
+    const fixesApplied = autoFixReport?.fixes?.length || 
+                        (autoFixBefore && autoFixAfter ? Math.max(0, autoFixBefore.issues.length - autoFixAfter.issues.length) : 
+                        autoFixReport ? 1 : 0);
+
+    const isReadyForPrint = (autoFixAfter?.issues?.length === 0) || (result?.issues?.length === 0);
+
+    console.log('[STEP4][COUNTS]', { issuesFound, fixesApplied, isReadyForPrint });
+
+    // Viewer Resolution
+    // Before: Original File
+    // After: Corrected Result (either file or lastPdfUrl)
+    const displayFile = showBeforeAfter === 'before' ? originalFile : file;
+    const displayPdfUrl = showBeforeAfter === 'after' ? lastPdfUrl : null;
+
+    console.log('[STEP4][VIEWER]', { 
+        mode: showBeforeAfter, 
+        hasFile: !!displayFile, 
+        hasUrl: !!displayPdfUrl 
+    });
 
     return (
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 pb-24">
@@ -121,6 +158,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                     <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden h-[600px] flex flex-col items-center justify-center p-2 md:p-8 bg-[var(--bg-primary)]">
                         <PageViewer 
                             file={displayFile}
+                            pdfUrl={displayPdfUrl}
                             numPages={numPages}
                             currentPage={currentPage}
                             onPageChange={onPageChange}
@@ -177,21 +215,23 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         </div>
 
                         <CertificationPanel 
-                            title={isReadyForPrint ? t('readyForPrinting') : t('analysisWaitMessage')} 
+                            title={isReadyForPrint ? t('readyForPrinting') : t('common.processing')} 
+                            issuesFound={issuesFound}
+                            fixesApplied={fixesApplied}
+                            profile={selectedPolicy || 'FOGRA51 / ISO_COATED'}
                             riskStatus={isReadyForPrint ? "certified" : "warning"} 
                         />
 
                         <div className="pt-6 border-t border-[var(--border-color)] space-y-4">
                             <div className="flex items-center justify-between">
                                 <span className="text-[0.8rem] font-black uppercase tracking-widest text-[var(--text-muted)]">{t('labelCertificateId')}</span>
-                                <span className="text-[0.8rem] font-mono text-[var(--text-secondary)]">{formatLabel(`PPOS_TX_${Math.floor(Math.random() * 90000) + 10000}`)}</span>
+                                <span className="text-[0.8rem] font-mono text-[var(--text-secondary)]">{formatLabel(`PPOS_TX_${(file?.size || 12345).toString().slice(-5)}`)}</span>
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-[0.8rem] font-black uppercase tracking-widest text-[var(--text-muted)]">{t('shell.policyProfile')}</span>
-                                <span className="text-[0.8rem] font-mono text-[var(--text-secondary)] italic">{formatLabel('FOGRA51 / PSO_V3')}</span>
+                                <span className="text-[0.8rem] font-mono text-[var(--text-secondary)] italic truncate max-w-[150px]">{formatLabel(selectedPolicy || 'DEFAULT_OVERSIGHT')}</span>
                             </div>
                         </div>
-
                         <button 
                             onClick={() => setShowTechNote(true)}
                             className="w-full py-4 bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] text-[0.8rem] font-black uppercase tracking-[0.2em] transition-all shadow-[0_5px_15px_rgba(220,0,0,0.15)]"
@@ -261,7 +301,9 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                         </div>
                                         <div className="flex justify-between border-b border-[var(--border-color)] pb-2">
                                             <span className="text-[var(--text-secondary)]">{t('shell.finalState')}:</span>
-                                            <span className="text-[var(--accent-color)] font-black uppercase">{t('common.verified')}</span>
+                                            <span className={`${isReadyForPrint ? 'text-[var(--accent-color)]' : 'text-amber-500'} font-black uppercase text-[0.8rem]`}>
+                                                {isReadyForPrint ? t('common.verified') : t('shell.manualReview')}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -275,7 +317,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                         </div>
                                         <div className="flex justify-between border-b border-[var(--border-color)] pb-2">
                                             <span className="text-[var(--text-secondary)]">{t('profileLabel')}</span>
-                                            <span>FOGRA51</span>
+                                            <span className="truncate max-w-[150px]">{formatLabel(selectedPolicy || 'FOGRA51 / PSO_V3')}</span>
                                         </div>
                                         <div className="flex justify-between border-b border-[var(--border-color)] pb-2">
                                             <span className="text-[var(--text-secondary)]">{t('account.service.tier')}:</span>

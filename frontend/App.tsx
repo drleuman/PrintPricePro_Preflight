@@ -62,7 +62,6 @@ function AppContent() {
   const [visualPageImage, setVisualPageImage] = useState<string | null>(null);
   const [visualReports, setVisualReports] = useState<Record<number, string>>({});
   const [showVisualModal, setShowVisualModal] = useState(false);
-  const [showEfficiencyModal, setShowEfficiencyModal] = useState(false);
 
   // Heatmap State
   const [heatmapData, setHeatmapData] = useState<HeatmapData | null>(null);
@@ -217,6 +216,13 @@ function AppContent() {
 
   const handleAutoFix = useCallback(async (opts: any) => {
     if (!file) return;
+    
+    // Save current result as 'before' if not already set
+    if (result && !autoFixBefore) {
+      setAutoFixBefore(result);
+      console.log('[APP][FIX-START] Storing Before state for Step 4 comparison');
+    }
+
     setLdmActive(true);
     setLdmStatus('Initializing AI Magic Fix on OS...');
     try {
@@ -224,17 +230,26 @@ function AppContent() {
       if (jobId) {
         setLdmProgress(10);
         const jobResult: any = await handleV2JobComplete(jobId);
+        
+        console.log('[APP][FIX-COMPLETE]', { jobId, hasReport: !!jobResult.report });
+        
         const downloadUrl = getDownloadUrl(jobId);
         setLastPdfUrl(downloadUrl);
         lastPdfUrlRef.current = downloadUrl;
+        
         if (jobResult.report) setAutoFixReport(jobResult.report);
+        
+        // Update the current result with the 'after' findings
+        const normalizedAfter = normalizePreflightResult(jobResult);
+        setResult(normalizedAfter);
+        setAutoFixAfter(normalizedAfter);
       }
       setLdmActive(false);
     } catch (err: any) {
       alert('AI Magic Failed: ' + err.message);
       setLdmActive(false);
     }
-  }, [file, autoFixServer, handleV2JobComplete, getDownloadUrl]);
+  }, [file, result, autoFixBefore, autoFixServer, handleV2JobComplete, getDownloadUrl]);
 
   const handleConvertCMYK = useCallback(async () => {
     if (!file) return;
@@ -490,9 +505,12 @@ function AppContent() {
                     isHeatmapLoading={heatmapLoading}
                     onRunHeatmap={handleRunHeatmap}
                     originalFile={originalFile}
+                    autoFixBefore={autoFixBefore}
+                    autoFixAfter={autoFixAfter}
                     autoFixReport={autoFixReport}
                     previewPages={previewPages}
                     previewLoading={previewLoading}
+                    selectedPolicy={selectedPolicy}
                   />
                 )}
               </div>
@@ -512,20 +530,11 @@ function AppContent() {
           selectedProfile={selectedProfile}
           onProfileChange={setSelectedProfile}
           onOpenAIAudit={(issue) => { setSelectedIssue(issue); setShowVisualModal(true); }}
-          onOpenEfficiencyTips={(issue) => { setSelectedIssue(issue); setShowEfficiencyModal(true); }}
         />
 
         <AIInspectorPanel
           isOpen={showVisualModal}
           onClose={() => setShowVisualModal(false)}
-          issue={selectedIssue}
-          fileMeta={fileMeta}
-          result={result}
-        />
-
-        <EfficiencyAuditModalV2_4
-          isOpen={showEfficiencyModal}
-          onClose={() => setShowEfficiencyModal(false)}
           issue={selectedIssue}
           fileMeta={fileMeta}
           result={result}

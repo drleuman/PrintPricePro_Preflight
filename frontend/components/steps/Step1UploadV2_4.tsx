@@ -3,7 +3,7 @@ import { pposFetch } from '../../lib/apiClient';
 import { FileMeta, AppMode } from '../../types';
 import { StatusBadge } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
-import { CloudArrowUpIcon, DocumentCheckIcon, AdjustmentsHorizontalIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { CloudArrowUpIcon, DocumentCheckIcon, AdjustmentsHorizontalIcon, SparklesIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '../../i18n';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -193,15 +193,15 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                             <button 
                                 onClick={() => setSelectedMode('magic')}
                                 className={`w-full flex items-center gap-5 p-6 border transition-all duration-500 relative group ${
-                                    selectedMode === 'magic' ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5' : 'border-[var(--border-color)] hover:border-[var(--text-muted)] bg-[var(--bg-primary)]/50'
+                                    selectedMode === 'magic' ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5' : 'border-[var(--border-color)] hover:border-[var(--accent-color)] hover:bg-[var(--accent-color)]/5 bg-[var(--bg-primary)]/50'
                                 }`}
                             >
-                                <div className={`p-4 transition-all duration-500 ${selectedMode === 'magic' ? 'bg-[var(--accent-color)] text-white shadow-[0_0_20px_rgba(220,0,0,0.2)]' : 'bg-[var(--hover-bg)] text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]'}`}>
+                                <div className={`p-4 transition-all duration-500 ${selectedMode === 'magic' ? 'bg-[var(--accent-color)] text-white shadow-[0_0_20px_rgba(220,0,0,0.2)]' : 'bg-[var(--hover-bg)] text-[var(--text-muted)] group-hover:text-white group-hover:bg-[var(--accent-color)]/20'}`}>
                                     <SparklesIcon className="h-6 w-6" />
                                 </div>
                                 <div className="text-left flex-1">
-                                    <div className="text-[0.85rem] font-black uppercase tracking-wider mb-1 text-[var(--text-primary)]">{t('aiMagicFix')}</div>
-                                    <div className="text-[0.88rem] text-[var(--text-secondary)] font-medium leading-normal">
+                                    <div className="text-[0.85rem] font-black uppercase tracking-wider mb-1 text-[var(--text-primary)] group-hover:text-white">{t('aiMagicFix')}</div>
+                                    <div className="text-[0.88rem] text-[var(--text-secondary)] font-medium leading-normal group-hover:text-white/80">
                                         {t('aiMagicFixDesc')}
                                     </div>
                                 </div>
@@ -213,15 +213,15 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                             <button 
                                 onClick={() => setSelectedMode('manual')}
                                 className={`w-full flex items-center gap-5 p-6 border transition-all duration-500 relative group ${
-                                    selectedMode === 'manual' ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5' : 'border-[var(--border-color)] hover:border-[var(--text-muted)] bg-[var(--bg-primary)]/50'
+                                    selectedMode === 'manual' ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5' : 'border-[var(--border-color)] hover:border-[var(--accent-color)] hover:bg-[var(--accent-color)]/5 bg-[var(--bg-primary)]/50'
                                 }`}
                             >
-                                <div className={`p-4 transition-all duration-500 ${selectedMode === 'manual' ? 'bg-[var(--accent-color)] text-white shadow-[0_0_20px_rgba(220,0,0,0.2)]' : 'bg-[var(--hover-bg)] text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]'}`}>
+                                <div className={`p-4 transition-all duration-500 ${selectedMode === 'manual' ? 'bg-[var(--accent-color)] text-white shadow-[0_0_20px_rgba(220,0,0,0.2)]' : 'bg-[var(--hover-bg)] text-[var(--text-muted)] group-hover:text-white group-hover:bg-[var(--accent-color)]/20'}`}>
                                     <AdjustmentsHorizontalIcon className="h-6 w-6" />
                                 </div>
                                 <div className="text-left flex-1">
-                                    <div className="text-[0.85rem] font-black uppercase tracking-wider mb-1 text-[var(--text-primary)]">{t('diagnosticModeTitle')}</div>
-                                    <div className="text-[0.88rem] text-[var(--text-secondary)] font-medium leading-normal">
+                                    <div className="text-[0.85rem] font-black uppercase tracking-wider mb-1 text-[var(--text-primary)] group-hover:text-white">{t('diagnosticModeTitle')}</div>
+                                    <div className="text-[0.88rem] text-[var(--text-secondary)] font-medium leading-normal group-hover:text-white/80">
                                         {t('diagnosticModeDesc')}
                                     </div>
                                 </div>
@@ -234,32 +234,64 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                         {/* Show policy enforcement for any analysis mode */}
                         <div className="mt-10 space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
                                 <div className="flex items-center justify-between">
-                                    <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                                        {t('shell.policyEnforcement')}
-                                    </div>
-                                    <span className="text-[0.85rem] font-mono text-[var(--accent-color)] opacity-50">{formatLabel('STRICT_OVERSIGHT')}</span>
-                                </div>
-                                <select 
-                                    className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] p-4 text-[0.85rem] font-bold text-[var(--text-primary)] focus:border-[var(--accent-color)] outline-none appearance-none cursor-pointer hover:border-[var(--text-muted)] transition-all font-mono uppercase"
-                                    value={selectedPolicy}
-                                    onChange={(e) => onPolicyChange(e.target.value)}
-                                    disabled={policyStatus === 'loading'}
-                                >
-                                    {policyStatus === 'loading' && <option>Loading policy catalog...</option>}
-                                    {policyStatus === 'error' && <option>Unable to load policy catalog.</option>}
-                                    {policyStatus === 'idle' && policies.length === 0 && <option>No policies available.</option>}
-                                    {policies.map(p => {
-                                        const primaryLabel = p.name ? p.name.split(' (')[0] : p.id;
-                                        const secondaryParts = [p.profile, p.colorSpace, p.standard].filter(Boolean);
-                                        const secondaryLabel = secondaryParts.join(' · ');
+                                    <div className="flex items-center gap-2 group/tip relative">
+                                        <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                                            {t('shell.policyEnforcement')}
+                                        </div>
+                                        <InformationCircleIcon 
+                                            className="h-4 w-4 text-[var(--text-muted)] cursor-help hover:text-[var(--accent-color)] transition-colors"
+                                            aria-label="Policy Information"
+                                            tabIndex={0}
+                                        />
                                         
-                                        return (
-                                            <option key={p.id} value={p.id}>
-                                                {primaryLabel.toUpperCase()} {secondaryLabel ? `[ ${secondaryLabel} ]` : ''}
-                                            </option>
-                                        );
-                                    })}
-                                </select>
+                                        {/* Minimal Tooltip Layer */}
+                                        <div className="absolute left-0 bottom-full mb-3 w-[320px] p-4 bg-[var(--bg-primary)] border border-[var(--border-color)] shadow-[0_20px_40px_rgba(0,0,0,0.4)] opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible focus-within:opacity-100 focus-within:visible transition-all duration-300 z-50">
+                                            <div className="text-[0.65rem] font-black uppercase tracking-[0.25em] text-[var(--accent-color)] mb-2">{t('policyInfo.title')}</div>
+                                            <p className="text-[0.78rem] text-[var(--text-primary)] leading-relaxed font-medium">
+                                                {t('policyInfo.desc')}
+                                            </p>
+                                            <div className="mt-3 h-px bg-[var(--border-color)]"></div>
+                                            <div className="mt-3 text-[0.6rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">{t('policyInfo.version')}</div>
+                                        </div>
+                                    </div>
+                                    <span className="text-[0.82rem] font-mono text-[var(--accent-color)] opacity-50">{formatLabel('PRODUCTION_GUARD')}</span>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <select 
+                                        className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] p-4 text-[0.85rem] font-bold text-[var(--text-primary)] focus:border-[var(--accent-color)] outline-none appearance-none cursor-pointer hover:border-[var(--accent-color)]/30 transition-all font-mono uppercase"
+                                        value={selectedPolicy}
+                                        onChange={(e) => onPolicyChange(e.target.value)}
+                                        disabled={policyStatus === 'loading'}
+                                    >
+                                        {policyStatus === 'loading' && <option>Loading policy catalog...</option>}
+                                        {policyStatus === 'error' && <option>Unable to load policy catalog.</option>}
+                                        {policyStatus === 'idle' && policies.length === 0 && <option>No policies available.</option>}
+                                        {policies.map(p => {
+                                            const primaryLabel = p.name ? p.name.split(' (')[0] : p.id;
+                                            return (
+                                                <option key={p.id} value={p.id}>
+                                                    {primaryLabel.toUpperCase()}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
+
+                                    <div className="flex flex-col gap-1.5 px-1">
+                                        <p className="text-[0.7rem] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+                                            {t('policyInfo.helper')}
+                                        </p>
+                                        {selectedPolicy && (
+                                            <p className="text-[0.75rem] font-medium text-[var(--accent-color)] opacity-90 italic">
+                                                {selectedPolicy.includes('COATED') ? t('policyInfo.coatedDesc') :
+                                                 selectedPolicy.includes('GRACOL') ? t('policyInfo.gracolDesc') :
+                                                 selectedPolicy.includes('DIGITAL') ? t('policyInfo.digitalDesc') :
+                                                 selectedPolicy.includes('WIDE') ? t('policyInfo.wideDesc') :
+                                                 t('policyInfo.defaultDesc')}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                     </div>
 

@@ -102,7 +102,7 @@ export const AuthOverlayV2_4: React.FC = () => {
                                             key={r.id}
                                             type="button"
                                             onClick={() => setRole(r.id as any)}
-                                            className={`h-[48px] text-[0.65rem] font-black uppercase tracking-widest border transition-all duration-300 ${role === r.id ? 'border-[#FF0000] bg-[#FF0000]/10 text-white shadow-[0_0_10px_rgba(255,0,0,0.1)]' : 'border-white/5 bg-[#0c0c0d] text-[#6b6b70] hover:border-white/20'}`}
+                                            className={`h-[48px] text-[0.65rem] font-black uppercase tracking-widest border transition-all duration-300 ${role === r.id ? 'border-[#FF0000] bg-[#FF0000]/10 text-white shadow-[0_0_10px_rgba(255,0,0,0.1)]' : 'border-white/5 bg-[#0c0c0d] text-[#6b6b70] hover:border-[#FF0000] hover:text-white'}`}
                                         >
                                             {r.label}
                                         </button>

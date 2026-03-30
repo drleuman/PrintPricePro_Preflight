@@ -176,9 +176,9 @@ export const CertificationPanel = ({
     const { t } = useTranslation();
     return (
       <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex items-start justify-between gap-4">
           <StatusBadge label={title} variant={riskStatus} />
-          <span className="text-[0.88rem] uppercase tracking-[0.18em] text-[var(--text-secondary)] font-mono">
+          <span className="text-[0.65rem] uppercase tracking-[0.18em] text-[var(--text-muted)] font-mono shrink-0 whitespace-nowrap pt-1">
             Trace 0x48a
           </span>
         </div>
@@ -257,13 +257,13 @@ export const IssueRow = ({
   };
 
   const getSeverityLabel = () => {
-      if (severity === 'error') return (t('error') || 'ERROR').toUpperCase();
-      if (severity === 'warning') return (t('warning') || 'WARNING').toUpperCase();
-      return (t('info') || 'INFO').toUpperCase();
+      if (severity === 'error') return t('error').toUpperCase();
+      if (severity === 'warning') return t('severityWarning').toUpperCase();
+      return t('info').toUpperCase();
   };
 
   const getFixLabel = () => {
-    return fixAvailable ? (t('fixAvailable') || 'FIX AVAILABLE').toUpperCase() : (t('manualReview') || 'MANUAL REVIEW').toUpperCase();
+    return fixAvailable ? t('shell.fixAvailable').toUpperCase() : t('shell.manualReview').toUpperCase();
   };
 
   return (
