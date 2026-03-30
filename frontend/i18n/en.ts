@@ -629,12 +629,19 @@ export const en = {
   'step.forensics.desc': 'Scanners',
   'step.engine.desc': 'Policy',
   'step.certify.desc': 'Validated',
+  'step.download.desc': 'Download',
 
   // System Phases
   ingress: 'Ingress',
   forensics: 'Forensics',
   engine: 'Engine',
   certify: 'Certify',
+  download: 'Download',
+
+  // Step 5 Specifics
+  'step.download.successTitle': 'Certification Complete',
+  'step.download.successDesc': 'Your document has passed all engine checks. The Forensic Carrier is ready.',
+  'step.download.readyForRetrival': 'READY FOR DOWNLOAD',
 
   // Step 1 Specifics
   diagnosticModeTitle: 'Diagnostic Mode',

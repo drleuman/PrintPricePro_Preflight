@@ -8,6 +8,7 @@ import { Step1UploadV2_4 } from './components/steps/Step1UploadV2_4';
 import { Step2AnalysisV2_4 } from './components/steps/Step2AnalysisV2_4';
 import { Step3FixV2_4 } from './components/steps/Step3FixV2_4';
 import { Step4ReviewV2_4 } from './components/steps/Step4ReviewV2_4';
+import { Step5DownloadV2_4 } from './components/steps/Step5DownloadV2_4';
 import { XMarkIcon, SparklesIcon, CpuChipIcon, CommandLineIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { PreflightShell, SignalStrip, PPOSLogo } from './design/preflight_starter_pack';
 import { ThemeProvider } from './hooks/useTheme';
@@ -374,7 +375,8 @@ function AppContent() {
                   { number: 1, title: t('ingress'), description: 'Carriers' },
                   { number: 2, title: t('forensics'), description: 'Scanners' },
                   { number: 3, title: t('engine'), description: 'Policy' },
-                  { number: 4, title: t('certify'), description: 'Validated' }
+                  { number: 4, title: t('certify'), description: 'Validated' },
+                  { number: 5, title: t('download'), description: 'Certified' }
                 ]}
               />
             }
@@ -508,6 +510,7 @@ function AppContent() {
                     onDownload={handleDownload}
                     onStartOver={handleStartOver}
                     onBack={() => setCurrentStep(3)}
+                    onNext={() => setCurrentStep(5)}
                     appMode={appMode}
                     heatmapData={heatmapData}
                     isHeatmapLoading={heatmapLoading}
@@ -519,6 +522,16 @@ function AppContent() {
                     previewPages={previewPages}
                     previewLoading={previewLoading}
                     selectedPolicy={selectedPolicy}
+                  />
+                )}
+
+                {currentStep === 5 && (
+                  <Step5DownloadV2_4
+                    lastPdfUrl={lastPdfUrl}
+                    lastPdfName={lastPdfName}
+                    file={file}
+                    onDownload={handleDownload}
+                    onStartOver={handleStartOver}
                   />
                 )}
               </div>

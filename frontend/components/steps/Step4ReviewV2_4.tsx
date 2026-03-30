@@ -35,6 +35,7 @@ interface Step4ReviewV2_4Props {
     onDownload: () => void;
     onStartOver: () => void;
     onBack: () => void;
+    onNext: () => void;
     appMode?: AppMode;
     heatmapData?: any;
     isHeatmapLoading?: boolean;
@@ -66,6 +67,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     onDownload,
     onStartOver,
     onBack,
+    onNext,
     appMode,
     heatmapData,
     isHeatmapLoading = false,
@@ -182,28 +184,12 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             <ArrowPathIcon className="h-4 w-4" /> {t('startOver')}
                         </button>
                         
-                        {lastPdfUrl && (
-                            <button 
-                                onClick={async () => {
-                                    try {
-                                        const res = await fetch(lastPdfUrl);
-                                        const blob = await res.blob();
-                                        const url = window.URL.createObjectURL(blob);
-                                        const a = document.createElement('a');
-                                        a.href = url;
-                                        a.download = lastPdfName || 'optimized_output.pdf';
-                                        a.click();
-                                        window.URL.revokeObjectURL(url);
-                                    } catch (err) {
-                                        console.error('Download failed', err);
-                                        alert('Failed to download artifact. Ensure you have the right permissions.');
-                                    }
-                                }}
-                                className="bg-[var(--accent-color)] text-white p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)] flex items-center justify-center gap-2 w-full"
-                            >
-                                <ArrowDownTrayIcon className="h-4 w-4" /> {t('step.review.download')}
-                            </button>
-                        )}
+                        <button 
+                            onClick={onNext}
+                            className="bg-[var(--accent-color)] text-white p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)] flex items-center justify-center gap-2 w-full"
+                        >
+                            <RocketLaunchIcon className="h-4 w-4" /> {t('continueToReview').toUpperCase()}
+                        </button>
                     </div>
                 </div>
 

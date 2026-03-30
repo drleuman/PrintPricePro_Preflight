@@ -627,12 +627,19 @@ export const es = {
   'step.forensics.desc': 'Escáneres',
   'step.engine.desc': 'Política',
   'step.certify.desc': 'Validado',
+  'step.download.desc': 'Descarga',
 
   // System Phases
   ingress: 'Ingreso',
   forensics: 'Forense',
   engine: 'Motor',
   certify: 'Certificar',
+  download: 'Carga',
+
+  // Step 5 Specifics
+  'step.download.successTitle': 'Certificación Completada',
+  'step.download.successDesc': 'Su documento ha superado todos los controles. El Carrier Forense está listo.',
+  'step.download.readyForRetrival': 'LISTO PARA DESCARGA',
 
   // Step 1 Specifics
   diagnosticModeTitle: 'Modo Diagnóstico',

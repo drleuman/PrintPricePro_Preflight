@@ -1,0 +1,113 @@
+import React from 'react';
+import { useTranslation } from '../../i18n';
+import { 
+    ArrowDownTrayIcon, 
+    ArrowPathIcon,
+    ShieldCheckIcon,
+    DocumentCheckIcon,
+    SparklesIcon
+} from '@heroicons/react/24/outline';
+import { PPOSLogo } from '../../design/preflight_starter_pack';
+
+interface Step5DownloadV2_4Props {
+    lastPdfUrl: string | null;
+    lastPdfName: string | null;
+    file: File | null;
+    onDownload: () => void;
+    onStartOver: () => void;
+}
+
+export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
+    lastPdfUrl,
+    lastPdfName,
+    file,
+    onDownload,
+    onStartOver
+}) => {
+    const { t } = useTranslation();
+
+    return (
+        <div className="max-w-4xl mx-auto space-y-12 animate-in fade-in zoom-in-95 duration-1000 py-12">
+            <div className="flex flex-col items-center text-center space-y-6">
+                <div className="relative">
+                    <div className="absolute inset-0 bg-[var(--accent-color)] blur-3xl opacity-20 animate-pulse"></div>
+                    <PPOSLogo className="w-24 h-24 border border-[var(--border-color)] p-5 bg-[var(--bg-secondary)] relative z-10" />
+                </div>
+                
+                <div className="space-y-3">
+                    <h2 className="text-4xl font-black tracking-tight text-[var(--text-primary)]">
+                        {t('step.download.successTitle')}
+                    </h2>
+                    <p className="text-[var(--text-secondary)] text-lg max-w-lg mx-auto">
+                        {t('step.download.successDesc')}
+                    </p>
+                </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8 items-stretch">
+                {/* Download Card */}
+                <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-10 flex flex-col items-center text-center space-y-8 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <ArrowDownTrayIcon className="w-32 h-32" />
+                    </div>
+
+                    <div className="h-16 w-16 bg-[var(--accent-color)]/10 flex items-center justify-center rounded-full border border-[var(--accent-color)]/20">
+                        <ShieldCheckIcon className="h-8 w-8 text-[var(--accent-color)]" />
+                    </div>
+
+                    <div className="space-y-4 relative z-10 w-full">
+                        <div className="text-[0.7rem] font-black uppercase tracking-[0.25em] text-[var(--accent-color)]">{t('step.download.readyForRetrival')}</div>
+                        <h3 className="text-xl font-bold text-[var(--text-primary)] truncate px-4">{lastPdfName || file?.name || 'optimized_document.pdf'}</h3>
+                        <div className="text-[0.8rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">{t('readyForPrinting')}</div>
+                    </div>
+
+                    <button 
+                        onClick={onDownload}
+                        className="w-full h-16 bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.9rem] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-4 shadow-[0_15px_40px_rgba(220,0,0,0.25)] relative z-10 group"
+                    >
+                        <span>{t('step.review.download')}</span>
+                        <ArrowDownTrayIcon className="h-5 w-5 group-hover:translate-y-1 transition-transform" />
+                    </button>
+                    
+                    <div className="pt-4 flex items-center gap-2 text-[var(--text-muted)] text-[0.7rem] font-medium uppercase tracking-widest">
+                       <DocumentCheckIcon className="h-4 w-4" />
+                       <span>ISO Standard Certified Carrier</span>
+                    </div>
+                </div>
+
+                {/* Feedback / Next Step Card */}
+                <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-10 flex flex-col items-center text-center justify-between space-y-8">
+                    <div className="space-y-6">
+                        <div className="h-16 w-16 bg-[var(--text-muted)]/10 flex items-center justify-center rounded-full border border-[var(--border-color)]">
+                            <SparklesIcon className="h-8 w-8 text-[var(--text-secondary)]" />
+                        </div>
+                        <div className="space-y-2">
+                           <h3 className="text-lg font-bold text-[var(--text-primary)]">¿Alguna otra tarea?</h3>
+                           <p className="text-[0.85rem] text-[var(--text-secondary)] leading-relaxed">
+                             Inicie un nuevo proceso pre-vuelo para otros archivos o aplique diferentes políticas de producción al mismo documento.
+                           </p>
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={onStartOver}
+                        className="w-full h-16 border border-[var(--border-color)] hover:border-[var(--accent-color)]/40 hover:bg-[var(--accent-color)]/5 text-[var(--text-secondary)] text-[0.85rem] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3"
+                    >
+                        <ArrowPathIcon className="h-4 w-4" />
+                        {t('startOver')}
+                    </button>
+                </div>
+            </div>
+
+            {/* High Tech Indicator */}
+            <div className="pt-12 flex flex-col items-center space-y-4">
+                <div className="h-px w-32 bg-gradient-to-r from-transparent via-[var(--border-color)] to-transparent"></div>
+                <div className="flex items-center gap-8 text-[var(--text-muted)] opacity-30">
+                    <span className="text-[0.6rem] font-mono tracking-widest uppercase">PPOS-VERIFIED-NODE-OK</span>
+                    <span className="text-[0.6rem] font-mono tracking-widest uppercase">PDF-X/1A-COMPLIANT</span>
+                    <span className="text-[0.6rem] font-mono tracking-widest uppercase">TRACE-SHA256-SIGN</span>
+                </div>
+            </div>
+        </div>
+    );
+};
