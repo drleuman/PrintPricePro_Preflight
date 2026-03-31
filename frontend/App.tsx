@@ -250,8 +250,11 @@ function AppContent() {
     setLdmStatus('Initializing AI Magic Fix on OS...');
     try {
       const res = await autoFixServer(file, opts);
-      const jobId = res.jobId || res.job_id || res.id;
+      // Backend Contract: jobId might be in root, jobId, job_id, or nested in result
+      let jobId = res.jobId || res.job_id || res.id || res.result?.meta?.jobId || res.inlineResult?.meta?.jobId;
       let jobResult: any = res.inlineResult || res.result || res.job || null;
+
+      console.log('[APP][FIX-START-RES]', { jobId, isInline: !!jobResult });
 
       if (jobId && !jobResult) {
         activeJobIdRef.current = jobId;
@@ -260,7 +263,8 @@ function AppContent() {
       }
       
       if (jobResult) {
-        console.log('[APP][FIX-COMPLETE-HAF]', { jobId, hasReport: !!jobResult.report });
+        const finalJobId = jobId || jobResult.meta?.jobId || jobResult.id;
+        console.log('[APP][FIX-COMPLETE-HAF]', { finalJobId, hasReport: !!jobResult.report });
         if (jobResult.report) setAutoFixReport(jobResult.report);
         
         const normalizedAfter = normalizePreflightResult(jobResult);
@@ -268,9 +272,9 @@ function AppContent() {
         setResult(normalizedAfter);
         
         // Final guards for artifact propagation
-        const artifactId = jobId || jobResult.meta?.jobId || jobResult.id;
-        if (artifactId) {
-          const url = `${window.location.origin}/api/v2/jobs/${artifactId}/artifacts/final_fixed_pdf`;
+        if (finalJobId) {
+          const url = `${window.location.origin}/api/v2/jobs/${finalJobId}/artifacts/final_fixed_pdf`;
+          console.log('[APP][ARTIFACT-URL]', url);
           setLastPdfUrl(url);
           lastPdfUrlRef.current = url;
           setLastPdfName(jobResult?.meta?.filename || 'certified_pdf.pdf');
@@ -278,9 +282,13 @@ function AppContent() {
 
         setCurrentPage(1);
         setCurrentStep(4);
+      } else {
+        console.error('[APP][FIX-FAILED] No jobResult found in res:', res);
+        throw new Error('Engine returned no result data.');
       }
       setLdmActive(false);
     } catch (err: any) {
+      console.error('[APP][FIX-ERROR]', err);
       alert('AI Magic Failed: ' + err.message);
       setLdmActive(false);
     }

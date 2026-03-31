@@ -67,7 +67,8 @@ export const PageViewer: React.FC<PageViewerProps> = ({
   // Effect to load PDF when file or pdfUrl changes
   useEffect(() => {
     const loadPdf = async () => {
-      if (ldmMode) return; 
+      // Disable gate for Step 4 review to ensure original/inline files render
+      // if (ldmMode) return; 
       
       const source = pdfUrl || file;
       if (!source) {
