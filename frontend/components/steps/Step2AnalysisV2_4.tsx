@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { PreflightResult, FileMeta, AppMode, Issue } from '../../types';
 import { StatusBadge, IssueRow } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
-import { RocketLaunchIcon, ArrowPathIcon, ChevronLeftIcon, ShieldCheckIcon, CommandLineIcon } from '@heroicons/react/24/outline';
+import { RocketLaunchIcon, ArrowPathIcon, ChevronLeftIcon, ShieldCheckIcon, CommandLineIcon, CpuChipIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '../../i18n';
 
 interface Step2AnalysisV2_4Props {
@@ -10,6 +10,8 @@ interface Step2AnalysisV2_4Props {
     fileMeta: FileMeta | null;
     result: PreflightResult | null;
     isRunning: boolean;
+    ldmStatus?: string | null;
+    ldmProgress?: number;
     appMode: AppMode;
     onRunAnalysis: () => void;
     onNext: () => void;
@@ -23,6 +25,8 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
     fileMeta,
     result,
     isRunning,
+    ldmStatus,
+    ldmProgress = 0,
     appMode,
     onRunAnalysis,
     onNext,
@@ -33,6 +37,18 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
     const { t } = useTranslation();
 
     const hasAutoRunRef = React.useRef<File | null>(null);
+
+    // Tech mapping for "Monolith 2.4" Forensic Terminal
+    const getTechStatus = () => {
+        if (!isRunning) return null;
+        if (ldmProgress < 20) return 'ENQUEUING V2 ASYNC JOB...';
+        if (ldmProgress < 40) return 'DETERMINISTIC CORE ANALYSIS (POPPLER/GHOSTSCRIPT)...';
+        if (ldmProgress < 60) return 'HEURISTIC CORE ANALYSIS & LAYOUT INFERENCE...';
+        if (ldmProgress < 85) return 'SCANNING ARTEFACT INTEGRITY & COMPLIANCE...';
+        return 'FINALIZING REPORT AND VALUE METRICS...';
+    };
+
+    const techMessage = getTechStatus();
 
     // Trace auto-run decisions to catch leak regression
     useEffect(() => {
@@ -85,18 +101,66 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
 
             <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
                 {/* Results Zone */}
-                <div className="space-y-6 min-h-[400px] w-full lg:flex-[1.2]">
+                <div className="space-y-6 min-h-[420px] w-full lg:flex-[1.2] flex flex-col">
                     {isRunning ? (
-                        <div className="flex flex-col items-center justify-center h-full border border-[var(--border-color)] bg-[var(--bg-secondary)] p-12 text-center">
-                            <div className="h-20 w-20 mb-8 flex items-center justify-center border border-[var(--border-color)] relative">
-                                <div className="absolute inset-0 animate-pulse border-2 border-[var(--accent-color)]/50" />
-                                <div className="h-2 w-2 bg-[var(--accent-color)] animate-ping" />
-                            </div>
-                            <h3 className="text-xl font-bold mb-2 text-[var(--text-primary)]">{t('analysis.loading')}</h3>
-                            <p className="text-sm text-[var(--text-secondary)] max-w-[280px]">{t('analysis.loading.desc')}</p>
+                        <div className="flex flex-col items-center justify-center flex-1 border border-[var(--border-color)] bg-black/60 backdrop-blur-xl p-10 relative overflow-hidden group">
+                           {/* Forensic Grid Scan Background */}
+                           <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+                           
+                           <div className="w-full max-w-md space-y-8 relative z-10">
+                                {/* Monolith Progress Bar */}
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-[0.65rem] font-mono text-[var(--accent-color)] font-bold tracking-[0.2em]">NODE_VALIDATION_ACTIVE</span>
+                                        <span className="text-[0.7rem] font-mono text-[var(--text-primary)] font-black">{Math.floor(ldmProgress)}%</span>
+                                    </div>
+                                    <div className="h-1 lg:h-1.5 w-full bg-[var(--border-color)] overflow-hidden">
+                                        <div 
+                                            className="h-full bg-[var(--accent-color)] transition-all duration-700 ease-out shadow-[0_0_15px_rgba(220,0,0,0.5)]"
+                                            style={{ width: `${ldmProgress}%` }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Forensic Status Container */}
+                                <div className="bg-black/40 border-l-2 border-[var(--accent-color)] p-6 space-y-4 shadow-2xl">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-2 w-2 rounded-full bg-[var(--accent-color)] animate-pulse shadow-[0_0_8px_rgba(220,0,0,0.8)]" />
+                                        <h3 className="text-sm font-black tracking-[0.1em] text-[var(--text-primary)] uppercase">{ldmStatus || 'ANALYZING CARRIER...'}</h3>
+                                    </div>
+                                    
+                                    <div className="space-y-3 font-mono text-[0.68rem] tracking-tight leading-relaxed">
+                                        {/* Map of Technical Statuses */}
+                                        <div className="flex gap-3 text-[var(--text-secondary)] opacity-80 italic animate-in fade-in slide-in-from-left-2 duration-700">
+                                            <span className="text-[var(--accent-color)] shrink-0 font-bold">[PROCESS]</span>
+                                            <span className="uppercase">{techMessage}</span>
+                                        </div>
+                                        
+                                        <div className="flex gap-3 text-[var(--text-muted)] border-t border-[var(--border-color)]/30 pt-3">
+                                            <span className="text-[0.6rem] font-bold shrink-0 opacity-50 uppercase tracking-widest">{t('step.analysis.igniter').replace('IGNITER ', '')}</span>
+                                            <span className="uppercase truncate">PPOS_V2_ASYNC_GATEWAY_332_RUNNING</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Technical Warning / Data Ingress */}
+                                <div className="flex items-center justify-between text-[0.6rem] font-mono text-[var(--text-muted)] uppercase tracking-widest px-1">
+                                    <div className="flex items-center gap-2">
+                                        <CpuChipIcon className="h-3 w-3" />
+                                        <span>DETERMINISTIC_ENGINE</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <CommandLineIcon className="h-3 w-3" />
+                                        <span>{fileMeta?.size ? (fileMeta.size / 1024).toFixed(1) + ' KB' : '0.0 KB'}</span>
+                                    </div>
+                                </div>
+                           </div>
+
+                           {/* Moving Scan Line */}
+                           <div className="absolute left-0 right-0 h-[1px] bg-[var(--accent-color)]/20 animate-[scan_3s_linear_infinite] shadow-[0_0_5px_rgba(220,0,0,0.2)]" />
                         </div>
                     ) : dataMissing ? (
-                        <div className="flex flex-col items-center justify-center h-full border border-[var(--border-color)] bg-[var(--hover-bg)] p-12 text-center opacity-60">
+                        <div className="flex flex-col items-center justify-center flex-1 border border-[var(--border-color)] bg-[var(--hover-bg)] p-12 text-center opacity-60">
                             <CommandLineIcon className="h-12 w-12 mb-4 text-[var(--text-muted)]" />
                             <h3 className="text-lg font-bold mb-2">{t('forensics.dataUnavailable')}</h3>
                             <p className="text-xs text-[var(--text-secondary)] max-w-[320px]">{t('forensics.dataUnavailableDesc')}</p>
@@ -212,6 +276,14 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                     </button>
                 </div>
             )}
+
+            <style>{`
+                @keyframes scan {
+                    0% { top: 0; opacity: 0; }
+                    50% { opacity: 1; }
+                    100% { top: 100%; opacity: 0; }
+                }
+            `}</style>
         </div>
     );
 };

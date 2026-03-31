@@ -18,36 +18,22 @@ type Props = {
 };
 
 const DEFAULT_STEPS: LoaderStep[] = [
-  { key: 'upload', title: 'Ingesting PDF', description: 'Loading pages, fonts, and metadata.' },
-  { key: 'preflight', title: 'Preflight Scan', description: 'Checking RGB/CMYK, bleed, DPI, and PDF standard.' },
-  { key: 'analyze', title: 'Issue Analysis', description: 'Classifying issues by severity and category.' },
-  { key: 'fix', title: 'Applying Fixes', description: 'Converting color space and optimizing for print.' },
-  { key: 'verify', title: 'Verification', description: 'Re-running checks to confirm improvements.' },
-  { key: 'finalize', title: 'Finalizing Output', description: 'Preparing your print-ready file for download.' },
+  { key: 'upload', title: 'PDF_INGRESS', description: 'Carrier validation and metadata stream.' },
+  { key: 'preflight', title: 'FORENSIC_SCAN', description: 'CMYK enforcement and bleed analysis.' },
+  { key: 'analyze', title: 'ISSUE_TRIAGE', description: 'Diagnostic classification by severity.' },
+  { key: 'fix', title: 'ENGINE_CERTIFICATION', description: 'Applying PPOS deterministic corrections.' },
+  { key: 'verify', title: 'INTEGRITY_CHECK', description: 'Final compliance audit.' }
 ];
 
 const LOADING_TIPS = [
-  'Please wait — complex PDFs can take a little longer.',
-  'Tip: We use 300 DPI by default for high-quality professional printing.',
-  'Tip: Always include 3 mm bleed on all sides for trimming safety.',
-  'Tip: Embed fonts to prevent substitutions at print time.',
-  'Tip: We\'ll convert colors safely for professional printing.',
+  'Deterministic Core V2: Processing high-compliance print profiles.',
+  'Technical Note: CMYK Enforced for professional litho-ready outputs.',
+  'Trace Integrity: Each correction is traceable in the final PPOS log.',
+  'AutoFix Active: Rendering corrections directly to the PDF carrier.',
 ];
 
 function computeStatuses(steps: LoaderStep[], stageKey?: string): Record<string, StepStatus> {
-  if (!stageKey) {
-    return Object.fromEntries(
-      steps.map((s, i) => [s.key, i === 0 ? 'active' : 'pending'])
-    ) as Record<string, StepStatus>;
-  }
-
-  const idx = steps.findIndex((s) => s.key === stageKey);
-  if (idx === -1) {
-    return Object.fromEntries(
-      steps.map((s, i) => [s.key, i === 0 ? 'active' : 'pending'])
-    ) as Record<string, StepStatus>;
-  }
-
+  const idx = stageKey ? steps.findIndex((s) => s.key === stageKey) : 0;
   const out: Record<string, StepStatus> = {};
   steps.forEach((s, i) => {
     if (i < idx) out[s.key] = 'done';
@@ -59,7 +45,7 @@ function computeStatuses(steps: LoaderStep[], stageKey?: string): Record<string,
 
 export const LoaderOverlay: React.FC<Props> = ({
   isOpen,
-  message = 'Processing…',
+  message = 'SYSTEM_READY',
   stageKey,
   steps,
   lockUI = true,
@@ -71,229 +57,122 @@ export const LoaderOverlay: React.FC<Props> = ({
   const statuses = useMemo(() => computeStatuses(pipeline, stageKey), [pipeline, stageKey]);
 
   useEffect(() => {
-    if (!isOpen) {
-      setVisualProgress(0);
-      return;
-    }
-
-    if (!stageKey) {
-      setVisualProgress(5);
-      return;
-    }
-
+    if (!isOpen) { setVisualProgress(0); return; }
     const total = pipeline.length;
-    const activeIdx = pipeline.findIndex((s) => statuses[s.key] === 'active');
-    const doneCount = pipeline.filter((s) => statuses[s.key] === 'done').length;
-
-    const base = (doneCount / total) * 100;
-    const target = activeIdx === -1 ? base : ((activeIdx + 1) / total) * 100;
+    const activeIdx = Math.max(0, pipeline.findIndex((s) => statuses[s.key] === 'active'));
+    const target = ((activeIdx + 1) / total) * 100;
 
     const interval = setInterval(() => {
       setVisualProgress((prev) => {
-        if (prev >= target - 1) {
-          return Math.min(99.9, prev + 0.02);
-        }
-        const diff = target - prev;
-        const step = Math.max(0.1, diff * 0.15);
-        return prev + step;
+        if (prev >= target - 0.5) return Math.min(99.9, prev + 0.05);
+        return prev + (target - prev) * 0.1;
       });
     }, 100);
-
     return () => clearInterval(interval);
   }, [isOpen, stageKey, pipeline, statuses]);
 
   useEffect(() => {
-    if (!isOpen) {
-      setTipIndex(0);
-      return;
-    }
-    const interval = setInterval(() => {
-      setTipIndex((prev) => (prev + 1) % LOADING_TIPS.length);
-    }, 5000);
+    if (!isOpen) return;
+    const interval = setInterval(() => setTipIndex((prev) => (prev + 1) % LOADING_TIPS.length), 4000);
     return () => clearInterval(interval);
   }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || !lockUI) return;
-    const prevOverflow = document.body.style.overflow;
+    const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
+    return () => { document.body.style.overflow = prev; };
   }, [isOpen, lockUI]);
 
   if (!isOpen) return null;
 
-  const activeIdx = pipeline.findIndex((s) => statuses[s.key] === 'active');
-  const currentStep = pipeline[activeIdx === -1 ? 0 : activeIdx];
-
-  const radius = 80;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (visualProgress / 100 * circumference);
+  const currentStep = pipeline[Math.max(0, pipeline.findIndex((s) => statuses[s.key] === 'active'))];
 
   const overlay = (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        zIndex: 99999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'rgba(0, 0, 0, 0.6)',
-        backdropFilter: 'blur(40px)',
-        WebkitBackdropFilter: 'blur(40px)',
-        overflow: 'hidden',
-        fontFamily: 'system-ui, -apple-system, sans-serif'
-      }}
-      aria-modal="true"
-      role="dialog"
-    >
-      {/* Background Animated Blobs */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-        <div style={{
-          position: 'absolute', top: '15%', left: '15%', width: '35%', height: '35%',
-          background: 'rgba(16, 185, 129, 0.2)', borderRadius: '50%', filter: 'blur(100px)',
-          animation: 'blob-move 15s infinite alternate ease-in-out'
-        }} />
-        <div style={{
-          position: 'absolute', bottom: '15%', right: '15%', width: '40%', height: '40%',
-          background: 'rgba(59, 130, 246, 0.2)', borderRadius: '50%', filter: 'blur(100px)',
-          animation: 'blob-move 18s infinite alternate-reverse ease-in-out'
-        }} />
-      </div>
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 backdrop-blur-3xl overflow-hidden font-mono text-[var(--text-primary)]">
+      
+      {/* Monolith Grid Background */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(var(--accent-color) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
-      <div style={{ position: 'relative', width: '100%', maxWidth: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-
-        {/* Container for Loader and Card */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '30px',
-          width: '100%',
-          maxWidth: '500px'
-        }}>
-          {/* Main Circular Loader */}
-          <div style={{ position: 'relative', width: '320px', height: '320px' }}>
-            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', transform: 'rotate(-90deg)' }} viewBox="0 0 200 200">
-              <circle cx="100" cy="100" r={radius} stroke="rgba(255,255,255,0.05)" strokeWidth="12" fill="transparent" />
-              <defs>
-                <linearGradient id="magic-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#10b981" />
-                  <stop offset="50%" stopColor="#3b82f6" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
-                </linearGradient>
-              </defs>
-              <circle
-                cx="100"
-                cy="100"
-                r={radius}
-                stroke="url(#magic-gradient)"
-                strokeWidth="12"
-                strokeLinecap="round"
-                fill="transparent"
-                strokeDasharray={circumference}
-                style={{
-                  strokeDashoffset,
-                  transition: 'stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-              />
-            </svg>
-
-            {/* Inner Central Glass Card */}
-            <div style={{
-              position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-              width: '230px', height: '230px', borderRadius: '40px',
-              backgroundColor: 'transparent',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              padding: '25px', textAlign: 'center', overflow: 'hidden'
-            }}>
-
-              <div style={{ height: '70px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <div key={currentStep.key} style={{ animation: 'slideFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}>
-                  <h3 style={{ color: '#fff', fontSize: '20px', fontWeight: 900, marginBottom: '6px', margin: 0, letterSpacing: '-0.3px' }}>
-                    {currentStep.title}
-                  </h3>
-                  <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', fontWeight: 500, margin: 0 }}>
-                    {currentStep.description}
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '20px', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                <span style={{ color: '#fff', fontSize: '48px', fontWeight: 900, letterSpacing: '-2px', fontVariantNumeric: 'tabular-nums' }}>
-                  {Math.floor(visualProgress)}
-                </span>
-                <span style={{ color: '#10b981', fontSize: '14px', fontWeight: 800 }}>%</span>
-              </div>
+      <div className="relative w-full max-w-2xl px-6 flex flex-col items-center">
+        
+        {/* Technical Header */}
+        <div className="w-full flex items-center justify-between mb-12 border-b border-[var(--border-color)] pb-4">
+            <div className="flex items-center gap-3">
+                <div className="h-2 w-2 bg-[#dc0000] animate-pulse shadow-[0_0_8px_rgba(220,0,0,0.8)]" />
+                <span className="text-[0.7rem] font-black uppercase tracking-[0.3em] text-[#dc0000]">OS_ENGINE_PROCESSING</span>
             </div>
-          </div>
-
-          {/* Timeline Dots */}
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            {pipeline.map((s) => {
-              const status = statuses[s.key];
-              const isActive = status === 'active';
-              const isDone = status === 'done';
-              return (
-                <div key={s.key} style={{
-                  height: '6px', width: isActive ? '45px' : '10px',
-                  borderRadius: '3px', background: isActive ? '#fff' : isDone ? '#10b981' : 'rgba(255,255,255,0.2)',
-                  transition: 'all 0.6s ease', position: 'relative', overflow: 'hidden'
-                }}>
-                  {isActive && <div style={{
-                    position: 'absolute', inset: 0, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-                    animation: 'shimmer-move 2s infinite'
-                  }} />}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Status Info */}
-          <div style={{ textAlign: 'center' }}>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 20px',
-              backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.1)',
-              marginBottom: '15px'
-            }}>
-              <span style={{ color: '#fff', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                {message}
-              </span>
-            </div>
-            <div style={{ height: '24px' }}>
-              <p key={tipIndex} style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px', fontStyle: 'italic', margin: 0, animation: 'tip-fade 5s infinite' }}>
-                " {LOADING_TIPS[tipIndex]} "
-              </p>
-            </div>
-          </div>
+            <span className="text-[0.75rem] font-bold text-[var(--accent-color)]">{Math.floor(visualProgress)}%</span>
         </div>
 
-      </div>
+        {/* Binary Stream Visual (Left) */}
+        <div className="absolute left-10 top-1/2 -translate-y-1/2 hidden xl:block opacity-20 text-[0.6rem] space-y-1 select-none pointer-events-none">
+            {Array.from({ length: 20 }).map((_, i) => (
+                <div key={i} className="animate-pulse" style={{ animationDelay: `${i * 100}ms` }}>
+                    {Math.random().toString(2).substring(2, 20)}
+                </div>
+            ))}
+        </div>
 
-      <style>{`
-        @keyframes blob-move {
-          0% { transform: translate(0, 0) scale(1); }
-          100% { transform: translate(60px, -40px) scale(1.15); }
-        }
-        @keyframes slideFadeUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes shimmer-move {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-        @keyframes tip-fade {
-          0% { opacity: 0; filter: blur(5px); }
-          10%, 90% { opacity: 1; filter: blur(0); }
-          100% { opacity: 0; filter: blur(5px); }
-        }
-      `}</style>
+        <div className="w-full flex flex-col lg:flex-row gap-12 items-center lg:items-start text-center lg:text-left">
+            
+            {/* Visual Node */}
+            <div className="shrink-0 relative">
+                <div className="h-32 w-32 border border-[#dc0000]/30 flex items-center justify-center relative">
+                    <div className="absolute inset-0 border border-[#dc0000] scale-x-[1.1] opacity-20" />
+                    <div className="absolute inset-0 border border-[#dc0000] scale-y-[1.1] opacity-20" />
+                    
+                    {/* Spinning Tech Ring */}
+                    <svg className="absolute inset-0 w-full h-full rotate-[-90deg]" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="48" stroke="rgba(220,0,0,0.1)" strokeWidth="1" fill="none" />
+                        <circle 
+                            cx="50" cy="50" r="48" 
+                            stroke="#dc0000" strokeWidth="2" fill="none" 
+                            strokeDasharray="301.59"
+                            strokeDashoffset={301.59 - (visualProgress / 100 * 301.59)}
+                            className="transition-all duration-700"
+                        />
+                    </svg>
+                    
+                    <span className="text-2xl font-black tracking-tighter text-white">V2.4</span>
+                </div>
+            </div>
+
+            {/* Information Node */}
+            <div className="flex-1 space-y-6">
+                <div>
+                   <h2 className="text-2xl font-black tracking-tighter text-white mb-2 uppercase italic">{currentStep.title}</h2>
+                   <p className="text-[0.65rem] text-[var(--text-secondary)] uppercase tracking-[0.2em] font-normal">{currentStep.description}</p>
+                </div>
+
+                {/* Technical Log Terminal */}
+                <div className="bg-white/[0.03] border border-[var(--border-color)] p-4 space-y-3 relative">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="h-1 w-1 bg-[#dc0000]" />
+                        <span className="text-[0.6rem] font-bold uppercase tracking-widest opacity-60">Log_Stream_Active</span>
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-[0.7rem] text-[#dc0000] font-black uppercase tracking-widest">{message}</p>
+                        <p className="text-[0.65rem] text-[var(--text-muted)] italic">" {LOADING_TIPS[tipIndex]} "</p>
+                    </div>
+                </div>
+                
+                {/* Pipeline Progression */}
+                <div className="flex gap-2">
+                    {pipeline.map((s) => (
+                        <div key={s.key} className={`h-1.5 flex-1 transition-all duration-700 ${statuses[s.key] === 'active' ? 'bg-[#dc0000] shadow-[0_0_10px_rgba(220,0,0,0.5)]' : statuses[s.key] === 'done' ? 'bg-[#dc0000]/60' : 'bg-white/10'}`} />
+                    ))}
+                </div>
+            </div>
+        </div>
+
+        {/* Footer Hardware Metadata */}
+        <div className="w-full mt-24 border-t border-[var(--border-color)] pt-4 flex justify-between items-center opacity-30 text-[0.6rem] font-bold uppercase tracking-widest">
+            <span>Server: PPOS_PROD_BFF</span>
+            <span>Lat: 34ms</span>
+            <span>CRC: OK</span>
+        </div>
+      </div>
     </div>
   );
 

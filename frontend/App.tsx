@@ -227,6 +227,16 @@ function AppContent() {
         console.log('[APP][V2-START] Sync mode detected, using inlineResult');
         const normalized = normalizePreflightResult(res.inlineResult);
         setResult(normalized);
+        
+        // Sync artifact URL if jobId is present in inline metadata
+        const jobId = normalized.meta?.jobId;
+        if (jobId) {
+          const url = `${window.location.origin}/api/v2/jobs/${jobId}/artifacts/final_fixed_pdf`;
+          setLastPdfUrl(url);
+          lastPdfUrlRef.current = url;
+          setLastPdfName(normalized.meta?.fileName || 'certified_document.pdf');
+        }
+
         setCurrentStep(2);
         setLdmActive(false);
         return;
@@ -278,10 +288,14 @@ function AppContent() {
         activeJobIdRef.current = jobId;
         setLdmProgress(10);
         jobResult = await handleV2JobComplete(jobId);
+      } else if (jobResult) {
+        // Ensure jobId is synced from the inline result metadata
+        if (!jobId) jobId = jobResult.meta?.jobId || jobResult.job_id || jobResult.id;
+        activeJobIdRef.current = jobId;
       }
       
       if (jobResult) {
-        const finalJobId = jobId || jobResult.meta?.jobId || jobResult.id;
+        const finalJobId = jobId || jobResult.meta?.jobId;
         console.log('[APP][FIX-COMPLETE-HAF]', { finalJobId, hasReport: !!jobResult.report });
         if (jobResult.report) setAutoFixReport(jobResult.report);
         
@@ -524,6 +538,8 @@ function AppContent() {
                     fileMeta={fileMeta}
                     result={result}
                     isRunning={isWorkerRunning || ldmActive}
+                    ldmStatus={ldmStatus}
+                    ldmProgress={ldmProgress}
                     appMode={appMode}
                     onRunAnalysis={() => {
                       console.log('[APP][ANALYSIS-RE-RUN]', { mode: appMode, path: 'OS-BACKED' });
