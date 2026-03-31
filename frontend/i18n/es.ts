@@ -34,7 +34,6 @@ export const es = {
   next: 'Siguiente →',
   igniteEngine: 'Probar Motor V2',
   fixIssues: 'Corregir Incidencias →',
-  continueToReview: 'Continuar para Revisar →',
   startOver: 'Empezar de Nuevo',
 
   // Status messages
@@ -690,4 +689,22 @@ export const es = {
   'forensics.dataUnavailable': 'Datos Forenses no Disponibles',
   'forensics.dataUnavailableDesc': 'El análisis se completó pero no se pudieron extraer datos forenses del carrier.',
   'waitingForArtifact': 'Esperando archivo...',
+  'continueToReview': 'CONTINUAR A DESCARGA',
+  'generatingCertificate': 'GENERANDO CERTIFICADO...',
+  'continueToReview_v2': 'CONTINUAR A REVISIÓN',
+
+  'technicalNotes': 'NOTAS TÉCNICAS',
+  'inspector.aiHyperAssist': 'ASISTENTE AI HYPER',
+  'inspector.tacticalCorrection': 'CORRECCIÓN TÁCTICA',
+  'inspector.bleedIngressMode': 'MODO DE INGRESO DE SANGRE',
+  'inspector.policyEnforcement': 'APLICACIÓN DE POLÍTICA',
+  'categories.images': 'IMÁGENES',
+  'categories.color': 'COLOR',
+  'categories.fonts': 'FUENTES',
+  'categories.metadata': 'METADATA',
+  'categories.transparency': 'TRANSPARENCIA',
+  'categories.bleed_margins': 'SANGRE Y MÁRGENES',
+  'categories.resolution': 'RESOLUCIÓN',
+  'categories.compliance': 'CUMPLIMIENTO',
+  'categories.page_setup': 'CONFIGURACIÓN DE PÁGINA',
 } as const;

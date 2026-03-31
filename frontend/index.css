@@ -2004,4 +2004,121 @@ div[role="button"]:focus-visible,
   animation: border-glow 3s ease-in-out infinite;
 }
 
+/* ===================== */
+/* Premium AI Markdown (.ppp-markdown-v2) */
+/* ===================== */
+.ppp-markdown-v2 {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.ppp-markdown-v2 h1,
+.ppp-markdown-v2 h2,
+.ppp-markdown-v2 h3 {
+  color: var(--text-primary) !important;
+  font-family: var(--font-heading) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em;
+  margin-top: 1.75rem !important;
+  margin-bottom: 0.75rem !important;
+  text-transform: uppercase;
+  font-size: 0.75rem !important;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  display: flex !important;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ppp-markdown-v2 h1::before,
+.ppp-markdown-v2 h2::before,
+.ppp-markdown-v2 h3::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 10px;
+  background: var(--accent-color);
+}
+
+.ppp-markdown-v2 p {
+  margin-bottom: 1rem;
+}
+
+.ppp-markdown-v2 strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.ppp-markdown-v2 ul {
+  list-style-type: none !important;
+  padding-left: 0 !important;
+  margin-bottom: 1.5rem !important;
+}
+
+.ppp-markdown-v2 li {
+  position: relative;
+  padding-left: 1.25rem !important;
+  margin-bottom: 0.6rem !important;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.4rem;
+}
+
+.ppp-markdown-v2 li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--accent-color);
+  font-weight: 900;
+  font-size: 0.7rem;
+}
+
+.ppp-markdown-v2 blockquote {
+  border-left: 3px solid var(--accent-color) !important;
+  background: rgba(220, 0, 0, 0.05) !important;
+  padding: 1rem 1.25rem !important;
+  margin: 1.25rem 0 !important;
+  font-style: italic;
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: var(--text-primary) !important;
+  font-size: 0.8rem;
+}
+
+.ppp-markdown-v2 hr {
+  border: none;
+  border-top: 1px dashed var(--border-color);
+  margin: 1.5rem 0;
+}
+
+.ai-report-content table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1.5rem 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+  font-size: 0.75rem;
+}
+
+.ai-report-content th,
+.ai-report-content td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ai-report-content th {
+  background: var(--bg-tertiary);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-primary);
+}
+
+.light .ppp-markdown-v2 blockquote {
+  background: rgba(220, 0, 0, 0.02) !important;
+  border-color: var(--accent-color) !important;
+}
+
    

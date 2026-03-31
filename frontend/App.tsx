@@ -95,7 +95,9 @@ function AppContent() {
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (ldmActive) {
+      // Guard if anything is in progress or if we have a file and are beyond step 1 (upload)
+      // This prevents losing the current session (jobId, normalized results, etc) on refresh.
+      if (ldmActive || (file && currentStep > 1)) {
         e.preventDefault();
         e.returnValue = 'Work in progress. Are you sure you want to leave?';
         return e.returnValue;
@@ -103,7 +105,7 @@ function AppContent() {
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [ldmActive]);
+  }, [ldmActive, file, currentStep]);
 
   useEffect(() => {
     console.log('[APP][STATE-SYNC] lastPdfUrl changed:', lastPdfUrl);

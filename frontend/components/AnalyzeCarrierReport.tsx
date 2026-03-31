@@ -12,32 +12,28 @@ export const AnalyzeCarrierReport: React.FC<Props> = ({ report }) => {
     const sections = parseReportSections(report);
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {sections.map((section, idx) => (
                 <div 
                     key={idx} 
-                    className="p-5 border border-[var(--border-color)] bg-[var(--bg-secondary)]/20 shadow-sm relative overflow-hidden group hover:border-[var(--accent-color)]/30 transition-colors"
+                    className="group relative"
                 >
-                    {section.title && (
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="h-1 w-1 bg-[var(--accent-color)]" />
-                            <h3 className="text-[0.7rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)]">
-                                {section.title}
-                            </h3>
+                    {/* Decorative element */}
+                    <div className="absolute -left-4 top-0 bottom-0 w-1 bg-[var(--accent-color)]/20 rounded-full group-hover:bg-[var(--accent-color)] transition-colors duration-300" />
+                    
+                    <div className="p-6 bg-[var(--bg-secondary)]/30 border border-[var(--border-color)] hover:border-[var(--accent-color)]/30 hover:bg-[var(--bg-secondary)]/50 transition-all duration-300 shadow-sm rounded-tr-xl rounded-br-xl backdrop-blur-sm">
+                        {section.title && (
+                            <div className="flex items-center justify-between mb-5">
+                                <h3 className="text-[0.7rem] font-black uppercase tracking-[0.25em] text-[var(--accent-color)] bg-[var(--accent-color)]/5 px-2 py-1 rounded">
+                                    {section.title}
+                                </h3>
+                                <div className="h-px flex-1 ml-4 bg-[var(--border-color)] opacity-50" />
+                            </div>
+                        )}
+                        
+                        <div className="ai-report-content text-[var(--text-secondary)] leading-relaxed">
+                            <SafeHtmlMarkdown markdown={section.content} className="markdown-body ppp-markdown-v2" />
                         </div>
-                    )}
-                    <div className="prose prose-invert prose-sm max-w-none 
-                        prose-p:text-[var(--text-secondary)] 
-                        prose-p:leading-[1.7] 
-                        prose-p:text-[0.8rem]
-                        prose-headings:text-[var(--text-primary)]
-                        prose-headings:text-[0.85rem]
-                        prose-headings:font-bold
-                        prose-headings:uppercase
-                        prose-headings:tracking-wider
-                        prose-strong:text-[var(--text-primary)]
-                        prose-li:text-[var(--text-secondary)]">
-                        <SafeHtmlMarkdown markdown={section.content} />
                     </div>
                 </div>
             ))}

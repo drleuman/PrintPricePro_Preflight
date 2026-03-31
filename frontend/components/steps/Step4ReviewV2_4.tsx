@@ -171,7 +171,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/50 backdrop-blur-md animate-in fade-in duration-500">
                                 <div className="h-12 w-12 border-4 border-white/10 border-t-[var(--accent-color)] rounded-full animate-spin mb-6" />
                                 <div className="text-white text-[0.75rem] font-black uppercase tracking-[0.3em] font-mono">
-                                    {t('generatingCertificate', 'GENERATING CERTIFICATE...')}
+                                    {t('generatingCertificate')}
                                 </div>
                             </div>
                         )}
@@ -205,7 +205,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             disabled={!lastPdfUrl}
                             className={`p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all flex items-center justify-center gap-2 w-full ${!lastPdfUrl ? 'bg-[var(--text-muted)] cursor-not-allowed opacity-50' : 'bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)]'}`}
                         >
-                            <RocketLaunchIcon className="h-4 w-4" /> {lastPdfUrl ? t('continueToReview').toUpperCase() : (t('waitingForArtifact' as any) || 'WAITING FOR ARTIFACT...').toUpperCase()}
+                            <RocketLaunchIcon className="h-4 w-4" /> {lastPdfUrl ? t('continueToReview').toUpperCase() : t('waitingForArtifact').toUpperCase()}
                         </button>
                     </div>
                 </div>
@@ -237,12 +237,21 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 <span className="text-[0.8rem] font-mono text-[var(--text-secondary)] italic truncate max-w-[150px]">{formatLabel(selectedPolicy || 'DEFAULT_OVERSIGHT')}</span>
                             </div>
                         </div>
-                        <button 
-                            onClick={onNext}
-                            className="w-full py-4 bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] text-[0.8rem] font-black uppercase tracking-[0.2em] transition-all shadow-[0_5px_15px_rgba(220,0,0,0.15)]"
-                        >
-                            {isReadyForPrint ? t('continueToReview', 'CONTINUE TO DOWNLOAD') : t('technicalNotes', 'TECHNICAL NOTES')}
-                        </button>
+                        <div className="flex gap-2">
+                            <button 
+                              onClick={onBack}
+                              className="px-6 py-3 border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-muted)] text-[0.7rem] font-black uppercase tracking-[0.2em] hover:text-[var(--text-primary)] hover:border-[var(--text-primary)] transition-all flex items-center gap-2"
+                            >
+                              {t('technicalNotes')}
+                            </button>
+                            <button 
+                              onClick={onNext}
+                              className="flex-1 bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.8rem] font-black uppercase tracking-[0.2em] py-4 transition-all flex items-center justify-center gap-2"
+                            >
+                              {t('continueToReview_v2')}
+                              <span className="text-xl">→</span>
+                            </button>
+                        </div>
                     </div>
 
                     {/* Production Hardening Tools */}

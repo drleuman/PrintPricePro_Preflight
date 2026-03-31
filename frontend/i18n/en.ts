@@ -35,9 +35,22 @@ export const en = {
   back: '← Back',
   next: 'Next →',
   igniteEngine: 'Ignite V2 Engine',
-  fixIssues: 'Fix Issues →',
   continueToReview: 'Continue to Review →',
   startOver: 'Start Over',
+  technicalNotes: 'TECHNICAL NOTES',
+  'inspector.aiHyperAssist': 'AI HYPER ASSIST',
+  'inspector.tacticalCorrection': 'TACTICAL CORRECTION',
+  'inspector.bleedIngressMode': 'BLEED INGRESS MODE',
+  'inspector.policyEnforcement': 'POLICY ENFORCEMENT',
+  'categories.images': 'IMAGES',
+  'categories.color': 'COLOR',
+  'categories.fonts': 'FONTS',
+  'categories.metadata': 'METADATA',
+  'categories.transparency': 'TRANSPARENCY',
+  'categories.bleed_margins': 'BLEED & MARGINS',
+  'categories.resolution': 'RESOLUTION',
+  'categories.compliance': 'COMPLIANCE',
+  'categories.page_setup': 'PAGE SETUP',
 
   // Status messages
   analysisWaitMessage: 'Please wait while we check your document for print readiness',
@@ -46,6 +59,8 @@ export const en = {
   checkingDetails: 'Checking fonts, colors, images, and more...',
   perfectNoIssues: 'Perfect! No issues found',
   readyForPrinting: 'Your PDF is ready for printing',
+  generatingCertificate: 'GENERATING CERTIFICATE...',
+  continueToReview_v2: 'CONTINUE TO REVIEW',
 
   // Summary
   issuesSummary: 'Issues Summary',

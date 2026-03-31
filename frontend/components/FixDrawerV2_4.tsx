@@ -4,7 +4,7 @@ import { pposFetch, getAuthToken } from '../lib/apiClient';
 import { pickAvailableModel, GEMINI_API_VER } from '../lib/gemini';
 import { useTranslation } from '../i18n';
 import { ISSUE_CATEGORY_LABELS } from '../constants';
-import { SafeHtmlMarkdown } from './SafeHtmlMarkdown';
+import { AnalyzeCarrierReport } from './AnalyzeCarrierReport';
 import { getIssueHint } from '../profiles/defaultProfile';
 import { StatusBadge } from '../design/preflight_starter_pack';
 import { formatLabel } from '../utils/formatters';
@@ -188,7 +188,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
 
         {/* AI Forensic Support */}
         <div className="space-y-4">
-            <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)]">{formatLabel('AI_HYPER_ASSIST')}</div>
+            <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)]">{t('inspector.aiHyperAssist')}</div>
             <div className="grid grid-cols-2 gap-3">
                 <button 
                     onClick={() => onOpenAIAudit?.(issue)}
@@ -227,16 +227,17 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                   ) : efficiencyError ? (
                     <div className="p-3 bg-[var(--accent-color)]/10 border border-[var(--accent-color)]/20 text-[var(--accent-color)] text-[0.75rem] font-mono">{efficiencyError}</div>
                   ) : (
-                    <div className="prose dark:prose-invert prose-sm max-w-none text-[var(--text-primary)] leading-relaxed">
-                        <SafeHtmlMarkdown markdown={efficiencyResponse || ""} />
+                    <div className="forensic-ai-card-v2">
+                        <AnalyzeCarrierReport report={efficiencyResponse || ""} />
                     </div>
                   )}
                   
                   {(efficiencyResponse || efficiencyError) && (
                     <button 
                       onClick={() => setEfficiencyResponse(null)}
-                      className="mt-6 text-[0.65rem] font-black uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                      className="mt-6 text-[0.65rem] font-black uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--accent-color)] transition-all flex items-center gap-2 group"
                     >
+                        <ArrowPathIcon className="h-3 w-3 group-hover:rotate-180 transition-transform duration-500" />
                         {t('inspector.resetProtocol')}
                     </button>
                   )}
@@ -246,14 +247,14 @@ export const FixDrawerV2_4: React.FC<Props> = ({
 
         {/* Tactical Fixes */}
         <div className="space-y-6">
-            <div className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">{formatLabel('Tactical_Correction')}</div>
+            <div className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">{t('inspector.tacticalCorrection')}</div>
             
             <div className="space-y-3">
                 {/* Specific Fixes Render Here */}
                 {['missing-bleed-info', 'insufficient-bleed'].includes(issue.id) && onFixBleed && (
                     <div className="p-6 border border-[var(--border-color)] bg-[var(--bg-tertiary)]/20 space-y-4">
                         <div className="flex justify-between items-center text-[0.8rem] font-black text-[var(--text-muted)] uppercase tracking-widest">
-                            <span>{formatLabel('Bleed_Ingress_Mode')}</span>
+                            <span>{t('inspector.bleedIngressMode')}</span>
                             <span className="text-[var(--accent-color)]">Automated</span>
                         </div>
                         <select 
@@ -278,7 +279,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                 {(issue.category === 'color' || issue.id?.includes('color')) && onConvertCMYK && (
                     <div className="p-6 border border-[var(--border-color)] bg-[var(--bg-tertiary)]/20 space-y-4">
                          <div className="flex justify-between items-center text-[0.8rem] font-black text-[var(--text-muted)] uppercase tracking-widest">
-                            <span>{formatLabel('Policy_Enforcement')}</span>
+                            <span>{t('inspector.policyEnforcement')}</span>
                         </div>
                         <select 
                             value={selectedProfile} 
