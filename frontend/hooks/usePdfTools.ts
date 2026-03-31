@@ -107,8 +107,23 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
             let attempt = 0;
             const interval = setInterval(async () => {
                 attempt++;
-                try {
-                    const job = await getJobStatus(jobId);
+                    let job: any;
+                    try {
+                        job = await getJobStatus(jobId);
+                    } catch (err: any) {
+                        // Resiliency: Handled transient 404s (Registration Lag)
+                        // With large files, the job might not be persisted yet when the first polls hit.
+                        if (err.status === 404 && attempt < 10) {
+                            console.warn('[POLL][SYNC-LAG-RETRY]', { attempt, jobId });
+                            if (onProgress) onProgress(0); // Show it's still initializing
+                            return;
+                        }
+                        // Non-retryable error or too many 404s
+                        clearInterval(interval);
+                        reject(err);
+                        return;
+                    }
+
                     if (onProgress && job.progress !== undefined) onProgress(job.progress);
 
                     // Normalize status names from PPOS
@@ -125,10 +140,6 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
                          clearInterval(interval);
                          reject(new Error('Job polling timed out.'));
                     }
-                } catch (e) {
-                    clearInterval(interval);
-                    reject(e);
-                }
             }, 2000);
         });
     }, [getJobStatus]);
