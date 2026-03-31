@@ -610,7 +610,9 @@ function AppContent() {
                     currentPage={currentPage}
                     lastPdfUrl={lastPdfUrl}
                     lastPdfName={lastPdfName}
-                    isRunning={isWorkerRunning}
+                    isRunning={isWorkerRunning || ldmActive}
+                    ldmStatus={ldmStatus}
+                    ldmProgress={ldmProgress}
                     onPageChange={handlePageChange}
                     onNumPagesChange={setNumPages}
                     onConvertGrayscale={handleConvertGrayscale}

@@ -14,7 +14,9 @@ import {
     ChevronLeftIcon,
     DocumentCheckIcon,
     ShieldCheckIcon,
-    XMarkIcon
+    XMarkIcon,
+    CommandLineIcon,
+    CpuChipIcon
 } from '@heroicons/react/24/outline';
 
 interface Step4ReviewV2_4Props {
@@ -26,6 +28,8 @@ interface Step4ReviewV2_4Props {
     lastPdfUrl: string | null;
     lastPdfName: string | null;
     isRunning: boolean;
+    ldmStatus?: string | null;
+    ldmProgress?: number;
     onPageChange: (page: number) => void;
     onNumPagesChange: (num: number) => void;
     onConvertGrayscale: () => void;
@@ -58,6 +62,8 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     lastPdfUrl,
     lastPdfName,
     isRunning,
+    ldmStatus,
+    ldmProgress = 0,
     onPageChange,
     onNumPagesChange,
     onConvertGrayscale,
@@ -83,6 +89,18 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     const { t } = useTranslation();
     const [showBeforeAfter, setShowBeforeAfter] = useState<'before' | 'after'>('after');
     const [showTechNote, setShowTechNote] = useState(false);
+
+    // Mapeo de estados de Certificación (Monolith v2.4 Spec)
+    const getCertTechStatus = () => {
+        if (!isRunning) return null;
+        if (ldmProgress < 20) return 'INITIATING_ENGINE_HANDSHAKE_V2';
+        if (ldmProgress < 40) return 'ENFORCING_ISO_OUTPUT_INTENTS';
+        if (ldmProgress < 60) return 'OPTIMIZING_COLOR_CARRIER_RESPONSE';
+        if (ldmProgress < 80) return 'HARDENING_PDF_STRUCTURES';
+        return 'SEALING_CERTIFIED_ARTIFACT_INTEGRITY';
+    };
+
+    const certMessage = getCertTechStatus();
 
     // Diagnostics
     console.log('[STEP4][INPUTS]', { 
@@ -262,6 +280,52 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                               {lastPdfUrl ? t('continueToReview_v2') : t('waitingForArtifact')}
                               {lastPdfUrl && <span className="text-xl">→</span>}
                             </button>
+
+                            {/* Live Certification Terminal (Monolith Extension) */}
+                            {isRunning && !lastPdfUrl && (
+                                <div className="mt-4 p-4 border border-[var(--border-color)] bg-black/40 space-y-3 animate-in fade-in slide-in-from-top-2 duration-500 overflow-hidden relative group">
+                                    <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+                                    
+                                    <div className="flex items-center justify-between mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-1.5 w-1.5 rounded-full bg-[var(--accent-color)] animate-pulse shadow-[0_0_5px_rgba(220,0,0,0.8)]" />
+                                            <span className="text-[0.6rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)]">PPOS_CERT_ENGINE</span>
+                                        </div>
+                                        <span className="text-[0.6rem] font-mono text-[var(--text-muted)]">{Math.floor(ldmProgress)}%</span>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <div className="h-[2px] w-full bg-[var(--border-color)] overflow-hidden">
+                                            <div 
+                                                className="h-full bg-[var(--accent-color)] transition-all duration-700 ease-out shadow-[0_0_8px_rgba(220,0,0,0.4)]"
+                                                style={{ width: `${ldmProgress}%` }}
+                                            />
+                                        </div>
+                                        
+                                        <div className="font-mono text-[0.62rem] leading-relaxed space-y-1 pt-1">
+                                            <div className="flex gap-2 text-[var(--text-primary)]">
+                                                <span className="text-[var(--accent-color)] font-bold shrink-0">[LOG]</span>
+                                                <span className="uppercase">{ldmStatus || 'DISPATCHING_REBUILD_AGENT...'}</span>
+                                            </div>
+                                            <div className="flex gap-2 text-[var(--text-secondary)] opacity-60 italic">
+                                                <span className="text-[var(--text-muted)] shrink-0 font-bold">[PROCESS]</span>
+                                                <span className="uppercase truncate">{certMessage || 'NORMALIZING_CARRIER...'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between mt-1 pt-2 border-t border-[var(--border-color)]/20 text-[0.55rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">
+                                        <div className="flex items-center gap-1.5">
+                                            <CpuChipIcon className="h-2.5 w-2.5" />
+                                            <span>HARDENING_MODE_v2.4</span>
+                                        </div>
+                                        <span>ISO_F51_COMPLIANT</span>
+                                    </div>
+
+                                    {/* Scanline Animation */}
+                                    <div className="absolute left-0 right-0 h-[1px] bg-[var(--accent-color)]/10 animate-[scan_4s_linear_infinite]" />
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -382,6 +446,14 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                     </div>
                 </div>
             )}
+
+            <style>{`
+                @keyframes scan {
+                    0% { top: 0; opacity: 0; }
+                    50% { opacity: 1; }
+                    100% { top: 100%; opacity: 0; }
+                }
+            `}</style>
         </div>
     );
 };
