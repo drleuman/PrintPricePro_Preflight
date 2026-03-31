@@ -161,6 +161,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
 
                     <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[500px] h-[600px] flex flex-col items-center justify-center p-2 md:p-8 bg-[var(--bg-primary)]">
                         <PageViewer 
+                            key={`${showBeforeAfter}-${displayPdfUrl || 'local'}`}
                             file={displayFile}
                             pdfUrl={displayPdfUrl}
                             numPages={numPages}
@@ -222,10 +223,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             </div>
                         </div>
                         <button 
-                            onClick={() => setShowTechNote(true)}
+                            onClick={onNext}
                             className="w-full py-4 bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] text-[0.8rem] font-black uppercase tracking-[0.2em] transition-all shadow-[0_5px_15px_rgba(220,0,0,0.15)]"
                         >
-                            {isReadyForPrint ? (t('continueToReview', 'CONTINUE TO DOWNLOAD')) : (t('technicalNotes', 'TECHNICAL NOTES'))}
+                            {isReadyForPrint ? t('continueToReview', 'CONTINUE TO DOWNLOAD') : t('technicalNotes', 'TECHNICAL NOTES')}
                         </button>
                     </div>
 
