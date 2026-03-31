@@ -117,6 +117,9 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     // Derived states
     const hasBefore = !!autoFixBefore || !!originalFile || !!file;
     const hasAfter = !!autoFixAfter || !!lastPdfUrl;
+    
+    // Loading indicator for certificate viewer
+    const isGenerating = showBeforeAfter === 'after' && !!lastPdfUrl && numPages === 0;
 
     console.log('[STEP4][VIEWER]', { 
         mode: showBeforeAfter, 
@@ -164,6 +167,14 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                     </div>
 
                     <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[500px] h-[600px] flex flex-col items-center justify-center p-2 md:p-8 bg-[var(--bg-primary)]">
+                        {isGenerating && (
+                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/50 backdrop-blur-md animate-in fade-in duration-500">
+                                <div className="h-12 w-12 border-4 border-white/10 border-t-[var(--accent-color)] rounded-full animate-spin mb-6" />
+                                <div className="text-white text-[0.75rem] font-black uppercase tracking-[0.3em] font-mono">
+                                    {t('generatingCertificate', 'GENERATING CERTIFICATE...')}
+                                </div>
+                            </div>
+                        )}
                         <PageViewer 
                             key={`${showBeforeAfter}-${displayPdfUrl || 'local'}`}
                             file={displayFile}

@@ -90,6 +90,17 @@ function AppContent() {
   const activeJobIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (ldmActive) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [ldmActive]);
+
+  useEffect(() => {
     console.log('[APP][STATE-SYNC] lastPdfUrl changed:', lastPdfUrl);
   }, [lastPdfUrl]);
 
