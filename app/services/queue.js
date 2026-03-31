@@ -49,10 +49,18 @@ function normalizeInput(payload = {}) {
  * propagating the user context safely without using raw frontend tokens.
  */
 async function enqueueJob(type, payload = {}) {
+  // Requirement: Normalización robusta de la ruta del archivo (filePath vs filepath)
+  const localFilePath = payload.filePath || payload.filepath || null;
+
   const tenantId = normalizeTenantId(payload);
   const jobId = normalizeJobId(payload);
-  const input = normalizeInput(payload);
+  
+  // Usamos localFilePath para la validación del contrato
+  const input = normalizeInput({ ...payload, filePath: localFilePath });
   const deploymentId = process.env.PPOS_DEPLOYMENT_ID || process.env.DEPLOYMENT_ID || 'production';
+
+  // ... (restando del contenido para brevedad en la edición, pero localFilePath se usará abajo) ...
+
 
   // Use authContext2 (canonical) or authContext (legacy) for identity propagation
   const userIdentity = payload.authContext2 || payload.authContext || {};
@@ -106,10 +114,10 @@ async function enqueueJob(type, payload = {}) {
     let response;
 
     // Determine if we should send as multipart/form-data
-    if (payload.filePath && fs.existsSync(payload.filePath)) {
+    if (localFilePath && fs.existsSync(localFilePath)) {
       console.log(`[QUEUE][MULTIPART] Reconstructing job creation request${jobId ? ' for ' + jobId : ''}`);
 
-      const fileBuffer = await fs.promises.readFile(payload.filePath);
+      const fileBuffer = await fs.promises.readFile(localFilePath);
       const fileMimeType = payload.mimeType || 'application/pdf';
       const fileName = payload.filename || input.filename || 'document.pdf';
       const blob = new Blob([fileBuffer], { type: fileMimeType });
@@ -148,7 +156,7 @@ async function enqueueJob(type, payload = {}) {
       console.log('[QUEUE][MULTIPART][DEBUG]', {
         jobId,
         tenantId,
-        filePath: payload.filePath,
+        filePath: localFilePath,
         fileExists: true,
         fileSize: fileBuffer.length,
         fileName,
