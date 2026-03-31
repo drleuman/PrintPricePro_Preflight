@@ -8,6 +8,7 @@ import { AnalyzeCarrierReport } from './AnalyzeCarrierReport';
 import { getIssueHint } from '../profiles/defaultProfile';
 import { StatusBadge } from '../design/preflight_starter_pack';
 import { formatLabel } from '../utils/formatters';
+import { translateIssueTitle } from '../utils/issueMapper';
 import {
   XMarkIcon,
   ExclamationCircleIcon,
@@ -132,7 +133,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
           <div>
             <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">{t('inspector.traceTitle')}</div>
             <h2 className="text-xl font-extrabold tracking-tight text-[var(--text-primary)] uppercase truncate max-w-[260px]">
-                {displayTitle}
+                {translateIssueTitle(issue, t)}
             </h2>
           </div>
         </div>

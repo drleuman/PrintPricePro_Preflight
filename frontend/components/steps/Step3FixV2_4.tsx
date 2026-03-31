@@ -15,6 +15,7 @@ import {
     FireIcon,
     EyeIcon
 } from '@heroicons/react/24/outline';
+import { translateIssueTitle } from '../../utils/issueMapper';
 
 interface Step3FixV2_4Props {
     file: File | null;
@@ -187,7 +188,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                                 issues.map((issue: Issue, idx: number) => (
                                     <IssueRow 
                                         key={issue.id || idx}
-                                        title={issue.title || issue.message}
+                                        title={translateIssueTitle(issue, t)}
                                         type={(issue.category || 'GENERAL').toString().toUpperCase()}
                                         fixAvailable={issue.fixable}
                                         severity={issue.severity as any}

@@ -13,6 +13,7 @@ import { AnalyzeCarrierReport } from './AnalyzeCarrierReport';
 import { useTranslation } from '../i18n';
 import { pposFetch } from '../lib/apiClient';
 import { pickAvailableModel, GEMINI_API_VER } from '../lib/gemini';
+import { translateIssueTitle } from '../utils/issueMapper';
 
 // Internal State Machine
 type AnalysisState = 'idle' | 'loading' | 'success' | 'error';
@@ -240,9 +241,11 @@ export const AIInspectorPanel: React.FC<Props> = ({
                                             <div className="p-5 border-l-4 border-[var(--accent-color)] bg-[var(--bg-tertiary)]/50">
                                                 <div className="text-[0.55rem] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2 flex items-center gap-2">
                                                     <CheckCircleIcon className="w-3 h-3 text-emerald-500" />
-                                                    {t('inspector.targetedNode')}: {issue.id}
+                                                    {t('inspector.targetedNode')}: {issue.code || issue.id}
                                                 </div>
-                                                <h4 className="text-[0.9rem] font-black text-[var(--text-primary)] uppercase tracking-tight">{issue.title}</h4>
+                                                <h4 className="text-[0.9rem] font-black text-[var(--text-primary)] uppercase tracking-tight">
+                                                    {translateIssueTitle(issue, t)}
+                                                </h4>
                                             </div>
                                         )}
 

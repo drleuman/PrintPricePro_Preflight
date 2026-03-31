@@ -4,6 +4,7 @@ import { StatusBadge, IssueRow } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
 import { RocketLaunchIcon, ArrowPathIcon, ChevronLeftIcon, ShieldCheckIcon, CommandLineIcon, CpuChipIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '../../i18n';
+import { translateIssueTitle } from '../../utils/issueMapper';
 
 interface Step2AnalysisV2_4Props {
     file: File | null;
@@ -178,7 +179,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                                     {issues.map((issue, idx) => (
                                         <IssueRow 
                                             key={issue.id || idx}
-                                            title={issue.title || issue.message}
+                                            title={translateIssueTitle(issue, t)}
                                             type={(issue.category || 'GENERAL').toString().toUpperCase()}
                                             fixAvailable={issue.fixable}
                                             severity={issue.severity as any}
