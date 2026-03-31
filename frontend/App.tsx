@@ -89,6 +89,10 @@ function AppContent() {
 
   const activeJobIdRef = useRef<string | null>(null);
 
+  useEffect(() => {
+    console.log('[APP][STATE-SYNC] lastPdfUrl changed:', lastPdfUrl);
+  }, [lastPdfUrl]);
+
   // ---------- Helpers ----------
 
   const resetResidues = useCallback(() => {
@@ -245,21 +249,27 @@ function AppContent() {
     try {
       const { jobId } = await autoFixServer(file, opts);
       if (jobId) {
+        activeJobIdRef.current = jobId;
         setLdmProgress(10);
         const jobResult: any = await handleV2JobComplete(jobId);
         
         console.log('[APP][FIX-COMPLETE]', { jobId, hasReport: !!jobResult.report });
         
-        const downloadUrl = getDownloadUrl(jobId);
+        const downloadUrl = `${window.location.origin}/api/v2/jobs/${jobId}/artifacts/final_fixed_pdf`;
+        console.log('[APP][SET-DOWNLOAD-URL]', { jobId, downloadUrl });
         setLastPdfUrl(downloadUrl);
         lastPdfUrlRef.current = downloadUrl;
+        setLastPdfName(jobResult?.meta?.filename || 'certified_pdf.pdf');
+        
+        setCurrentPage(1);
         
         if (jobResult.report) setAutoFixReport(jobResult.report);
         
-        // Update the current result with the 'after' findings
+        // Final confirmation set
         const normalizedAfter = normalizePreflightResult(jobResult);
         setResult(normalizedAfter);
         setAutoFixAfter(normalizedAfter);
+        console.log('[APP][FIX-SYNC] Finished and set result/url');
       }
       setLdmActive(false);
     } catch (err: any) {
@@ -312,6 +322,7 @@ function AppContent() {
     try {
       const jobId = await convertColorServer(file, selectedProfile);
       if (jobId) {
+        activeJobIdRef.current = jobId;
         await handleV2JobComplete(jobId);
         const url = getDownloadUrl(jobId);
         setLastPdfUrl(url);
@@ -331,6 +342,7 @@ function AppContent() {
     try {
       const jobId = await convertToGrayscaleServer(file);
       if (jobId) {
+        activeJobIdRef.current = jobId;
         await handleV2JobComplete(jobId);
         const url = getDownloadUrl(jobId);
         setLastPdfUrl(url);
@@ -350,6 +362,7 @@ function AppContent() {
     try {
       const jobId = await rebuildPdfServer(file, 300);
       if (jobId) {
+        activeJobIdRef.current = jobId;
         await handleV2JobComplete(jobId);
         const url = getDownloadUrl(jobId);
         setLastPdfUrl(url);
@@ -408,6 +421,7 @@ function AppContent() {
       handleRunHeatmap(currentPage);
     }
   }, [currentPage]); // Re-run if page changes and data was already visible
+
 
   return (
     <ThemeProvider>
@@ -593,7 +607,10 @@ function AppContent() {
           onConvertGrayscale={handleConvertGrayscale}
           onConvertCMYK={handleConvertCMYK}
           onRebuildPdf={handleRebuildPdf}
-          onApplyCorrection={() => setCurrentStep(3)}
+          onApplyCorrection={() => {
+            handleAutoFix({});
+            setCurrentStep(3);
+          }}
           selectedProfile={selectedProfile}
           onProfileChange={setSelectedProfile}
           onOpenAIAudit={(issue) => { setSelectedIssue(issue); setShowVisualModal(true); }}

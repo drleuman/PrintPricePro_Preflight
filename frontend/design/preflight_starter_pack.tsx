@@ -49,12 +49,12 @@ export const StatusBadge = ({
 
   return (
     <span
-      className={`inline-flex items-center gap-2 border px-3 py-1 text-[0.82rem] leading-[1.2] font-black tracking-[0.2em] uppercase font-mono break-words whitespace-normal text-center ${styles[variant] || styles.default}`}
+      className={`inline-flex items-center gap-2 border px-3 py-1 text-[0.82rem] leading-none font-black uppercase font-mono whitespace-nowrap text-center ${styles[variant] || styles.default} tracking-normal`}
     >
       {variant === 'processing' && (
         <span className="h-1.5 w-1.5 shrink-0 animate-pulse bg-[#dc0000]" />
       )}
-      {t(label as any).includes(label) ? formatLabel(label) : t(label as any)}
+      {label}
     </span>
   );
 };

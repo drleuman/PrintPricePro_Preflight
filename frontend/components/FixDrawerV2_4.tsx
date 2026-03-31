@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import type { Issue } from '../types';
 import { pposFetch, getAuthToken } from '../lib/apiClient';
 import { pickAvailableModel, GEMINI_API_VER } from '../lib/gemini';
-import { t } from '../i18n';
+import { useTranslation } from '../i18n';
 import { ISSUE_CATEGORY_LABELS } from '../constants';
 import { SafeHtmlMarkdown } from './SafeHtmlMarkdown';
 import { getIssueHint } from '../profiles/defaultProfile';
@@ -52,6 +52,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
   isFixing,
   serverAvailable = true
 }) => {
+  const { t } = useTranslation();
   const [bleedMode, setBleedMode] = useState<'safe' | 'aggressive'>('safe');
   const [policies, setPolicies] = useState<any[]>([]);
   const [efficiencyLoading, setEfficiencyLoading] = useState(false);

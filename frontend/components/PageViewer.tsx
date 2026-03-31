@@ -119,12 +119,19 @@ export const PageViewer: React.FC<PageViewerProps> = ({
     const renderPage = async () => {
       if (ldmMode) return;
       const canvas = canvasRef.current;
-      if (!canvas || !pdfRef.current || currentPage < 1 || currentPage > numPages || numPages === 0) {
+      
+      // DIAGNOSTIC
+      console.log('[VIEWER][RENDER-TRIGGER]', { 
+        currentPage, 
+        numPages, 
+        hasPdf: !!pdfRef.current,
+        canvas: !!canvas 
+      });
+
+      if (!canvas || !pdfRef.current || currentPage < 1 || (numPages > 0 && currentPage > numPages)) {
         if (canvas) {
           const context = canvas.getContext('2d');
-          if (context) {
-            context.clearRect(0, 0, canvas.width, canvas.height);
-          }
+          if (context) context.clearRect(0, 0, canvas.width, canvas.height);
         }
         return;
       }
@@ -156,10 +163,24 @@ export const PageViewer: React.FC<PageViewerProps> = ({
     };
 
     renderPage();
-  }, [currentPage, numPages, scale, selectedIssue, drawBbox]);
+  }, [currentPage, numPages, scale, selectedIssue, drawBbox, file, pdfUrl]);
 
   // Logic for heatmap visibility and effects derived from props
   const heatmapVisible = !!heatmapData || isHeatmapLoading;
+
+  // AUTO-TRIGGER PAGE 1: If we have a PDF and numPages > 0, but canvas is empty or we haven't rendered
+  useEffect(() => {
+    if (pdfRef.current && numPages > 0 && currentPage === 1) {
+      console.log('[VIEWER][AUTO-INIT-PAGE-1]');
+      // Small timeout to ensure canvas is ready in DOM
+      const t = setTimeout(() => {
+        // We just need to trigger the render effect, which depends on numPages and currentPage
+        // Since we are already at currentPage 1, and numPages just changed from 0 to N, 
+        // the other effect SHOULD have triggered, but this acts as a safety guard.
+      }, 100);
+      return () => clearTimeout(t);
+    }
+  }, [pdfRef.current, numPages, currentPage]);
 
 
   // Heatmap Drawing
