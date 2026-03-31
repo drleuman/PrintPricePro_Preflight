@@ -145,31 +145,33 @@ function AppContent() {
     getDownloadUrl
   } = usePdfTools({
     onStatus: (st: string) => { setLdmStatus(st); },
-    onComplete: (res: any) => {
+    onComplete: (normalized: any) => {
       // Point of Application (Validation C): Check jobId BEFORE any state change
-      const completedJobId = res.meta?.jobId || res.id;
+      const completedJobId = normalized.meta?.jobId || normalized.id;
       if (completedJobId && activeJobIdRef.current && completedJobId !== activeJobIdRef.current) {
         console.warn('[APP][STALE-JOB-DETECTED]', { completed: completedJobId, active: activeJobIdRef.current });
         return;
       }
 
-      console.log('[APP] Preflight Job Complete:', res);
-      setResult(res);
+      console.log('[APP] Preflight Job Complete:', normalized);
+      setResult(normalized);
       
-      // Update download URL if available in metadata
+      // Update download URL
       if (completedJobId) {
-        const url = getDownloadUrl(completedJobId);
+        const url = `${window.location.origin}/api/v2/jobs/${completedJobId}/artifacts/final_fixed_pdf`;
         console.log('[APP][SET-DOWNLOAD-URL]', { jobId: completedJobId, url });
         setLastPdfUrl(url);
         lastPdfUrlRef.current = url;
         
-        const fileName = res.meta?.fileName || res.filename || res.meta?.filename || 'certified_document.pdf';
+        const fileName = normalized.meta?.fileName || normalized.filename || normalized.meta?.filename || 'certified_document.pdf';
         setLastPdfName(fileName);
       }
 
-      // ONLY jump to step 2 if we are coming from step 1 (initial upload)
-      // If we are in step 3 (Fixing), we should NOT jump back to step 2.
-      setCurrentStep(prev => prev === 1 ? 2 : prev);
+      // If we are in step 1 (upload), move to step 2 (results)
+      if (currentStep === 1) {
+        setAutoFixBefore(normalized);
+        setCurrentStep(2);
+      }
       
       setLdmActive(false);
     }
@@ -253,23 +255,17 @@ function AppContent() {
         setLdmProgress(10);
         const jobResult: any = await handleV2JobComplete(jobId);
         
-        console.log('[APP][FIX-COMPLETE]', { jobId, hasReport: !!jobResult.report });
+        console.log('[APP][FIX-COMPLETE-HAF]', { jobId, hasReport: !!jobResult.report });
+        if (jobResult.report) setAutoFixReport(jobResult.report);
         
-        const downloadUrl = `${window.location.origin}/api/v2/jobs/${jobId}/artifacts/final_fixed_pdf`;
-        console.log('[APP][SET-DOWNLOAD-URL]', { jobId, downloadUrl });
-        setLastPdfUrl(downloadUrl);
-        lastPdfUrlRef.current = downloadUrl;
-        setLastPdfName(jobResult?.meta?.filename || 'certified_pdf.pdf');
+        const normalizedAfter = normalizePreflightResult(jobResult);
+        setAutoFixAfter(normalizedAfter);
+        setResult(normalizedAfter);
         
         setCurrentPage(1);
         
-        if (jobResult.report) setAutoFixReport(jobResult.report);
-        
-        // Final confirmation set
-        const normalizedAfter = normalizePreflightResult(jobResult);
-        setResult(normalizedAfter);
-        setAutoFixAfter(normalizedAfter);
-        console.log('[APP][FIX-SYNC] Finished and set result/url');
+        // Auto-advance to certification if coming from magic fix or manual corrections
+        setCurrentStep(4);
       }
       setLdmActive(false);
     } catch (err: any) {

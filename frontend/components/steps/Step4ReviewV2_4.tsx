@@ -111,7 +111,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     // Viewer Resolution
     // Before: Original File
     // After: Corrected Result (either file or lastPdfUrl)
-    const displayFile = showBeforeAfter === 'before' ? originalFile : file;
+    const displayFile = showBeforeAfter === 'before' ? (originalFile || file) : (lastPdfUrl ? null : file);
     const displayPdfUrl = showBeforeAfter === 'after' ? lastPdfUrl : null;
 
     console.log('[STEP4][VIEWER]', { 
