@@ -186,9 +186,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         
                         <button 
                             onClick={onNext}
-                            className="bg-[var(--accent-color)] text-white p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)] flex items-center justify-center gap-2 w-full"
+                            disabled={!lastPdfUrl}
+                            className={`p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all flex items-center justify-center gap-2 w-full ${!lastPdfUrl ? 'bg-[var(--text-muted)] cursor-not-allowed opacity-50' : 'bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)]'}`}
                         >
-                            <RocketLaunchIcon className="h-4 w-4" /> {t('continueToReview').toUpperCase()}
+                            <RocketLaunchIcon className="h-4 w-4" /> {lastPdfUrl ? t('continueToReview').toUpperCase() : (t('waitingForArtifact' as any) || 'WAITING FOR ARTIFACT...').toUpperCase()}
                         </button>
                     </div>
                 </div>

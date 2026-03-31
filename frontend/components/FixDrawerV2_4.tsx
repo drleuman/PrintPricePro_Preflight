@@ -129,7 +129,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
             {isError ? <ExclamationCircleIcon className="h-6 w-6" /> : <InformationCircleIcon className="h-6 w-6" />}
           </div>
           <div>
-            <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Trace Inspector v2.4</div>
+            <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">{t('inspector.traceTitle')}</div>
             <h2 className="text-xl font-extrabold tracking-tight text-[var(--text-primary)] uppercase truncate max-w-[260px]">
                 {displayTitle}
             </h2>
@@ -146,12 +146,12 @@ export const FixDrawerV2_4: React.FC<Props> = ({
             <div className="flex items-center justify-between">
                 <StatusBadge label={((issue as any).severity || 'WARNING').toUpperCase()} variant={isError ? 'warning' : 'default'} />
                 <span className="text-[0.8rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">
-                  {issue.page ? `PAGE ${issue.page}` : 'DOCUMENT'} / {displayId.substring(0,8)}
+                  {issue.page ? `${t('inspector.pageLabelPage')} ${issue.page}` : t('inspector.pageLabelDoc')} / {displayId.substring(0,8)}
                 </span>
             </div>
             
             <div className="space-y-2">
-                <div className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Finding Details</div>
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">{t('inspector.findingDetails')}</div>
                 <p className="text-[0.9rem] font-medium text-[var(--text-primary)] leading-relaxed">
                     {issue.message}
                 </p>
@@ -164,7 +164,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
 
             {issue.recommendation && (
               <div className="p-4 bg-[var(--accent-color)]/5 border-l-2 border-[var(--accent-color)] space-y-2">
-                  <div className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)]">Engine Recommendation</div>
+                  <div className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)]">{t('inspector.engineRecommendation')}</div>
                   <p className="text-[0.8rem] text-[var(--text-primary)] font-medium italic">
                     {issue.recommendation}
                   </p>
@@ -173,7 +173,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
 
             {(issue.context || issue.source) && (
               <div className="p-4 border-l-2 border-[var(--border-color)] bg-[var(--bg-tertiary)]/10 space-y-2">
-                  <div className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Technical Context</div>
+                  <div className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">{t('inspector.technicalContext')}</div>
                   <p className="text-[0.75rem] font-mono text-[var(--text-secondary)] leading-relaxed">
                     {issue.context || issue.source}
                   </p>
@@ -181,9 +181,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
             )}
             
             <div className="flex items-center gap-4 text-[0.7rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">
-                <span>Category: {issue.category || 'GENERAL'}</span>
-                <span>•</span>
-                <span>Fixable: {issue.fixable ? 'YES' : 'NO'}</span>
+                <span>{t('inspector.fixable')} {issue.fixable ? t('inspector.isFixableYes') : t('inspector.isFixableNo')}</span>
             </div>
         </div>
 
@@ -196,7 +194,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                     className="p-4 border border-[var(--accent-color)]/30 bg-[var(--accent-color)]/5 hover:bg-[var(--accent-color)]/10 transition-all flex flex-col items-center gap-3 text-center group"
                 >
                     <SparklesIcon className="h-5 w-5 text-[var(--accent-color)]" />
-                    <span className="text-[0.75rem] font-black uppercase tracking-widest text-[var(--accent-color)]">Deep Diagnostic</span>
+                    <span className="text-[0.75rem] font-black uppercase tracking-widest text-[var(--accent-color)]">{t('inspector.deepDiagnostic')}</span>
                 </button>
                 <button 
                     onClick={fetchEfficiencyTips}
@@ -205,7 +203,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                 >
                     <BeakerIcon className={`h-5 w-5 ${efficiencyLoading ? 'animate-pulse text-[var(--accent-color)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--accent-color)]'}`} />
                     <span className="text-[0.75rem] font-black uppercase tracking-widest text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]">
-                        {efficiencyLoading ? 'Running...' : 'Efficiency Lab'}
+                        {efficiencyLoading ? t('common.processing') : t('inspector.efficiencyLab')}
                     </span>
                 </button>
             </div>
@@ -215,7 +213,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
               <div className="p-6 border border-[var(--border-color)] bg-[var(--bg-primary)]/60 animate-in fade-in slide-in-from-top-4 duration-500">
                   <div className="flex items-center gap-3 mb-4">
                       <BeakerIcon className="h-5 w-5 text-[var(--accent-color)]" />
-                      <span className="text-[0.7rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">Efficiency Protocol Analysis</span>
+                      <span className="text-[0.7rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">{t('inspector.efficiencyProtocol')}</span>
                   </div>
                   
                   {efficiencyLoading ? (
@@ -223,7 +221,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                         <div className="h-2 w-full bg-[var(--border-color)] overflow-hidden">
                             <div className="h-full bg-[var(--accent-color)] animate-[shimmer_2s_infinite]"></div>
                         </div>
-                        <div className="text-[0.65rem] font-black uppercase tracking-widest text-[var(--text-muted)] animate-pulse">Consulting AI Knowledge Base...</div>
+                        <div className="text-[0.65rem] font-black uppercase tracking-widest text-[var(--text-muted)] animate-pulse">{t('inspector.consultingAi')}</div>
                     </div>
                   ) : efficiencyError ? (
                     <div className="p-3 bg-[var(--accent-color)]/10 border border-[var(--accent-color)]/20 text-[var(--accent-color)] text-[0.75rem] font-mono">{efficiencyError}</div>
@@ -238,7 +236,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                       onClick={() => setEfficiencyResponse(null)}
                       className="mt-6 text-[0.65rem] font-black uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
                     >
-                        Reset Protocol
+                        {t('inspector.resetProtocol')}
                     </button>
                   )}
               </div>
@@ -270,7 +268,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                             className="w-full py-4 bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.82rem] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg"
                         >
                             <WrenchScrewdriverIcon className="h-4 w-4" />
-                            Apply 3mm Standard Fix
+                            {t('inspector.applyBleedFix')}
                         </button>
                     </div>
                 )}
@@ -296,7 +294,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                             className="w-full py-4 bg-[var(--hover-bg)] hover:bg-[var(--accent-color)]/5 text-[var(--text-primary)] text-[0.82rem] font-black uppercase tracking-widest transition-all border border-[var(--border-color)] flex items-center justify-center gap-2"
                         >
                             <SwatchIcon className="h-4 w-4" />
-                            Convert to CMYK Policy
+                            {t('inspector.applyCmykFix')}
                         </button>
                     </div>
                 )}
@@ -307,7 +305,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                         className="w-full py-5 bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.85rem] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-[0_15px_30px_rgba(220,0,0,0.3)] group"
                     >
                         <WrenchScrewdriverIcon className="h-5 w-5 animate-bounce group-hover:animate-none" />
-                        Fix this issue
+                        {t('inspector.fixIssue')}
                     </button>
                 )}
             </div>
@@ -317,14 +315,14 @@ export const FixDrawerV2_4: React.FC<Props> = ({
       {/* Footer Footer */}
       <div className="p-8 border-t border-[var(--border-color)] bg-[var(--bg-tertiary)]/10 flex items-center justify-between">
             <div className="flex flex-col gap-1">
-                <span className="text-[0.75rem] font-black text-[var(--text-muted)] uppercase tracking-widest">{formatLabel('System_Load')}</span>
+                <span className="text-[0.75rem] font-black text-[var(--text-muted)] uppercase tracking-widest">{t('inspector.systemLoad')}</span>
                 <span className="text-[0.8rem] font-mono text-[var(--text-primary)]">0.42 / IDLE</span>
             </div>
             <button 
                 onClick={onClose}
                 className="text-[0.8rem] font-black uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
             >
-                Dismiss
+                {t('inspector.dismiss')}
             </button>
       </div>
     </aside>

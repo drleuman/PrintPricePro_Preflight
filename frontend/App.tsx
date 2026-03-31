@@ -143,7 +143,7 @@ function AppContent() {
     onStatus: (st: string) => { setLdmStatus(st); },
     onComplete: (res: any) => {
       // Point of Application (Validation C): Check jobId BEFORE any state change
-      const completedJobId = res.meta?.jobId;
+      const completedJobId = res.meta?.jobId || res.id;
       if (completedJobId && activeJobIdRef.current && completedJobId !== activeJobIdRef.current) {
         console.warn('[APP][STALE-JOB-DETECTED]', { completed: completedJobId, active: activeJobIdRef.current });
         return;
@@ -155,11 +155,18 @@ function AppContent() {
       // Update download URL if available in metadata
       if (completedJobId) {
         const url = getDownloadUrl(completedJobId);
+        console.log('[APP][SET-DOWNLOAD-URL]', { jobId: completedJobId, url });
         setLastPdfUrl(url);
         lastPdfUrlRef.current = url;
+        
+        const fileName = res.meta?.fileName || res.filename || res.meta?.filename || 'certified_document.pdf';
+        setLastPdfName(fileName);
       }
 
-      setCurrentStep(2); // Analysis
+      // ONLY jump to step 2 if we are coming from step 1 (initial upload)
+      // If we are in step 3 (Fixing), we should NOT jump back to step 2.
+      setCurrentStep(prev => prev === 1 ? 2 : prev);
+      
       setLdmActive(false);
     }
   });

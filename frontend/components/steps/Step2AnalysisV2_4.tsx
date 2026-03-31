@@ -74,11 +74,11 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                         {t('stepNumber', { number: 2 })} / {t('step.analysis.forensic')}
                     </div>
                     <h2 className="text-3xl font-extrabold tracking-tight">
-                        {isRunning ? t('analyzingYourPdf').toUpperCase() : dataMissing ? (t('analysisFailed' as any) || 'ANALYSIS FAILED').toUpperCase() : t('analysisComplete').toUpperCase()}
+                        {isRunning ? t('analyzingYourPdf').toUpperCase() : dataMissing ? t('analysisFailed').toUpperCase() : t('analysisComplete').toUpperCase()}
                     </h2>
                 </div>
                 <StatusBadge 
-                    label={isRunning ? t('analyzingPDF') : dataMissing ? (t('missingData' as any) || 'MISSING DATA').toUpperCase() : hasIssues ? t('analysis').toUpperCase() + " " + t('error').toUpperCase() : t('verified').toUpperCase()} 
+                    label={isRunning ? t('analyzingPDF') : dataMissing ? t('missingData').toUpperCase() : hasIssues ? t('analysis').toUpperCase() + " " + t('error').toUpperCase() : t('verified').toUpperCase()} 
                     variant={isRunning ? "processing" : dataMissing ? "warning" : hasIssues ? "warning" : "certified"} 
                 />
             </div>
@@ -98,8 +98,8 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                     ) : dataMissing ? (
                         <div className="flex flex-col items-center justify-center h-full border border-[var(--border-color)] bg-[var(--hover-bg)] p-12 text-center opacity-60">
                             <CommandLineIcon className="h-12 w-12 mb-4 text-[var(--text-muted)]" />
-                            <h3 className="text-lg font-bold mb-2">{t('forensics.dataUnavailable' as any) || 'Forensics Data Unavailable'}</h3>
-                            <p className="text-xs text-[var(--text-secondary)] max-w-[320px]">{t('forensics.dataUnavailableDesc' as any) || 'Analysis completed but no forensic data could be parsed.'}</p>
+                            <h3 className="text-lg font-bold mb-2">{t('forensics.dataUnavailable')}</h3>
+                            <p className="text-xs text-[var(--text-secondary)] max-w-[320px]">{t('forensics.dataUnavailableDesc')}</p>
                         </div>
                     ) : result ? (
                         <div className="space-y-4">
@@ -137,7 +137,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                     {result && !isRunning ? (
                         <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8">
                             <div className="mb-8 flex items-center justify-between">
-                                <StatusBadge label={dataMissing ? (t('step.analysis.noData' as any) || 'NO DATA') : hasIssues ? t('step.analysis.invalidCarrier') : t('step.analysis.validCarrier')} variant={dataMissing || hasIssues ? "warning" : "certified"} />
+                                <StatusBadge label={dataMissing ? t('missingData') : hasIssues ? t('step.analysis.invalidCarrier') : t('step.analysis.validCarrier')} variant={dataMissing || hasIssues ? "warning" : "certified"} />
                                 <span className="text-[0.88rem] font-mono text-[var(--text-secondary)] uppercase tracking-widest">{formatLabel(`TRACE_V2.4_${result.score || 'ERR'}`)}</span>
                             </div>
 
@@ -160,7 +160,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">{t('step.analysis.finalSignal')}</span>
-                                    <StatusBadge label={dataMissing ? (t('missing' as any) || 'MISSING') : hasIssues ? t('step.analysis.actionRequired') : t('step.analysis.ready')} variant={dataMissing || hasIssues ? "warning" : "certified"} />
+                                    <StatusBadge label={dataMissing ? t('missingData') : hasIssues ? t('step.analysis.actionRequired') : t('step.analysis.ready')} variant={dataMissing || hasIssues ? "warning" : "certified"} />
                                 </div>
                             </div>
                         </div>
@@ -208,7 +208,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                         disabled={isRunning}
                         className="border border-[var(--accent-color)]/30 px-6 py-3 text-[0.8rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)] hover:bg-[var(--accent-color)]/5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                        {isRunning ? (t('processing' as any) || 'PROCESSING').toUpperCase() : (t('step.analysis.ignite' as any) || 'IGNITE').toUpperCase()}
+                        {isRunning ? t('common.processing').toUpperCase() : t('step.analysis.ignite').toUpperCase()}
                     </button>
                 </div>
             )}
