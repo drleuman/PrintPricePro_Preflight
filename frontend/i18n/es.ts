@@ -691,7 +691,7 @@ export const es = {
   'waitingForArtifact': 'Esperando archivo...',
   'continueToReview': 'CONTINUAR A DESCARGA',
   'generatingCertificate': 'GENERANDO CERTIFICADO...',
-  'continueToReview_v2': 'CONTINUAR A REVISIÓN',
+  'continueToReview_v2': 'FINALIZAR Y DESCARGAR',
 
   'technicalNotes': 'NOTAS TÉCNICAS',
   'inspector.aiHyperAssist': 'ASISTENTE AI HYPER',

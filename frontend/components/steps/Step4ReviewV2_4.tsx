@@ -237,19 +237,30 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 <span className="text-[0.8rem] font-mono text-[var(--text-secondary)] italic truncate max-w-[150px]">{formatLabel(selectedPolicy || 'DEFAULT_OVERSIGHT')}</span>
                             </div>
                         </div>
-                        <div className="flex gap-2">
-                            <button 
-                              onClick={onBack}
-                              className="px-6 py-3 border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-muted)] text-[0.7rem] font-black uppercase tracking-[0.2em] hover:text-[var(--text-primary)] hover:border-[var(--text-primary)] transition-all flex items-center gap-2"
-                            >
-                              {t('technicalNotes')}
-                            </button>
+                        <div className="flex flex-col gap-3">
+                            <div className="flex gap-2">
+                                <button 
+                                  onClick={onBack}
+                                  className="px-4 py-3 border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-muted)] text-[0.7rem] font-black uppercase tracking-[0.2em] hover:text-[var(--text-primary)] hover:border-[var(--text-primary)] transition-all flex items-center gap-2"
+                                  title="Return to Policy Engine"
+                                >
+                                  <ChevronLeftIcon className="h-4 w-4" />
+                                  {t('common.back')}
+                                </button>
+                                <button 
+                                  onClick={() => setShowTechNote(true)}
+                                  className="flex-1 px-4 py-3 border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-muted)] text-[0.7rem] font-black uppercase tracking-[0.2em] hover:text-[var(--text-primary)] hover:border-[var(--text-primary)] transition-all flex items-center justify-center gap-2"
+                                >
+                                  {t('technicalNotes')}
+                                </button>
+                            </div>
                             <button 
                               onClick={onNext}
-                              className="flex-1 bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.8rem] font-black uppercase tracking-[0.2em] py-4 transition-all flex items-center justify-center gap-2"
+                              disabled={!lastPdfUrl}
+                              className={`w-full bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.8rem] font-black uppercase tracking-[0.2em] py-5 transition-all flex items-center justify-center gap-2 ${!lastPdfUrl ? 'opacity-50 cursor-not-allowed' : 'shadow-[0_10px_30px_rgba(220,0,0,0.2)]'}`}
                             >
-                              {t('continueToReview_v2')}
-                              <span className="text-xl">→</span>
+                              {lastPdfUrl ? t('continueToReview_v2') : t('waitingForArtifact')}
+                              {lastPdfUrl && <span className="text-xl">→</span>}
                             </button>
                         </div>
                     </div>

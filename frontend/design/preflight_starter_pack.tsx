@@ -64,7 +64,7 @@ export const PreflightShell = ({ children, headerContent, rightContent }: { chil
     <nav className="sticky top-0 z-50 flex h-20 shrink-0 items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-primary)] px-6 md:px-10 transition-colors duration-300">
       <div className="flex items-center gap-4 min-w-max">
         <PPOSLogo className="h-9 w-9" />
-        <div>
+        <div className="hidden md:block">
           <div className="ppp-header-title leading-none uppercase flex gap-1.5">
             <span className="text-[var(--accent-color)]">PrintPrice</span> 
             <span className="text-[var(--text-primary)]">Pro</span>
