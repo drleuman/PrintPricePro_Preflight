@@ -56,8 +56,14 @@ async function enqueueJob(type, payload = {}) {
   const jobId = normalizeJobId(payload);
   
   // Usamos localFilePath para la validación del contrato
-  const input = normalizeInput({ ...payload, filePath: localFilePath });
+  // Priority: Force use of environment-defined deployment ID to allow rotation/unlocking
   const deploymentId = process.env.PPOS_DEPLOYMENT_ID || process.env.DEPLOYMENT_ID || 'production';
+  
+  console.log('[QUEUE][DEPLOYMENT-RESOLVED]', { 
+    final: deploymentId, 
+    fromEnv: process.env.PPOS_DEPLOYMENT_ID,
+    fromContext: payload.authContext2?.deploymentId 
+  });
 
   // ... (restando del contenido para brevedad en la edición, pero localFilePath se usará abajo) ...
 
