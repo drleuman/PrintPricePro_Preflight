@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import * as pdfjsLib from 'pdfjs-dist';
 import { Stepper } from './components/Stepper';
 import { LoaderOverlay } from './components/LoaderOverlay';
 import { AIInspectorPanel } from './components/AIInspectorPanel';
@@ -25,6 +26,9 @@ import { normalizePreflightResult } from './utils/payloadNormalization';
 import { usePreflightWorker } from './hooks/usePreflightWorker';
 import { usePdfTools } from './hooks/usePdfTools';
 import { pposFetch } from './lib/apiClient';
+
+// Use CDN for worker to ensure stability in production across different server configs
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 import { AuthOverlayV2_4 } from './components/AuthOverlayV2_4';
 import { useAuth } from './hooks/useAuth';
@@ -93,7 +97,8 @@ function AppContent() {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (ldmActive) {
         e.preventDefault();
-        e.returnValue = '';
+        e.returnValue = 'Work in progress. Are you sure you want to leave?';
+        return e.returnValue;
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);

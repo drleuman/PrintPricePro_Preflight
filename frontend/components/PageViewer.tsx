@@ -3,10 +3,9 @@ import { Issue, Bbox, FileMeta, HeatmapData } from '../types';
 import { ChevronLeftIcon, ChevronRightIcon, FireIcon, EyeIcon } from '@heroicons/react/24/outline'; // FireIcon for Heatmap
 import { t } from '../i18n';
 import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+// Use CDN for worker to ensure stability in production across different server configs
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 interface PageViewerProps {
   file: File | null;
