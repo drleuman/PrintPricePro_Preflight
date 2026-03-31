@@ -249,12 +249,17 @@ function AppContent() {
     setLdmActive(true);
     setLdmStatus('Initializing AI Magic Fix on OS...');
     try {
-      const { jobId } = await autoFixServer(file, opts);
-      if (jobId) {
+      const res = await autoFixServer(file, opts);
+      const jobId = res.jobId || res.job_id || res.id;
+      let jobResult: any = res.inlineResult || res.result || res.job || null;
+
+      if (jobId && !jobResult) {
         activeJobIdRef.current = jobId;
         setLdmProgress(10);
-        const jobResult: any = await handleV2JobComplete(jobId);
-        
+        jobResult = await handleV2JobComplete(jobId);
+      }
+      
+      if (jobResult) {
         console.log('[APP][FIX-COMPLETE-HAF]', { jobId, hasReport: !!jobResult.report });
         if (jobResult.report) setAutoFixReport(jobResult.report);
         
@@ -262,9 +267,16 @@ function AppContent() {
         setAutoFixAfter(normalizedAfter);
         setResult(normalizedAfter);
         
+        // Final guards for artifact propagation
+        const artifactId = jobId || jobResult.meta?.jobId || jobResult.id;
+        if (artifactId) {
+          const url = `${window.location.origin}/api/v2/jobs/${artifactId}/artifacts/final_fixed_pdf`;
+          setLastPdfUrl(url);
+          lastPdfUrlRef.current = url;
+          setLastPdfName(jobResult?.meta?.filename || 'certified_pdf.pdf');
+        }
+
         setCurrentPage(1);
-        
-        // Auto-advance to certification if coming from magic fix or manual corrections
         setCurrentStep(4);
       }
       setLdmActive(false);

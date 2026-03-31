@@ -84,9 +84,9 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
     const autoFixServer = useCallback(async (
         file: File,
         opts?: any
-    ): Promise<{ jobId: string }> => {
+    ): Promise<any> => {
         const res = await startV2Preflight(file, opts?.policy || 'OFFSET_MODERN_COATED');
-        return { jobId: res.jobId || res.job_id || res.id };
+        return res;
     }, [startV2Preflight]);
 
     const getJobStatus = useCallback(async (jobId: string) => {
