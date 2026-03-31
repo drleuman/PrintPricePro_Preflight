@@ -32,6 +32,7 @@ interface Step3FixV2_4Props {
     isHeatmapLoading: boolean;
     isRunning: boolean;
     selectedProfile: string;
+    lastPdfUrl?: string | null;
     onPageChange: (page: number) => void;
     onNumPagesChange: (num: number) => void;
     onSelectIssue: (issue: Issue | null) => void;
@@ -75,6 +76,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
     isHeatmapLoading,
     isRunning,
     selectedProfile,
+    lastPdfUrl,
     onPageChange,
     onNumPagesChange,
     onSelectIssue,
@@ -105,6 +107,17 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
     const [aiAuditOpen, setAiAuditOpen] = useState(false);
     const [efficiencyOpen, setEfficiencyOpen] = useState(false);
     const [issueForAudit, setIssueForAudit] = useState<Issue | null>(null);
+
+    // Mapeo dinámico para Fix Phase (similar a Step 2 y 4)
+    const getFixTechStatus = () => {
+        if (!ldmActive) return null;
+        if (ldmProgress < 20) return 'ENQUEUING_ENGINE_JOB...';
+        if (ldmProgress < 50) return 'CORE_RADIOLOGICAL_CORRECTION...';
+        if (ldmProgress < 80) return 'HEURISTIC_LAYOUT_NORMALIZATION...';
+        return 'REBUILDING_COMPLIANT_ARTIFACT...';
+    };
+
+    const fixMessage = getFixTechStatus();
 
     const issues = result?.issues || [];
     const errorCount = issues.filter((i: Issue) => i.severity === 'error').length;
@@ -146,7 +159,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                     </div>
                     <div className="mt-3 flex items-center justify-between">
                         <div className="text-[0.6rem] font-mono text-[var(--text-secondary)] uppercase tracking-[0.2em]">
-                           {ldmStatus || t('step.fix.analyzingLayers')}
+                           {ldmStatus || fixMessage || t('step.fix.analyzingLayers')}
                         </div>
                         <div className="text-[0.55rem] font-mono text-[var(--accent-color)] uppercase animate-pulse">
                             {t('step.fix.hwAccel')}
@@ -262,9 +275,19 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                             </div>
                         </div>
 
-                        <div className="flex-1 p-8 pt-16 overflow-auto custom-scrollbar flex items-center justify-center bg-[var(--bg-primary)]">
+                        <div className="flex-1 p-8 pt-16 overflow-auto custom-scrollbar flex items-center justify-center bg-[var(--bg-primary)] relative">
+                            {isHeatmapLoading && (
+                                <div className="absolute inset-0 z-[15] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+                                    <div className="h-10 w-10 border-2 border-[var(--accent-color)] border-t-transparent rounded-full animate-spin mb-4" />
+                                    <div className="text-[0.6rem] font-black uppercase tracking-[0.3em] text-[var(--accent-color)] font-mono">
+                                        CALCULATING_INK_DENSITY...
+                                    </div>
+                                </div>
+                            )}
                             <PageViewer 
+                                key={`step3-viewer-${lastPdfUrl ? 'artifact' : 'local'}`}
                                 file={file}
+                                pdfUrl={lastPdfUrl}
                                 numPages={numPages}
                                 currentPage={currentPage}
                                 onPageChange={onPageChange}

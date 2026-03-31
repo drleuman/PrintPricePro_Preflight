@@ -595,6 +595,7 @@ function AppContent() {
                     onOpenEfficiency={() => alert('Efficiency optimized by PPOS.')}
                     onNext={() => setCurrentStep(4)}
                     onBack={() => setCurrentStep(2)}
+                    lastPdfUrl={lastPdfUrl}
                     serverAvailable={true}
                     previewPages={previewPages}
                     previewLoading={previewLoading}
