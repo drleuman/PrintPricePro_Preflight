@@ -114,16 +114,15 @@ router.post(
       if (job.mode === 'sync') {
         responsePayload.inlineResult = job.inlineResult;
       } else {
-        responsePayload.id = job.id;
-        responsePayload.jobId = job.id;
-        responsePayload.status = job.status || 'QUEUED';
+        // Enforce canonical job_ prefix for async polling compatibility
+        const canonicalId = String(job.id).startsWith('job_') ? job.id : `job_${job.id}`;
+        responsePayload.id = canonicalId;
+        responsePayload.jobId = canonicalId;
       }
 
-      console.log('[BFF][JOB-CREATE-RETURN]', {
-        requestId,
-        mode: job.mode,
-        jobId: job.id,
-        isInline: job.mode === 'sync'
+      console.log(`[BFF][V2-JOB-SUCCESS][${requestId}] Response:`, {
+        id: responsePayload.id || 'SYNC',
+        inline: !!responsePayload.inlineResult
       });
 
       return res.status(201).json(responsePayload);
@@ -189,12 +188,14 @@ router.get('/policies', async (req, res) => {
 
 /**
  * GET /api/v2/jobs/:jobId
- * Returns the status of a specific job from PPOS.
  */
 router.get('/:jobId', async (req, res) => {
   try {
+    const { jobId } = req.params;
+    const finalJobId = String(jobId).startsWith('job_') ? jobId : `job_${jobId}`;
+
     const response = await pposRequest(
-      ppos.routes.jobStatus(req.params.jobId),
+      ppos.routes.jobStatus(finalJobId),
       {
         method: 'GET',
         headers: {
