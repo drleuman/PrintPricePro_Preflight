@@ -114,10 +114,10 @@ router.post(
       if (job.mode === 'sync') {
         responsePayload.inlineResult = job.inlineResult;
       } else {
-        // Enforce canonical job_ prefix for async polling compatibility
-        const canonicalId = String(job.id).startsWith('job_') ? job.id : `job_${job.id}`;
-        responsePayload.id = canonicalId;
-        responsePayload.jobId = canonicalId;
+        // Trust the Engine's returned ID verbatim to avoid mismatch
+        const engineId = job.jobId || job.id || job.job_id;
+        responsePayload.id = engineId;
+        responsePayload.jobId = engineId;
       }
 
       console.log(`[BFF][V2-JOB-SUCCESS][${requestId}] Response:`, {
@@ -190,19 +190,57 @@ router.get('/policies', async (req, res) => {
  * GET /api/v2/jobs/:jobId
  */
 router.get('/:jobId', async (req, res) => {
+  const { jobId } = req.params;
+  const requestId = req.get('x-request-id') || 'internal-' + Date.now();
+  
   try {
-    const { jobId } = req.params;
-    const finalJobId = String(jobId).startsWith('job_') ? jobId : `job_${jobId}`;
-
-    const response = await pposRequest(
-      ppos.routes.jobStatus(finalJobId),
+    console.log(`[BFF][POLL][${requestId}] Status check for Job: ${jobId}`);
+    
+    const authHeader = identityService.getAuthHeaders(req.auth || req.user || {}).Authorization;
+    
+    // Pass 1: Try literal ID as provided
+    let response = await pposRequest(
+      ppos.routes.jobStatus(jobId),
       {
-        method: 'GET',
         headers: {
-          Authorization: identityService.getAuthHeaders(req.auth || req.user || {}).Authorization
+          'Authorization': authHeader,
+          'X-Request-ID': requestId
         }
       }
     );
+
+    // Pass 2: Fallback if 404 and ID looks like a numeric worker ID
+    if (response.status === 404 && !String(jobId).startsWith('job_')) {
+          console.log(`[BFF][POLL][FALLBACK] ID ${jobId} not found. Trying prefixed 'job_${jobId}'...`);
+          response = await pposRequest(
+            ppos.routes.jobStatus(`job_${jobId}`),
+            {
+              headers: {
+                'Authorization': authHeader,
+                'X-Request-ID': requestId + '-retry'
+              }
+            }
+          );
+    }
+
+    // Pass 3: Fallback if 404 and ID has a prefix (try legacy numeric)
+    if (response.status === 404 && String(jobId).startsWith('job_')) {
+          const numericId = String(jobId).replace('job_', '');
+          console.log(`[BFF][POLL][FALLBACK] ID ${jobId} not found. Trying numeric '${numericId}'...`);
+          response = await pposRequest(
+            ppos.routes.jobStatus(numericId),
+            {
+              headers: {
+                'Authorization': authHeader,
+                'X-Request-ID': requestId + '-retry2'
+              }
+            }
+          );
+    }
+
+    if (response.status === 404) {
+      return res.status(404).json({ error: 'Job not found', jobId });
+    }
 
     const raw = await response.text();
     let data = {};
