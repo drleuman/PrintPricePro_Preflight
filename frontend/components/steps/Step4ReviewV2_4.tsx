@@ -234,10 +234,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         
                         <button 
                             onClick={onNext}
-                            disabled={!lastPdfUrl}
-                            className={`p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all flex items-center justify-center gap-2 w-full ${!lastPdfUrl ? 'bg-[var(--text-muted)] cursor-not-allowed opacity-50' : 'bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)]'}`}
+                            disabled={isRunning || (!lastPdfUrl && !isAnalyzeOnly)}
+                            className={`p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all flex items-center justify-center gap-2 w-full ${ (isRunning || (!lastPdfUrl && !isAnalyzeOnly)) ? 'bg-[var(--text-muted)] cursor-not-allowed opacity-50' : 'bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)]'}`}
                         >
-                            <RocketLaunchIcon className="h-4 w-4" /> {lastPdfUrl ? t('continueToReview').toUpperCase() : t('waitingForArtifact').toUpperCase()}
+                            <RocketLaunchIcon className="h-4 w-4" /> { (lastPdfUrl || isAnalyzeOnly) ? (isAnalyzeOnly ? t('finalizeTrace').toUpperCase() : t('continueToReview').toUpperCase()) : t('waitingForArtifact').toUpperCase()}
                         </button>
                     </div>
                 </div>
@@ -288,11 +288,11 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             </div>
                             <button 
                               onClick={onNext}
-                              disabled={!lastPdfUrl}
-                              className={`w-full bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.8rem] font-black uppercase tracking-[0.2em] py-5 transition-all flex items-center justify-center gap-2 ${!lastPdfUrl ? 'opacity-50 cursor-not-allowed' : 'shadow-[0_10px_30px_rgba(220,0,0,0.2)]'}`}
+                              disabled={isRunning || (!lastPdfUrl && !isAnalyzeOnly)}
+                              className={`w-full bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.8rem] font-black uppercase tracking-[0.2em] py-5 transition-all flex items-center justify-center gap-2 ${ (isRunning || (!lastPdfUrl && !isAnalyzeOnly)) ? 'opacity-50 cursor-not-allowed' : 'shadow-[0_10px_30px_rgba(220,0,0,0.2)]'}`}
                             >
-                              {lastPdfUrl ? t('continueToReview_v2') : t('waitingForArtifact')}
-                              {lastPdfUrl && <span className="text-xl">→</span>}
+                              {(lastPdfUrl || isAnalyzeOnly) ? (isAnalyzeOnly ? t('finalizeTrace') : t('continueToReview_v2')) : t('waitingForArtifact')}
+                              {(lastPdfUrl || isAnalyzeOnly) && <span className="text-xl">→</span>}
                             </button>
 
                             {/* Live Certification Terminal (Monolith Extension) */}
