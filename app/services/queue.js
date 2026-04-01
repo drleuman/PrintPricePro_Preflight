@@ -59,6 +59,9 @@ async function enqueueJob(type, payload = {}) {
   // Priority: Force use of environment-defined deployment ID to allow rotation/unlocking
   const deploymentId = 'production-enterprise-dedicated-v2';
   
+  // Force: Re-hydrate input metadata to avoid 'input is not defined' 500 error
+  const input = normalizeInput(payload);
+  
   console.log('[QUEUE][DEPLOYMENT-RESOLVED]', { 
     final: deploymentId, 
     fromEnv: process.env.PPOS_DEPLOYMENT_ID,
