@@ -43,6 +43,8 @@ router.post(
   async (req, res) => {
     const requestId = req.id || `req_${Date.now()}`;
     const tenantId = getTenantId(req);
+    // FORCE: Generate a unique jobId here to ensure PPOS contract safety
+    const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
     try {
       console.log(`[BFF][V2-JOB-START][${requestId}]`, {
@@ -72,11 +74,12 @@ router.post(
       const internalToken = identityService.getAuthHeaders(authContext).Authorization;
 
       const job = await queue.enqueueJob('PREFLIGHT', {
+        jobId, // Pass the pre-generated ID
         requestId,
         tenantId,
         policy,
         filename,
-        filePath: req.file.path, // Use the multer temp file path directly
+        filePath: req.file.path,
         size: req.file.size,
         userToken: internalToken,
         authContext
