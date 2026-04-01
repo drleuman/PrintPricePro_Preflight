@@ -250,6 +250,16 @@ router.get('/:jobId', async (req, res) => {
       data = { raw };
     }
 
+    // --- v2.4.91: Payload Normalization (BFF/FE Contract Sync) ---
+    // If the engine returns a 'result' wrapper, flatten it to match the inline response
+    if (data.status === 'COMPLETED' && data.result) {
+        console.log(`[BFF][POLL][NORMALIZATION] Flattening result for job ${jobId}`);
+        const result = data.result;
+        delete data.result;
+        data = { ...data, ...result };
+    }
+    // -------------------------------------------------------------
+
     return res.status(response.status).json(data);
 
   } catch (error) {

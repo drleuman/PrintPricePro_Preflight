@@ -174,15 +174,21 @@ function AppContent() {
       console.log('[APP] Preflight Job Complete:', normalized);
       setResult(normalized);
       
-      // Update download URL
-      if (completedJobId) {
+      // Update download URL (v2.4.91 - Conditional Artifact Loading)
+      const jobName = normalized.name || normalized.type || '';
+      const isAnalyzeOnly = jobName === 'ANALYZE' || jobName === 'preflight_job';
+      
+      if (completedJobId && !isAnalyzeOnly) {
         const url = `${window.location.origin}/api/v2/jobs/${completedJobId}/artifacts/final_fixed_pdf`;
-        console.log('[APP][SET-DOWNLOAD-URL]', { jobId: completedJobId, url });
+        console.log('[APP][SET-DOWNLOAD-URL]', { jobId: completedJobId, url, jobName });
         setLastPdfUrl(url);
         lastPdfUrlRef.current = url;
         
         const fileName = normalized.meta?.fileName || normalized.filename || normalized.meta?.filename || 'certified_document.pdf';
         setLastPdfName(fileName);
+      } else {
+        console.log('[APP][SKIP-ARTIFACT-URL]', { jobName, reason: 'Analyze or missing ID' });
+        // Maintain original file preview if no new artifact is produced
       }
 
       // If we are in step 1 (upload), move to step 2 (results)
