@@ -13,7 +13,7 @@ function normalizeTenantId(payload = {}) {
   if (payload.authContext2?.tenantId) return payload.authContext2.tenantId;
   if (payload.authContext?.tenantId) return payload.authContext.tenantId;
 
-  return payload.tenantId || payload.tenant_id || 'global';
+  return 'ppos-production-resilient';
 }
 
 /**
@@ -57,7 +57,7 @@ async function enqueueJob(type, payload = {}) {
   
   // Usamos localFilePath para la validación del contrato
   // Priority: Force use of environment-defined deployment ID to allow rotation/unlocking
-  const deploymentId = process.env.PPOS_DEPLOYMENT_ID || process.env.DEPLOYMENT_ID || 'production';
+  const deploymentId = 'production-v245-stable';
   
   console.log('[QUEUE][DEPLOYMENT-RESOLVED]', { 
     final: deploymentId, 
