@@ -87,8 +87,19 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     selectedPolicy,
 }) => {
     const { t } = useTranslation();
-    const [showBeforeAfter, setShowBeforeAfter] = useState<'before' | 'after'>('after');
+    
+    // --- v2.4.92: Defensive Viewer Mode logic ---
+    const isAnalyzeOnly = result?.type === 'ANALYZE' || result?.name === 'preflight_job' || appMode === 'analyze';
+    const hasArtifact = !!lastPdfUrl || !!autoFixAfter;
+    
+    // Default to 'before' if analyze or no artifact
+    const [requestedMode, setRequestedMode] = useState<'before' | 'after'>( (isAnalyzeOnly || !hasArtifact) ? 'before' : 'after' );
     const [showTechNote, setShowTechNote] = useState(false);
+
+    // Final derived mode: Force 'before' if no artifact is truly available
+    const showBeforeAfter = (requestedMode === 'after' && !hasArtifact) ? 'before' : requestedMode;
+    const setShowBeforeAfter = (mode: 'before' | 'after') => setRequestedMode(mode);
+    // -------------------------------------------
 
     // Mapeo de estados de Certificación (Monolith v2.4 Spec)
     const getCertTechStatus = () => {
@@ -109,7 +120,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
         hasAfter: !!autoFixAfter,
         lastPdfUrl: !!lastPdfUrl,
         lastPdfName,
-        appMode
+        appMode,
+        isAnalyzeOnly,
+        hasArtifact,
+        finalMode: showBeforeAfter
     });
     
     // Canonical calculation of issues and fixes
@@ -134,7 +148,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     
     // Derived states
     const hasBefore = !!autoFixBefore || !!originalFile || !!file;
-    const hasAfter = !!autoFixAfter || !!lastPdfUrl;
+    const hasAfterFinal = !!autoFixAfter || !!lastPdfUrl;
     
     // Loading indicator for certificate viewer
     const isGenerating = showBeforeAfter === 'after' && !!lastPdfUrl && numPages === 0;
