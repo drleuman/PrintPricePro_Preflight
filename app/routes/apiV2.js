@@ -261,6 +261,12 @@ router.get('/:jobId', async (req, res) => {
         data.findings = result.findings || result.report?.findings || data.findings || [];
         data.issues = result.issues || result.report?.issues || data.issues || [];
         
+        // --- v2.4.95: Hard-Syncing Boolean Flags after Flattening ---
+        data.hasReport = !!data.report;
+        data.hasFindings = data.findings.length > 0;
+        data.hasIssues = data.issues.length > 0;
+        // -------------------------------------------------------------
+        
         // Ensure job type/identity is at the root
         data.type = result.type || data.type || 'ANALYZE';
         data.name = result.name || data.name || data.type;
