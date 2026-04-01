@@ -52,10 +52,19 @@ function humanizeDescription(code: string | undefined | null): string | null {
  * Robustly extracts findings from various possible backend payload locations.
  * Aligns with V2.4 canonical OS and legacy formats.
  */
-export function normalizePreflightResult(payload: any): PreflightResult | null {
-    if (!payload) return null;
+export function normalizePreflightResult(rawPayload: any): PreflightResult | null {
+    if (!rawPayload) return null;
 
-    console.log('[STEP2][RAW-PAYLOAD]', payload);
+    console.log('[STEP2][RAW-PAYLOAD]', rawPayload);
+
+    // --- v2.4.94: Deep Flattening of Async Payloads ---
+    // If the data is nested in 'result' (canonical async format), bring it to the root
+    let payload = rawPayload;
+    if (rawPayload.result && typeof rawPayload.result === 'object') {
+        console.log('[STEP2][FLATTENING] Merging nested result into payload root');
+        payload = { ...rawPayload, ...rawPayload.result };
+    }
+    // -------------------------------------------------
 
     // 1. Identify the findings array
     let findings: any[] = [];
