@@ -77,14 +77,15 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
         payload.report?.issues,
         payload.report?.findings,
         payload.result?.report?.issues,
+        payload.result?.report?.findings, // Added v2.4.97
         payload.result?.findings,
-        payload.summary?.findings,
-        payload.anomalies,
-        payload.warnings,
-        payload.alerts,
         payload.data?.issues,
         payload.data?.findings
     ];
+
+    candidatePaths.forEach((c, idx) => {
+        if (c) console.log(`[STEP2][CANDIDATE][${idx}]`, typeof c, Array.isArray(c));
+    });
 
     for (const candidate of candidatePaths) {
         if (Array.isArray(candidate)) {
@@ -93,6 +94,13 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
             if (candidate.length > 0) break;
         }
     }
+
+    // --- v2.4.97: Aggressive Source Detection ---
+    if (!sourceFound && (payload.report || payload.score !== undefined || payload.summary)) {
+        console.log('[STEP2][AGGRESSIVE-DETECTION] Source marked as found via report/score existence');
+        sourceFound = true;
+    }
+    // --------------------------------------------
 
     // 2. Normalize individual issues
     const normalizedIssues: Issue[] = findings.map((item, idx) => {
