@@ -104,10 +104,10 @@ router.post(
         ok: true,
         tenantId,
         policy,
-        input: {
-          assetId: job.id,
-          filename,
-          size: req.file.size
+        jobMeta: {
+          id: job.id,
+          fileName: req.file.originalname,
+          fileSize: req.file.size
         }
       };
 

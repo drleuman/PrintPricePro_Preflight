@@ -59,8 +59,8 @@ async function enqueueJob(type, payload = {}) {
   // Priority: Force use of environment-defined deployment ID to allow rotation/unlocking
   const deploymentId = 'production-ver-2-4-preflight';
   
-  // Force: Rename to pposPayloadInput to avoid shadowing/ReferenceError
-  const pposPayloadInput = normalizeInput(payload);
+  // Requirement: PPOS Engine Validator strictly expects the 'input' key.
+  const input = normalizeInput(payload);
   
   console.log('[QUEUE][DEPLOYMENT-RESOLVED]', { 
     final: deploymentId, 
@@ -86,7 +86,7 @@ async function enqueueJob(type, payload = {}) {
       cleanup: payload.cleanup || true
     },
     policy: payload.policy || 'OFFSET_MODERN_COATED',
-    input: pposPayloadInput,
+    input,
     metadata: {
       source: 'printprice-preflight-app',
       requestId: payload.requestId || null,
@@ -135,7 +135,7 @@ async function enqueueJob(type, payload = {}) {
 
       const fileBuffer = await fs.promises.readFile(localFilePath);
       const fileMimeType = payload.mimeType || 'application/pdf';
-      const fileName = payload.filename || pposPayloadInput.filename || 'document.pdf';
+      const fileName = payload.filename || input.filename || 'document.pdf';
       const blob = new Blob([fileBuffer], { type: fileMimeType });
 
       const form = new FormData();
@@ -151,7 +151,7 @@ async function enqueueJob(type, payload = {}) {
       form.append('policy', payload.policy || 'OFFSET_MODERN_COATED');
 
       // Nested objects as JSON strings
-      form.append('input', JSON.stringify(pposPayloadInput));
+      form.append('input', JSON.stringify(input));
       form.append('metadata', JSON.stringify({
         source: 'printprice-preflight-app',
         requestId: payload.requestId || null,
