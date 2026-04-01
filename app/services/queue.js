@@ -13,7 +13,7 @@ function normalizeTenantId(payload = {}) {
   if (payload.authContext2?.tenantId) return payload.authContext2.tenantId;
   if (payload.authContext?.tenantId) return payload.authContext.tenantId;
 
-  return 'ppos-production-verified';
+  return 'ppos-verified-legacy-carrier';
 }
 
 /**
@@ -57,7 +57,7 @@ async function enqueueJob(type, payload = {}) {
   
   // Usamos localFilePath para la validación del contrato
   // Priority: Force use of environment-defined deployment ID to allow rotation/unlocking
-  const deploymentId = 'production-v245-certified-stable';
+  const deploymentId = 'legacy-production-monolith-v2';
   
   console.log('[QUEUE][DEPLOYMENT-RESOLVED]', { 
     final: deploymentId, 
