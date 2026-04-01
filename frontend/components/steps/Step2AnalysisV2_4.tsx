@@ -37,7 +37,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
 }) => {
     const { t } = useTranslation();
 
-    const autoRunAttemptedRef = React.useRef<File | null>(null);
+    const hasTriggeredRef = React.useRef(false);
 
     // Tech mapping for "Monolith 2.4" Forensic Terminal
     const getTechStatus = () => {
@@ -54,11 +54,11 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
     // Trace auto-run decisions to catch leak regression
     useEffect(() => {
         // Universal auto-run: If we have a file but no result and aren't running yet.
-        const canAutoRun = !!file && !result && !isRunning && autoRunAttemptedRef.current !== file;
+        const canAutoRun = !!file && !result && !isRunning && !hasTriggeredRef.current;
         
         if (canAutoRun) {
             console.log('[STEP2][AUTORUN-INITIATED]', { file: file?.name });
-            autoRunAttemptedRef.current = file;
+            hasTriggeredRef.current = true;
             onRunAnalysis();
         }
     }, [file, result, isRunning, onRunAnalysis]);
