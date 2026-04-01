@@ -142,15 +142,13 @@ async function enqueueJob(type, payload = {}) {
       const fileBuffer = await fs.promises.readFile(localFilePath);
       const fileMimeType = payload.mimeType || 'application/pdf';
       const fileName = payload.filename || input.filename || 'document.pdf';
-      const blob = new Blob([fileBuffer], { type: fileMimeType });
+      const deploymentId = process.env.DEPLOYMENT_ID || 'local-dev';
+      const tenantId = process.env.PPOS_INTERNAL_TENANT_ID || 'ppos-production-worker';
 
+      // Build standard multipart/form-data for PPOS V2 engine contract
       const form = new FormData();
-
-      // Scalar fields
-      if (jobId) {
-        form.append('id', jobId);
-        form.append('jobId', jobId);
-      }
+      form.append('id', input.jobId || `job_${Date.now()}`);
+      form.append('jobId', input.jobId || `job_${Date.now()}`);
       form.append('tenantId', tenantId);
       form.append('deploymentId', deploymentId);
       form.append('job_type', type || 'PREFLIGHT');
