@@ -59,8 +59,14 @@ async function enqueueJob(type, payload = {}) {
   // Priority: Force use of environment-defined deployment ID to allow rotation/unlocking
   const deploymentId = 'production-ver-2-4-preflight';
   
-  // Requirement: PPOS Engine Validator strictly expects the 'input' key.
-  const input = normalizeInput(payload);
+  // Initialize 'input' at the function head to prevent ReferenceErrors in all scopes
+  let input = null;
+  try {
+    input = normalizeInput(payload);
+  } catch (err) {
+    console.error('[QUEUE][CONTRACT-ERROR]', err.message);
+    throw err;
+  }
   
   console.log('[QUEUE][DEPLOYMENT-RESOLVED]', { 
     final: deploymentId, 
