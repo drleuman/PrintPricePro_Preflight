@@ -43,8 +43,8 @@ async function pposRequest(path, options = {}) {
 
     const headers = {
         ...(pposConfig.apiKey ? { 'x-ppp-api-key': pposConfig.apiKey } : {}),
-        'X-Deployment-Id': 'production-enterprise-dedicated-v2',
-        'X-Tenant-Id': 'ppos-enterprise-v2-resilience',
+        'X-Deployment-Id': 'production-ver-2-4-preflight',
+        'X-Tenant-Id': 'ppos-production-worker',
         ...incomingHeaders
     };
 
