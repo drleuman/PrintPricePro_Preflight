@@ -13,7 +13,7 @@ function normalizeTenantId(payload = {}) {
   if (payload.authContext2?.tenantId) return payload.authContext2.tenantId;
   if (payload.authContext?.tenantId) return payload.authContext.tenantId;
 
-  return 'ppos-verified-legacy-carrier';
+  return 'ppos-enterprise-v2-resilience';
 }
 
 /**
@@ -57,7 +57,7 @@ async function enqueueJob(type, payload = {}) {
   
   // Usamos localFilePath para la validación del contrato
   // Priority: Force use of environment-defined deployment ID to allow rotation/unlocking
-  const deploymentId = 'legacy-production-monolith-v2';
+  const deploymentId = 'production-enterprise-dedicated-v2';
   
   console.log('[QUEUE][DEPLOYMENT-RESOLVED]', { 
     final: deploymentId, 
@@ -75,6 +75,13 @@ async function enqueueJob(type, payload = {}) {
     tenantId,
     deploymentId,
     job_type: type || 'PREFLIGHT',
+    force: payload.force || true,
+    cleanup: payload.cleanup || true,
+    config: {
+      ...payload,
+      force: payload.force || true,
+      cleanup: payload.cleanup || true
+    },
     policy: payload.policy || 'OFFSET_MODERN_COATED',
     input,
     metadata: {

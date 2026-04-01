@@ -72,7 +72,7 @@ function buildInternalAuthPayload(user = {}) {
         appRole: originalRole,       // Product role (DEVELOPER, AUTHOR, etc)
         scopes: scopes,
         scope: scopes.join(' '),     // Compatibility with some OAuth2 decoders
-        tenantId: 'ppos-verified-legacy-carrier'
+        tenantId: 'ppos-enterprise-v2-resilience'
     };
 }
 

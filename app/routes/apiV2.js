@@ -75,6 +75,8 @@ router.post(
 
       const job = await queue.enqueueJob('PREFLIGHT', {
         jobId, // Pass the pre-generated ID
+        force: true,   // Clear previous job state
+        cleanup: true, // Remove ghost tasks
         requestId,
         tenantId,
         policy,
