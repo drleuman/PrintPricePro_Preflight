@@ -250,15 +250,25 @@ router.get('/:jobId', async (req, res) => {
       data = { raw };
     }
 
-    // --- v2.4.91: Payload Normalization (BFF/FE Contract Sync) ---
-    // If the engine returns a 'result' wrapper, flatten it to match the inline response
+    // --- v2.4.93: Deep Payload Normalization (BFF/FE Contract Sync) ---
+    // If the engine returns a 'result' wrapper, hard-flatten it to ensure consistent Step 2/Step 4 behavior
     if (data.status === 'COMPLETED' && data.result) {
-        console.log(`[BFF][POLL][NORMALIZATION] Flattening result for job ${jobId}`);
+        console.log(`[BFF][POLL][DEEP-NORMALIZATION] Flattening result for job ${jobId}`);
         const result = data.result;
+        
+        // Ensure core finding fields are at the root
+        data.report = result.report || data.report;
+        data.findings = result.findings || result.report?.findings || data.findings || [];
+        data.issues = result.issues || result.report?.issues || data.issues || [];
+        
+        // Ensure job type/identity is at the root
+        data.type = result.type || data.type || 'ANALYZE';
+        data.name = result.name || data.name || data.type;
+
+        // Clean up the nested wrapper to prevent confusion
         delete data.result;
-        data = { ...data, ...result };
     }
-    // -------------------------------------------------------------
+    // ------------------------------------------------------------------
 
     return res.status(response.status).json(data);
 

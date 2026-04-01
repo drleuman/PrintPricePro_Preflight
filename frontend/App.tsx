@@ -174,21 +174,24 @@ function AppContent() {
       console.log('[APP] Preflight Job Complete:', normalized);
       setResult(normalized);
       
-      // Update download URL (v2.4.91 - Conditional Artifact Loading)
-      const jobName = normalized.name || normalized.type || '';
-      const isAnalyzeOnly = jobName === 'ANALYZE' || jobName === 'preflight_job';
+      // Update download URL (v2.4.93 - Deep Artifact Deteccion)
+      // Cascading type detection for maximum resilience
+      const jobIdentifier = (normalized.type || normalized.result?.type || normalized.name || '').toUpperCase();
+      const isAutoFixSuccess = jobIdentifier === 'AUTOFIX' || !!normalized.artifacts?.final_fixed_pdf;
       
-      if (completedJobId && !isAnalyzeOnly) {
+      if (completedJobId && isAutoFixSuccess) {
         const url = `${window.location.origin}/api/v2/jobs/${completedJobId}/artifacts/final_fixed_pdf`;
-        console.log('[APP][SET-DOWNLOAD-URL]', { jobId: completedJobId, url, jobName });
+        console.log('[APP][SET-DOWNLOAD-URL][SUCCESS]', { jobId: completedJobId, url, jobIdentifier });
         setLastPdfUrl(url);
         lastPdfUrlRef.current = url;
         
         const fileName = normalized.meta?.fileName || normalized.filename || normalized.meta?.filename || 'certified_document.pdf';
         setLastPdfName(fileName);
       } else {
-        console.log('[APP][SKIP-ARTIFACT-URL]', { jobName, reason: 'Analyze or missing ID' });
-        // Maintain original file preview if no new artifact is produced
+        console.log('[APP][SKIP-ARTIFACT-URL]', { jobIdentifier, reason: 'Analyze or missing artifacts' });
+        // Restore original file view if we only performed an analysis
+        setLastPdfUrl(null); 
+        lastPdfUrlRef.current = null;
       }
 
       // If we are in step 1 (upload), move to step 2 (results)
@@ -234,13 +237,19 @@ function AppContent() {
         const normalized = normalizePreflightResult(res.inlineResult);
         setResult(normalized);
         
-        // Sync artifact URL if jobId is present in inline metadata
-        const jobId = normalized.meta?.jobId;
-        if (jobId) {
+        // Sync artifact URL if jobId is present in inline metadata (v2.4.93 sync)
+        const jobId = normalized.meta?.jobId || normalized.id;
+        const jobIdentifier = (normalized.type || normalized.result?.type || normalized.name || '').toUpperCase();
+        const isAutoFixSuccess = jobIdentifier === 'AUTOFIX' || !!normalized.artifacts?.final_fixed_pdf;
+
+        if (jobId && isAutoFixSuccess) {
           const url = `${window.location.origin}/api/v2/jobs/${jobId}/artifacts/final_fixed_pdf`;
           setLastPdfUrl(url);
           lastPdfUrlRef.current = url;
           setLastPdfName(normalized.meta?.fileName || 'certified_document.pdf');
+        } else {
+          setLastPdfUrl(null);
+          lastPdfUrlRef.current = null;
         }
 
         setCurrentStep(2);
