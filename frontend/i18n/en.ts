@@ -1,5 +1,3 @@
-// translations.ts (o como se llame tu archivo)
-
 export const en = {
   // App / header
   appName: 'PDF Preflight Check',
@@ -37,20 +35,6 @@ export const en = {
   igniteEngine: 'Ignite V2 Engine',
   continueToReview: 'Continue to Review →',
   startOver: 'Start Over',
-  technicalNotes: 'TECHNICAL NOTES',
-  'inspector.aiHyperAssist': 'AI HYPER ASSIST',
-  'inspector.tacticalCorrection': 'TACTICAL CORRECTION',
-  'inspector.bleedIngressMode': 'BLEED INGRESS MODE',
-  'inspector.policyEnforcement': 'POLICY ENFORCEMENT',
-  'categories.images': 'IMAGES',
-  'categories.color': 'COLOR',
-  'categories.fonts': 'FONTS',
-  'categories.metadata': 'METADATA',
-  'categories.transparency': 'TRANSPARENCY',
-  'categories.bleed_margins': 'BLEED & MARGINS',
-  'categories.resolution': 'RESOLUTION',
-  'categories.compliance': 'COMPLIANCE',
-  'categories.page_setup': 'PAGE SETUP',
 
   // Status messages
   analysisWaitMessage: 'Please wait while we check your document for print readiness',
@@ -707,6 +691,35 @@ export const en = {
   'forensics.dataUnavailable': 'Forensics Data Unavailable',
   'forensics.dataUnavailableDesc': 'Analysis completed but no forensic data could be parsed from the carrier.',
   'waitingForArtifact': 'Waiting for artifact...',
+  'inspector.aiHyperAssist': 'AI HYPER ASSIST',
+  'inspector.tacticalCorrection': 'TACTICAL CORRECTION',
+  'inspector.bleedIngressMode': 'BLEED INGRESS MODE',
+  'inspector.policyEnforcement': 'POLICY ENFORCEMENT',
+  'categories.images': 'IMAGES',
+  'categories.color': 'COLOR',
+  'categories.fonts': 'FONTS',
+  'categories.metadata': 'METADATA',
+  'categories.transparency': 'TRANSPARENCY',
+  'categories.bleed_margins': 'BLEED & MARGINS',
+  'categories.resolution': 'RESOLUTION',
+  'categories.compliance': 'COMPLIANCE',
+  'categories.page_setup': 'PAGE SETUP',
+  'finding.color_compliance': 'COLOR SPACE COMPLIANCE',
+  'finding.trim_anomaly': 'TRIM BOX ANOMALY',
+  'finding.image_analysis': 'IMAGE ASSET ANALYSIS',
+  'finding.typography_integrity': 'TYPOGRAPHY INTEGRITY',
+  'finding.bleed_exception': 'BLEED ZONE EXCEPTION',
+  'finding.resolution_fault': 'RESOLUTION DENSITY FAULT',
+  'finding.metadata_fault': 'METADATA STRUCTURE FAULT',
+  'finding.transparency_risk': 'TRANSPARENCY FLATTENING RISK',
+  'finding.rgb_detected': 'RGB COLOR DETECTED',
+  'finding.low_res_asset': 'LOW RESOLUTION ASSET',
+  'finding.unembedded_glyph': 'UNEMBEDDED GLYPH FAULT',
+  'finding.critical_trace': 'CRITICAL TRACE FINDING',
+  'finding.geom_anomaly': 'GEOMETRY ANOMALY',
+  'finding.ink_limit_violation': 'INK COVERAGE EXCEEDED',
+  'finding.spot_color_warning': 'SPOT COLOR WARNING',
+  'finding.pdf_compliance_error': 'PDF/X COMPLIANCE FAULT',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

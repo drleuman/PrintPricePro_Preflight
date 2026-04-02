@@ -9,31 +9,41 @@ export const translateIssueTitle = (issue: Issue | null | undefined, t: (key: st
 
     const code = (issue.code || issue.id || "").toString().toUpperCase();
 
-    // Map common PPOS engine codes to English canonical names
+    // Map common PPOS engine codes to localized keys
     const codes: Record<string, string> = {
-        'IND_TRIM': 'TRIM BOX ANOMALY',
-        'IND_COLOR': 'COLOR SPACE COMPLIANCE',
-        'IND_IMG': 'IMAGE ASSET ANALYSIS',
-        'IND_FONT': 'TYPOGRAPHY INTEGRITY',
-        'IND_BLEED': 'BLEED ZONE EXCEPTION',
-        'IND_RESOLUTION': 'RESOLUTION DENSITY FAULT',
-        'IND_METADATA': 'METADATA STRUCTURE FAULT',
-        'IND_TRANSPARENCY': 'TRANSPARENCY FLATTENING RISK',
-        'TRIM_BOX_MISSING': 'TRIM BOX ANOMALY',
-        'COLOR_RGB': 'RGB COLOR DETECTED',
-        'IMAGE_LOW_RES': 'LOW RESOLUTION ASSET',
-        'FONT_NOT_EMBEDDED': 'UNEMBEDDED GLYPH FAULT',
-        'BLEED_MISSING': 'BLEED ZONE EXCEPTION',
+        'IND_GEOM': t('finding.geom_anomaly'),
+        'IND_TYPE': t('finding.typography_integrity'),
+        'IND_COLOR': t('finding.color_compliance'),
+        'IND_BOX': t('finding.trim_anomaly'),
+        'IND_IMAGE': t('finding.image_analysis'),
+        'IND_BLEED': t('finding.bleed_exception'),
+        'IND_TRIM': t('finding.trim_anomaly'),
+        'IND_FONT': t('finding.typography_integrity'),
+        'IND_BLACK': t('finding.ink_limit_violation'),
+        'IND_SPOT': t('finding.spot_color_warning'),
+        'IND_PDF': t('finding.pdf_compliance_error'),
+        'IND_IMG': t('finding.image_analysis'),
+        'IND_RESOLUTION': t('finding.resolution_fault'),
+        'IND_METADATA': t('finding.metadata_fault'),
+        'IND_TRANSPARENCY': t('finding.transparency_risk'),
+        'TRIM_BOX_MISSING': t('finding.trim_anomaly'),
+        'COLOR_RGB': t('finding.rgb_detected'),
+        'IMAGE_LOW_RES': t('finding.low_res_asset'),
+        'FONT_NOT_EMBEDDED': t('finding.unembedded_glyph'),
+        'BLEED_MISSING': t('finding.bleed_exception'),
     };
 
     if (codes[code]) return codes[code];
 
-    // Fallback logic: Use the translation key if it exists, otherwise clean the string
-    // If it's the specific "Problema con marcas de corte", we force the trim box key
+    // Fallback logic: Detect Spanish strings and return localized keys
     if (issue.title?.includes('marcas de corte') || issue.message?.includes('marcas de corte')) {
-        return 'TRIM BOX ANOMALY';
+        return t('finding.trim_anomaly');
     }
 
-    // Default to the title provided, but we prefer standardized names for the "Forensic" look
-    return issue.title || issue.message || "CRITICAL TRACE FINDING";
+    if (issue.title?.includes('Uso de RGB') || issue.message?.includes('Uso de RGB') || issue.title?.includes('perfiles no estándar')) {
+        return t('finding.color_compliance');
+    }
+
+    // Default to the title provided, but we prefer localized keys for the UI
+    return issue.title || issue.message || t('finding.critical_trace');
 };
