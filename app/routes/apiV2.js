@@ -267,12 +267,26 @@ router.get('/:jobId', async (req, res) => {
         data.hasIssues = data.issues.length > 0;
         // -------------------------------------------------------------
         
-        // Ensure job type/identity is at the root
-        data.type = result.type || data.type || 'ANALYZE';
+        // --- v2.4.111: Forensic Job-Type Identification Bridge ---
+        // Force 'ANALYZE' mode if type is missing to clear the Step 4 stall
+        const detectedType = result.type || data.type || result.job_type || 'ANALYZE';
+        data.type = detectedType.toUpperCase();
         data.name = result.name || data.name || data.type;
+
+        // v2.4.111: Artifact Path Registry Sync
+        // If the backend didn't register artifacts, build a virtual registry from the report root
+        if (!data.artifacts || Object.keys(data.artifacts).length === 0) {
+            data.artifacts = {
+                analysis_report: 'report.json',
+                ...((result.artifacts || result.report?.artifacts) || {})
+            };
+        }
 
         // Clean up the nested wrapper to prevent confusion
         delete data.result;
+    } else if (data.status === 'COMPLETED' && !data.type) {
+        // Fallback for non-nested or legacy payloads
+        data.type = 'ANALYZE';
     }
     // ------------------------------------------------------------------
 
