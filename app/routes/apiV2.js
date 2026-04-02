@@ -111,13 +111,12 @@ router.post(
         }
       };
 
+      const engineId = job.jobId || job.id || job.job_id;
+      responsePayload.id = engineId;
+      responsePayload.jobId = engineId;
+
       if (job.mode === 'sync') {
         responsePayload.inlineResult = job.inlineResult;
-      } else {
-        // Trust the Engine's returned ID verbatim to avoid mismatch
-        const engineId = job.jobId || job.id || job.job_id;
-        responsePayload.id = engineId;
-        responsePayload.jobId = engineId;
       }
 
       console.log(`[BFF][V2-JOB-SUCCESS][${requestId}] Response:`, {
@@ -264,20 +263,18 @@ router.get('/:jobId', async (req, res) => {
         // --- v2.4.95: Hard-Syncing Boolean Flags after Flattening ---
         data.hasReport = !!data.report;
         data.hasFindings = data.findings.length > 0;
-        data.hasIssues = data.issues.length > 0;
-        // -------------------------------------------------------------
-        
         // --- v2.4.111: Forensic Job-Type Identification Bridge ---
         // Force 'ANALYZE' mode if type is missing to clear the Step 4 stall
         const detectedType = result.type || data.type || result.job_type || 'ANALYZE';
         data.type = detectedType.toUpperCase();
         data.name = result.name || data.name || data.type;
 
-        // v2.4.111: Artifact Path Registry Sync
-        // If the backend didn't register artifacts, build a virtual registry from the report root
+        // v2.4.111: Persistent Artifact Registry Contract
+        // We expose canonical keys (e.g. 'final_fixed_pdf') and the downstream resolver handles them
         if (!data.artifacts || Object.keys(data.artifacts).length === 0) {
             data.artifacts = {
-                analysis_report: 'report.json',
+                analysis_report: 'analysis_report',
+                final_fixed_pdf: 'final_fixed_pdf', 
                 ...((result.artifacts || result.report?.artifacts) || {})
             };
         }
@@ -285,7 +282,6 @@ router.get('/:jobId', async (req, res) => {
         // Clean up the nested wrapper to prevent confusion
         delete data.result;
     } else if (data.status === 'COMPLETED' && !data.type) {
-        // Fallback for non-nested or legacy payloads
         data.type = 'ANALYZE';
     }
     // ------------------------------------------------------------------
@@ -307,8 +303,19 @@ router.get('/:jobId', async (req, res) => {
  */
 router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
   try {
+    // --- v2.4.111: BFF-Side Artifact Alias Support ---
+    // Maps frontend artifact keys to real filenames expected by PPOS
+    const artifactMap = {
+      'analysis_report': 'report.json',
+      'final_fixed_pdf': 'normalized.pdf',
+      'audit_report': 'fix_audit.json'
+    };
+    
+    // Resolve targeted artifact ID (favoring alias if present)
+    const resolvedArtifactId = artifactMap[req.params.artifactId] || req.params.artifactId;
+
     const response = await pposRequest(
-      ppos.routes.jobArtifact(req.params.jobId, req.params.artifactId),
+      ppos.routes.jobArtifact(req.params.jobId, resolvedArtifactId),
       {
         method: 'GET',
         headers: {
