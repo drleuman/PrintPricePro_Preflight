@@ -143,6 +143,8 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
 
     // 3. Construct the PreflightResult
     const result: PreflightResult = {
+        type: (payload.type || payload.result?.type || payload.job_type || '').toUpperCase() as any,
+        artifacts: payload.artifacts ?? payload.result?.artifacts ?? {},
         score: payload.score ?? payload.report?.score ?? (sourceFound && normalizedIssues.length === 0 ? 100 : (normalizedIssues.length > 0 ? Math.max(0, 100 - normalizedIssues.length * 10) : 0)),
         summary: payload.summary ?? payload.report?.summary ?? (sourceFound ? (normalizedIssues.length === 0 ? 'Clean Trace: No issues detected.' : `${normalizedIssues.length} issues identified.`) : 'Analysis data unavailable'),
         issues: normalizedIssues,

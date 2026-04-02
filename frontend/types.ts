@@ -140,6 +140,8 @@ export type AppMode = 'manual' | 'ai' | 'audit' | null;
  * The overall result of a PDF preflight analysis.
  */
 export interface PreflightResult {
+  type?: 'ANALYZE' | 'AUTOFIX';
+  artifacts?: Record<string, string>;
   score: number; // Overall score (0-100), higher is better
   summary: string; // A brief overall summary of findings
   issues: Issue[];
