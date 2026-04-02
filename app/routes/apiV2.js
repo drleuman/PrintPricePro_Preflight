@@ -263,6 +263,7 @@ router.get('/:jobId', async (req, res) => {
         // --- v2.4.95: Hard-Syncing Boolean Flags after Flattening ---
         data.hasReport = !!data.report;
         data.hasFindings = data.findings.length > 0;
+        data.hasIssues = data.issues.length > 0;
         // --- v2.4.111: Forensic Job-Type Identification Bridge ---
         // Force 'ANALYZE' mode if type is missing to clear the Step 4 stall
         const detectedType = result.type || data.type || result.job_type || 'ANALYZE';
