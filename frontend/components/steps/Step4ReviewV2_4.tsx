@@ -262,7 +262,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         <div className="pt-6 border-t border-[var(--border-color)] space-y-4">
                             <div className="flex items-center justify-between">
                                 <span className="text-[0.8rem] font-black uppercase tracking-widest text-[var(--text-muted)]">{t('labelCertificateId')}</span>
-                                <span className="text-[0.8rem] font-mono text-[var(--text-secondary)]">{formatLabel(`PPOS_TX_${(file?.size || 12345).toString().slice(-5)}`)}</span>
+                                <span className="text-[0.8rem] font-mono text-[var(--text-secondary)]">{formatLabel(result?.meta?.jobId || 'PPOS_INTERNAL_PENDING')}</span>
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-[0.8rem] font-black uppercase tracking-widest text-[var(--text-muted)]">{t('shell.policyProfile')}</span>

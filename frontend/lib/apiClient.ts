@@ -91,16 +91,23 @@ export async function pposFetch<T>(path: string, options?: RequestInit): Promise
 
     if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        // Normalización PPOS Error Contract
-        const pposError = errorData.error || {};
-        const message = pposError.message || errorData.message || `Request failed with status ${res.status}`;
         
-        const err: any = new Error(message);
+        // PPOS V2.4 Error Contract Normalization
+        const errorMessage = errorData.message || errorData.error || `Request failed with status ${res.status}`;
+        
+        const err: any = new Error(errorMessage);
         err.status = res.status;
-        err.code = pposError.code || 'UNKNOWN_ERROR';
-        err.type = pposError.type || 'SYSTEM_ERROR';
-        err.retryable = pposError.retryable || false;
+        err.code = errorData.code || errorData.error || 'UNKNOWN_ERROR';
+        err.traceId = errorData.traceId || headers['X-Request-ID'] || 'LOCAL-TRACE';
         err.data = errorData;
+        err.v2 = !!errorData.v2;
+        
+        console.error(`[API-ERROR][${err.traceId}]`, {
+            status: err.status,
+            code: err.code,
+            message: err.message
+        });
+
         throw err;
     }
 

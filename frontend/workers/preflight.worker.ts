@@ -16,20 +16,8 @@ ctx.onmessage = async (e) => {
 
     try {
         if (type === 'analyze') {
-            // Placeholder for full preflight analysis
-            ctx.postMessage({
-                type: 'analysisResult',
-                result: { 
-                    ok: true, 
-                    issues: [], 
-                    stats: { pages: 1 }, 
-                    meta: { 
-                        fileName: fileMeta?.name || 'unknown.pdf',
-                        fileSize: fileMeta?.size || 0,
-                        pageCount: 1 
-                    } 
-                }
-            });
+            // v2.4+ Monolith: Analysis delegated to PPOS. Local worker analysis disabled to prevent mock pollution.
+            throw new Error('Local worker analysis is deprecated. Use PPOS engine via BFF /api/v2/jobs.');
         } 
         else if (type === 'tacHeatmap') {
             const data = new Uint8Array(buffer);

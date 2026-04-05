@@ -62,9 +62,11 @@ router.use('/', async (req, res) => {
         console.error(`[PROXY][PPOS-ERROR] ${req.method} ${req.url}:`, error.message);
         if (!res.headersSent) {
             res.status(502).json({
-                error: 'Bad Gateway',
+                error: 'PPOS_GATEWAY_ERROR',
                 message: 'Failed to proxy request to PPOS Service',
-                details: error.message
+                details: error.message,
+                traceId: req.headers['x-request-id'] || 'system',
+                v2: true
             });
         }
     }

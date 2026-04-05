@@ -73,8 +73,14 @@ router.get('/summary', async (req, res) => {
             avg_risk_reduction: Math.round(riskBefore - riskAfter)
         });
     } catch (err) {
-        console.error('[ANALYTICS-SUMMARY]', err);
-        res.status(500).json({ error: 'Failed to load summary.' });
+        const traceId = req.headers['x-request-id'] || `req_ana_${Date.now()}`;
+        console.error(`[ANALYTICS-SUMMARY][${traceId}]`, err);
+        res.status(500).json({ 
+            error: 'ANALYTICS_FETCH_FAILED', 
+            message: 'Failed to load executive summary.',
+            traceId,
+            v2: true
+        });
     }
 });
 
@@ -113,8 +119,14 @@ router.get('/timeseries', async (req, res) => {
             }))
         });
     } catch (err) {
-        console.error('[ANALYTICS-TIMESERIES]', err);
-        res.status(500).json({ error: 'Failed to load timeseries.' });
+        const traceId = req.headers['x-request-id'] || `req_ana_ts_${Date.now()}`;
+        console.error(`[ANALYTICS-TIMESERIES][${traceId}]`, err);
+        res.status(500).json({ 
+            error: 'ANALYTICS_FETCH_FAILED', 
+            message: 'Failed to load daily activity timeseries.',
+            traceId,
+            v2: true
+        });
     }
 });
 
@@ -153,8 +165,14 @@ router.get('/policies', async (req, res) => {
             }))
         });
     } catch (err) {
-        console.error('[ANALYTICS-POLICIES]', err);
-        res.status(500).json({ error: 'Failed to load policy analytics.' });
+        const traceId = req.headers['x-request-id'] || `req_ana_pol_${Date.now()}`;
+        console.error(`[ANALYTICS-POLICIES][${traceId}]`, err);
+        res.status(500).json({ 
+            error: 'ANALYTICS_FETCH_FAILED', 
+            message: 'Failed to load policy performance breakdown.',
+            traceId,
+            v2: true
+        });
     }
 });
 
@@ -191,8 +209,14 @@ router.get('/errors', async (req, res) => {
             }))
         });
     } catch (err) {
-        console.error('[ANALYTICS-ERRORS]', err);
-        res.status(500).json({ error: 'Failed to load error analytics.' });
+        const traceId = req.headers['x-request-id'] || `req_ana_err_${Date.now()}`;
+        console.error(`[ANALYTICS-ERRORS][${traceId}]`, err);
+        res.status(500).json({ 
+            error: 'ANALYTICS_FETCH_FAILED', 
+            message: 'Failed to load error distribution analytics.',
+            traceId,
+            v2: true
+        });
     }
 });
 
@@ -237,8 +261,14 @@ router.get('/batches', async (req, res) => {
             }))
         });
     } catch (err) {
-        console.error('[ANALYTICS-BATCHES]', err);
-        res.status(500).json({ error: 'Failed to load batch analytics.' });
+        const traceId = req.headers['x-request-id'] || `req_ana_bat_${Date.now()}`;
+        console.error(`[ANALYTICS-BATCHES][${traceId}]`, err);
+        res.status(500).json({ 
+            error: 'ANALYTICS_FETCH_FAILED', 
+            message: 'Failed to load batch history analytics.',
+            traceId,
+            v2: true
+        });
     }
 });
 

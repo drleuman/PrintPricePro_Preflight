@@ -15,7 +15,12 @@ module.exports = (options = {}) => {
         const requestId = req.headers['x-request-id'] || 'system';
 
         if (!userId) {
-            return res.status(401).json({ error: 'AUTH_REQUIRED', message: 'Identity context required for governance.' });
+            return res.status(401).json({ 
+                error: 'AUTH_REQUIRED', 
+                message: 'Identity context required for governance.',
+                traceId: requestId,
+                v2: true
+            });
         }
 
         try {
@@ -28,13 +33,23 @@ module.exports = (options = {}) => {
             `, [userId]);
 
             if (users.length === 0) {
-                return res.status(404).json({ error: 'USER_NOT_FOUND', message: 'Node identity not recognized.' });
+                return res.status(404).json({ 
+                    error: 'USER_NOT_FOUND', 
+                    message: 'Node identity not recognized.',
+                    traceId: requestId,
+                    v2: true
+                });
             }
 
             const user = users[0];
 
             if (user.status !== 'ACTIVE') {
-                return res.status(403).json({ error: 'NODE_SUSPENDED', message: 'Access to Preflight node is currently restricted.' });
+                return res.status(403).json({ 
+                    error: 'NODE_SUSPENDED', 
+                    message: 'Access to Preflight node is currently restricted.',
+                    traceId: requestId,
+                    v2: true
+                });
             }
 
             // 1. Check Job Quota
@@ -43,7 +58,9 @@ module.exports = (options = {}) => {
                 return res.status(429).json({ 
                     error: 'LICENSE_LIMIT_EXCEEDED', 
                     code: 'DAILY_QUOTA_REACHED',
-                    message: `Daily limit of ${user.daily_jobs_limit} jobs reached. Upgrade to PRO for higher volume.`
+                    message: `Daily limit of ${user.daily_jobs_limit} jobs reached. Upgrade to PRO for higher volume.`,
+                    traceId: requestId,
+                    v2: true
                 });
             }
 
@@ -54,7 +71,9 @@ module.exports = (options = {}) => {
                     return res.status(413).json({ 
                         error: 'LICENSE_LIMIT_EXCEEDED', 
                         code: 'FILE_TOO_LARGE',
-                        message: `Plan ${user.plan} supports up to ${user.max_file_size_mb}MB. Current: ${fileSizeMb.toFixed(2)}MB.`
+                        message: `Plan ${user.plan} supports up to ${user.max_file_size_mb}MB. Current: ${fileSizeMb.toFixed(2)}MB.`,
+                        traceId: requestId,
+                        v2: true
                     });
                 }
             }
@@ -64,7 +83,9 @@ module.exports = (options = {}) => {
                 return res.status(403).json({ 
                     error: 'FEATURE_NOT_ALLOWED', 
                     code: 'AI_FIX_RESTRICTED',
-                    message: 'AI Magic Fix is a PRO feature. Current plan: FREE.'
+                    message: 'AI Magic Fix is a PRO feature. Current plan: FREE.',
+                    traceId: requestId,
+                    v2: true
                 });
             }
 
@@ -83,8 +104,13 @@ module.exports = (options = {}) => {
             req.license = user;
             next();
         } catch (err) {
-            console.error('[GOVERNANCE-ERROR]', err);
-            res.status(500).json({ error: 'GOVERNANCE_FAILURE', message: 'Resource check failed.' });
+            console.error(`[GOVERNANCE-ERROR][${requestId}]`, err);
+            res.status(500).json({ 
+                error: 'GOVERNANCE_FAILURE', 
+                message: 'Resource check failed in license node.',
+                traceId: requestId,
+                v2: true
+            });
         }
     };
 };

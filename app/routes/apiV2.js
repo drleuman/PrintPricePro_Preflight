@@ -126,20 +126,22 @@ router.post(
 
       return res.status(201).json(responsePayload);
     } catch (error) {
+      const traceId = requestId;
       if (req.file?.path) {
         fs.unlink(req.file.path, () => { });
       }
 
-      console.error('[BFF][JOB-CREATE][ERROR]', {
-        requestId,
+      console.error(`[BFF][V2-JOB-CREATE][ERROR][${traceId}]`, {
         tenantId,
         error: error.message
       });
 
       const status = error.status || 500;
       return res.status(status).json({
-        error: status === 403 ? 'Forbidden' : 'Failed to create V2 preflight job.',
-        message: error.message
+        error: status === 403 ? 'FORBIDDEN' : 'V2_JOB_CREATE_FAILED',
+        message: status === 403 ? 'Action restricted by security policy' : (error.message || 'Failed to initialize engine job.'),
+        traceId,
+        v2: true
       });
     }
   }
@@ -176,12 +178,18 @@ router.get('/policies', async (req, res) => {
 
     return res.json({ policies });
   } catch (error) {
-    console.error('[POLICIES_ERROR]', error?.response?.data || error.message);
+    const traceId = req.id || `req_pol_${Date.now()}`;
+    console.error(`[POLICIES_ERROR][${traceId}]`, error?.response?.data || error.message);
 
     const status = error?.response?.status || 500;
-    return res.status(status).json(
-      error?.response?.data || { error: 'POLICY_FETCH_FAILED' }
-    );
+    const errorData = error?.response?.data || {};
+    
+    return res.status(status).json({
+       error: errorData.error || 'POLICY_FETCH_FAILED',
+       message: errorData.message || 'The policy engine is unreachable.',
+       traceId,
+       v2: true
+    });
   }
 });
 
@@ -238,7 +246,12 @@ router.get('/:jobId', async (req, res) => {
     }
 
     if (response.status === 404) {
-      return res.status(404).json({ error: 'Job not found', jobId });
+      return res.status(404).json({ 
+        error: 'JOB_NOT_FOUND', 
+        message: 'The requested job ID was not found in the PPOS registry.',
+        traceId: requestId,
+        v2: true
+      });
     }
 
     const raw = await response.text();
@@ -272,13 +285,9 @@ router.get('/:jobId', async (req, res) => {
 
         // v2.4.111: Persistent Artifact Registry Contract
         // We expose canonical keys (e.g. 'final_fixed_pdf') and the downstream resolver handles them
-        if (!data.artifacts || Object.keys(data.artifacts).length === 0) {
-            data.artifacts = {
-                analysis_report: 'analysis_report',
-                final_fixed_pdf: 'final_fixed_pdf', 
-                ...((result.artifacts || result.report?.artifacts) || {})
-            };
-        }
+        // v2.4+ Cleanup: Remove hardcoded artifact mocks to prevent UI fakes.
+        // We only return what the real engine provides.
+        data.artifacts = (result.artifacts || result.report?.artifacts || data.artifacts || {});
 
         // Clean up the nested wrapper to prevent confusion
         delete data.result;
@@ -290,10 +299,13 @@ router.get('/:jobId', async (req, res) => {
     return res.status(response.status).json(data);
 
   } catch (error) {
+    console.error(`[BFF][POLL][ERROR][${requestId}]`, error.message);
     return res.status(502).json({
-      error: 'Bad Gateway',
-      message: 'Failed to fetch job status from PPOS',
-      details: error.message
+      error: 'PPOS_GATEWAY_ERROR',
+      message: 'The PPOS engine status node returned an unexpected response.',
+      details: error.message,
+      traceId: requestId,
+      v2: true
     });
   }
 });
@@ -339,10 +351,14 @@ router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
     return res.end(Buffer.from(arrayBuffer));
 
   } catch (error) {
+    const traceId = `req_art_${Date.now()}`;
+    console.error(`[BFF][ARTIFACT][ERROR][${traceId}]`, error.message);
     return res.status(502).json({
-      error: 'Bad Gateway',
-      message: 'Failed to fetch artifact from PPOS',
-      details: error.message
+      error: 'ARTIFACT_STREAM_FAILED',
+      message: 'Failed to retrieve requested artifact from PPOS storage.',
+      details: error.message,
+      traceId,
+      v2: true
     });
   }
 });

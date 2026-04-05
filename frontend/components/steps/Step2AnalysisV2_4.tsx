@@ -131,7 +131,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                                         
                                         <div className="flex gap-3 text-[var(--text-muted)] border-t border-[var(--border-color)]/30 pt-3">
                                             <span className="text-[0.6rem] font-bold shrink-0 opacity-50 uppercase tracking-widest">{t('step.analysis.igniter').replace('IGNITER ', '')}</span>
-                                            <span className="uppercase truncate">PPOS_V2_ASYNC_GATEWAY_332_RUNNING</span>
+                                            <span className="uppercase truncate">PPOS_V2_ASYNC_GATEWAY_ACTIVE</span>
                                         </div>
                                     </div>
                                 </div>

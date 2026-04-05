@@ -390,10 +390,14 @@ app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
 
   const statusCode = err.status || err.statusCode || 500;
+  const traceId = req.id || `unhandled_${Date.now()}`;
+  
   if (req.path.startsWith('/api')) {
     return res.status(statusCode).json({
-      error: err.message || 'Internal Server Error',
-      code: err.code || 'UNKNOWN_ERROR',
+      error: err.code || 'UNKNOWN_ERROR',
+      message: err.message || 'Internal Server Error',
+      traceId,
+      v2: true,
       stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
   }

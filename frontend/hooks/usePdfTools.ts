@@ -67,25 +67,25 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
     }, []);
 
     const convertToGrayscaleServer = useCallback(async (file: File) => {
-        const res = await startV2Preflight(file, 'DIGITAL_RGB');
+        const res = await startV2Preflight(file, 'DIGITAL_RGB', { mode: 'CONVERT_GRAYSCALE' });
         return res.jobId || res.job_id || res.id;
     }, [startV2Preflight]);
-
+    
     const convertColorServer = useCallback(async (file: File, profile: string = 'OFFSET_MODERN_COATED') => {
-        const res = await startV2Preflight(file, profile);
+        const res = await startV2Preflight(file, profile, { mode: 'CONVERT_COLOR' });
         return res.jobId || res.job_id || res.id;
     }, [startV2Preflight]);
-
+    
     const rebuildPdfServer = useCallback(async (file: File, dpi: number = 300) => {
-        const res = await startV2Preflight(file, 'OFFSET_MODERN_COATED');
+        const res = await startV2Preflight(file, 'OFFSET_MODERN_COATED', { mode: 'REBUILD', dpi });
         return res.jobId || res.job_id || res.id;
     }, [startV2Preflight]);
-
+    
     const autoFixServer = useCallback(async (
         file: File,
         opts?: any
     ): Promise<any> => {
-        const res = await startV2Preflight(file, opts?.policy || 'OFFSET_MODERN_COATED');
+        const res = await startV2Preflight(file, opts?.policy || 'OFFSET_MODERN_COATED', { mode: 'AUTOFIX', ...opts });
         return res;
     }, [startV2Preflight]);
 
@@ -133,12 +133,21 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
                         resolve(job);
                     } else if (['FAILED', 'ERROR'].includes(status)) {
                         clearInterval(interval);
-                        reject(new Error(job.error?.message || 'Job failed at PrintPrice OS'));
+                        const jobErr = job.error || {};
+                        const throwErr: any = new Error(jobErr.message || 'Job failed at PrintPrice OS');
+                        throwErr.code = jobErr.code || jobErr.errorCode || 'ENGINE_JOB_FAILED';
+                        throwErr.traceId = jobErr.traceId || job.traceId || 'POLL_ERR_CHAIN';
+                        throwErr.v2 = true;
+                        reject(throwErr);
                     }
                     
                     if (attempt > 300) { // 10 min timeout
                          clearInterval(interval);
-                         reject(new Error('Job polling timed out.'));
+                         const timeoutErr: any = new Error('Job polling timed out.');
+                         timeoutErr.code = 'POLLING_TIMEOUT';
+                         timeoutErr.traceId = 'BFF_TIMEOUT';
+                         timeoutErr.v2 = true;
+                         reject(timeoutErr);
                     }
             }, 2000);
         });

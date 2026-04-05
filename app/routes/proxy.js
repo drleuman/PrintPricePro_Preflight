@@ -151,9 +151,15 @@ router.use('/', async (req, res, next) => {
         apiResponse.data.on('data', (chunk) => res.write(chunk));
         apiResponse.data.on('end', () => res.end());
         apiResponse.data.on('error', (err) => {
-            console.error('Proxy stream error from upstream:', err);
+            const traceId = req.headers['x-request-id'] || 'system';
+            console.error(`[PROXY][STREAM-ERROR][${traceId}]`, err);
             if (!res.headersSent) {
-                res.status(500).json({ error: 'Proxy error during upstream streaming' });
+                res.status(502).json({ 
+                    error: 'PROXY_STREAM_ERROR', 
+                    message: 'Gemini stream connection interrupted.',
+                    traceId,
+                    v2: true
+                });
             } else {
                 res.end();
             }
@@ -161,14 +167,22 @@ router.use('/', async (req, res, next) => {
     } catch (error) {
         console.error('Proxy error before upstream:', error);
         if (!res.headersSent) {
+            const traceId = req.headers['x-request-id'] || 'system';
             if (error.response) {
                 res.status(error.response.status).json({
-                    status: error.response.status,
-                    message: (error.response.data && error.response.data.error && error.response.data.error.message) || 'Upstream error',
+                    error: 'PROXY_UPSTREAM_ERROR',
+                    message: (error.response.data && error.response.data.error && error.response.data.error.message) || 'Gemini upstream error',
                     details: (error.response.data && error.response.data.error && error.response.data.error.details) || null,
+                    traceId,
+                    v2: true
                 });
             } else {
-                res.status(500).json({ error: 'Proxy setup error', message: error.message });
+                res.status(500).json({ 
+                    error: 'PROXY_SETUP_ERROR', 
+                    message: error.message,
+                    traceId,
+                    v2: true
+                });
             }
         }
     }

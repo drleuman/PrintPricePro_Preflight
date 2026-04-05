@@ -42,14 +42,24 @@ const v2ReadLimiter = rateLimit({
 router.post('/', v2UploadLimiter, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ error: 'No ZIP file provided in "file" field.' });
+            return res.status(400).json({ 
+                error: 'BAD_REQUEST', 
+                message: 'No ZIP file provided in "file" field.',
+                traceId: req.headers['x-request-id'] || 'system',
+                v2: true
+            });
         }
 
         const mime = req.file.mimetype || '';
         const ext = path.extname(req.file.originalname).toLowerCase();
         if (ext !== '.zip' && !mime.includes('zip')) {
             fs.unlinkSync(req.file.path);
-            return res.status(400).json({ error: 'Only ZIP archives are accepted.' });
+            return res.status(400).json({ 
+                error: 'INVALID_FILE_TYPE', 
+                message: 'Only ZIP archives are accepted for batch processing.',
+                traceId: req.headers['x-request-id'] || 'system',
+                v2: true
+            });
         }
 
         const tenantId = req.auth.tenantId;
@@ -91,8 +101,14 @@ router.post('/', v2UploadLimiter, upload.single('file'), async (req, res) => {
             links: { self: `/api/v2/batches/${batchId}` }
         });
     } catch (err) {
-        console.error('[BATCH-API][POST]', err);
-        res.status(500).json({ error: 'Failed to create batch.' });
+        const traceId = req.headers['x-request-id'] || `req_bat_${Date.now()}`;
+        console.error(`[BATCH-API][POST][${traceId}]`, err);
+        res.status(500).json({ 
+            error: 'BATCH_CREATE_FAILED', 
+            message: 'Failed to initialize batch orchestration job.',
+            traceId,
+            v2: true
+        });
     }
 });
 
@@ -119,8 +135,14 @@ router.get('/', v2ReadLimiter, async (req, res) => {
 
         res.json({ count: rows.length, batches: rows });
     } catch (err) {
-        console.error('[BATCH-API][LIST]', err);
-        res.status(500).json({ error: 'Failed to list batches.' });
+        const traceId = req.headers['x-request-id'] || `req_bat_ls_${Date.now()}`;
+        console.error(`[BATCH-API][LIST][${traceId}]`, err);
+        res.status(500).json({ 
+            error: 'BATCH_LIST_FAILED', 
+            message: 'Failed to retrieve batch history.',
+            traceId,
+            v2: true
+        });
     }
 });
 
@@ -162,8 +184,14 @@ router.get('/:id', v2ReadLimiter, async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('[BATCH-API][GET]', err);
-        res.status(500).json({ error: 'Failed to get batch status.' });
+        const traceId = req.headers['x-request-id'] || `req_bat_get_${Date.now()}`;
+        console.error(`[BATCH-API][GET][${traceId}]`, err);
+        res.status(500).json({ 
+            error: 'BATCH_FETCH_FAILED', 
+            message: 'Failed to retrieve detailed batch status.',
+            traceId,
+            v2: true
+        });
     }
 });
 
@@ -208,8 +236,14 @@ router.get('/:id/jobs', v2ReadLimiter, async (req, res) => {
             }))
         });
     } catch (err) {
-        console.error('[BATCH-API][GET-JOBS]', err);
-        res.status(500).json({ error: 'Failed to list batch jobs.' });
+        const traceId = req.headers['x-request-id'] || `req_bat_jbs_${Date.now()}`;
+        console.error(`[BATCH-API][GET-JOBS][${traceId}]`, err);
+        res.status(500).json({ 
+            error: 'BATCH_JOBS_FETCH_FAILED', 
+            message: 'Failed to retrieve child jobs for this batch.',
+            traceId,
+            v2: true
+        });
     }
 });
 
@@ -333,8 +367,14 @@ router.get('/:id/download', v2ReadLimiter, async (req, res) => {
         res.send(zipBuffer);
 
     } catch (err) {
-        console.error('[BATCH-API][DOWNLOAD]', err);
-        res.status(500).json({ error: 'Failed to assemble batch output.' });
+        const traceId = req.headers['x-request-id'] || `req_bat_dl_${Date.now()}`;
+        console.error(`[BATCH-API][DOWNLOAD][${traceId}]`, err);
+        res.status(500).json({ 
+            error: 'BATCH_ASSEMBLY_FAILED', 
+            message: 'Failed to assemble batch output archive.',
+            traceId,
+            v2: true
+        });
     }
 });
 

@@ -15,6 +15,7 @@ interface Step1UploadV2_4Props {
     selectedPolicy: string;
     onPolicyChange: (p: string) => void;
     isAuthenticated?: boolean;
+    onError?: (error: { code: string; message: string; traceId?: string; v2?: boolean }) => void;
 }
 
 export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
@@ -24,6 +25,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
     onNext,
     selectedPolicy,
     onPolicyChange,
+    onError,
 }) => {
     const { t } = useTranslation();
     const { user } = useAuth();
@@ -72,12 +74,24 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
         if (f && f.type === 'application/pdf') {
             const sizeMb = f.size / (1024 * 1024);
             if (sizeMb > maxMb) {
-                alert(`${t('appName')}: Plan ${user?.plan || 'GUEST'} supports up to ${maxMb}MB. This file is ${sizeMb.toFixed(1)}MB.`);
+                    onError({
+                        code: 'FILE_SIZE_LIMIT_EXCEEDED',
+                        message: `Plan ${user?.plan || 'GUEST'} supports up to ${maxMb}MB. This file is ${sizeMb.toFixed(1)}MB.`,
+                        traceId: 'GOV_CLIENT_LIMIT',
+                        v2: true
+                    });
                 return;
             }
             onFileSelect(f);
         } else if (f) {
-            alert(t('invalidFileType'));
+            if (onError) {
+                onError({
+                    code: 'INVALID_FILE_TYPE',
+                    message: t('invalidFileType'),
+                    traceId: 'GOV_CLIENT_MIME',
+                    v2: true
+                });
+            }
         }
     };
 
@@ -91,7 +105,14 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
     const handleContinue = () => {
         if (!file) return;
         if (selectedMode === 'magic' && !isAiFixAllowed) {
-            alert(t('account.apiNoAccessDesc'));
+            if (onError) {
+                onError({
+                    code: 'AI_ACCESS_RESTRICTED',
+                    message: t('account.apiNoAccessDesc'),
+                    traceId: 'GOV_CLIENT_TIER',
+                    v2: true
+                });
+            }
             return;
         }
         const appMode: AppMode = selectedMode === 'magic' ? 'ai' : 'manual';

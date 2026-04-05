@@ -72,6 +72,7 @@ function AppContent() {
   // Heatmap State
   const [heatmapData, setHeatmapData] = useState<HeatmapData | null>(null);
   const [heatmapLoading, setHeatmapLoading] = useState(false);
+  const [showEfficiencyModal, setShowEfficiencyModal] = useState(false);
 
   // ---------- Large Document Mode (LDM) State ----------
   const [ldmActive, setLdmActive] = useState(false);
@@ -81,6 +82,15 @@ function AppContent() {
   // Preview State (Server-side GS PNGs)
   const [previewPages, setPreviewPages] = useState<string[] | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Engine Error State (Explicit Traceability)
+  const [engineError, setEngineError] = useState<{
+    code: string;
+    message: string;
+    traceId?: string;
+    details?: string;
+    v2?: boolean;
+  } | null>(null);
 
   // UI / Loader
   const lastPdfUrlRef = useRef<string | null>(null);
@@ -124,6 +134,7 @@ function AppContent() {
     setAutoFixReport(null);
     setAutoFixRunId(null);
     setLdmStatus('');
+    setEngineError(null);
     // Note: file and fileMeta are generally kept
   }, []);
 
@@ -238,8 +249,8 @@ function AppContent() {
         setResult(normalized);
         
         // Sync artifact URL if jobId is present in inline metadata (v2.4.93 sync)
-        const jobId = normalized.meta?.jobId || normalized.id;
-        const jobIdentifier = (normalized.type || normalized.result?.type || normalized.name || '').toUpperCase();
+        const jobId = normalized.meta?.jobId;
+        const jobIdentifier = (normalized.type || '').toUpperCase();
         const isAutoFixSuccess = jobIdentifier === 'AUTOFIX' || !!normalized.artifacts?.final_fixed_pdf;
 
         if (jobId && isAutoFixSuccess) {
@@ -270,13 +281,15 @@ function AppContent() {
         }
       }
     } catch (err: any) {
-      // Point of Application (Validation A): Protect error states
       console.error('[APP][V2-ERROR]', err);
-      // Only show error and clear LDM if it's the current active job
-      // Note: During upload/start, jobId might be unknown yet, so we allow if ldmActive is true
       setLdmActive(false);
       setLdmStatus('');
-      alert('Engine Processing Error: ' + err.message);
+      setEngineError({
+        code: err.code || 'ENGINE_V2_START_FAILURE',
+        message: err.message || 'The PPOS engine failed to initialize the analysis.',
+        traceId: err.traceId || 'N/A',
+        details: err.status ? `HTTP ${err.status}` : undefined
+      });
     }
   }, [file, selectedPolicy, startV2Preflight, handleV2JobComplete, resetResidues, ldmActive]);
 
@@ -336,14 +349,22 @@ function AppContent() {
       setLdmActive(false);
     } catch (err: any) {
       console.error('[APP][FIX-ERROR]', err);
-      alert('AI Magic Failed: ' + err.message);
       setLdmActive(false);
+      setEngineError({
+        code: err.code || 'ENGINE_AUTOFIX_FAILURE',
+        message: err.message || 'AI Magic Fix encountered a terminal error.',
+        traceId: err.traceId || 'N/A'
+      });
     }
   }, [file, result, autoFixBefore, autoFixServer, handleV2JobComplete, getDownloadUrl]);
 
   const handleDownload = useCallback(async () => {
     if (!lastPdfUrl) {
-      alert('No certified PDF available for download yet.');
+      setEngineError({
+        code: 'ARTIFACT_UNAVAILABLE',
+        message: 'No certified PDF available for download yet. Ensure analysis is complete.',
+        traceId: 'UI_STATE_GUARD'
+      });
       return;
     }
 
@@ -374,8 +395,12 @@ function AppContent() {
       setLdmActive(false);
     } catch (err: any) {
       console.error('[DOWNLOAD_ERROR]', err);
-      alert('Download Error: ' + err.message);
       setLdmActive(false);
+      setEngineError({
+        code: err.code || 'DOWNLOAD_FAILURE',
+        message: err.message || 'Secure artifact retrieval failed.',
+        traceId: err.traceId || 'N/A'
+      });
     }
   }, [lastPdfUrl, lastPdfName]);
   const handleConvertCMYK = useCallback(async () => {
@@ -393,8 +418,12 @@ function AppContent() {
       }
       setLdmActive(false);
     } catch (err: any) {
-      alert('Color Conversion Failed: ' + err.message);
       setLdmActive(false);
+      setEngineError({
+        code: err.code || 'COLOR_CONVERSION_FAILURE',
+        message: err.message || 'Color policy enforcement failed.',
+        traceId: err.traceId || 'N/A'
+      });
     }
   }, [file, convertColorServer, selectedProfile, handleV2JobComplete, getDownloadUrl]);
 
@@ -412,9 +441,14 @@ function AppContent() {
         lastPdfUrlRef.current = url;
       }
       setLdmActive(false);
-    } catch (err: any) {
-      alert('Grayscale Conversion Failed: ' + err.message);
       setLdmActive(false);
+    } catch (err: any) {
+      setLdmActive(false);
+      setEngineError({
+        code: err.code || 'GRAYSCALE_CONVERSION_FAILURE',
+        message: err.message || 'Grayscale conversion failed.',
+        traceId: err.traceId || 'N/A'
+      });
     }
   }, [file, convertToGrayscaleServer, handleV2JobComplete, getDownloadUrl]);
 
@@ -432,9 +466,14 @@ function AppContent() {
         lastPdfUrlRef.current = url;
       }
       setLdmActive(false);
-    } catch (err: any) {
-      alert('Rebuild Failed: ' + err.message);
       setLdmActive(false);
+    } catch (err: any) {
+      setLdmActive(false);
+      setEngineError({
+        code: err.code || 'REBUILD_FAILURE',
+        message: err.message || 'Forensic carrier rebuild failed.',
+        traceId: err.traceId || 'N/A'
+      });
     }
   }, [file, rebuildPdfServer, handleV2JobComplete, getDownloadUrl]);
 
@@ -448,9 +487,14 @@ function AppContent() {
       setLastPdfUrl(url);
       lastPdfUrlRef.current = url;
       setLdmActive(false);
-    } catch (err: any) {
-      alert('Booklet Generation Failed: ' + err.message);
       setLdmActive(false);
+    } catch (err: any) {
+      setLdmActive(false);
+      setEngineError({
+        code: 'BOOKLET_GENERATION_FAILURE',
+        message: err.message || 'Booklet imposition failed.',
+        traceId: 'CLIENT_SIDE'
+      });
     }
   }, [file, createBookletClient]);
   const handleSelectIssue = (issue: Issue | null) => setSelectedIssue(issue);
@@ -544,6 +588,7 @@ function AppContent() {
                     selectedPolicy={selectedPolicy}
                     onPolicyChange={setSelectedPolicy}
                     isAuthenticated={isAuthenticated}
+                    onError={setEngineError}
                   />
                 )}
 
@@ -607,7 +652,7 @@ function AppContent() {
                     onToggleCompare={setCompareEnabled}
                     onProfileChange={setSelectedProfile}
                     onOpenAIAudit={(issue) => { handleSelectIssue(issue); setShowVisualModal(true); }}
-                    onOpenEfficiency={() => alert('Efficiency optimized by PPOS.')}
+                    onOpenEfficiency={() => setShowEfficiencyModal(true)}
                     onNext={() => setCurrentStep(4)}
                     onBack={() => setCurrentStep(2)}
                     lastPdfUrl={lastPdfUrl}
@@ -668,6 +713,13 @@ function AppContent() {
         ) : (
           <AuthOverlayV2_4 />
         )}
+        
+        {engineError && (
+          <EngineErrorOverlay 
+            error={engineError} 
+            onClose={() => setEngineError(null)} 
+          />
+        )}
 
         <FixDrawerV2_4 
           issue={selectedIssue}
@@ -697,7 +749,66 @@ function AppContent() {
           message={ldmStatus || 'Processing...'}
           stageKey={ldmStatus?.toLowerCase().includes('engine') ? 'upload' : 'preflight'}
         />
+
+        <EfficiencyAuditModalV2_4 
+          isOpen={showEfficiencyModal}
+          onClose={() => setShowEfficiencyModal(false)}
+          result={result}
+          issue={selectedIssue}
+          fileMeta={fileMeta}
+        />
       </div>
     </ThemeProvider>
+  );
+}
+
+function EngineErrorOverlay({ error, onClose }: { error: any, onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="w-full max-w-lg bg-[var(--bg-secondary)] border-2 border-[#dc0000]/30 shadow-[0_30px_60px_rgba(0,0,0,0.5)] overflow-hidden">
+        <div className="bg-[#dc0000] p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+             <div className="h-2 w-2 bg-white animate-pulse" />
+             <span className="text-[0.65rem] font-black text-white uppercase tracking-[0.3em]">System_Terminal_Error</span>
+          </div>
+          <button onClick={onClose} className="text-white/80 hover:text-white transition-colors">
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
+        
+        <div className="p-8 space-y-6">
+          <div className="space-y-2">
+            <h3 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">ENGINE TERMINATED</h3>
+            <p className="text-[var(--text-secondary)] text-sm font-medium leading-relaxed">
+              {error.message}
+            </p>
+          </div>
+          
+          <div className="bg-[var(--bg-tertiary)] p-5 border border-[var(--border-color)] space-y-4">
+             <div className="flex justify-between items-center text-[0.65rem] font-black uppercase tracking-widest text-[var(--text-muted)]">
+                <span>Error Code</span>
+                <span className="text-[var(--accent-color)]">{error.code}</span>
+             </div>
+             <div className="h-px bg-[var(--border-color)]/50" />
+             <div className="flex justify-between items-center text-[0.65rem] font-black uppercase tracking-widest text-[var(--text-muted)]">
+                <span>Trace ID</span>
+                <span className="font-mono text-[var(--text-secondary)]">{error.traceId}</span>
+             </div>
+          </div>
+          
+          <div className="flex flex-col gap-3">
+            <button 
+              onClick={onClose}
+              className="w-full py-4 border border-[var(--accent-color)]/30 text-[0.75rem] font-bold uppercase tracking-widest text-[var(--accent-color)] hover:bg-[var(--accent-color)] hover:text-white transition-all"
+            >
+              Acknowledge & Close
+            </button>
+            <p className="text-[0.6rem] text-center text-[var(--text-muted)] font-mono uppercase tracking-[0.2em]">
+               Report this trace to PPOS Operations if the problem persists.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
