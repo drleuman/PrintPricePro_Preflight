@@ -262,6 +262,16 @@ router.get('/:jobId', async (req, res) => {
       data = { raw };
     }
 
+    if (!response.ok) {
+        return res.status(response.status).json({
+            error: data.code || data.error || 'PPOS_UPSTREAM_ERROR',
+            message: data.message || 'The PPOS engine returned a terminal failure.',
+            details: data.raw || null,
+            traceId: requestId,
+            v2: true
+        });
+    }
+
     // --- v2.4.93: Deep Payload Normalization (BFF/FE Contract Sync) ---
     // If the engine returns a 'result' wrapper, hard-flatten it to ensure consistent Step 2/Step 4 behavior
     if (data.status === 'COMPLETED' && data.result) {
