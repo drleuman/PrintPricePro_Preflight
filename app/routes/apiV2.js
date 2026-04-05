@@ -285,27 +285,40 @@ router.get('/:jobId', async (req, res) => {
         data.findings = result.findings || result.report?.findings || data.findings || [];
         data.issues = result.issues || result.report?.issues || data.issues || [];
         
-        // v2.4.115: Include correction metadata in deep-normalization
-        data.fixes = result.fixes || result.repairs || result.applied_fixes || data.fixes || [];
-        data.repairs = data.fixes; // Duplicate for internal compatibility
+        // v2.4.115-116: Forensic Preservation Hierarchy
+        // We promote every meaningful field to the root to ensure zero data-loss before pruning the wrapper
+        const forensicFields = [
+            'fixes', 'repairs', 'applied_fixes', 
+            'artifacts', 'output', 'reports', 
+            'compliance', 'certification', 'trace', 
+            'policy', 'metadata', 'audit'
+        ];
         
+        forensicFields.forEach(field => {
+            if (result[field] !== undefined) {
+                // Combine instead of overwrite if root already has data (e.g. artifacts)
+                if (field === 'artifacts' || field === 'metadata') {
+                   data[field] = { ...data[field], ...result[field] };
+                } else {
+                   data[field] = result[field];
+                }
+            }
+        });
+
+        // Set compatibility duplicates
+        data.repairs = data.fixes || data.repairs; 
+
         // --- v2.4.95: Hard-Syncing Boolean Flags after Flattening ---
         data.hasReport = !!data.report;
-        data.hasFindings = data.findings.length > 0;
-        data.hasIssues = data.issues.length > 0;
+        data.hasFindings = (data.findings?.length > 0);
+        data.hasIssues = (data.issues?.length > 0);
+        
         // --- v2.4.111: Forensic Job-Type Identification Bridge ---
-        // Force 'ANALYZE' mode if type is missing to clear the Step 4 stall
         const detectedType = result.type || data.type || result.job_type || 'ANALYZE';
         data.type = detectedType.toUpperCase();
         data.name = result.name || data.name || data.type;
 
-        // v2.4.111: Persistent Artifact Registry Contract
-        // We expose canonical keys (e.g. 'final_fixed_pdf') and the downstream resolver handles them
-        // v2.4+ Cleanup: Remove hardcoded artifact mocks to prevent UI fakes.
-        // We only return what the real engine provides.
-        data.artifacts = (result.artifacts || result.report?.artifacts || data.artifacts || {});
-
-        // Clean up the nested wrapper to prevent confusion
+        // Clean up the nested wrapper now that preservation is complete
         delete data.result;
     } else if (data.status === 'COMPLETED' && !data.type) {
         data.type = 'ANALYZE';
