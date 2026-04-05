@@ -185,23 +185,22 @@ function AppContent() {
       console.log('[APP] Preflight Job Complete:', normalized);
       setResult(normalized);
       
-      // Update download URL (v2.4.93 - Deep Artifact Deteccion)
-      // Cascading type detection for maximum resilience
-      const jobIdentifier = (normalized.type || normalized.result?.type || normalized.name || '').toUpperCase();
-      const isAutoFixSuccess = jobIdentifier === 'AUTOFIX' || !!normalized.artifacts?.final_fixed_pdf;
-      
-      if (completedJobId && isAutoFixSuccess) {
-        const url = `${window.location.origin}/api/v2/jobs/${completedJobId}/artifacts/final_fixed_pdf`;
-        console.log('[APP][SET-DOWNLOAD-URL][SUCCESS]', { jobId: completedJobId, url, jobIdentifier });
+      // v2.4.112: Resilient Artifact Selection (Analysis-Only Support)
+      if (completedJobId) {
+        const artifacts = normalized.artifacts || normalized.result?.artifacts || {};
+        const bestArtifactKey = artifacts.final_fixed_pdf ? 'final_fixed_pdf' : 'source_pdf';
+        
+        const url = `${window.location.origin}/api/v2/jobs/${completedJobId}/artifacts/${bestArtifactKey}`;
+        console.log('[APP][SET-DOWNLOAD-URL]', { key: bestArtifactKey, jobId: completedJobId, url });
+        
         setLastPdfUrl(url);
         lastPdfUrlRef.current = url;
         
         const fileName = normalized.meta?.fileName || normalized.filename || normalized.meta?.filename || 'certified_document.pdf';
         setLastPdfName(fileName);
       } else {
-        console.log('[APP][SKIP-ARTIFACT-URL]', { jobIdentifier, reason: 'Analyze or missing artifacts' });
-        // Restore original file view if we only performed an analysis
-        setLastPdfUrl(null); 
+        console.warn('[APP][SKIP-ARTIFACT-URL] No jobId found for artifact registration');
+        setLastPdfUrl(null);
         lastPdfUrlRef.current = null;
       }
 
@@ -333,8 +332,14 @@ function AppContent() {
         
         // Final guards for artifact propagation
         if (finalJobId) {
-          const url = `${window.location.origin}/api/v2/jobs/${finalJobId}/artifacts/final_fixed_pdf`;
-          console.log('[APP][ARTIFACT-URL]', url);
+          // v2.4.98: Intelligent Artifact Resolution
+          // Check the artifacts registry from the core engine result to avoid 'Waiting for Artifact' hangs
+          const availableArtifacts = jobResult.artifacts || {};
+          const bestArtifactKey = availableArtifacts.final_fixed_pdf ? 'final_fixed_pdf' : 'source_pdf';
+          
+          const url = `${window.location.origin}/api/v2/jobs/${finalJobId}/artifacts/${bestArtifactKey}`;
+          console.log('[APP][ARTIFACT-URL]', { key: bestArtifactKey, url });
+          
           setLastPdfUrl(url);
           lastPdfUrlRef.current = url;
           setLastPdfName(jobResult?.meta?.filename || 'certified_pdf.pdf');
