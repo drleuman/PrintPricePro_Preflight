@@ -111,9 +111,11 @@ router.post(
         }
       };
 
-      const engineId = job.jobId || job.id || job.job_id;
-      responsePayload.id = engineId;
-      responsePayload.jobId = engineId;
+      // v2.4.114: Guaranteed ID Propagation
+      // We prioritize the pre-generated jobId from Line 47 to ensure frontend sync
+      const finalId = jobId || job.jobId || job.id || job._id || `job_${Date.now()}`;
+      responsePayload.id = finalId;
+      responsePayload.jobId = finalId;
 
       if (job.mode === 'sync') {
         responsePayload.inlineResult = job.inlineResult;
