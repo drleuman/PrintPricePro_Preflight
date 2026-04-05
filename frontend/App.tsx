@@ -247,17 +247,21 @@ function AppContent() {
         const normalized = normalizePreflightResult(res.inlineResult);
         setResult(normalized);
         
-        // Sync artifact URL if jobId is present in inline metadata (v2.4.93 sync)
-        const jobId = normalized.meta?.jobId;
-        const jobIdentifier = (normalized.type || '').toUpperCase();
-        const isAutoFixSuccess = jobIdentifier === 'AUTOFIX' || !!normalized.artifacts?.final_fixed_pdf;
-
-        if (jobId && isAutoFixSuccess) {
-          const url = `${window.location.origin}/api/v2/jobs/${jobId}/artifacts/final_fixed_pdf`;
+        // v2.4.113: Synchronous Resilient Artifact Resolution
+        const jobId = normalized.meta?.jobId || res.jobId || res.job_id || res.id;
+        
+        if (jobId) {
+          const artifacts = normalized.artifacts || {};
+          const bestArtifactKey = artifacts.final_fixed_pdf ? 'final_fixed_pdf' : 'source_pdf';
+          
+          const url = `${window.location.origin}/api/v2/jobs/${jobId}/artifacts/${bestArtifactKey}`;
+          console.log('[APP][SET-DOWNLOAD-URL][SYNC]', { key: bestArtifactKey, jobId, url });
+          
           setLastPdfUrl(url);
           lastPdfUrlRef.current = url;
           setLastPdfName(normalized.meta?.fileName || 'certified_document.pdf');
         } else {
+          console.warn('[APP][SKIP-ARTIFACT-URL][SYNC] No jobId found');
           setLastPdfUrl(null);
           lastPdfUrlRef.current = null;
         }

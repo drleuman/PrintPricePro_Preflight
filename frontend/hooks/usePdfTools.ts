@@ -166,14 +166,11 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
     const handleV2JobComplete = useCallback(async (jobId: string) => {
         const res = await pollJob(jobId);
         
-        if (callbacks?.onComplete) {
-            const normalizedResult = normalizePreflightResult(res);
-            if (normalizedResult) {
-                callbacks.onComplete(normalizedResult);
-            }
+        const normalizedResult = normalizePreflightResult(res);
+        if (normalizedResult && callbacks?.onComplete) {
+            callbacks.onComplete(normalizedResult);
         }
-        
-        return res;
+        return normalizedResult || res;
     }, [pollJob, callbacks]);
 
     return {
