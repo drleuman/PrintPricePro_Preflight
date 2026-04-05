@@ -145,6 +145,7 @@ export interface PreflightResult {
   score: number; // Overall score (0-100), higher is better
   summary: string; // A brief overall summary of findings
   issues: Issue[];
+  fixes?: any[]; // Repairs/Applied fixes
   pages: Array<{ pageNumber: number; issuesCount: number }>;
   categorySummaries: CategorySummary[];
   meta: {

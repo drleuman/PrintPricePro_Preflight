@@ -148,6 +148,7 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
         score: payload.score ?? payload.report?.score ?? (sourceFound ? 0 : null),
         summary: payload.summary ?? payload.report?.summary ?? (sourceFound ? null : 'Analysis data unavailable'),
         issues: normalizedIssues,
+        fixes: payload.fixes ?? payload.repairs ?? payload.result?.fixes ?? payload.result?.repairs ?? [],
         pages: payload.pages ?? payload.report?.pages ?? [],
         categorySummaries: payload.categorySummaries ?? payload.report?.categorySummaries ?? [],
         meta: {

@@ -132,7 +132,8 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     // Fixes Applied calculation logic:
     // 1. Check direct report if available
     // 2. Otherwise calc delta between before and after results
-    const fixesApplied = autoFixReport?.fixes?.length || 
+    const fixesApplied = autoFixAfter?.fixes?.length || 
+                        autoFixReport?.fixes?.length || 
                         (autoFixBefore && autoFixAfter ? Math.max(0, autoFixBefore.issues.length - autoFixAfter.issues.length) : 
                         autoFixReport ? 1 : 0);
 
