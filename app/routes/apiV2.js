@@ -392,4 +392,53 @@ router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/v2/jobs/:jobId/actions/fix
+ * Trigger a stateful autofix on an existing job asset.
+ */
+router.post('/:jobId/actions/fix', async (req, res) => {
+  const { jobId } = req.params;
+  const requestId = req.get('x-request-id') || `fix_${Date.now()}`;
+  const tenantId = getTenantId(req);
+
+  try {
+    console.log(`[BFF][FIX-ACTION][${requestId}] Triggering fix for job: ${jobId}`);
+
+    const authContext = req.auth || req.user || {};
+    const internalToken = identityService.getAuthHeaders(authContext).Authorization;
+
+    // We enqueue a new AUTOFIX job referencing the previous jobId as the source asset
+    const job = await queue.enqueueJob('AUTOFIX', {
+      assetId: jobId,
+      jobId: `fix_${jobId}_${Date.now()}`,
+      force: true,
+      requestId,
+      tenantId,
+      policy: req.body?.policy || 'OFFSET_MODERN_COATED',
+      options: req.body?.options || {},
+      userToken: internalToken,
+      authContext
+    });
+
+    const responsePayload = {
+      ok: true,
+      jobId: job.id,
+      status: job.status,
+      mode: job.mode,
+      inlineResult: job.inlineResult
+    };
+
+    return res.status(201).json(responsePayload);
+  } catch (error) {
+    const traceId = requestId;
+    console.error(`[BFF][FIX-ACTION][ERROR][${traceId}]`, error.message);
+    return res.status(500).json({
+      error: 'FIX_ACTION_FAILED',
+      message: 'Failed to trigger the autofix lifecycle for this job.',
+      traceId,
+      v2: true
+    });
+  }
+});
+
 module.exports = router;

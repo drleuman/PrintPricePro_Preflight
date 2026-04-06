@@ -308,7 +308,10 @@ function AppContent() {
     setLdmActive(true);
     setLdmStatus('Initializing AI Magic Fix on OS...');
     try {
-      const res = await autoFixServer(file, opts);
+      const res = await autoFixServer(file, { 
+        policy: opts?.policy || selectedPolicy,
+        jobId: activeJobIdRef.current 
+      });
       // Backend Contract: jobId might be in root, jobId, job_id, or nested in result
       let jobId = res.jobId || res.job_id || res.id || res.result?.meta?.jobId || res.inlineResult?.meta?.jobId;
       let jobResult: any = res.inlineResult || res.result || res.job || null;

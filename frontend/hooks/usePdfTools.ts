@@ -85,6 +85,20 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
         file: File,
         opts?: any
     ): Promise<any> => {
+        // v2.4.120: Stateful Fix Action Support
+        // If we have an existing jobId from the analysis phase, we use the stateful action endpoint
+        if (opts?.jobId) {
+            console.log(`[FIX][STATEFUL-ACTION] Triggering fix for existing job: ${opts.jobId}`);
+            return await pposFetch<any>(`/api/v2/jobs/${opts.jobId}/actions/fix`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    policy: opts.policy || 'OFFSET_MODERN_COATED',
+                    options: opts.options || {}
+                })
+            });
+        }
+
+        // Stateless Fallback: Re-upload for standalone fix runs
         const res = await startV2Preflight(file, opts?.policy || 'OFFSET_MODERN_COATED', { mode: 'AUTOFIX', ...opts });
         return res;
     }, [startV2Preflight]);
