@@ -76,6 +76,12 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
         payload.findings,
         payload.report?.issues,
         payload.report?.findings,
+        payload.analysis?.issues,
+        payload.analysis?.findings,
+        payload.analysis,
+        payload.forensics?.issues,
+        payload.forensics?.findings,
+        payload.forensics,
         payload.result?.report?.issues,
         payload.result?.report?.findings, // Added v2.4.97
         payload.result?.findings,
@@ -156,8 +162,7 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
             fileSize: payload.meta?.fileSize ?? payload.report?.meta?.fileSize ?? payload.size ?? 0,
             pageCount: pageCount ?? 0,
             jobId: payload.jobId ?? payload.job_id ?? payload.id
-        },
-        artifacts: payload.artifacts ?? payload.result?.artifacts ?? {}
+        }
     };
 
     // Add a flag for UI to detect missing forensic data

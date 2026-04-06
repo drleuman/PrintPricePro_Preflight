@@ -28,10 +28,10 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
             });
 
             const formData = new FormData();
-            
+
             // Requirement 2: Añade el PDF con la clave exacta 'file'
             formData.append('file', file);
-            
+
             // Campos adicionales
             formData.append('policy', policy || 'OFFSET_MODERN_COATED');
             if (options?.mode) {
@@ -70,17 +70,17 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
         const res = await startV2Preflight(file, 'DIGITAL_RGB', { mode: 'CONVERT_GRAYSCALE' });
         return res.jobId || res.job_id || res.id;
     }, [startV2Preflight]);
-    
+
     const convertColorServer = useCallback(async (file: File, profile: string = 'OFFSET_MODERN_COATED') => {
         const res = await startV2Preflight(file, profile, { mode: 'CONVERT_COLOR' });
         return res.jobId || res.job_id || res.id;
     }, [startV2Preflight]);
-    
+
     const rebuildPdfServer = useCallback(async (file: File, dpi: number = 300) => {
         const res = await startV2Preflight(file, 'OFFSET_MODERN_COATED', { mode: 'REBUILD', dpi });
         return res.jobId || res.job_id || res.id;
     }, [startV2Preflight]);
-    
+
     const autoFixServer = useCallback(async (
         file: File,
         opts?: any
@@ -108,10 +108,10 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
         const res = await pposFetch<any>(`/api/v2/jobs/${jobId}`);
         // Log job data for debugging trace inventory regression
         console.log('[LDM] Job Data:', jobId, {
-           status: res.status,
-           hasReport: !!res.report,
-           hasFindings: !!res.findings,
-           hasIssues: !!res.issues
+            status: res.status,
+            hasReport: !!res.report,
+            hasFindings: !!res.findings,
+            hasIssues: !!res.issues
         });
         return res;
     }, []);
@@ -121,48 +121,48 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
             let attempt = 0;
             const interval = setInterval(async () => {
                 attempt++;
-                    let job: any;
-                    try {
-                        job = await getJobStatus(jobId);
-                    } catch (err: any) {
-                        // Resiliency: Handled transient 404s (Registration Lag)
-                        // With large files, the job might not be persisted yet when the first polls hit.
-                        if (err.status === 404 && attempt < 10) {
-                            console.warn('[POLL][SYNC-LAG-RETRY]', { attempt, jobId });
-                            if (onProgress) onProgress(0); // Show it's still initializing
-                            return;
-                        }
-                        // Non-retryable error or too many 404s
-                        clearInterval(interval);
-                        reject(err);
+                let job: any;
+                try {
+                    job = await getJobStatus(jobId);
+                } catch (err: any) {
+                    // Resiliency: Handled transient 404s (Registration Lag)
+                    // With large files, the job might not be persisted yet when the first polls hit.
+                    if (err.status === 404 && attempt < 10) {
+                        console.warn('[POLL][SYNC-LAG-RETRY]', { attempt, jobId });
+                        if (onProgress) onProgress(0); // Show it's still initializing
                         return;
                     }
+                    // Non-retryable error or too many 404s
+                    clearInterval(interval);
+                    reject(err);
+                    return;
+                }
 
-                    if (onProgress && job.progress !== undefined) onProgress(job.progress);
+                if (onProgress && job.progress !== undefined) onProgress(job.progress);
 
-                    // Normalize status names from PPOS
-                    const status = (job.status || '').toUpperCase();
-                    if (['COMPLETED', 'SUCCEEDED', 'SUCCESS'].includes(status)) {
-                        clearInterval(interval);
-                        resolve(job);
-                    } else if (['FAILED', 'ERROR'].includes(status)) {
-                        clearInterval(interval);
-                        const jobErr = job.error || {};
-                        const throwErr: any = new Error(jobErr.message || 'Job failed at PrintPrice OS');
-                        throwErr.code = jobErr.code || jobErr.errorCode || 'ENGINE_JOB_FAILED';
-                        throwErr.traceId = jobErr.traceId || job.traceId || 'POLL_ERR_CHAIN';
-                        throwErr.v2 = true;
-                        reject(throwErr);
-                    }
-                    
-                    if (attempt > 300) { // 10 min timeout
-                         clearInterval(interval);
-                         const timeoutErr: any = new Error('Job polling timed out.');
-                         timeoutErr.code = 'POLLING_TIMEOUT';
-                         timeoutErr.traceId = 'BFF_TIMEOUT';
-                         timeoutErr.v2 = true;
-                         reject(timeoutErr);
-                    }
+                // Normalize status names from PPOS
+                const status = (job.status || '').toUpperCase();
+                if (['COMPLETED', 'SUCCEEDED', 'SUCCESS'].includes(status)) {
+                    clearInterval(interval);
+                    resolve(job);
+                } else if (['FAILED', 'ERROR'].includes(status)) {
+                    clearInterval(interval);
+                    const jobErr = job.error || {};
+                    const throwErr: any = new Error(jobErr.message || 'Job failed at PrintPrice OS');
+                    throwErr.code = jobErr.code || jobErr.errorCode || 'ENGINE_JOB_FAILED';
+                    throwErr.traceId = jobErr.traceId || job.traceId || 'POLL_ERR_CHAIN';
+                    throwErr.v2 = true;
+                    reject(throwErr);
+                }
+
+                if (attempt > 300) { // 10 min timeout
+                    clearInterval(interval);
+                    const timeoutErr: any = new Error('Job polling timed out.');
+                    timeoutErr.code = 'POLLING_TIMEOUT';
+                    timeoutErr.traceId = 'BFF_TIMEOUT';
+                    timeoutErr.v2 = true;
+                    reject(timeoutErr);
+                }
             }, 2000);
         });
     }, [getJobStatus]);
@@ -179,7 +179,7 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
 
     const handleV2JobComplete = useCallback(async (jobId: string) => {
         const res = await pollJob(jobId);
-        
+
         const normalizedResult = normalizePreflightResult(res);
         if (normalizedResult && callbacks?.onComplete) {
             callbacks.onComplete(normalizedResult);

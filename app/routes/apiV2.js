@@ -264,6 +264,10 @@ router.get('/:jobId', async (req, res) => {
       data = { raw };
     }
 
+    // --- PHASE 1 DIAGNOSTIC ---
+    console.log(`[BFF][V2-POLL-RAW][${requestId}] FULL PAYLOAD:`, JSON.stringify(data, null, 2));
+    // ---------------------------
+
     if (!response.ok) {
         return res.status(response.status).json({
             error: data.code || data.error || 'PPOS_UPSTREAM_ERROR',
@@ -288,6 +292,7 @@ router.get('/:jobId', async (req, res) => {
         // v2.4.115-116: Forensic Preservation Hierarchy
         // We promote every meaningful field to the root to ensure zero data-loss before pruning the wrapper
         const forensicFields = [
+            'analysis', 'forensics',
             'fixes', 'repairs', 'applied_fixes', 
             'artifacts', 'output', 'reports', 
             'compliance', 'certification', 'trace', 
