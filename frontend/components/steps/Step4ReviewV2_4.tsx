@@ -37,6 +37,7 @@ interface Step4ReviewV2_4Props {
     onRebuildPdf: () => void;
     onMakeBooklet: () => void;
     onDownload: () => void;
+    onDownloadReport: () => void;
     onStartOver: () => void;
     onBack: () => void;
     onNext: () => void;
@@ -71,6 +72,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     onRebuildPdf,
     onMakeBooklet,
     onDownload,
+    onDownloadReport,
     onStartOver,
     onBack,
     onNext,
@@ -366,6 +368,13 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 <span className="text-[0.8rem] font-black uppercase tracking-widest text-[var(--text-muted)]">{t('shell.policyProfile')}</span>
                                 <span className="text-[0.8rem] font-mono text-[var(--text-secondary)] italic truncate max-w-[150px]">{formatLabel(selectedPolicy || 'DEFAULT_OVERSIGHT')}</span>
                             </div>
+                            <button 
+                                onClick={onDownloadReport}
+                                className="w-full py-2 border-b border-dashed border-[var(--border-color)] text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] hover:text-[var(--accent-color)] transition-all flex items-center justify-between group"
+                            >
+                                <span>Export Analysis Report (JSON)</span>
+                                <CommandLineIcon className="h-3 w-3 opacity-50 group-hover:opacity-100" />
+                            </button>
                         </div>
                         <div className="flex flex-col gap-3">
                             <div className="flex gap-2">

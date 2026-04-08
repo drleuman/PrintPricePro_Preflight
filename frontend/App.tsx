@@ -23,6 +23,7 @@ import {
   AppMode,
 } from './types';
 import { normalizePreflightResult } from './utils/payloadNormalization';
+import { normalizeDownloadFilename } from './utils/formatters';
 import { usePreflightWorker } from './hooks/usePreflightWorker';
 import { usePdfTools } from './hooks/usePdfTools';
 import { pposFetch } from './lib/apiClient';
@@ -438,10 +439,17 @@ function AppContent() {
       return;
     }
 
+    const finalName = normalizeDownloadFilename(lastPdfName || fileMeta?.name || 'preflight', 'pdf');
+    console.log('[DOWNLOAD][FILENAME]', { 
+        original: lastPdfName || fileMeta?.name || 'unknown', 
+        normalized: finalName.replace('-certified.pdf', ''), 
+        final: finalName 
+    });
+
     if (lastPdfUrl.startsWith('blob:')) {
       const a = document.createElement('a');
       a.href = lastPdfUrl;
-      a.download = lastPdfName || 'certified_document.pdf';
+      a.download = finalName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -456,7 +464,7 @@ function AppContent() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = lastPdfName || 'certified_document.pdf';
+      a.download = finalName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -472,7 +480,30 @@ function AppContent() {
         traceId: err.traceId || 'N/A'
       });
     }
-  }, [lastPdfUrl, lastPdfName]);
+  }, [lastPdfUrl, lastPdfName, fileMeta]);
+
+  const handleDownloadReport = useCallback(() => {
+    if (!result) return;
+    try {
+      const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const finalName = normalizeDownloadFilename(lastPdfName || fileMeta?.name || 'preflight', 'report');
+      a.download = finalName;
+      console.log('[DOWNLOAD][FILENAME][REPORT]', { 
+          original: lastPdfName || fileMeta?.name || 'unknown', 
+          normalized: finalName.replace('-report.json', ''), 
+          final: finalName 
+      });
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (err: any) {
+      console.error('[REPORT_DOWNLOAD_ERROR]', err);
+    }
+  }, [result, lastPdfName, fileMeta]);
   const handleConvertCMYK = useCallback(async () => {
     if (!file) return;
     setLdmActive(true);
@@ -751,6 +782,7 @@ function AppContent() {
                     onRebuildPdf={handleRebuildPdf}
                     onMakeBooklet={handleMakeBooklet}
                     onDownload={handleDownload}
+                    onDownloadReport={handleDownloadReport}
                     onStartOver={handleStartOver}
                     onBack={() => setCurrentStep(3)}
                     onNext={() => setCurrentStep(5)}
@@ -774,6 +806,7 @@ function AppContent() {
                     lastPdfName={lastPdfName}
                     file={file}
                     onDownload={handleDownload}
+                    onDownloadReport={handleDownloadReport}
                     onStartOver={handleStartOver}
                   />
                 )}

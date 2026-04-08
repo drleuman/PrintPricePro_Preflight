@@ -372,7 +372,8 @@ router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
     const artifactMap = {
       'analysis_report': 'report.json',
       'final_fixed_pdf': 'normalized.pdf',
-      'audit_report': 'fix_audit.json'
+      'audit_report': 'fix_audit.json',
+      'certified_pdf': 'certified.pdf'
     };
     
     // Resolve targeted artifact ID (favoring alias if present)

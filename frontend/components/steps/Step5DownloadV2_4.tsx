@@ -14,6 +14,7 @@ interface Step5DownloadV2_4Props {
     lastPdfName: string | null;
     file: File | null;
     onDownload: () => void;
+    onDownloadReport: () => void;
     onStartOver: () => void;
 }
 
@@ -22,6 +23,7 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
     lastPdfName,
     file,
     onDownload,
+    onDownloadReport,
     onStartOver
 }) => {
     const { t } = useTranslation();
@@ -75,9 +77,17 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                         <ArrowDownTrayIcon className="h-5 w-5 group-hover:translate-y-1 transition-transform" />
                     </button>
                     
-                    <div className="pt-4 flex items-center gap-2 text-[var(--text-muted)] text-[0.7rem] font-medium uppercase tracking-widest">
-                       <DocumentCheckIcon className="h-4 w-4" />
-                       <span>ISO Standard Certified Carrier</span>
+                    <div className="pt-4 flex flex-col items-center gap-4 w-full">
+                        <button 
+                            onClick={onDownloadReport}
+                            className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)] hover:underline opacity-60 hover:opacity-100 transition-all"
+                        >
+                            Export Technical Analysis Report (JSON)
+                        </button>
+                        <div className="flex items-center gap-2 text-[var(--text-muted)] text-[0.7rem] font-medium uppercase tracking-widest">
+                           <DocumentCheckIcon className="h-4 w-4" />
+                           <span>ISO Standard Certified Carrier</span>
+                        </div>
                     </div>
                 </div>
 
