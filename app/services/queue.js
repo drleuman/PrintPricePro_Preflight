@@ -54,11 +54,11 @@ async function enqueueJob(type, payload = {}) {
 
   const tenantId = normalizeTenantId(payload);
   const jobId = normalizeJobId(payload);
-  
+
   // Usamos localFilePath para la validación del contrato
   // Priority: Force use of environment-defined deployment ID to allow rotation/unlocking
   const deploymentId = 'production-ver-2-4-preflight';
-  
+
   // Initialize 'input' at the function head to prevent ReferenceErrors in all scopes
   let input = null;
   try {
@@ -67,11 +67,11 @@ async function enqueueJob(type, payload = {}) {
     console.error('[QUEUE][CONTRACT-ERROR]', err.message);
     throw err;
   }
-  
-  console.log('[QUEUE][DEPLOYMENT-RESOLVED]', { 
-    final: deploymentId, 
+
+  console.log('[QUEUE][DEPLOYMENT-RESOLVED]', {
+    final: deploymentId,
     fromEnv: process.env.PPOS_DEPLOYMENT_ID,
-    fromContext: payload.authContext2?.deploymentId 
+    fromContext: payload.authContext2?.deploymentId
   });
 
   // ... (restando del contenido para brevedad en la edición, pero localFilePath se usará abajo) ...
@@ -225,9 +225,9 @@ async function enqueueJob(type, payload = {}) {
 
     // v2.4.120: Hardened canonical ID extraction
     // Priority: Upstream explicit fields -> nested metadata -> pre-generated local ID
-    const rawId = data.jobId || data.job_id || data.id || data.job?.id || 
-                  data.metadata?.jobId || data.result?.jobId || data.result?.meta?.jobId ||
-                  jobId;
+    const rawId = data.jobId || data.job_id || data.id || data.job?.id ||
+      data.metadata?.jobId || data.result?.jobId || data.result?.meta?.jobId ||
+      jobId;
 
     // PROTECTION: Never allow mode labels like 'SYNC' or 'ASYNC' to become the canonical ID
     const canonicalJobId = (rawId && rawId !== 'SYNC' && rawId !== 'ASYNC') ? rawId : jobId;

@@ -87,17 +87,16 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     selectedPolicy,
 }) => {
     const { t } = useTranslation();
+    const [layoutMode, setLayoutMode] = useState<'single' | 'side-by-side'>('side-by-side');
+    const isAnalyzeOnly = result?.type === 'ANALYZE' || (result as any)?.name === 'preflight_job' || (appMode as string) === 'manual';
+    const hasFix = !!lastPdfUrl && !lastPdfUrl.startsWith('blob:');
     
-    // --- v2.4.92: Defensive Viewer Mode logic ---
-    const isAnalyzeOnly = result?.type === 'ANALYZE' || result?.name === 'preflight_job' || appMode === 'analyze';
-    const hasArtifact = !!lastPdfUrl || !!autoFixAfter;
-    
-    // Default to 'before' if analyze or no artifact
-    const [requestedMode, setRequestedMode] = useState<'before' | 'after'>( (isAnalyzeOnly || !hasArtifact) ? 'before' : 'after' );
+    // Default to 'after' if we have a fix, otherwise 'before'
+    const [requestedMode, setRequestedMode] = useState<'before' | 'after'>(hasFix ? 'after' : 'before');
     const [showTechNote, setShowTechNote] = useState(false);
 
-    // Final derived mode: Force 'before' if no artifact is truly available
-    const showBeforeAfter = (requestedMode === 'after' && !hasArtifact) ? 'before' : requestedMode;
+    // Final derived mode for single view: Force 'before' if no artifact is truly available
+    const showBeforeAfter = (requestedMode === 'after' && !hasFix) ? 'before' : requestedMode;
     const setShowBeforeAfter = (mode: 'before' | 'after') => setRequestedMode(mode);
     // -------------------------------------------
 
@@ -122,7 +121,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
         lastPdfName,
         appMode,
         isAnalyzeOnly,
-        hasArtifact,
+        hasFix,
         finalMode: showBeforeAfter
     });
     
@@ -182,47 +181,135 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-1 flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex bg-[var(--bg-primary)] p-1">
                             <button 
-                                onClick={() => setShowBeforeAfter('before')}
-                                className={`px-6 py-2 ppp-phase-tag !text-[0.8rem] !tracking-widest transition-all ${showBeforeAfter === 'before' ? 'bg-[var(--accent-color)] text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
+                                onClick={() => setLayoutMode('side-by-side')}
+                                className={`px-4 py-1.5 ppp-phase-tag !text-[0.65rem] !tracking-widest transition-all ${layoutMode === 'side-by-side' ? 'bg-[var(--accent-color)] text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
                             >
-                                {t('step.review.before')}
+                                SIDE-BY-SIDE
                             </button>
                             <button 
-                                onClick={() => setShowBeforeAfter('after')}
-                                className={`px-6 py-2 ppp-phase-tag !text-[0.8rem] !tracking-widest transition-all ${showBeforeAfter === 'after' ? 'bg-[var(--accent-color)] text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
+                                onClick={() => setLayoutMode('single')}
+                                className={`px-4 py-1.5 ppp-phase-tag !text-[0.65rem] !tracking-widest transition-all ${layoutMode === 'single' ? 'bg-[var(--accent-color)] text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
                             >
-                                {t('step.review.after')}
+                                SINGLE VIEW
                             </button>
                         </div>
-                        <div className="px-6 text-[0.8rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">
+                        
+                        {layoutMode === 'single' && (
+                            <div className="flex bg-[var(--bg-primary)] p-1">
+                                <button 
+                                    onClick={() => setShowBeforeAfter('before')}
+                                    className={`px-6 py-1.5 ppp-phase-tag !text-[0.65rem] !tracking-widest transition-all ${showBeforeAfter === 'before' ? 'bg-[var(--accent-color)] text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
+                                >
+                                    {t('step.review.before')}
+                                </button>
+                                <button 
+                                    onClick={() => setShowBeforeAfter('after')}
+                                    disabled={!hasFix}
+                                    className={`px-6 py-1.5 ppp-phase-tag !text-[0.65rem] !tracking-widest transition-all ${showBeforeAfter === 'after' ? 'bg-[var(--accent-color)] text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'} disabled:opacity-30 disabled:cursor-not-allowed`}
+                                >
+                                    {t('step.review.after')}
+                                </button>
+                            </div>
+                        )}
+                        
+                        <div className="px-6 text-[0.65rem] font-mono text-[var(--text-muted)] uppercase tracking-[0.3em]">
                             {t('step.review.verifierLabel')}
                         </div>
                     </div>
 
-                    <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[500px] h-[600px] flex flex-col items-center justify-center p-2 md:p-8 bg-[var(--bg-primary)]">
-                        {isGenerating && (
-                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/50 backdrop-blur-md animate-in fade-in duration-500">
-                                <div className="h-12 w-12 border-4 border-white/10 border-t-[var(--accent-color)] rounded-full animate-spin mb-6" />
-                                <div className="text-white text-[0.75rem] font-black uppercase tracking-[0.3em] font-mono">
-                                    {t('generatingCertificate')}
+                    <div className={`grid ${layoutMode === 'side-by-side' ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                        {/* BEFORE VIEW */}
+                        {(layoutMode === 'side-by-side' || showBeforeAfter === 'before') && (
+                            <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[500px] h-[650px] flex flex-col items-center bg-[var(--bg-primary)] group">
+                                <div className="absolute top-4 left-4 z-20 px-3 py-1 bg-black/40 backdrop-blur-md border border-white/5 text-[0.6rem] font-black text-white uppercase tracking-[0.2em]">
+                                    Original Document
                                 </div>
+                                <div className="absolute top-4 right-4 z-20">
+                                    <div className="px-2 py-1 bg-amber-500/10 border border-amber-500/20 text-[0.55rem] font-bold text-amber-500 uppercase tracking-widest">
+                                        Ingress State
+                                    </div>
+                                </div>
+                                <PageViewer 
+                                    key="viewer-before"
+                                    file={originalFile || file}
+                                    numPages={numPages}
+                                    currentPage={currentPage}
+                                    onPageChange={onPageChange}
+                                    onNumPagesChange={onNumPagesChange}
+                                    selectedIssue={null}
+                                    heatmapData={heatmapData || null}
+                                    onRunHeatmap={onRunHeatmap || (() => { })}
+                                    isHeatmapLoading={isHeatmapLoading}
+                                    previewPages={requestedMode === 'before' ? previewPages : null}
+                                    previewLoading={requestedMode === 'before' ? previewLoading : false}
+                                />
                             </div>
                         )}
-                        <PageViewer 
-                            key={`${showBeforeAfter}-${displayPdfUrl || 'local'}`}
-                            file={displayFile}
-                            pdfUrl={displayPdfUrl}
-                            numPages={numPages}
-                            currentPage={currentPage}
-                            onPageChange={onPageChange}
-                            onNumPagesChange={onNumPagesChange}
-                            selectedIssue={null}
-                            heatmapData={heatmapData || null}
-                            onRunHeatmap={onRunHeatmap || (() => { })}
-                            isHeatmapLoading={isHeatmapLoading}
-                            previewPages={previewPages}
-                            previewLoading={previewLoading}
-                        />
+
+                        {/* AFTER VIEW */}
+                        {(layoutMode === 'side-by-side' || showBeforeAfter === 'after') && (
+                            <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[500px] h-[650px] flex flex-col items-center justify-center bg-[var(--bg-primary)] group">
+                                <div className="absolute top-4 left-4 z-20 px-3 py-1 bg-[var(--accent-color)]/20 backdrop-blur-md border border-[var(--accent-color)]/20 text-[0.6rem] font-black text-[var(--accent-color)] uppercase tracking-[0.2em]">
+                                    Optimized for Print
+                                </div>
+                                
+                                {hasFix && (
+                                    <div className="absolute top-4 right-4 z-20">
+                                        <div className="px-2 py-1 bg-green-500/10 border border-green-500/20 text-[0.55rem] font-bold text-green-500 uppercase tracking-widest">
+                                            Certified State
+                                        </div>
+                                    </div>
+                                )}
+
+                                {isGenerating && (
+                                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/50 backdrop-blur-md animate-in fade-in duration-500">
+                                        <div className="h-12 w-12 border-4 border-white/10 border-t-[var(--accent-color)] rounded-full animate-spin mb-6" />
+                                        <div className="text-white text-[0.75rem] font-black uppercase tracking-[0.3em] font-mono">
+                                            {t('generatingCertificate')}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {hasFix ? (
+                                    <PageViewer 
+                                        key="viewer-after"
+                                        file={null}
+                                        pdfUrl={lastPdfUrl}
+                                        numPages={numPages}
+                                        currentPage={currentPage}
+                                        onPageChange={onPageChange}
+                                        onNumPagesChange={onNumPagesChange}
+                                        selectedIssue={null}
+                                        hideNavigation={layoutMode === 'side-by-side'}
+                                        heatmapData={null}
+                                        onRunHeatmap={() => {}}
+                                        isHeatmapLoading={false}
+                                        previewPages={requestedMode === 'after' ? previewPages : null}
+                                        previewLoading={requestedMode === 'after' ? previewLoading : false}
+                                    />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center p-12 text-center space-y-6">
+                                        <div className="h-20 w-20 bg-[var(--bg-secondary)] border border-[var(--border-color)] flex items-center justify-center rotate-45 group-hover:rotate-90 transition-all duration-700">
+                                            <CommandLineIcon className="h-8 w-8 text-[var(--text-muted)] -rotate-45 group-hover:-rotate-90 transition-all duration-700" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h4 className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">No Fix Applied Yet</h4>
+                                            <p className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-relaxed max-w-[200px]">
+                                                Run AutoFix to generate the corrected and certified artifact.
+                                            </p>
+                                        </div>
+                                        {!isRunning && (
+                                            <button 
+                                                onClick={onBack}
+                                                className="px-6 py-3 border border-[var(--accent-color)]/30 bg-[var(--accent-color)]/5 text-[var(--accent-color)] text-[0.6rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-color)] hover:text-white transition-all"
+                                            >
+                                                Go to Engine Fix
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex flex-col-reverse md:grid md:grid-cols-2 gap-4">
@@ -235,14 +322,14 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         
                         <button 
                             onClick={onNext}
-                            disabled={isRunning || (!lastPdfUrl && !isAnalyzeOnly)}
-                            className={`p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all flex items-center justify-center gap-2 w-full ${ (isRunning || (!lastPdfUrl && !isAnalyzeOnly)) ? 'bg-[var(--text-muted)] cursor-not-allowed opacity-50' : 'bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)]'}`}
+                            disabled={isRunning || (!hasFix && !isAnalyzeOnly)}
+                            className={`p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all flex items-center justify-center gap-2 w-full ${ (isRunning || (!hasFix && !isAnalyzeOnly)) ? 'bg-[var(--text-muted)] cursor-not-allowed opacity-50' : 'bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)]'}`}
                         >
-                            <RocketLaunchIcon className="h-4 w-4" /> { (lastPdfUrl || isAnalyzeOnly) ? (isAnalyzeOnly ? t('finalizeTrace').toUpperCase() : t('continueToReview').toUpperCase()) : t('waitingForArtifact').toUpperCase()}
+                            <RocketLaunchIcon className="h-4 w-4" /> { (hasFix || isAnalyzeOnly) ? (isAnalyzeOnly ? t('step.analysis.finalizeTrace' as any).toUpperCase() : t('continueToReview').toUpperCase()) : t('waitingForArtifact' as any).toUpperCase()}
                         </button>
 
                         {/* Missing Artifact Warning (v2.4.120) */}
-                        {!lastPdfUrl && !isRunning && !isAnalyzeOnly && (
+                        {!hasFix && !isRunning && !isAnalyzeOnly && (
                             <div className="md:col-span-2 p-4 bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
                                 <CpuChipIcon className="h-5 w-5 text-amber-500 shrink-0" />
                                 <div className="text-[0.7rem] font-bold text-amber-500 uppercase tracking-widest leading-normal">
@@ -294,20 +381,20 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                   onClick={() => setShowTechNote(true)}
                                   className="flex-1 px-4 py-3 border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-muted)] text-[0.7rem] font-black uppercase tracking-[0.2em] hover:text-[var(--text-primary)] hover:border-[var(--text-primary)] transition-all flex items-center justify-center gap-2"
                                 >
-                                  {t('technicalNotes')}
+                                  {t('step.review.note' as any)}
                                 </button>
                             </div>
                             <button 
                               onClick={onNext}
-                              disabled={isRunning || (!lastPdfUrl && !isAnalyzeOnly)}
-                              className={`w-full bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.8rem] font-black uppercase tracking-[0.2em] py-5 transition-all flex items-center justify-center gap-2 ${ (isRunning || (!lastPdfUrl && !isAnalyzeOnly)) ? 'opacity-50 cursor-not-allowed' : 'shadow-[0_10px_30px_rgba(220,0,0,0.2)]'}`}
+                              disabled={isRunning || (!hasFix && !isAnalyzeOnly)}
+                              className={`w-full bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.8rem] font-black uppercase tracking-[0.2em] py-5 transition-all flex items-center justify-center gap-2 ${ (isRunning || (!hasFix && !isAnalyzeOnly)) ? 'opacity-50 cursor-not-allowed' : 'shadow-[0_10px_30px_rgba(220,0,0,0.2)]'}`}
                             >
-                              {(lastPdfUrl || isAnalyzeOnly) ? (isAnalyzeOnly ? t('finalizeTrace') : t('continueToReview_v2')) : t('waitingForArtifact')}
-                              {(lastPdfUrl || isAnalyzeOnly) && <span className="text-xl">→</span>}
+                              {(hasFix || isAnalyzeOnly) ? (isAnalyzeOnly ? t('step.analysis.finalizeTrace' as any) : t('continueToReview_v2' as any)) : t('waitingForArtifact' as any)}
+                              {(hasFix || isAnalyzeOnly) && <span className="text-xl">→</span>}
                             </button>
 
                             {/* Live Certification Terminal (Monolith Extension) */}
-                            {isRunning && !lastPdfUrl && (
+                            {isRunning && !hasFix && (
                                 <div className="mt-4 p-4 border border-[var(--border-color)] bg-black/40 space-y-3 animate-in fade-in slide-in-from-top-2 duration-500 overflow-hidden relative group">
                                     <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
                                     
