@@ -142,13 +142,12 @@ async function enqueueJob(type, payload = {}) {
       const fileBuffer = await fs.promises.readFile(localFilePath);
       const fileMimeType = payload.mimeType || 'application/pdf';
       const fileName = payload.filename || input.filename || 'document.pdf';
-      const deploymentId = process.env.DEPLOYMENT_ID || 'local-dev';
-      const tenantId = process.env.PPOS_INTERNAL_TENANT_ID || 'ppos-production-worker';
+      // Removed shadowing of deploymentId and tenantId to use outer scope variables
 
       // Build standard multipart/form-data for PPOS V2 engine contract
       const form = new FormData();
-      form.append('id', input.jobId || `job_${Date.now()}`);
-      form.append('jobId', input.jobId || `job_${Date.now()}`);
+      form.append('id', jobId || `job_${Date.now()}`);
+      form.append('jobId', jobId || `job_${Date.now()}`);
       form.append('tenantId', tenantId);
       form.append('deploymentId', deploymentId);
       form.append('job_type', type || 'PREFLIGHT');
@@ -163,8 +162,8 @@ async function enqueueJob(type, payload = {}) {
         ...payload.metadata
       }));
 
-      // Canonical multipart file field
-      form.append('file', blob, fileName);
+      // Use fileBuffer correctly (was referencing undefined 'blob')
+      form.append('file', fileBuffer, fileName);
 
       console.log('[JOB_PAYLOAD][MULTIPART]', {
         tenantId,
@@ -224,13 +223,16 @@ async function enqueueJob(type, payload = {}) {
       throw err;
     }
 
-    // Extraction order for jobId: jobId, job_id, id, job.id, or nested in metadata/result
-    const canonicalJobId = data.jobId || data.job_id || data.id || data.job?.id || 
-                          data.metadata?.jobId || data.result?.jobId || data.result?.meta?.jobId ||
-                          jobId; // Fallback to pre-generated ID we sent
+    // v2.4.120: Hardened canonical ID extraction
+    // Priority: Upstream explicit fields -> nested metadata -> pre-generated local ID
+    const rawId = data.jobId || data.job_id || data.id || data.job?.id || 
+                  data.metadata?.jobId || data.result?.jobId || data.result?.meta?.jobId ||
+                  jobId;
+
+    // PROTECTION: Never allow mode labels like 'SYNC' or 'ASYNC' to become the canonical ID
+    const canonicalJobId = (rawId && rawId !== 'SYNC' && rawId !== 'ASYNC') ? rawId : jobId;
 
     // Detection of sync/inline mode: It's sync if it contains a full result OR if it's already COMPLETED
-    // We favor 'sync' status if findings/analysis are present regardless of ID
     const hasInlineSigns = !!(data.analysis || data.issues || data.report || data.findings || (data.status === 'COMPLETED' && !canonicalJobId));
     const mode = hasInlineSigns ? 'sync' : (canonicalJobId ? 'async' : 'unknown');
 
@@ -242,6 +244,15 @@ async function enqueueJob(type, payload = {}) {
     }
 
     console.log('[CREATE-JOB][BFF-RETURN]', { mode, jobId: canonicalJobId });
+
+    // FAIL-LOUD: Diagnostic for ID loss
+    if (!canonicalJobId || canonicalJobId === 'undefined') {
+      console.error(`[CREATE-JOB][CRITICAL] No canonical job ID resolved in mode ${mode}!`, {
+        upstreamKeys: Object.keys(data),
+        requestId: payload.requestId,
+        upstreamStatus: data.status
+      });
+    }
 
     return {
       id: canonicalJobId,
