@@ -224,12 +224,15 @@ async function enqueueJob(type, payload = {}) {
       throw err;
     }
 
-    // Extraction order for jobId: jobId, job_id, id, job.id
-    const canonicalJobId = data.jobId || data.job_id || data.id || data.job?.id;
+    // Extraction order for jobId: jobId, job_id, id, job.id, or nested in metadata/result
+    const canonicalJobId = data.jobId || data.job_id || data.id || data.job?.id || 
+                          data.metadata?.jobId || data.result?.jobId || data.result?.meta?.jobId ||
+                          jobId; // Fallback to pre-generated ID we sent
 
-    // Detection of sync/inline mode
-    const hasInlineSigns = !!(data.analysis || data.issues || (data.status && !canonicalJobId));
-    const mode = canonicalJobId ? 'async' : (hasInlineSigns ? 'sync' : 'unknown');
+    // Detection of sync/inline mode: It's sync if it contains a full result OR if it's already COMPLETED
+    // We favor 'sync' status if findings/analysis are present regardless of ID
+    const hasInlineSigns = !!(data.analysis || data.issues || data.report || data.findings || (data.status === 'COMPLETED' && !canonicalJobId));
+    const mode = hasInlineSigns ? 'sync' : (canonicalJobId ? 'async' : 'unknown');
 
     console.log('[CREATE-JOB][MODE-DETECTED]', { mode, jobId: canonicalJobId });
 
@@ -245,7 +248,7 @@ async function enqueueJob(type, payload = {}) {
       jobId: canonicalJobId,
       status: data.status || "QUEUED",
       mode,
-      inlineResult: mode === 'sync' ? data : null,
+      inlineResult: hasInlineSigns ? data : null,
       raw: data
     };
   } catch (serviceError) {

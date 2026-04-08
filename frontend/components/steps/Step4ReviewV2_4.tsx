@@ -240,6 +240,16 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         >
                             <RocketLaunchIcon className="h-4 w-4" /> { (lastPdfUrl || isAnalyzeOnly) ? (isAnalyzeOnly ? t('finalizeTrace').toUpperCase() : t('continueToReview').toUpperCase()) : t('waitingForArtifact').toUpperCase()}
                         </button>
+
+                        {/* Missing Artifact Warning (v2.4.120) */}
+                        {!lastPdfUrl && !isRunning && !isAnalyzeOnly && (
+                            <div className="md:col-span-2 p-4 bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+                                <CpuChipIcon className="h-5 w-5 text-amber-500 shrink-0" />
+                                <div className="text-[0.7rem] font-bold text-amber-500 uppercase tracking-widest leading-normal">
+                                    Certified artifact is not accessible. You can finalize the trace, but the direct comparison is limited to the ingress state.
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 

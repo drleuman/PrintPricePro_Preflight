@@ -248,7 +248,9 @@ function AppContent() {
         setResult(normalized);
         
         // v2.4.113: Synchronous Resilient Artifact Resolution
-        const jobId = normalized.meta?.jobId || res.jobId || res.job_id || res.id;
+        // v2.4.120: Forensic ID Propagation Bridge
+        // We prioritize root keys then nested meta to ensure artifacts can resolve
+        const jobId = res.jobId || res.job_id || res.id || normalized.meta?.jobId || res.jobMeta?.id;
         
         if (jobId) {
           const artifacts = normalized.artifacts || {};
@@ -261,7 +263,7 @@ function AppContent() {
           lastPdfUrlRef.current = url;
           setLastPdfName(normalized.meta?.fileName || 'certified_document.pdf');
         } else {
-          console.warn('[APP][SKIP-ARTIFACT-URL][SYNC] No jobId found');
+          console.error('[APP][CRITICAL-SYNC-FAILURE] Success response received but NO canonical jobId found. Certification artifacts will be broken.');
           setLastPdfUrl(null);
           lastPdfUrlRef.current = null;
         }

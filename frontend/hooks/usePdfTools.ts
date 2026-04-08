@@ -48,10 +48,17 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
                 body: formData,
             });
 
+            const finalJobId = res.jobId || res.job_id || res.id || res.inlineResult?.meta?.jobId || res.jobMeta?.id;
+            
             console.log('[CREATE-JOB][SUCCESS-BFF]', {
-                jobId: res.jobId || res.job_id || res.id,
-                inline: !!res.inlineResult
+                jobId: finalJobId,
+                inline: !!res.inlineResult,
+                status: res.status
             });
+
+            if (!finalJobId) {
+                console.warn('[CREATE-JOB][WARN] BFF returned success but NO jobId was found. Artifacts in Step 4 will fail to resolve.');
+            }
 
             return res;
         } catch (err: any) {

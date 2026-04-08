@@ -100,31 +100,46 @@ router.post(
         if (err) console.warn(`[BFF][CLEANUP][WARN] Failed to delete temp file ${req.file.path}:`, err.message);
       });
 
+      // v2.4.120: Forensic ID Propagation Logic
+      // We prioritize the local jobId (from Line 47) as the canonical contract ID
+      const finalId = jobId || job.jobId || job.id || job.inlineResult?.meta?.jobId || `job_${Date.now()}`;
+      
       const responsePayload = {
         ok: true,
+        id: finalId,
+        jobId: finalId,
         tenantId,
         policy,
+        mode: job.mode,
         jobMeta: {
-          id: job.id,
+          id: finalId,
           fileName: req.file.originalname,
           fileSize: req.file.size
         }
       };
-
-      // v2.4.114: Guaranteed ID Propagation
-      // We prioritize the pre-generated jobId from Line 47 to ensure frontend sync
-      const finalId = jobId || job.jobId || job.id || job._id || `job_${Date.now()}`;
-      responsePayload.id = finalId;
-      responsePayload.jobId = finalId;
-
-      if (job.mode === 'sync') {
+      
+      if (job.inlineResult) {
         responsePayload.inlineResult = job.inlineResult;
+        // Ensure the inline result itself contains the jobId in its metadata
+        if (responsePayload.inlineResult.meta) {
+           responsePayload.inlineResult.meta.jobId = finalId;
+        }
       }
 
-      console.log(`[BFF][V2-JOB-SUCCESS][${requestId}] Response:`, {
-        id: responsePayload.id || 'SYNC',
-        inline: !!responsePayload.inlineResult
+      console.log(`[BFF][V2-JOB-SUCCESS][${requestId}]`, {
+        id: responsePayload.id,
+        mode: responsePayload.inlineResult ? 'SYNC' : 'ASYNC',
+        hasInline: !!responsePayload.inlineResult
       });
+
+      // FAIL-LOUD: Diagnostic for artifact loss prévention
+      if (!responsePayload.id || responsePayload.id === 'undefined') {
+        console.error(`[BFF][V2-JOB-CRITICAL-ERROR][${requestId}] Job created but ID IS MISSING!`, {
+            jobIdVar: jobId,
+            jobResultId: job.id,
+            jobResultJobId: job.jobId
+        });
+      }
 
       return res.status(201).json(responsePayload);
     } catch (error) {
