@@ -102,7 +102,7 @@ router.post(
 
       // v2.4.120: Forensic ID Propagation Logic
       // We prioritize the local jobId (from Line 47) as the canonical contract ID
-      const finalId = jobId || job.jobId || job.id || job.inlineResult?.meta?.jobId || `job_${Date.now()}`;
+      const finalId = job.jobId || job.id || jobId || job.inlineResult?.meta?.jobId || `job_${Date.now()}`;
       
       const responsePayload = {
         ok: true,
@@ -121,9 +121,10 @@ router.post(
       if (job.inlineResult) {
         responsePayload.inlineResult = job.inlineResult;
         // Ensure the inline result itself contains the jobId in its metadata
-        if (responsePayload.inlineResult.meta) {
-           responsePayload.inlineResult.meta.jobId = finalId;
-        }
+        responsePayload.inlineResult.meta = {
+          ...(responsePayload.inlineResult.meta || {}),
+          jobId: finalId
+        };
       }
 
       console.log(`[BFF][V2-JOB-SUCCESS][${requestId}]`, {
@@ -141,6 +142,7 @@ router.post(
         });
       }
 
+      responsePayload.__route_marker = 'apiV2-jobid-patch-2026-04-08';
       return res.status(201).json(responsePayload);
     } catch (error) {
       const traceId = requestId;
