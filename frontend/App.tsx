@@ -207,8 +207,16 @@ function AppContent() {
           lastPdfUrlRef.current = null;
         }
         
-        const fileName = normalized.meta?.fileName || normalized.filename || normalized.meta?.filename || 'certified_document.pdf';
-        setLastPdfName(fileName);
+        // v2.4.120: Premium Filename Resolution (No-Unknown Policy)
+        const jobFileName = (normalized as any).meta?.fileName || (normalized as any).filename || (normalized as any).meta?.filename;
+        const isInternalUuid = jobFileName && /^[0-9a-f-]{36}/.test(jobFileName);
+        
+        let finalDisplayName = jobFileName;
+        if (!jobFileName || isInternalUuid) {
+          finalDisplayName = fileMeta?.name || file?.name || jobFileName || 'certified_document.pdf';
+        }
+        
+        setLastPdfName(finalDisplayName);
       } else {
         console.warn('[APP][SKIP-ARTIFACT-URL] No jobId found for artifact registration');
         setLastPdfUrl(null);
@@ -282,7 +290,16 @@ function AppContent() {
             setLastPdfUrl(null);
             lastPdfUrlRef.current = null;
           }
-          setLastPdfName(normalized.meta?.fileName || 'certified_document.pdf');
+          // v2.4.120: Sync Mode Filename Resolution
+          const jobFileName = (normalized as any).meta?.fileName || (normalized as any).filename || (normalized as any).meta?.filename;
+          const isInternalUuid = jobFileName && /^[0-9a-f-]{36}/.test(jobFileName);
+          
+          let finalDisplayName = jobFileName;
+          if (!jobFileName || isInternalUuid) {
+            finalDisplayName = fileMeta?.name || file?.name || jobFileName || 'certified_document.pdf';
+          }
+          
+          setLastPdfName(finalDisplayName);
         } else {
           console.error('[APP][CRITICAL-SYNC-FAILURE] Success response received but NO canonical jobId found. Certification artifacts will be broken.');
           setLastPdfUrl(null);
@@ -381,7 +398,16 @@ function AppContent() {
             setLastPdfUrl(null);
             lastPdfUrlRef.current = null;
           }
-          setLastPdfName(jobResult?.meta?.filename || 'certified_pdf.pdf');
+          // v2.4.120: AutoFix Filename Resolution
+          const jobFileName = jobResult?.meta?.fileName || jobResult?.filename || jobResult?.meta?.filename;
+          const isInternalUuid = jobFileName && /^[0-9a-f-]{36}/.test(jobFileName);
+          
+          let finalDisplayName = jobFileName;
+          if (!jobFileName || isInternalUuid) {
+            finalDisplayName = fileMeta?.name || file?.name || jobFileName || 'certified_pdf.pdf';
+          }
+          
+          setLastPdfName(finalDisplayName);
         }
 
         setCurrentPage(1);

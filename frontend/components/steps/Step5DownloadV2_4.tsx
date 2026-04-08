@@ -57,7 +57,13 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
 
                     <div className="space-y-4 relative z-10 w-full">
                         <div className="text-[0.7rem] font-black uppercase tracking-[0.25em] text-[var(--accent-color)]">{t('step.download.readyForRetrival')}</div>
-                        <h3 className="text-xl font-bold text-[var(--text-primary)] truncate px-4">{lastPdfName || file?.name || 'optimized_document.pdf'}</h3>
+                        <h3 className="text-xl font-bold text-[var(--text-primary)] truncate px-4">
+                            {(() => {
+                                const baseName = lastPdfName || file?.name || 'document.pdf';
+                                const cleanBase = baseName.toLowerCase().endsWith('.pdf') ? baseName.slice(0, -4) : baseName;
+                                return `${cleanBase}-certified.pdf`;
+                            })()}
+                        </h3>
                         <div className="text-[0.8rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">{t('readyForPrinting')}</div>
                     </div>
 
