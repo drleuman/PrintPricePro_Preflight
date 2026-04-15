@@ -162,8 +162,9 @@ async function enqueueJob(type, payload = {}) {
         ...payload.metadata
       }));
 
-      // Use fileBuffer correctly (was referencing undefined 'blob')
-      form.append('file', fileBuffer, fileName);
+      // Native FormData requires a Blob, not a raw Buffer (Node 20+ strict Web API).
+      const fileBlob = new Blob([fileBuffer], { type: fileMimeType });
+      form.append('file', fileBlob, fileName);
 
       console.log('[JOB_PAYLOAD][MULTIPART]', {
         tenantId,
@@ -180,7 +181,7 @@ async function enqueueJob(type, payload = {}) {
         fileSize: fileBuffer.length,
         fileName,
         fileMimeType,
-        usingNativeFormData: true
+        usingNativeFormData: true, fileAsBlob: true
       });
 
       console.log('[QUEUE][TARGET]', pposConfig.routes.jobs);
