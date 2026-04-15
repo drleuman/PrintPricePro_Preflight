@@ -16,6 +16,23 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
     const startV2Preflight = useCallback(async (file: File, policy: string, options?: any) => {
         setIsServerRunning(true);
         try {
+            // Runtime Blob/File identity check — must run before any FormData access
+            console.log('[FILE-DEBUG]', {
+                type: Object.prototype.toString.call(file),
+                isBlob: file instanceof Blob,
+                isFile: file instanceof File,
+                name: file?.name,
+                size: file?.size,
+            });
+
+            if (!(file instanceof Blob)) {
+                throw new Error(
+                    `Upload aborted: file is not a valid Blob/File. ` +
+                    `Got: ${Object.prototype.toString.call(file)}. ` +
+                    `name=${(file as any)?.name}, size=${(file as any)?.size}`
+                );
+            }
+
             // DIAGNOSTIC LOGS (Requirement 5)
             console.log('[CREATE-JOB][DIAGNOSTIC]', {
                 endpoint: '/api/v2/jobs',
@@ -29,8 +46,9 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
 
             const formData = new FormData();
 
-            // Requirement 2: Añade el PDF con la clave exacta 'file'
-            formData.append('file', file);
+            // Requirement 2: Append with explicit filename so the server receives
+            // a proper filename even when the browser omits it (e.g. Blob without name).
+            formData.append('file', file, file.name || 'document.pdf');
 
             // Campos adicionales
             formData.append('policy', policy || 'OFFSET_MODERN_COATED');
