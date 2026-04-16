@@ -1,7 +1,7 @@
 'use strict';
 
 const fs = require('fs');
-const { File, Blob } = require('node:buffer');
+const FormData = require('form-data');
 const { pposRequest } = require('./apiClient');
 const identityService = require('./identityService');
 const pposConfig = require('../../config/ppos');
@@ -145,7 +145,9 @@ async function enqueueJob(type, payload = {}) {
       const fileName = payload.filename || input.filename || 'document.pdf';
       // Removed shadowing of deploymentId and tenantId to use outer scope variables
 
-      // Build standard multipart/form-data for PPOS V2 engine contract
+      // v2.4.125: Node/PM2 Runtime Stability Pivot
+      // Switching to 'form-data' package as native Web FormData/File 
+      // shows branding mismatches in the production PM2 environment.
       const form = new FormData();
       form.append('id', jobId || `job_${Date.now()}`);
       form.append('jobId', jobId || `job_${Date.now()}`);
@@ -163,24 +165,18 @@ async function enqueueJob(type, payload = {}) {
         ...payload.metadata
       }));
 
-      // v2.4.122: Node 20+ strict Web API compatibility
-      // Native FormData.append in Node requires a Blob or File.
-      // We use the File object to ensure the filename is correctly bound to the payload.
-      const fileObject = new File([fileBuffer], fileName, {
-        type: fileMimeType || 'application/pdf',
-      });
-
       console.log('[QUEUE][FILE-OBJECT-CHECK]', {
-        ctor: fileObject?.constructor?.name,
-        isFile: fileObject instanceof File,
-        isBlob: fileObject instanceof Blob,
-        hasArrayBuffer: typeof fileObject?.arrayBuffer === 'function',
-        size: fileObject?.size,
-        type: fileObject?.type,
-        name: fileObject?.name,
+        mode: 'form-data-buffer',
+        size: fileBuffer.length,
+        type: fileMimeType || 'application/pdf',
+        name: fileName
       });
 
-      form.append('file', fileObject);
+      form.append('file', fileBuffer, {
+        filename: fileName,
+        contentType: fileMimeType || 'application/pdf',
+        knownLength: fileBuffer.length
+      });
 
       console.log('[JOB_PAYLOAD][MULTIPART]', {
         tenantId,
@@ -197,14 +193,15 @@ async function enqueueJob(type, payload = {}) {
         fileSize: fileBuffer.length,
         fileName,
         fileMimeType,
-        usingNativeFormData: true, fileAsBlob: true
+        usingNodeFormData: true
       });
 
       console.log('[QUEUE][TARGET]', pposConfig.routes.jobs);
       response = await pposRequest(pposConfig.routes.jobs, {
         method: 'POST',
         headers: {
-          ...authHeaders
+          ...authHeaders,
+          ...form.getHeaders()
         },
         body: form
       });
