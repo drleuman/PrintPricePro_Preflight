@@ -155,8 +155,6 @@ async function enqueueJob(type, payload = {}) {
       form.append('deploymentId', deploymentId);
       form.append('job_type', type || 'PREFLIGHT');
       form.append('policy', payload.policy || 'OFFSET_MODERN_COATED');
-
-      // Nested objects as JSON strings
       form.append('input', JSON.stringify(input));
       form.append('metadata', JSON.stringify({
         source: 'printprice-preflight-app',
@@ -165,6 +163,12 @@ async function enqueueJob(type, payload = {}) {
         ...payload.metadata
       }));
 
+      form.append('file', fileBuffer, {
+        filename: fileName,
+        contentType: fileMimeType || 'application/pdf',
+        knownLength: fileBuffer.length
+      });
+
       console.log('[QUEUE][FILE-OBJECT-CHECK]', {
         mode: 'form-data-buffer',
         size: fileBuffer.length,
@@ -172,31 +176,6 @@ async function enqueueJob(type, payload = {}) {
         name: fileName
       });
 
-      form.append('file', fileBuffer, {
-        filename: fileName,
-        contentType: fileMimeType || 'application/pdf',
-        knownLength: fileBuffer.length
-      });
-
-      console.log('[JOB_PAYLOAD][MULTIPART]', {
-        tenantId,
-        deploymentId,
-        jobId,
-        formFields: ['id', 'jobId', 'tenantId', 'deploymentId', 'job_type', 'policy', 'input', 'metadata', 'file']
-      });
-
-      console.log('[QUEUE][MULTIPART][DEBUG]', {
-        jobId,
-        tenantId,
-        filePath: localFilePath,
-        fileExists: true,
-        fileSize: fileBuffer.length,
-        fileName,
-        fileMimeType,
-        usingNodeFormData: true
-      });
-
-      console.log('[QUEUE][TARGET]', pposConfig.routes.jobs);
       response = await pposRequest(pposConfig.routes.jobs, {
         method: 'POST',
         headers: {

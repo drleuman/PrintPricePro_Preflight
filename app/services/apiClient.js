@@ -9,12 +9,6 @@
 
 const pposConfig = require('../../config/ppos');
 
-function isNativeFormData(body) {
-    return (
-        typeof FormData !== 'undefined' &&
-        body instanceof FormData
-    );
-}
 
 /**
  * Standard request helper for PPOS services.
@@ -34,7 +28,17 @@ async function pposRequest(path, options = {}) {
     const url = isAbsolutePath ? path : `${baseUrl.replace(/\/$/, '')}${path}`;
     
     const body = options.body;
-    const nativeMultipart = isNativeFormData(body);
+    
+    const nativeFormData = 
+        typeof FormData !== 'undefined' && 
+        body instanceof FormData;
+
+    const nodeFormData = 
+        body && 
+        typeof body.getHeaders === 'function' && 
+        typeof body.append === 'function';
+
+    const multipartBody = nativeFormData || nodeFormData;
     const incomingHeaders = { ...(options.headers || {}) };
 
     const hasExplicitContentType = Object.keys(incomingHeaders).some(
@@ -49,13 +53,14 @@ async function pposRequest(path, options = {}) {
     };
 
     // Only inject JSON content-type for non-FormData requests that do not already define one.
-    if (!nativeMultipart && !hasExplicitContentType) {
+    if (!multipartBody && !hasExplicitContentType) {
         headers['Content-Type'] = 'application/json';
     }
 
     // Never forward an explicit multipart Content-Type for native FormData.
     // fetch/undici must generate the boundary automatically.
-    if (nativeMultipart) {
+    // However, for Node 'form-data', we MUST keep the content-type (bound by form.getHeaders()).
+    if (nativeFormData) {
         for (const key of Object.keys(headers)) {
             if (key.toLowerCase() === 'content-type') {
                 delete headers[key];
@@ -72,7 +77,8 @@ async function pposRequest(path, options = {}) {
     console.log('[PPOS-API][DEBUG]', {
         method: options.method || 'GET',
         url,
-        nativeMultipart,
+        nativeFormData,
+        nodeFormData,
         hasExplicitContentType,
         headerKeys: Object.keys(headers)
     });
