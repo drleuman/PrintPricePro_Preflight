@@ -191,22 +191,32 @@ function AppContent() {
         const artifacts = normalized.artifacts || normalized.result?.artifacts || {};
         const bestArtifactKey = artifacts.final_fixed_pdf || null;
         
-        if (bestArtifactKey) {
-          const url = `${window.location.origin}/api/v2/jobs/${completedJobId}/artifacts/${bestArtifactKey}`;
-          console.log('[APP][SET-DOWNLOAD-URL]', { key: bestArtifactKey, jobId: completedJobId, url });
-          setLastPdfUrl(url);
-          lastPdfUrlRef.current = url;
-        } else if (file) {
-          // Fallback to original uploaded file (client-side) if no certified artifact exists
-          const url = URL.createObjectURL(file);
-          console.log('[APP][SET-DOWNLOAD-URL][FALLBACK]', { url });
-          setLastPdfUrl(url);
-          lastPdfUrlRef.current = url;
-        } else {
-          console.warn('[APP][SKIP-ARTIFACT-URL] No artifact and no local file');
-          setLastPdfUrl(null);
-          lastPdfUrlRef.current = null;
-        }
+        const updateArtifactUrl = async () => {
+          if (bestArtifactKey) {
+            try {
+              const bUrl = await getAuthenticatedBlobUrl(completedJobId, bestArtifactKey);
+              if (bUrl) {
+                console.log('[APP][SET-DOWNLOAD-URL]', { key: bestArtifactKey, jobId: completedJobId, url: bUrl });
+                setLastPdfUrl(bUrl);
+                lastPdfUrlRef.current = bUrl;
+              }
+            } catch (err) {
+              console.error('[APP][ARTIFACT-RESOLVE-ERROR]', err);
+            }
+          } else if (file) {
+            // Fallback to original uploaded file (client-side) if no certified artifact exists
+            const url = URL.createObjectURL(file);
+            console.log('[APP][SET-DOWNLOAD-URL][FALLBACK]', { url });
+            setLastPdfUrl(url);
+            lastPdfUrlRef.current = url;
+          } else {
+            console.warn('[APP][SKIP-ARTIFACT-URL] No artifact and no local file');
+            setLastPdfUrl(null);
+            lastPdfUrlRef.current = null;
+          }
+        };
+
+        updateArtifactUrl();
         
         // v2.4.120: Premium Filename Resolution (No-Unknown Policy)
         const jobFileName = (normalized as any).meta?.fileName || (normalized as any).filename || (normalized as any).meta?.filename;
@@ -277,10 +287,13 @@ function AppContent() {
           const bestArtifactKey = artifacts.final_fixed_pdf || null;
           
           if (bestArtifactKey) {
-            const url = `${window.location.origin}/api/v2/jobs/${jobId}/artifacts/${bestArtifactKey}`;
-            console.log('[APP][SET-DOWNLOAD-URL][SYNC]', { key: bestArtifactKey, jobId, url });
-            setLastPdfUrl(url);
-            lastPdfUrlRef.current = url;
+            getAuthenticatedBlobUrl(jobId, bestArtifactKey).then(bUrl => {
+                if (bUrl) {
+                    console.log('[APP][SET-DOWNLOAD-URL][SYNC]', { key: bestArtifactKey, jobId, url: bUrl });
+                    setLastPdfUrl(bUrl);
+                    lastPdfUrlRef.current = bUrl;
+                }
+            }).catch(err => console.error('[APP][SYNC-ARTIFACT-ERROR]', err));
           } else if (file) {
             const url = URL.createObjectURL(file);
             console.log('[APP][SET-DOWNLOAD-URL][SYNC-FALLBACK]', { url });
@@ -386,10 +399,13 @@ function AppContent() {
           const bestArtifactKey = availableArtifacts.final_fixed_pdf || null;
           
           if (bestArtifactKey) {
-            const url = `${window.location.origin}/api/v2/jobs/${finalJobId}/artifacts/${bestArtifactKey}`;
-            console.log('[APP][ARTIFACT-URL]', { key: bestArtifactKey, url });
-            setLastPdfUrl(url);
-            lastPdfUrlRef.current = url;
+            getAuthenticatedBlobUrl(finalJobId, bestArtifactKey).then(bUrl => {
+                if (bUrl) {
+                    console.log('[APP][ARTIFACT-URL]', { key: bestArtifactKey, url: bUrl });
+                    setLastPdfUrl(bUrl);
+                    lastPdfUrlRef.current = bUrl;
+                }
+            }).catch(err => console.error('[APP][FIX-ARTIFACT-ERROR]', err));
           } else if (file) {
             const url = URL.createObjectURL(file);
             console.log('[APP][ARTIFACT-URL][FALLBACK]', { url });
@@ -513,9 +529,7 @@ function AppContent() {
       if (jobId) {
         activeJobIdRef.current = jobId;
         await handleV2JobComplete(jobId);
-        const url = getDownloadUrl(jobId);
-        setLastPdfUrl(url);
-        lastPdfUrlRef.current = url;
+        // handleV2JobComplete already triggers the blob fetch via callback
       }
       setLdmActive(false);
     } catch (err: any) {
@@ -537,9 +551,6 @@ function AppContent() {
       if (jobId) {
         activeJobIdRef.current = jobId;
         await handleV2JobComplete(jobId);
-        const url = getDownloadUrl(jobId);
-        setLastPdfUrl(url);
-        lastPdfUrlRef.current = url;
       }
       setLdmActive(false);
       setLdmActive(false);
@@ -562,9 +573,6 @@ function AppContent() {
       if (jobId) {
         activeJobIdRef.current = jobId;
         await handleV2JobComplete(jobId);
-        const url = getDownloadUrl(jobId);
-        setLastPdfUrl(url);
-        lastPdfUrlRef.current = url;
       }
       setLdmActive(false);
       setLdmActive(false);

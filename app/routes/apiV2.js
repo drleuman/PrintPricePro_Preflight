@@ -337,6 +337,10 @@ router.get('/:jobId', async (req, res) => {
         
         // --- v2.4.111: Forensic Job-Type Identification Bridge ---
         const detectedType = result.type || data.type || result.job_type || 'ANALYZE';
+        console.log(`[BFF][POLL][TYPE-RAW][${requestId}]`, { 
+            detected: detectedType, 
+            source: result.type ? 'result.type' : (data.type ? 'data.type' : 'job_type') 
+        });
         data.type = detectedType.toUpperCase();
         data.name = result.name || data.name || data.type;
 
@@ -437,13 +441,14 @@ router.post('/:jobId/actions/fix', async (req, res) => {
     const authContext = req.auth || req.user || {};
     const internalToken = identityService.getAuthHeaders(authContext).Authorization;
 
-    console.log('[BFF][FIX-ACTION][PAYLOAD]', { jobId, mode: 'stateful-fix' });
+    console.log('[BFF][FIX-ACTION][PAYLOAD]', { jobId, mode: 'AUTOFIX (Explicit)' });
 
     // We enqueue a new AUTOFIX job referencing the previous jobId as the source context
     const job = await queue.enqueueJob('AUTOFIX', {
       sourceJobId: jobId,
       assetId: jobId,
       jobId: `fix_${jobId}_${Date.now()}`,
+      mode: 'AUTOFIX', // Explicit contract mode
       force: true,
       requestId,
       tenantId,

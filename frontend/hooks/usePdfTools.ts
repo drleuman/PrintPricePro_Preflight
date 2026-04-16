@@ -202,6 +202,24 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
         return `/api/v2/jobs/${jobId}/artifacts/${artifactId}`;
     }, []);
 
+    const getAuthenticatedBlobUrl = useCallback(async (jobId: string, artifactId: string = 'final_fixed_pdf') => {
+        const url = getDownloadUrl(jobId, artifactId);
+        console.log('[APP][ARTIFACT][AUTH-BLOB-FETCH] Fetching protected artifact:', { url });
+        try {
+            const blob = await pposFetch<Blob>(url);
+            if (!(blob instanceof Blob)) {
+                console.error('[APP][ARTIFACT][ERROR] Expected Blob but got:', typeof blob);
+                return null;
+            }
+            const blobUrl = URL.createObjectURL(blob);
+            console.log('[APP][ARTIFACT][SUCCESS] Blob URL created:', blobUrl);
+            return blobUrl;
+        } catch (err: any) {
+            console.error('[APP][ARTIFACT][FAILURE]', err.message);
+            throw err;
+        }
+    }, [getDownloadUrl]);
+
     const createBookletClient = useCallback(async (file: File) => {
         const arrayBuffer = await file.arrayBuffer();
         const pdfBytes = await createBooklet(arrayBuffer);
@@ -228,6 +246,7 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
         getJobStatus,
         pollJob,
         getDownloadUrl,
+        getAuthenticatedBlobUrl,
         startV2Preflight,
         handleV2JobComplete,
     };

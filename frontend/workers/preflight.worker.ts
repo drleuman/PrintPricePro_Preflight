@@ -1,15 +1,18 @@
 import * as pdfjsLib from 'pdfjs-dist';
 
-// @ts-ignore - Vite asset import
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
-
 /**
  * Preflight Worker Engine (Recovery)
  * Handles compute-intensive tasks like TAC (Total Area Coverage) analysis
  * and eventually full preflight checks.
  */
 const ctx: Worker = self as any;
+
+// Verification for canvas support in workers
+const supportsOffscreenCanvas = typeof OffscreenCanvas !== 'undefined';
+if (!supportsOffscreenCanvas) {
+    console.warn('[WORKER] OffscreenCanvas is not supported. Heatmap rendering may fail.');
+}
+
 
 ctx.onmessage = async (e) => {
     const { type, buffer, pageIndex, fileMeta } = e.data;
@@ -35,6 +38,9 @@ ctx.onmessage = async (e) => {
             const samplesY = Math.round(samplesX * ratio);
             
             // Render to OffscreenCanvas at the sampling resolution
+            if (!supportsOffscreenCanvas) {
+                throw new Error('Heatmap aborted: OffscreenCanvas API is not available in this environment.');
+            }
             const canvas = new OffscreenCanvas(samplesX, samplesY);
             const context = canvas.getContext('2d', { willReadFrequently: true });
             

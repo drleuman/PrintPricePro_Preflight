@@ -102,10 +102,12 @@ async function enqueueJob(type, payload = {}) {
     tenantId,
     deploymentId,
     job_type: type || 'PREFLIGHT',
+    intent: type || 'PREFLIGHT', // Redundancy for older engine versions
     force: payload.force || true,
     cleanup: payload.cleanup || true,
     config: {
       ...payload,
+      mode: type || payload.mode || 'PREFLIGHT', // Explicitly propagate mode
       force: payload.force || true,
       cleanup: payload.cleanup || true
     },
@@ -114,7 +116,8 @@ async function enqueueJob(type, payload = {}) {
     metadata: {
       source: 'printprice-preflight-app',
       requestId: payload.requestId || null,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      intent: type || 'PREFLIGHT'
     }
   };
 
