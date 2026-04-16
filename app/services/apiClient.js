@@ -7,6 +7,7 @@
  * Replaces hardcoded URLs with environment-driven configuration.
  */
 
+const axios = require('axios');
 const pposConfig = require('../../config/ppos');
 
 
@@ -65,6 +66,59 @@ async function pposRequest(path, options = {}) {
             if (key.toLowerCase() === 'content-type') {
                 delete headers[key];
             }
+        }
+    }
+
+    if (nodeFormData) {
+        console.log('[PPOS-API][AXIOS-MULTIPART]', {
+            method: options.method || 'POST',
+            url,
+            headerKeys: Object.keys(headers)
+        });
+
+        try {
+            const axiosResponse = await axios({
+                method: options.method || 'POST',
+                url,
+                headers,
+                data: body,
+                maxBodyLength: Infinity,
+                maxContentLength: Infinity,
+                validateStatus: () => true
+            });
+
+            const responseLike = {
+                ok: axiosResponse.status >= 200 && axiosResponse.status < 300,
+                status: axiosResponse.status,
+                headers: axiosResponse.headers,
+                async text() {
+                    if (typeof axiosResponse.data === 'string') return axiosResponse.data;
+                    return JSON.stringify(axiosResponse.data ?? {});
+                },
+                async json() {
+                    if (typeof axiosResponse.data === 'string') {
+                        try {
+                            return JSON.parse(axiosResponse.data);
+                        } catch {
+                            return { raw: axiosResponse.data };
+                        }
+                    }
+                    return axiosResponse.data ?? {};
+                },
+                clone() {
+                    return this;
+                }
+            };
+
+            if (!responseLike.ok) {
+                const errorBody = await responseLike.text();
+                console.error(`[PPOS-API] Error response from ${url}: ${responseLike.status} - ${errorBody}`);
+            }
+
+            return responseLike;
+        } catch (error) {
+            console.error(`[PPOS-API] Network error requesting ${url}:`, error.message);
+            throw error;
         }
     }
 
