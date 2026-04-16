@@ -44,11 +44,17 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
                 isFormData: true
             });
 
+            // v2.4.122: SES/Membrane Unwrapping (Fix: ENGINE TERMINATED)
+            // Native FormData.append rejects Proxies in some environments (SES/Lockdown).
+            // We recreate a native-branded Blob to ensure parameter 2 is a true Blob.
+            const nativeBlob = new Blob([file], { type: file.type });
+            const fileName = file.name || 'document.pdf';
+
             const formData = new FormData();
 
             // Requirement 2: Append with explicit filename so the server receives
             // a proper filename even when the browser omits it (e.g. Blob without name).
-            formData.append('file', file, file.name || 'document.pdf');
+            formData.append('file', nativeBlob, fileName);
 
             // Campos adicionales
             formData.append('policy', policy || 'OFFSET_MODERN_COATED');
