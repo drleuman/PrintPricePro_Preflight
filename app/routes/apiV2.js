@@ -425,13 +425,23 @@ router.post('/:jobId/actions/fix', async (req, res) => {
   const tenantId = getTenantId(req);
 
   try {
+    if (!jobId) {
+        return res.status(400).json({
+            error: 'MISSING_JOB_ID',
+            message: 'Target Job ID is required for a stateful fix.'
+        });
+    }
+
     console.log(`[BFF][FIX-ACTION][${requestId}] Triggering fix for job: ${jobId}`);
 
     const authContext = req.auth || req.user || {};
     const internalToken = identityService.getAuthHeaders(authContext).Authorization;
 
-    // We enqueue a new AUTOFIX job referencing the previous jobId as the source asset
+    console.log('[BFF][FIX-ACTION][PAYLOAD]', { jobId, mode: 'stateful-fix' });
+
+    // We enqueue a new AUTOFIX job referencing the previous jobId as the source context
     const job = await queue.enqueueJob('AUTOFIX', {
+      sourceJobId: jobId,
       assetId: jobId,
       jobId: `fix_${jobId}_${Date.now()}`,
       force: true,
@@ -440,7 +450,11 @@ router.post('/:jobId/actions/fix', async (req, res) => {
       policy: req.body?.policy || 'OFFSET_MODERN_COATED',
       options: req.body?.options || {},
       userToken: internalToken,
-      authContext
+      authContext,
+      metadata: {
+        mode: 'stateful-fix',
+        requestedBy: 'bff-actions-fix'
+      }
     });
 
     const responsePayload = {

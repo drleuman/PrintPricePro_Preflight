@@ -62,17 +62,34 @@ async function enqueueJob(type, payload = {}) {
 
   // Initialize 'input' at the function head to prevent ReferenceErrors in all scopes
   let input = null;
-  try {
-    input = normalizeInput(payload);
-  } catch (err) {
-    console.error('[QUEUE][CONTRACT-ERROR]', err.message);
-    throw err;
+
+  // v2.4.128: Stateful AUTOFIX mode support.
+  // If we have a sourceJobId for an AUTOFIX, we don't require filePath/fileUrl.
+  if (type === 'AUTOFIX' && payload.sourceJobId) {
+    console.log('[QUEUE][AUTOFIX][STATEFUL-MODE]', {
+      sourceJobId: payload.sourceJobId,
+      assetId: payload.assetId || payload.sourceJobId
+    });
+
+    input = {
+      sourceJobId: payload.sourceJobId,
+      assetId: payload.assetId || payload.sourceJobId,
+      filename: payload.filename || 'document.pdf'
+    };
+  } else {
+    try {
+      input = normalizeInput(payload);
+    } catch (err) {
+      console.error('[QUEUE][CONTRACT-ERROR]', err.message);
+      throw err;
+    }
   }
 
   console.log('[QUEUE][DEPLOYMENT-RESOLVED]', {
     final: deploymentId,
     fromEnv: process.env.PPOS_DEPLOYMENT_ID,
-    fromContext: payload.authContext2?.deploymentId
+    fromContext: payload.authContext2?.deploymentId,
+    mode: input?.sourceJobId ? 'STATEFUL' : 'UPLOAD'
   });
 
   // ... (restando del contenido para brevedad en la edición, pero localFilePath se usará abajo) ...
