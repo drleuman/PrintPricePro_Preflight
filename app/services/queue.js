@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('fs');
+const { File, Blob } = require('node:buffer');
 const { pposRequest } = require('./apiClient');
 const identityService = require('./identityService');
 const pposConfig = require('../../config/ppos');
@@ -162,9 +163,24 @@ async function enqueueJob(type, payload = {}) {
         ...payload.metadata
       }));
 
-      // Native FormData requires a Blob, not a raw Buffer (Node 20+ strict Web API).
-      const fileBlob = new Blob([fileBuffer], { type: fileMimeType });
-      form.append('file', fileBlob, fileName);
+      // v2.4.122: Node 20+ strict Web API compatibility
+      // Native FormData.append in Node requires a Blob or File.
+      // We use the File object to ensure the filename is correctly bound to the payload.
+      const fileObject = new File([fileBuffer], fileName, {
+        type: fileMimeType || 'application/pdf',
+      });
+
+      console.log('[QUEUE][FILE-OBJECT-CHECK]', {
+        ctor: fileObject?.constructor?.name,
+        isFile: fileObject instanceof File,
+        isBlob: fileObject instanceof Blob,
+        hasArrayBuffer: typeof fileObject?.arrayBuffer === 'function',
+        size: fileObject?.size,
+        type: fileObject?.type,
+        name: fileObject?.name,
+      });
+
+      form.append('file', fileObject);
 
       console.log('[JOB_PAYLOAD][MULTIPART]', {
         tenantId,
