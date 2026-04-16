@@ -713,6 +713,7 @@ function AppContent() {
                       setCurrentStep(1);
                     }}
                     onSelectIssue={setSelectedIssue}
+                    error={engineError}
                   />
                 )}
 

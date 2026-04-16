@@ -19,6 +19,7 @@ interface Step2AnalysisV2_4Props {
     onSkipToReview: () => void;
     onBack: () => void;
     onSelectIssue: (issue: Issue | null) => void;
+    error?: any;
 }
 
 export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
@@ -34,6 +35,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
     onSkipToReview,
     onBack,
     onSelectIssue,
+    error,
 }) => {
     const { t } = useTranslation();
 
@@ -54,14 +56,15 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
     // Trace auto-run decisions to catch leak regression
     useEffect(() => {
         // Universal auto-run: If we have a file but no result and aren't running yet.
-        const canAutoRun = !!file && !result && !isRunning && !hasTriggeredRef.current;
+        // v2.4.122 Hardening: Do not autorun if we already have a terminal engine error
+        const canAutoRun = !!file && !result && !isRunning && !hasTriggeredRef.current && !error;
         
         if (canAutoRun) {
             console.log('[STEP2][AUTORUN-INITIATED]', { file: file?.name });
             hasTriggeredRef.current = true;
             onRunAnalysis();
         }
-    }, [file, result, isRunning, onRunAnalysis]);
+    }, [file, result, isRunning, onRunAnalysis, error]);
 
     const issues = result?.issues || [];
     const hasErrors = issues.filter(i => i.severity === 'error').length > 0;
