@@ -447,12 +447,7 @@ router.post('/:jobId/actions/fix', async (req, res) => {
         });
     }
 
-    console.log(`[BFF][FIX-ACTION][${requestId}] Triggering fix for job: ${jobId}`);
-
-    const authContext = req.auth || req.user || {};
-    const internalToken = identityService.getAuthHeaders(authContext).Authorization;
-
-    console.log('[BFF][FIX-ACTION][PAYLOAD]', { jobId, mode: 'AUTOFIX (Proxy-Mode)' });
+    console.log(`[APP][AUTOFIX][REQUEST][${requestId}]`, { jobId, policy: req.body?.policy || 'default' });
 
     // Architectural Pivot: Direct action proxying instead of new job enqueuing
     const response = await pposRequest(
@@ -472,6 +467,7 @@ router.post('/:jobId/actions/fix', async (req, res) => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error(`[APP][AUTOFIX][ERROR][${requestId}]`, errorData);
         return res.status(response.status).json({
             error: 'FIX_ACTION_FAILED',
             message: errorData.message || 'The PPOS engine rejected the fix action.',
@@ -486,7 +482,8 @@ router.post('/:jobId/actions/fix', async (req, res) => {
     // v2.4.135: Action Response ID Normalization (Blindaje V3)
     // Enforce priority: payload.jobId || payload.job_id || req.params.jobId || payload.id
     const upstreamCandidates = [data.jobId, data.job_id, data.id];
-    const canonicalId = upstreamCandidates.find(v => typeof v === 'string' && v.startsWith('job_'));
+    // Support both job_ and fix_ prefixes
+    const canonicalId = upstreamCandidates.find(v => typeof v === 'string' && (v.startsWith('job_') || v.startsWith('fix_')));
     
     if (!canonicalId) {
         console.warn('[BFF][FIX-ACTION][REJECTED-ID]', { 
@@ -496,7 +493,9 @@ router.post('/:jobId/actions/fix', async (req, res) => {
         });
     }
 
+    console.log(`[APP][AUTOFIX][RESPONSE][${requestId}]`, { sourceJobId: jobId, targetJobId: canonicalId || jobId });
     console.log(`[BFF][CANONICAL-ID][FIX] Response for Job: ${jobId} -> Resolved: ${canonicalId || jobId}`);
+    console.log(`[APP][AUTOFIX][TARGET-JOB][${requestId}]`, canonicalId || jobId);
     
     // Ensure we always return a canonical jobId field to the frontend
     data.jobId = canonicalId || jobId; 

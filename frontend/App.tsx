@@ -63,6 +63,8 @@ function AppContent() {
   const [autoFixAfter, setAutoFixAfter] = useState<PreflightResult | null>(null);
   const [autoFixReport, setAutoFixReport] = useState<any | null>(null);
   const [autoFixRunId, setAutoFixRunId] = useState<number | null>(null);
+  const [sourceJobId, setSourceJobId] = useState<string | null>(null);
+  const [targetJobId, setTargetJobId] = useState<string | null>(null);
   const [compareEnabled, setCompareEnabled] = useState(false);
 
   // Visual QA State
@@ -327,9 +329,9 @@ function AppContent() {
         return;
       }
 
-      const jobId = pickCanonicalJobId(res.jobId, res.job_id, res.id);
       if (jobId) {
         activeJobIdRef.current = jobId;
+        setSourceJobId(jobId); // Set sourceJobId on initial analyze
         console.log('[APP][V2-START] Async mode, Job ID set to', jobId);
         setLdmStatus('Engine Processing...');
         await handleV2JobComplete(jobId);
@@ -363,17 +365,26 @@ function AppContent() {
 
     setLdmActive(true);
     setLdmStatus('Initializing AI Magic Fix on OS...');
+    console.log('[APP][STEP3][STATE]', { 
+        status: 'FIX_INITIALIZING', 
+        sourceJobId: activeJobIdRef.current,
+        policy: opts?.policy || selectedPolicy 
+    });
+
     try {
       const res = await autoFixServer(file, { 
         policy: opts?.policy || selectedPolicy,
         jobId: activeJobIdRef.current 
       });
+
       // Backend Contract: jobId might be in root, jobId, job_id, or nested in result
-      let jobId = pickCanonicalJobId(res.jobId, res.job_id, res.id, res.result?.meta?.jobId, res.inlineResult?.meta?.jobId, activeJobIdRef.current);
+      let jobId = pickCanonicalJobId(res.jobId, res.job_id, res.id, res.result?.meta?.jobId, res.inlineResult?.meta?.jobId);
+      
       console.log('[APP][FIX][NEXT-JOB-ID]', { jobId, sourceId: activeJobIdRef.current });
       
       if (jobId) {
         console.log('[APP][CANONICAL-JOB-ID][FROM-FIX]', { new: jobId, previous: activeJobIdRef.current });
+        setTargetJobId(jobId);
         activeJobIdRef.current = jobId;
       }
 
@@ -383,11 +394,17 @@ function AppContent() {
       if (jobId && !jobResult) {
         activeJobIdRef.current = jobId;
         setLdmProgress(10);
+        console.log('[APP][STEP3][STATE]', { status: 'FIX_POLLING', targetJobId: jobId });
         jobResult = await handleV2JobComplete(jobId);
       } else if (jobResult) {
         // Ensure jobId is synced from the inline result metadata
-        if (!jobId) jobId = jobResult.meta?.jobId || jobResult.job_id || jobResult.id;
-        activeJobIdRef.current = jobId;
+        if (!jobId) {
+            jobId = pickCanonicalJobId(jobResult.meta?.jobId, jobResult.job_id, jobResult.id) || jobId;
+            if (jobId) {
+                setTargetJobId(jobId);
+                activeJobIdRef.current = jobId;
+            }
+        }
       }
       
       if (jobResult) {
@@ -399,12 +416,17 @@ function AppContent() {
         setAutoFixAfter(normalizedAfter);
         setResult(normalizedAfter);
         
+        console.log('[APP][STEP4][ARTIFACT-RESOLUTION]', { 
+            jobId: finalJobId, 
+            hasCorrectedArtifact: !!(jobResult.artifacts?.final_fixed_pdf || jobResult.artifacts?.certified_pdf) 
+        });
+
         // Final guards for artifact propagation
         if (finalJobId) {
           // v2.4.98: Intelligent Artifact Resolution
-          // Check the artifacts registry from the core engine result to avoid 'Waiting for Artifact' hangs
           const availableArtifacts = jobResult.artifacts || {};
-          const bestArtifactKey = availableArtifacts.final_fixed_pdf || null;
+          // Prefer certified_pdf for final step if available
+          const bestArtifactKey = availableArtifacts.certified_pdf || availableArtifacts.final_fixed_pdf || null;
           
           if (bestArtifactKey) {
             getAuthenticatedBlobUrl(finalJobId, bestArtifactKey).then(bUrl => {
@@ -450,8 +472,9 @@ function AppContent() {
         message: err.message || 'AI Magic Fix encountered a terminal error.',
         traceId: err.traceId || 'N/A'
       });
+      console.log('[APP][STEP3][STATE]', { status: 'FIX_FAILED', error: err.message });
     }
-  }, [file, result, autoFixBefore, autoFixServer, handleV2JobComplete, getDownloadUrl]);
+  }, [file, result, autoFixBefore, autoFixServer, handleV2JobComplete, getDownloadUrl, selectedPolicy, fileMeta]);
 
   const handleDownload = useCallback(async () => {
     if (!lastPdfUrl) {
@@ -781,40 +804,42 @@ function AppContent() {
                 )}
 
                 {currentStep === 4 && (
-                  <Step4ReviewV2_4
-                    file={file}
-                    fileMeta={fileMeta}
-                    result={result}
-                    numPages={numPages}
-                    currentPage={currentPage}
-                    lastPdfUrl={lastPdfUrl}
-                    lastPdfName={lastPdfName}
-                    isRunning={isWorkerRunning || ldmActive}
-                    ldmStatus={ldmStatus}
-                    ldmProgress={ldmProgress}
-                    onPageChange={handlePageChange}
-                    onNumPagesChange={setNumPages}
-                    onConvertGrayscale={handleConvertGrayscale}
-                    onConvertColors={handleConvertCMYK}
-                    onRebuildPdf={handleRebuildPdf}
-                    onMakeBooklet={handleMakeBooklet}
-                    onDownload={handleDownload}
-                    onDownloadReport={handleDownloadReport}
-                    onStartOver={handleStartOver}
-                    onBack={() => setCurrentStep(3)}
-                    onNext={() => setCurrentStep(5)}
-                    appMode={appMode}
-                    heatmapData={heatmapData}
-                    isHeatmapLoading={heatmapLoading}
-                    onRunHeatmap={handleRunHeatmap}
-                    originalFile={originalFile}
-                    autoFixBefore={autoFixBefore}
-                    autoFixAfter={autoFixAfter}
-                    autoFixReport={autoFixReport}
-                    previewPages={previewPages}
-                    previewLoading={previewLoading}
-                    selectedPolicy={selectedPolicy}
-                  />
+                    <Step4ReviewV2_4
+                      file={file}
+                      fileMeta={fileMeta}
+                      result={result}
+                      numPages={numPages}
+                      currentPage={currentPage}
+                      lastPdfUrl={lastPdfUrl}
+                      lastPdfName={lastPdfName}
+                      isRunning={isWorkerRunning || ldmActive}
+                      ldmStatus={ldmStatus}
+                      ldmProgress={ldmProgress}
+                      onPageChange={handlePageChange}
+                      onNumPagesChange={setNumPages}
+                      onConvertGrayscale={handleConvertGrayscale}
+                      onConvertColors={handleConvertCMYK}
+                      onRebuildPdf={handleRebuildPdf}
+                      onMakeBooklet={handleMakeBooklet}
+                      onDownload={handleDownload}
+                      onDownloadReport={handleDownloadReport}
+                      onStartOver={handleStartOver}
+                      onBack={() => setCurrentStep(3)} // Allow back to Step 3
+                      onNext={() => setCurrentStep(5)}
+                      appMode={appMode}
+                      heatmapData={heatmapData}
+                      isHeatmapLoading={heatmapLoading}
+                      onRunHeatmap={handleRunHeatmap}
+                      originalFile={originalFile}
+                      autoFixBefore={autoFixBefore}
+                      autoFixAfter={autoFixAfter}
+                      autoFixReport={autoFixReport}
+                      previewPages={previewPages}
+                      previewLoading={previewLoading}
+                      selectedPolicy={selectedPolicy}
+                      targetJobId={targetJobId}
+                      sourceJobId={sourceJobId}
+                    />
                 )}
 
                 {currentStep === 5 && (

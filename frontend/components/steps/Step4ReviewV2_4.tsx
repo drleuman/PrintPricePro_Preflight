@@ -52,6 +52,8 @@ interface Step4ReviewV2_4Props {
     previewPages?: string[] | null;
     previewLoading?: boolean;
     selectedPolicy?: string;
+    targetJobId?: string | null;
+    sourceJobId?: string | null;
 }
 
 export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
@@ -87,11 +89,14 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     previewPages = null,
     previewLoading = false,
     selectedPolicy,
+    targetJobId,
+    sourceJobId,
 }) => {
     const { t } = useTranslation();
     const [layoutMode, setLayoutMode] = useState<'single' | 'side-by-side'>('side-by-side');
     const isAnalyzeOnly = result?.type === 'ANALYZE' || (result as any)?.name === 'preflight_job' || (appMode as string) === 'manual';
-    const hasFix = !!lastPdfUrl && !lastPdfUrl.startsWith('blob:');
+    // Robust fix state detection: check if we have a target job and an artifact
+    const hasFix = !!targetJobId && !!lastPdfUrl;
     
     // Default to 'after' if we have a fix, otherwise 'before'
     const [requestedMode, setRequestedMode] = useState<'before' | 'after'>(hasFix ? 'after' : 'before');
@@ -115,13 +120,13 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     const certMessage = getCertTechStatus();
 
     // Diagnostics
-    console.log('[STEP4][INPUTS]', { 
+    console.log('[APP][STEP4][ARTIFACT-RESOLUTION]', { 
         hasResult: !!result, 
         hasBefore: !!autoFixBefore, 
         hasAfter: !!autoFixAfter,
         lastPdfUrl: !!lastPdfUrl,
-        lastPdfName,
-        appMode,
+        sourceJobId,
+        targetJobId,
         isAnalyzeOnly,
         hasFix,
         finalMode: showBeforeAfter

@@ -179,10 +179,10 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
  */
 export function pickCanonicalJobId(...candidates: any[]): string | null {
     for (const c of candidates) {
-        if (typeof c === 'string' && c.startsWith('job_')) {
+        if (typeof c === 'string' && (c.startsWith('job_') || c.startsWith('fix_'))) {
             return c;
         }
-        if (c && (typeof c === 'number' || !c.toString().startsWith('job_'))) {
+        if (c && (typeof c === 'number' || (!c.toString().startsWith('job_') && !c.toString().startsWith('fix_')))) {
             console.warn('[JOB-ID][REJECTED] Ignoring non-canonical identifier candidate:', c);
         }
     }

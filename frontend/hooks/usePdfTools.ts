@@ -160,6 +160,9 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
                 attempt++;
                 let job: any;
                 try {
+                    if (jobId.startsWith('fix_')) {
+                        console.log(`[APP][POLLING][FIX-JOB][Attempt ${attempt}]`, jobId);
+                    }
                     job = await getJobStatus(jobId);
                 } catch (err: any) {
                     // Resiliency: Handled transient 404s (Registration Lag)
