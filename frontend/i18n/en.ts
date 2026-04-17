@@ -652,7 +652,7 @@ export const en = {
   'common.enforced': 'Enforced',
   // Policy Info Tooltips
   'policyInfo.title': 'Protocol Intelligence',
-  'policyInfo.desc': 'Defines the print standards your file must comply with. We validate your PDF against real production constraints (color profile, bleed, resolution, geometry). Choose the standard that matches your final printer.',
+  'policyInfo.desc': 'Defines print compliance standard (FOGRA, GRACoL, etc.). We validate your PDF against real production constraints (color profile, bleed, resolution, geometry).',
   'policyInfo.helper': 'Ensures your file meets real printing requirements.',
   'policyInfo.version': 'Standard Compliance v2.4',
   'policyInfo.coatedDesc': 'Best for European offset printing with coated paper (FOGRA).',

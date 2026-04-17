@@ -9,6 +9,7 @@
 
 const axios = require('axios');
 const pposConfig = require('../../config/ppos');
+const identityService = require('./identityService');
 
 
 /**
@@ -41,6 +42,14 @@ async function pposRequest(path, options = {}) {
 
     const multipartBody = nativeFormData || nodeFormData;
     const incomingHeaders = { ...(options.headers || {}) };
+
+    // REQUIREMENT 4: Authorization Fallback (Injection)
+    // If the request arrives without Authorization, we inject a signed service token.
+    if (!incomingHeaders.Authorization && !incomingHeaders.authorization) {
+        const fallback = identityService.getAuthHeaders({ sub: 'ppos-bff-client' });
+        incomingHeaders.Authorization = fallback.Authorization;
+        console.log('[API-CLIENT][AUTH-INJECTED] Fallback service token used for:', path);
+    }
 
     const hasExplicitContentType = Object.keys(incomingHeaders).some(
         h => h.toLowerCase() === 'content-type'

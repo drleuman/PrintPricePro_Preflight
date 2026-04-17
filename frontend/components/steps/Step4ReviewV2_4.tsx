@@ -398,6 +398,17 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                   {t('step.review.note' as any)}
                                 </button>
                             </div>
+
+                            {hasFix && (
+                                <button 
+                                    onClick={onDownload}
+                                    className="w-full flex items-center justify-center gap-3 py-5 bg-[var(--bg-primary)] border-2 border-[var(--accent-color)] text-[var(--accent-color)] text-[0.8rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-color)] hover:text-white transition-all shadow-[0_10px_30px_rgba(220,0,0,0.1)] group"
+                                >
+                                    <ArrowDownTrayIcon className="h-5 w-5 group-hover:translate-y-0.5 transition-transform" />
+                                    {t('step.review.download')}
+                                </button>
+                            )}
+
                             <button 
                               onClick={onNext}
                               disabled={isRunning || (!hasFix && !isAnalyzeOnly)}

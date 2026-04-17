@@ -485,7 +485,14 @@ function AppContent() {
   }, [file, result, autoFixBefore, autoFixServer, handleV2JobComplete, getAuthenticatedBlobUrl, selectedPolicy, fileMeta]);
 
   const handleDownload = useCallback(async () => {
-    if (!lastPdfUrl) {
+    // v2.4.140: Hardened Authenticated Download Stream
+    // We prefer fetching a fresh artifact from the server on-demand to ensure auth-integrity
+    const jobId = targetJobId || sourceJobId || result?.meta?.jobId || (result as any)?.id;
+    const finalName = normalizeDownloadFilename(lastPdfName || fileMeta?.name || 'preflight', 'pdf');
+
+    console.log('[DOWNLOAD][TRIGGER]', { jobId, name: finalName, hasPrevUrl: !!lastPdfUrl });
+
+    if (!jobId && !lastPdfUrl) {
       setEngineError({
         code: 'ARTIFACT_UNAVAILABLE',
         message: 'No certified PDF available for download yet. Ensure analysis is complete.',
@@ -494,28 +501,40 @@ function AppContent() {
       return;
     }
 
-    const finalName = normalizeDownloadFilename(lastPdfName || fileMeta?.name || 'preflight', 'pdf');
-    console.log('[DOWNLOAD][FILENAME]', {
-      original: lastPdfName || fileMeta?.name || 'unknown',
-      normalized: finalName.replace('-certified.pdf', ''),
-      final: finalName
-    });
-
-    if (lastPdfUrl.startsWith('blob:')) {
-      const a = document.createElement('a');
-      a.href = lastPdfUrl;
-      a.download = finalName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      return;
-    }
-
     try {
       setLdmActive(true);
       setLdmStatus('Downloading secure artifact...');
 
-      const blob = await pposFetch<Blob>(lastPdfUrl);
+      let blob: Blob;
+
+      // If we have a canonical JobID, we force a fresh authenticated fetch of the certified_pdf artifact
+      if (jobId && !jobId.includes('local')) {
+        const artifactUrl = `/api/v2/jobs/${jobId}/artifacts/certified_pdf`;
+        console.log('[DOWNLOAD][AUTHENTICATED-STREAM]', artifactUrl);
+        try {
+          blob = await pposFetch<Blob>(artifactUrl);
+        } catch (err: any) {
+          // Fallback to final_fixed_pdf if certified_pdf is missing
+          if (err.status === 404) {
+             console.log('[DOWNLOAD][FALLBACK] certified_pdf not found, trying final_fixed_pdf');
+             blob = await pposFetch<Blob>(`/api/v2/jobs/${jobId}/artifacts/final_fixed_pdf`);
+          } else {
+            throw err;
+          }
+        }
+      } else if (lastPdfUrl && lastPdfUrl.startsWith('blob:')) {
+        // Fallback for local processing or if server fetch is impossible
+        console.log('[DOWNLOAD][LOCAL-BLOB-FALLBACK]');
+        const res = await fetch(lastPdfUrl);
+        blob = await res.blob();
+      } else if (lastPdfUrl) {
+        console.log('[DOWNLOAD][URL-FETCH]', lastPdfUrl);
+        blob = await pposFetch<Blob>(lastPdfUrl);
+      } else {
+        throw new Error('No downloadable source found for this career.');
+      }
+
+      // Trigger Browser Download via Safe Blob Object
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -524,18 +543,18 @@ function AppContent() {
       a.click();
       document.body.removeChild(a);
 
-      setTimeout(() => URL.revokeObjectURL(url), 100);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       setLdmActive(false);
     } catch (err: any) {
       console.error('[DOWNLOAD_ERROR]', err);
       setLdmActive(false);
       setEngineError({
         code: err.code || 'DOWNLOAD_FAILURE',
-        message: err.message || 'Secure artifact retrieval failed.',
+        message: err.message || 'Secure artifact retrieval failed. The server session might have expired or the link is stale.',
         traceId: err.traceId || 'N/A'
       });
     }
-  }, [lastPdfUrl, lastPdfName, fileMeta]);
+  }, [lastPdfUrl, lastPdfName, fileMeta, targetJobId, sourceJobId, result]);
 
   const handleDownloadReport = useCallback(() => {
     if (!result) return;

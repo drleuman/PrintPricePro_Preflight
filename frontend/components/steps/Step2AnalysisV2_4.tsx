@@ -70,11 +70,13 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
     const hasErrors = issues.filter(i => i.severity === 'error').length > 0;
     const hasIssues = issues.length > 0;
     const dataMissing = (result as any)?._forensicDataMissing;
+    const isDegraded = (result as any)?._isDegraded;
 
     console.log('[STEP2][RENDER]', {
         issues: issues.length,
         hasResult: !!result,
-        dataMissing
+        dataMissing,
+        isDegraded
     });
 
     return (
@@ -156,13 +158,27 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                            <div className="absolute left-0 right-0 h-[1px] bg-[var(--accent-color)]/20 animate-[scan_3s_linear_infinite] shadow-[0_0_5px_rgba(220,0,0,0.2)]" />
                         </div>
                     ) : dataMissing ? (
-                        <div className="flex flex-col items-center justify-center flex-1 border border-[var(--border-color)] bg-[var(--hover-bg)] p-12 text-center opacity-60">
-                            <CommandLineIcon className="h-12 w-12 mb-4 text-[var(--text-muted)]" />
-                            <h3 className="text-lg font-bold mb-2">{t('forensics.dataUnavailable')}</h3>
-                            <p className="text-xs text-[var(--text-secondary)] max-w-[320px]">{t('forensics.dataUnavailableDesc')}</p>
+                        <div className="flex flex-col items-center justify-center flex-1 border-2 border-dashed border-[var(--accent-color)]/30 bg-[var(--accent-color)]/[0.02] p-12 text-center animate-pulse">
+                            <CommandLineIcon className="h-12 w-12 mb-4 text-[var(--accent-color)]" />
+                            <h3 className="text-xl font-black uppercase tracking-widest text-[var(--accent-color)] mb-3">{t('forensics.dataUnavailable')}</h3>
+                            <p className="text-sm text-[var(--text-secondary)] max-w-[400px] font-medium leading-relaxed">
+                                {t('forensics.dataUnavailableDesc') || 'The forensic engine failed to return valid analysis artifacts. This usually suggests a secure pipe termination or an unsupported PDF envelope.'}
+                            </p>
+                            <div className="mt-8 px-4 py-2 bg-[var(--accent-color)] text-white text-[0.65rem] font-black uppercase tracking-[0.2em]">
+                                Terminal Engine Error
+                            </div>
                         </div>
                     ) : result ? (
                         <div className="space-y-4">
+                            {isDegraded && (
+                                <div className="p-4 border-l-4 border-[var(--accent-color)] bg-[var(--accent-color)]/5 flex items-start gap-4 mb-6">
+                                    <CommandLineIcon className="h-5 w-5 text-[var(--accent-color)] shrink-0 mt-0.5" />
+                                    <div>
+                                        <div className="text-[0.7rem] font-black uppercase tracking-wider text-[var(--accent-color)] mb-1">Degraded Analysis Signal</div>
+                                        <div className="text-[0.75rem] text-[var(--text-secondary)] font-medium">Some forensic inspectors timed out. Results may be incomplete.</div>
+                                    </div>
+                                </div>
+                            )}
                             {issues.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center p-12 text-center opacity-40">
                                     <ShieldCheckIcon className="h-12 w-12 mb-4 text-[var(--accent-color)]" />

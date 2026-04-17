@@ -165,8 +165,19 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
         }
     };
 
-    // Add a flag for UI to detect missing forensic data
-    (result as any)._forensicDataMissing = !sourceFound;
+    // --- v2.4.140: Fail-Loud Forensic Detection ---
+    const hasTechnicalData = sourceFound || (normalizedIssues.length > 0) || (result.score !== null);
+    const isDegraded = !!(payload.degraded || payload.partial || payload._degraded);
+    
+    (result as any)._forensicDataMissing = !hasTechnicalData;
+    (result as any)._isDegraded = isDegraded;
+
+    if (!hasTechnicalData) {
+        console.error('[STEP2][CRITICAL] Forensic data expected but not found in payload.', {
+            id: result.meta.jobId,
+            status: payload.status
+        });
+    }
 
     console.log('[STEP2][NORMALIZED]', result);
     return result;

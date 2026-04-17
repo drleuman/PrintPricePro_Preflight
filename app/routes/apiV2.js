@@ -174,10 +174,11 @@ router.get('/policies', async (req, res) => {
   try {
     const upstreamPath = ppos.routes.policies;
 
+    const authHeaders = identityService.getAuthHeaders(req.auth || req.user || {});
     const response = await pposRequest(upstreamPath, {
       method: 'GET',
       headers: {
-        Authorization: req.headers.authorization,
+        Authorization: authHeaders.Authorization,
       },
     });
 
@@ -449,13 +450,15 @@ router.post('/:jobId/actions/fix', async (req, res) => {
 
     console.log(`[APP][AUTOFIX][REQUEST][${requestId}]`, { jobId, policy: req.body?.policy || 'default' });
 
-    // Architectural Pivot: Direct action proxying instead of new job enqueuing
+    const authHeaders = identityService.getAuthHeaders(req.auth || req.user || {});
+    
+    // Architectural Requirement: Always proxy to PPOS preflight service
     const response = await pposRequest(
       `/api/preflight/jobs/${jobId}/actions/fix`,
       {
         method: 'POST',
         headers: {
-          Authorization: internalToken,
+          Authorization: authHeaders.Authorization,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({

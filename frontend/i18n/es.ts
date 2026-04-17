@@ -650,7 +650,7 @@ export const es = {
   'common.enforced': 'Aplicada',
   // Policy Info Tooltips
   'policyInfo.title': 'Inteligencia de Protocolo',
-  'policyInfo.desc': 'Define los estándares de impresión que debe cumplir su archivo. Validamos su PDF contra restricciones reales de producción (perfil de color, sangrado, resolución, geometría). Elija el estándar que mejor se adapte a su imprenta final.',
+  'policyInfo.desc': 'Define el estándar de cumplimiento de impresión (FOGRA, GRACoL, etc.). Validamos su PDF contra restricciones reales de producción (perfil de color, sangrado, resolución, geometría).',
   'policyInfo.helper': 'Asegura que su archivo cumpla con los requerimientos reales de impresión.',
   'policyInfo.version': 'Cumplimiento Estándar v2.4',
   'policyInfo.coatedDesc': 'Ideal para impresión offset europea con papel estucado (FOGRA).',
