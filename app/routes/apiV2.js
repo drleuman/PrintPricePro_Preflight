@@ -441,36 +441,37 @@ router.post('/:jobId/actions/fix', async (req, res) => {
     const authContext = req.auth || req.user || {};
     const internalToken = identityService.getAuthHeaders(authContext).Authorization;
 
-    console.log('[BFF][FIX-ACTION][PAYLOAD]', { jobId, mode: 'AUTOFIX (Explicit)' });
+    console.log('[BFF][FIX-ACTION][PAYLOAD]', { jobId, mode: 'AUTOFIX (Proxy-Mode)' });
 
-    // We enqueue a new AUTOFIX job referencing the previous jobId as the source context
-    const job = await queue.enqueueJob('AUTOFIX', {
-      sourceJobId: jobId,
-      assetId: jobId,
-      jobId: `fix_${jobId}_${Date.now()}`,
-      mode: 'AUTOFIX', // Explicit contract mode
-      force: true,
-      requestId,
-      tenantId,
-      policy: req.body?.policy || 'OFFSET_MODERN_COATED',
-      options: req.body?.options || {},
-      userToken: internalToken,
-      authContext,
-      metadata: {
-        mode: 'stateful-fix',
-        requestedBy: 'bff-actions-fix'
+    // Architectural Pivot: Direct action proxying instead of new job enqueuing
+    const response = await pposRequest(
+      `/api/preflight/jobs/${jobId}/actions/fix`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: internalToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          policy: req.body?.policy || 'OFFSET_MODERN_COATED',
+          options: req.body?.options || {}
+        })
       }
-    });
+    );
 
-    const responsePayload = {
-      ok: true,
-      jobId: job.id,
-      status: job.status,
-      mode: job.mode,
-      inlineResult: job.inlineResult
-    };
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return res.status(response.status).json({
+            error: 'FIX_ACTION_FAILED',
+            message: errorData.message || 'The PPOS engine rejected the fix action.',
+            traceId: requestId,
+            v2: true,
+            upstreamError: errorData
+        });
+    }
 
-    return res.status(201).json(responsePayload);
+    const data = await response.json();
+    return res.status(200).json(data);
   } catch (error) {
     const traceId = requestId;
     console.error(`[BFF][FIX-ACTION][ERROR][${traceId}]`, error.message);
