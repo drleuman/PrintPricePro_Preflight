@@ -5,6 +5,11 @@ import {
     PreflightWorkerMessage,
     FileMeta,
 } from '../types';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Ensure PDF.js worker is configured in the main thread context for heatmap rendering
+const PDFJS_WORKER_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
 
 type WorkerCallbacks = {
     onAnalysisResult?: (result: PreflightResult) => void;
@@ -163,22 +168,58 @@ export function usePreflightWorker(callbacks: WorkerCallbacks) {
     const runTacHeatmap = useCallback(async (file: File, fileMeta: FileMeta, pageIndex: number) => {
         if (!workerRef.current) return;
         try {
-            // Note: Generating a heatmap is fast enough we might not want to block full UI,
-            // but for now let's set running.
+            console.log('[APP][HEATMAP][MAIN-THREAD-RENDER]', { pageIndex });
             setIsWorkerRunning(true);
             const buffer = await file.arrayBuffer();
-            const cmd: PreflightWorkerCommand = {
+
+            // v2.4+ Refactor: Render PDF in main thread to avoid Worker DOM dependency crashes
+            const loadingTask = pdfjsLib.getDocument({ data: buffer });
+            const pdf = await loadingTask.promise;
+            
+            const pageNum = (pageIndex || 0) + 1;
+            const page = await pdf.getPage(pageNum);
+            
+            const samplesX = 40;
+            const viewport = page.getViewport({ scale: 1.0 });
+            const ratio = viewport.height / viewport.width;
+            const samplesY = Math.round(samplesX * ratio);
+
+            // Create a temporary canvas in the main thread (DOM available)
+            const canvas = document.createElement('canvas');
+            canvas.width = samplesX;
+            canvas.height = samplesY;
+            const context = canvas.getContext('2d', { willReadFrequently: true });
+            
+            if (!context) throw new Error('Could not get 2D context for heatmap rendering');
+            
+            const renderViewport = page.getViewport({ scale: samplesX / viewport.width });
+            await page.render({
+                canvasContext: context as any,
+                viewport: renderViewport
+            }).promise;
+            
+            // Extract raw image data to send to worker for TAC calculation
+            const imageData = context.getImageData(0, 0, samplesX, samplesY).data;
+            
+            const cmd: any = {
                 type: 'tacHeatmap',
                 fileMeta,
-                buffer,
-                pageIndex
+                pageIndex,
+                imageData,
+                width: samplesX,
+                height: samplesY
             };
-            workerRef.current.postMessage(cmd, [buffer]);
+            
+            // Send to worker for computational TAC calculation
+            workerRef.current.postMessage(cmd, [imageData.buffer]);
+            
+            await pdf.destroy();
         } catch (e) {
             setIsWorkerRunning(false);
+            console.error('[APP][HEATMAP][MAIN-THREAD-ERROR]', e);
             callbacks.onError?.((e as Error).message);
         }
-    }, []);
+    }, [callbacks.onError]);
 
     const runRenderPageAsImage = useCallback(async (file: File, fileMeta: FileMeta, pageIndex: number) => {
         if (!workerRef.current) return;

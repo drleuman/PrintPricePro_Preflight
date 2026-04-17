@@ -1,26 +1,15 @@
-import * as pdfjsLib from 'pdfjs-dist';
-
 // v2.4+ Monolith: Robust PDF.js worker initialization for heatmap/preview
-const PDFJS_WORKER_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
-pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
-console.log('[APP][HEATMAP][INIT]', { workerSrc: PDFJS_WORKER_URL });
+// Note: PDF rendering is now moved to Main Thread to avoid DOM/Canvas dependency in Workers
+console.log('[APP][HEATMAP][WORKER-DEGRADED]');
 
 /**
  * Preflight Worker Engine (Recovery)
- * Handles compute-intensive tasks like TAC (Total Area Coverage) analysis
- * and eventually full preflight checks.
+ * Handles compute-intensive tasks like TAC (Total Area Coverage) analysis.
  */
 const ctx: Worker = self as any;
 
-// Verification for canvas support in workers
-const supportsOffscreenCanvas = typeof OffscreenCanvas !== 'undefined';
-if (!supportsOffscreenCanvas) {
-    console.warn('[WORKER] OffscreenCanvas is not supported. Heatmap rendering may fail.');
-}
-
-
 ctx.onmessage = async (e) => {
-    const { type, buffer, pageIndex, fileMeta } = e.data;
+    const { type, buffer, pageIndex, fileMeta, imageData, width, height } = e.data;
 
     try {
         if (type === 'analyze') {
@@ -28,44 +17,25 @@ ctx.onmessage = async (e) => {
             throw new Error('Local worker analysis is deprecated. Use PPOS engine via BFF /api/v2/jobs.');
         } 
         else if (type === 'tacHeatmap') {
-            const data = new Uint8Array(buffer);
-            const loadingTask = pdfjsLib.getDocument({ data });
-            const pdf = await loadingTask.promise;
+            // v2.4+ Refactor: Worker no longer renders PDF to avoid document.createElement crashes.
+            // It now receives pre-rendered imageData from the main thread.
             
-            // Get specific page (1-indexed in PDF.js)
-            const pageNum = (pageIndex || 0) + 1;
-            const page = await pdf.getPage(pageNum);
-            
-            // We want a fixed grid for the heatmap (e.g., 40xN)
-            const samplesX = 40;
-            const viewport = page.getViewport({ scale: 1.0 });
-            const ratio = viewport.height / viewport.width;
-            const samplesY = Math.round(samplesX * ratio);
-            
-            // Render to OffscreenCanvas at the sampling resolution
-            if (!supportsOffscreenCanvas) {
-                throw new Error('Heatmap aborted: OffscreenCanvas API is not available in this environment.');
+            if (!imageData) {
+                throw new Error('Heatmap failed: Missing imageData from main thread render.');
             }
-            const canvas = new OffscreenCanvas(samplesX, samplesY);
-            const context = canvas.getContext('2d', { willReadFrequently: true });
+
+            const samplesX = width || 40;
+            const samplesY = height;
+            const data = imageData; // Uint8ClampedArray [r,g,b,a, r,g,b,a, ...]
             
-            if (!context) throw new Error('Could not get OffscreenCanvas context');
-            
-            const renderViewport = page.getViewport({ scale: samplesX / viewport.width });
-            await page.render({
-                canvasContext: context as any,
-                viewport: renderViewport
-            }).promise;
-            
-            // Extract pixel data
-            const imageData = context.getImageData(0, 0, samplesX, samplesY).data;
+            // Extract pixel data and calculate TAC
             const resultValues = new Uint8Array(samplesX * samplesY);
             let maxTac = 0;
             
-            for (let i = 0; i < imageData.length; i += 4) {
-                const r = imageData[i] / 255;
-                const g = imageData[i + 1] / 255;
-                const b = imageData[i + 2] / 255;
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i] / 255;
+                const g = data[i + 1] / 255;
+                const b = data[i + 2] / 255;
                 
                 // CMYK Estimation (Standard RGB to CMYK)
                 const k = 1 - Math.max(r, g, b);
@@ -93,11 +63,9 @@ ctx.onmessage = async (e) => {
                 values: resultValues,
                 maxTac: maxTac * 100
             }, [resultValues.buffer]);
-            
-            await pdf.destroy();
         }
         else if (type === 'renderPageAsImage') {
-            // Stub for page rendering
+            // Stub for page rendering (Legacy)
             ctx.postMessage({ type: 'renderPageResult', base64: '' });
         }
     } catch (err: any) {

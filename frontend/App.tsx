@@ -163,7 +163,7 @@ function AppContent() {
       setHeatmapData(data);
       setHeatmapLoading(false);
     },
-    onError: (err: string) => { 
+    onError: (err: string) => {
       console.error('[WORKER-ERROR]', err);
       setHeatmapLoading(false);
     }
@@ -192,12 +192,12 @@ function AppContent() {
 
       console.log('[APP] Preflight Job Complete:', normalized);
       setResult(normalized);
-      
+
       // v2.4.112: Resilient Artifact Selection (Analysis-Only Support)
       if (completedJobId) {
         const artifacts = normalized.artifacts || normalized.result?.artifacts || {};
         const bestArtifactKey = artifacts.final_fixed_pdf || null;
-        
+
         const updateArtifactUrl = async () => {
           if (bestArtifactKey) {
             try {
@@ -224,16 +224,16 @@ function AppContent() {
         };
 
         updateArtifactUrl();
-        
+
         // v2.4.120: Premium Filename Resolution (No-Unknown Policy)
         const jobFileName = (normalized as any).meta?.fileName || (normalized as any).filename || (normalized as any).meta?.filename;
         const isInternalUuid = jobFileName && /^[0-9a-f-]{36}/.test(jobFileName);
-        
+
         let finalDisplayName = jobFileName;
         if (!jobFileName || isInternalUuid) {
           finalDisplayName = fileMeta?.name || file?.name || jobFileName || 'certified_document.pdf';
         }
-        
+
         setLastPdfName(finalDisplayName);
       } else {
         console.warn('[APP][SKIP-ARTIFACT-URL] No jobId found for artifact registration');
@@ -246,7 +246,7 @@ function AppContent() {
         setAutoFixBefore(normalized);
         setCurrentStep(2);
       }
-      
+
       setLdmActive(false);
     }
   });
@@ -271,19 +271,19 @@ function AppContent() {
 
   const handleV2Start = useCallback(async () => {
     if (!file || ldmActive) return;
-    
+
     resetResidues();
     setLdmActive(true);
     setLdmStatus('Starting PrintPrice OS Engine...');
-    
+
     try {
       const res = await startV2Preflight(file, selectedPolicy, { mode: appMode });
-      
+
       if (res.inlineResult) {
         console.log('[APP][V2-START] Sync mode detected, using inlineResult');
         const normalized = normalizePreflightResult(res.inlineResult);
         setResult(normalized);
-        
+
         // v2.4.113: Synchronous Resilient Artifact Resolution
         // v2.4.120: Forensic ID Propagation Bridge
         // We prioritize root keys then nested meta to ensure artifacts can resolve
@@ -294,14 +294,14 @@ function AppContent() {
 
           const artifacts = normalized.artifacts || {};
           const bestArtifactKey = artifacts.final_fixed_pdf || null;
-          
+
           if (bestArtifactKey) {
             getAuthenticatedBlobUrl(jobId, bestArtifactKey).then(bUrl => {
-                if (bUrl) {
-                    console.log('[APP][SET-DOWNLOAD-URL][SYNC]', { key: bestArtifactKey, jobId, url: bUrl });
-                    setLastPdfUrl(bUrl);
-                    lastPdfUrlRef.current = bUrl;
-                }
+              if (bUrl) {
+                console.log('[APP][SET-DOWNLOAD-URL][SYNC]', { key: bestArtifactKey, jobId, url: bUrl });
+                setLastPdfUrl(bUrl);
+                lastPdfUrlRef.current = bUrl;
+              }
             }).catch(err => console.error('[APP][SYNC-ARTIFACT-ERROR]', err));
           } else if (file) {
             const url = URL.createObjectURL(file);
@@ -316,12 +316,12 @@ function AppContent() {
           // v2.4.120: Sync Mode Filename Resolution
           const jobFileName = (normalized as any).meta?.fileName || (normalized as any).filename || (normalized as any).meta?.filename;
           const isInternalUuid = jobFileName && /^[0-9a-f-]{36}/.test(jobFileName);
-          
+
           let finalDisplayName = jobFileName;
           if (!jobFileName || isInternalUuid) {
             finalDisplayName = fileMeta?.name || file?.name || jobFileName || 'certified_document.pdf';
           }
-          
+
           setLastPdfName(finalDisplayName);
         } else {
           console.error('[APP][CRITICAL-SYNC-FAILURE] Success response received but NO canonical jobId found. Certification artifacts will be broken.');
@@ -340,7 +340,7 @@ function AppContent() {
         console.log('[APP][V2-START] Async mode, Job ID set to', res.jobId);
         setLdmStatus('Engine Processing...');
         await handleV2JobComplete(res.jobId);
-        
+
         // Final guard if onComplete didn't finish or for synchronous success
         if (activeJobIdRef.current === res.jobId) {
           setLdmActive(false);
@@ -361,7 +361,7 @@ function AppContent() {
 
   const handleAutoFix = useCallback(async (opts: any) => {
     if (!file) return;
-    
+
     // Save current result as 'before' if not already set
     if (result && !autoFixBefore) {
       setAutoFixBefore(result);
@@ -371,23 +371,23 @@ function AppContent() {
     setLdmActive(true);
     setFixError(null);
     setLdmStatus('Initializing AI Magic Fix on OS...');
-    console.log('[APP][STEP3][STATE]', { 
-        status: 'FIX_INITIALIZING', 
-        sourceJobId: activeJobIdRef.current,
-        policy: opts?.policy || selectedPolicy 
+    console.log('[APP][STEP3][STATE]', {
+      status: 'FIX_INITIALIZING',
+      sourceJobId: activeJobIdRef.current,
+      policy: opts?.policy || selectedPolicy
     });
 
     try {
-      const res = await autoFixServer(file, { 
+      const res = await autoFixServer(file, {
         policy: opts?.policy || selectedPolicy,
-        jobId: activeJobIdRef.current 
+        jobId: activeJobIdRef.current
       });
 
       // Backend Contract: jobId might be in root, jobId, job_id, or nested in result
       let jobId = pickCanonicalJobId(res.jobId, res.job_id, res.id, res.result?.meta?.jobId, res.inlineResult?.meta?.jobId);
-      
+
       console.log('[APP][FIX][NEXT-JOB-ID]', { jobId, sourceId: activeJobIdRef.current });
-      
+
       if (jobId) {
         console.log('[APP][CANONICAL-JOB-ID][FROM-FIX]', { new: jobId, previous: activeJobIdRef.current });
         setTargetJobId(jobId);
@@ -405,26 +405,26 @@ function AppContent() {
       } else if (jobResult) {
         // Ensure jobId is synced from the inline result metadata
         if (!jobId) {
-            jobId = pickCanonicalJobId(jobResult.meta?.jobId, jobResult.job_id, jobResult.id) || jobId;
-            if (jobId) {
-                setTargetJobId(jobId);
-                activeJobIdRef.current = jobId;
-            }
+          jobId = pickCanonicalJobId(jobResult.meta?.jobId, jobResult.job_id, jobResult.id) || jobId;
+          if (jobId) {
+            setTargetJobId(jobId);
+            activeJobIdRef.current = jobId;
+          }
         }
       }
-      
+
       if (jobResult) {
         const finalJobId = jobId || jobResult.meta?.jobId;
         console.log('[APP][FIX-COMPLETE-HAF]', { finalJobId, hasReport: !!jobResult.report });
         if (jobResult.report) setAutoFixReport(jobResult.report);
-        
+
         const normalizedAfter = normalizePreflightResult(jobResult);
         setAutoFixAfter(normalizedAfter);
         setResult(normalizedAfter);
-        
-        console.log('[APP][STEP4][ARTIFACT-RESOLUTION]', { 
-            jobId: finalJobId, 
-            hasCorrectedArtifact: !!(jobResult.artifacts?.final_fixed_pdf || jobResult.artifacts?.certified_pdf) 
+
+        console.log('[APP][STEP4][ARTIFACT-RESOLUTION]', {
+          jobId: finalJobId,
+          hasCorrectedArtifact: !!(jobResult.artifacts?.final_fixed_pdf || jobResult.artifacts?.certified_pdf)
         });
 
         // Final guards for artifact propagation
@@ -433,14 +433,14 @@ function AppContent() {
           const availableArtifacts = jobResult.artifacts || {};
           // Prefer certified_pdf for final step if available
           const bestArtifactKey = availableArtifacts.certified_pdf || availableArtifacts.final_fixed_pdf || null;
-          
+
           if (bestArtifactKey) {
             getAuthenticatedBlobUrl(finalJobId, bestArtifactKey).then(bUrl => {
-                if (bUrl) {
-                    console.log('[APP][ARTIFACT-URL]', { key: bestArtifactKey, url: bUrl });
-                    setLastPdfUrl(bUrl);
-                    lastPdfUrlRef.current = bUrl;
-                }
+              if (bUrl) {
+                console.log('[APP][ARTIFACT-URL]', { key: bestArtifactKey, url: bUrl });
+                setLastPdfUrl(bUrl);
+                lastPdfUrlRef.current = bUrl;
+              }
             }).catch(err => console.error('[APP][FIX-ARTIFACT-ERROR]', err));
           } else if (file) {
             const url = URL.createObjectURL(file);
@@ -454,12 +454,12 @@ function AppContent() {
           // v2.4.120: AutoFix Filename Resolution
           const jobFileName = jobResult?.meta?.fileName || jobResult?.filename || jobResult?.meta?.filename;
           const isInternalUuid = jobFileName && /^[0-9a-f-]{36}/.test(jobFileName);
-          
+
           let finalDisplayName = jobFileName;
           if (!jobFileName || isInternalUuid) {
             finalDisplayName = fileMeta?.name || file?.name || jobFileName || 'certified_pdf.pdf';
           }
-          
+
           setLastPdfName(finalDisplayName);
         }
 
@@ -495,10 +495,10 @@ function AppContent() {
     }
 
     const finalName = normalizeDownloadFilename(lastPdfName || fileMeta?.name || 'preflight', 'pdf');
-    console.log('[DOWNLOAD][FILENAME]', { 
-        original: lastPdfName || fileMeta?.name || 'unknown', 
-        normalized: finalName.replace('-certified.pdf', ''), 
-        final: finalName 
+    console.log('[DOWNLOAD][FILENAME]', {
+      original: lastPdfName || fileMeta?.name || 'unknown',
+      normalized: finalName.replace('-certified.pdf', ''),
+      final: finalName
     });
 
     if (lastPdfUrl.startsWith('blob:')) {
@@ -514,7 +514,7 @@ function AppContent() {
     try {
       setLdmActive(true);
       setLdmStatus('Downloading secure artifact...');
-      
+
       const blob = await pposFetch<Blob>(lastPdfUrl);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -523,7 +523,7 @@ function AppContent() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      
+
       setTimeout(() => URL.revokeObjectURL(url), 100);
       setLdmActive(false);
     } catch (err: any) {
@@ -546,10 +546,10 @@ function AppContent() {
       a.href = url;
       const finalName = normalizeDownloadFilename(lastPdfName || fileMeta?.name || 'preflight', 'report');
       a.download = finalName;
-      console.log('[DOWNLOAD][FILENAME][REPORT]', { 
-          original: lastPdfName || fileMeta?.name || 'unknown', 
-          normalized: finalName.replace('-report.json', ''), 
-          final: finalName 
+      console.log('[DOWNLOAD][FILENAME][REPORT]', {
+        original: lastPdfName || fileMeta?.name || 'unknown',
+        normalized: finalName.replace('-report.json', ''),
+        final: finalName
       });
       document.body.appendChild(a);
       a.click();
@@ -659,9 +659,9 @@ function AppContent() {
       setHeatmapData(null);
       return;
     }
-    
+
     if (!file || !fileMeta) return;
-    
+
     setHeatmapLoading(true);
     const pageToAnalyze = targetPage !== undefined ? targetPage : currentPage;
     runTacHeatmap(file, fileMeta, pageToAnalyze - 1);
@@ -696,7 +696,7 @@ function AppContent() {
               <div className="flex items-center gap-4">
                 <LanguageSwitcher />
                 <div className="h-6 w-px bg-[var(--border-color)] mx-1 hidden md:block"></div>
-                <button 
+                <button
                   onClick={() => setShowVisualModal(true)}
                   className="flex items-center gap-2 px-3 py-1.5 border border-[var(--border-color)] bg-[var(--bg-secondary)]/50 text-[var(--text-primary)] text-[0.65rem] font-bold uppercase tracking-wider hover:bg-[var(--hover-bg)] transition-all"
                   title="Open AI Inspector"
@@ -719,7 +719,7 @@ function AppContent() {
                       setAppMode(mode);
                       resetResidues(); // Clear previous residues
                       setCurrentStep(2); // Ensure we go to Analysis (Step 2)
-                      
+
                       console.log('[APP][ANALYSIS-INGRESS]', {
                         mode,
                         path: 'OS-BACKED (V2/BFF)',
@@ -810,42 +810,42 @@ function AppContent() {
                 )}
 
                 {currentStep === 4 && (
-                    <Step4ReviewV2_4
-                      file={file}
-                      fileMeta={fileMeta}
-                      result={result}
-                      numPages={numPages}
-                      currentPage={currentPage}
-                      lastPdfUrl={lastPdfUrl}
-                      lastPdfName={lastPdfName}
-                      isRunning={isWorkerRunning || ldmActive}
-                      ldmStatus={ldmStatus}
-                      ldmProgress={ldmProgress}
-                      onPageChange={handlePageChange}
-                      onNumPagesChange={setNumPages}
-                      onConvertGrayscale={handleConvertGrayscale}
-                      onConvertColors={handleConvertCMYK}
-                      onRebuildPdf={handleRebuildPdf}
-                      onMakeBooklet={handleMakeBooklet}
-                      onDownload={handleDownload}
-                      onDownloadReport={handleDownloadReport}
-                      onStartOver={handleStartOver}
-                      onBack={() => setCurrentStep(3)} // Allow back to Step 3
-                      onNext={() => setCurrentStep(5)}
-                      appMode={appMode}
-                      heatmapData={heatmapData}
-                      isHeatmapLoading={heatmapLoading}
-                      onRunHeatmap={handleRunHeatmap}
-                      originalFile={originalFile}
-                      autoFixBefore={autoFixBefore}
-                      autoFixAfter={autoFixAfter}
-                      autoFixReport={autoFixReport}
-                      previewPages={previewPages}
-                      previewLoading={previewLoading}
-                      selectedPolicy={selectedPolicy}
-                      targetJobId={targetJobId}
-                      sourceJobId={sourceJobId}
-                    />
+                  <Step4ReviewV2_4
+                    file={file}
+                    fileMeta={fileMeta}
+                    result={result}
+                    numPages={numPages}
+                    currentPage={currentPage}
+                    lastPdfUrl={lastPdfUrl}
+                    lastPdfName={lastPdfName}
+                    isRunning={isWorkerRunning || ldmActive}
+                    ldmStatus={ldmStatus}
+                    ldmProgress={ldmProgress}
+                    onPageChange={handlePageChange}
+                    onNumPagesChange={setNumPages}
+                    onConvertGrayscale={handleConvertGrayscale}
+                    onConvertColors={handleConvertCMYK}
+                    onRebuildPdf={handleRebuildPdf}
+                    onMakeBooklet={handleMakeBooklet}
+                    onDownload={handleDownload}
+                    onDownloadReport={handleDownloadReport}
+                    onStartOver={handleStartOver}
+                    onBack={() => setCurrentStep(3)} // Allow back to Step 3
+                    onNext={() => setCurrentStep(5)}
+                    appMode={appMode}
+                    heatmapData={heatmapData}
+                    isHeatmapLoading={heatmapLoading}
+                    onRunHeatmap={handleRunHeatmap}
+                    originalFile={originalFile}
+                    autoFixBefore={autoFixBefore}
+                    autoFixAfter={autoFixAfter}
+                    autoFixReport={autoFixReport}
+                    previewPages={previewPages}
+                    previewLoading={previewLoading}
+                    selectedPolicy={selectedPolicy}
+                    targetJobId={targetJobId}
+                    sourceJobId={sourceJobId}
+                  />
                 )}
 
                 {currentStep === 5 && (
@@ -864,15 +864,15 @@ function AppContent() {
         ) : (
           <AuthOverlayV2_4 />
         )}
-        
+
         {engineError && (
-          <EngineErrorOverlay 
-            error={engineError} 
-            onClose={() => setEngineError(null)} 
+          <EngineErrorOverlay
+            error={engineError}
+            onClose={() => setEngineError(null)}
           />
         )}
 
-        <FixDrawerV2_4 
+        <FixDrawerV2_4
           issue={selectedIssue}
           onClose={() => setSelectedIssue(null)}
           onConvertGrayscale={handleConvertGrayscale}
@@ -901,7 +901,7 @@ function AppContent() {
           stageKey={ldmStatus?.toLowerCase().includes('engine') ? 'upload' : 'preflight'}
         />
 
-        <EfficiencyAuditModalV2_4 
+        <EfficiencyAuditModalV2_4
           isOpen={showEfficiencyModal}
           onClose={() => setShowEfficiencyModal(false)}
           result={result}
@@ -919,14 +919,14 @@ function EngineErrorOverlay({ error, onClose }: { error: any, onClose: () => voi
       <div className="w-full max-w-lg bg-[var(--bg-secondary)] border-2 border-[#dc0000]/30 shadow-[0_30px_60px_rgba(0,0,0,0.5)] overflow-hidden">
         <div className="bg-[#dc0000] p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-             <div className="h-2 w-2 bg-white animate-pulse" />
-             <span className="text-[0.65rem] font-black text-white uppercase tracking-[0.3em]">System_Terminal_Error</span>
+            <div className="h-2 w-2 bg-white animate-pulse" />
+            <span className="text-[0.65rem] font-black text-white uppercase tracking-[0.3em]">System_Terminal_Error</span>
           </div>
           <button onClick={onClose} className="text-white/80 hover:text-white transition-colors">
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
-        
+
         <div className="p-8 space-y-6">
           <div className="space-y-2">
             <h3 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">ENGINE TERMINATED</h3>
@@ -934,28 +934,28 @@ function EngineErrorOverlay({ error, onClose }: { error: any, onClose: () => voi
               {error.message}
             </p>
           </div>
-          
+
           <div className="bg-[var(--bg-tertiary)] p-5 border border-[var(--border-color)] space-y-4">
-             <div className="flex justify-between items-center text-[0.65rem] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                <span>Error Code</span>
-                <span className="text-[var(--accent-color)]">{error.code}</span>
-             </div>
-             <div className="h-px bg-[var(--border-color)]/50" />
-             <div className="flex justify-between items-center text-[0.65rem] font-black uppercase tracking-widest text-[var(--text-muted)]">
-                <span>Trace ID</span>
-                <span className="font-mono text-[var(--text-secondary)]">{error.traceId}</span>
-             </div>
+            <div className="flex justify-between items-center text-[0.65rem] font-black uppercase tracking-widest text-[var(--text-muted)]">
+              <span>Error Code</span>
+              <span className="text-[var(--accent-color)]">{error.code}</span>
+            </div>
+            <div className="h-px bg-[var(--border-color)]/50" />
+            <div className="flex justify-between items-center text-[0.65rem] font-black uppercase tracking-widest text-[var(--text-muted)]">
+              <span>Trace ID</span>
+              <span className="font-mono text-[var(--text-secondary)]">{error.traceId}</span>
+            </div>
           </div>
-          
+
           <div className="flex flex-col gap-3">
-            <button 
+            <button
               onClick={onClose}
               className="w-full py-4 border border-[var(--accent-color)]/30 text-[0.75rem] font-bold uppercase tracking-widest text-[var(--accent-color)] hover:bg-[var(--accent-color)] hover:text-white transition-all"
             >
               Acknowledge & Close
             </button>
             <p className="text-[0.6rem] text-center text-[var(--text-muted)] font-mono uppercase tracking-[0.2em]">
-               Report this trace to PPOS Operations if the problem persists.
+              Report this trace to PPOS Operations if the problem persists.
             </p>
           </div>
         </div>
