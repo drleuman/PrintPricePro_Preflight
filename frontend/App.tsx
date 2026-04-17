@@ -29,7 +29,9 @@ import { usePdfTools } from './hooks/usePdfTools';
 import { pposFetch } from './lib/apiClient';
 
 // Use CDN for worker to ensure stability in production across different server configs
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+const PDFJS_WORKER_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+console.log('[APP][PDFJS][WORKER-SRC]', PDFJS_WORKER_URL);
 
 import { AuthOverlayV2_4 } from './components/AuthOverlayV2_4';
 import { useAuth } from './hooks/useAuth';
@@ -62,6 +64,7 @@ function AppContent() {
   const [autoFixBefore, setAutoFixBefore] = useState<PreflightResult | null>(null);
   const [autoFixAfter, setAutoFixAfter] = useState<PreflightResult | null>(null);
   const [autoFixReport, setAutoFixReport] = useState<any | null>(null);
+  const [fixError, setFixError] = useState<any | null>(null);
   const [autoFixRunId, setAutoFixRunId] = useState<number | null>(null);
   const [sourceJobId, setSourceJobId] = useState<string | null>(null);
   const [targetJobId, setTargetJobId] = useState<string | null>(null);
@@ -138,6 +141,7 @@ function AppContent() {
     setAutoFixRunId(null);
     setLdmStatus('');
     setEngineError(null);
+    setFixError(null);
     // Note: file and fileMeta are generally kept
   }, []);
 
@@ -174,7 +178,8 @@ function AppContent() {
     rebuildPdfServer,
     createBookletClient,
     handleV2JobComplete,
-    getDownloadUrl
+    getDownloadUrl,
+    getAuthenticatedBlobUrl
   } = usePdfTools({
     onStatus: (st: string) => { setLdmStatus(st); },
     onComplete: (normalized: any) => {
@@ -329,15 +334,15 @@ function AppContent() {
         return;
       }
 
-      if (jobId) {
-        activeJobIdRef.current = jobId;
-        setSourceJobId(jobId); // Set sourceJobId on initial analyze
-        console.log('[APP][V2-START] Async mode, Job ID set to', jobId);
+      if (res.jobId) {
+        activeJobIdRef.current = res.jobId;
+        setSourceJobId(res.jobId); // Set sourceJobId on initial analyze
+        console.log('[APP][V2-START] Async mode, Job ID set to', res.jobId);
         setLdmStatus('Engine Processing...');
-        await handleV2JobComplete(jobId);
+        await handleV2JobComplete(res.jobId);
         
         // Final guard if onComplete didn't finish or for synchronous success
-        if (activeJobIdRef.current === jobId) {
+        if (activeJobIdRef.current === res.jobId) {
           setLdmActive(false);
         }
       }
@@ -352,7 +357,7 @@ function AppContent() {
         details: err.status ? `HTTP ${err.status}` : undefined
       });
     }
-  }, [file, selectedPolicy, startV2Preflight, handleV2JobComplete, resetResidues, ldmActive]);
+  }, [file, selectedPolicy, startV2Preflight, handleV2JobComplete, resetResidues, ldmActive, appMode, fileMeta, getAuthenticatedBlobUrl]);
 
   const handleAutoFix = useCallback(async (opts: any) => {
     if (!file) return;
@@ -364,6 +369,7 @@ function AppContent() {
     }
 
     setLdmActive(true);
+    setFixError(null);
     setLdmStatus('Initializing AI Magic Fix on OS...');
     console.log('[APP][STEP3][STATE]', { 
         status: 'FIX_INITIALIZING', 
@@ -467,14 +473,16 @@ function AppContent() {
     } catch (err: any) {
       console.error('[APP][FIX-ERROR]', err);
       setLdmActive(false);
-      setEngineError({
+      const errorObj = {
         code: err.code || 'ENGINE_AUTOFIX_FAILURE',
         message: err.message || 'AI Magic Fix encountered a terminal error.',
         traceId: err.traceId || 'N/A'
-      });
+      };
+      setFixError(errorObj);
+      console.log('[APP][AUTOFIX][TRIGGER-FAILED]', { error: err.message, code: errorObj.code });
       console.log('[APP][STEP3][STATE]', { status: 'FIX_FAILED', error: err.message });
     }
-  }, [file, result, autoFixBefore, autoFixServer, handleV2JobComplete, getDownloadUrl, selectedPolicy, fileMeta]);
+  }, [file, result, autoFixBefore, autoFixServer, handleV2JobComplete, getAuthenticatedBlobUrl, selectedPolicy, fileMeta]);
 
   const handleDownload = useCallback(async () => {
     if (!lastPdfUrl) {
@@ -571,7 +579,7 @@ function AppContent() {
         traceId: err.traceId || 'N/A'
       });
     }
-  }, [file, convertColorServer, selectedProfile, handleV2JobComplete, getDownloadUrl]);
+  }, [file, convertColorServer, selectedProfile, handleV2JobComplete]);
 
   const handleConvertGrayscale = useCallback(async () => {
     if (!file) return;
@@ -584,7 +592,6 @@ function AppContent() {
         await handleV2JobComplete(jobId);
       }
       setLdmActive(false);
-      setLdmActive(false);
     } catch (err: any) {
       setLdmActive(false);
       setEngineError({
@@ -593,7 +600,7 @@ function AppContent() {
         traceId: err.traceId || 'N/A'
       });
     }
-  }, [file, convertToGrayscaleServer, handleV2JobComplete, getDownloadUrl]);
+  }, [file, convertToGrayscaleServer, handleV2JobComplete]);
 
   const handleRebuildPdf = useCallback(async () => {
     if (!file) return;
@@ -606,7 +613,6 @@ function AppContent() {
         await handleV2JobComplete(jobId);
       }
       setLdmActive(false);
-      setLdmActive(false);
     } catch (err: any) {
       setLdmActive(false);
       setEngineError({
@@ -615,7 +621,7 @@ function AppContent() {
         traceId: err.traceId || 'N/A'
       });
     }
-  }, [file, rebuildPdfServer, handleV2JobComplete, getDownloadUrl]);
+  }, [file, rebuildPdfServer, handleV2JobComplete]);
 
   const handleMakeBooklet = useCallback(async () => {
     if (!file) return;
@@ -626,7 +632,6 @@ function AppContent() {
       const url = URL.createObjectURL(blob);
       setLastPdfUrl(url);
       lastPdfUrlRef.current = url;
-      setLdmActive(false);
       setLdmActive(false);
     } catch (err: any) {
       setLdmActive(false);
@@ -800,6 +805,7 @@ function AppContent() {
                     serverAvailable={true}
                     previewPages={previewPages}
                     previewLoading={previewLoading}
+                    error={fixError}
                   />
                 )}
 

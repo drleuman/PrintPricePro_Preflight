@@ -59,6 +59,7 @@ interface Step3FixV2_4Props {
     ldmStatus?: string | null;
     ldmMode?: boolean;
     ldmJobId?: string | null;
+    error?: any | null;
 }
 
 export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
@@ -103,6 +104,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
     ldmStatus = null,
     ldmMode = false,
     ldmJobId = null,
+    error = null,
 }) => {
     const { t } = useTranslation();
     const [aiAuditOpen, setAiAuditOpen] = useState(false);
@@ -123,6 +125,11 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
     const issues = result?.issues || [];
     const errorCount = issues.filter((i: Issue) => i.severity === 'error').length;
     const warningCount = issues.filter((i: Issue) => i.severity === 'warning').length;
+    
+    // Diagnostics for failure state visibility
+    if (error) {
+        console.log('[APP][AUTOFIX][FAILED-STATE]', { error });
+    }
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 pb-24">
@@ -166,6 +173,44 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                             {t('step.fix.hwAccel')}
                         </div>
                     </div>
+                </div>
+            )}
+            
+            {/* AI Magic Fix Failure state (v2.4.125) */}
+            {error && !ldmActive && (
+                <div 
+                    className="border border-amber-500/50 bg-amber-500/5 p-6 space-y-4 animate-in fade-in slide-in-from-top-4 duration-500"
+                    id="autofix-failure-banner"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 bg-amber-500 flex items-center justify-center shrink-0">
+                            <SparklesIcon className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                            <div className="text-[0.7rem] font-black uppercase tracking-[0.2em] text-amber-500 mb-1">
+                                {t('step.fix.failed' as any)}
+                            </div>
+                            <h3 className="text-xl font-extrabold tracking-tight text-[var(--text-primary)]">
+                                {t('step.fix.engineTerminal' as any)}
+                            </h3>
+                        </div>
+                        <StatusBadge label={error.code || 'ABORTED'} variant="warning" />
+                    </div>
+                    
+                    <div className="p-4 bg-[var(--bg-primary)] border border-amber-500/20 font-mono text-[0.75rem] text-[var(--text-secondary)] leading-relaxed">
+                        <div className="flex items-start gap-3">
+                            <span className="text-amber-500 font-bold shrink-0">[ERR]</span>
+                            <span>{error.message || 'The PPOS engine encountered a transient failure during trace hardening.'}</span>
+                        </div>
+                        <div className="flex items-start gap-3 mt-2 opacity-50">
+                            <span className="shrink-0 font-bold">[TRACE]</span>
+                            <span>{error.traceId || 'N/A'}</span>
+                        </div>
+                    </div>
+                    
+                    <p className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-normal">
+                        {t('step.fix.failureNotice' as any)}
+                    </p>
                 </div>
             )}
 

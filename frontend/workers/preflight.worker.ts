@@ -1,5 +1,10 @@
 import * as pdfjsLib from 'pdfjs-dist';
 
+// v2.4+ Monolith: Robust PDF.js worker initialization for heatmap/preview
+const PDFJS_WORKER_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+console.log('[APP][HEATMAP][INIT]', { workerSrc: PDFJS_WORKER_URL });
+
 /**
  * Preflight Worker Engine (Recovery)
  * Handles compute-intensive tasks like TAC (Total Area Coverage) analysis
