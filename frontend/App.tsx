@@ -282,8 +282,7 @@ function AppContent() {
         // We prioritize root keys then nested meta to ensure artifacts can resolve
         const jobId = pickCanonicalJobId(res.jobId, res.job_id, res.id, normalized.meta?.jobId, res.jobMeta?.id);
         if (jobId) {
-          console.log('[APP][CANONICAL-JOB-ID]', { new: jobId, previous: activeJobId });
-          setActiveJobId(jobId);
+          console.log('[APP][CANONICAL-JOB-ID]', { new: jobId, previous: activeJobIdRef.current });
           activeJobIdRef.current = jobId;
 
           const artifacts = normalized.artifacts || {};
@@ -374,8 +373,7 @@ function AppContent() {
       console.log('[APP][FIX][NEXT-JOB-ID]', { jobId, sourceId: activeJobIdRef.current });
       
       if (jobId) {
-        console.log('[APP][CANONICAL-JOB-ID][FROM-FIX]', { new: jobId, previous: activeJobId });
-        setActiveJobId(jobId);
+        console.log('[APP][CANONICAL-JOB-ID][FROM-FIX]', { new: jobId, previous: activeJobIdRef.current });
         activeJobIdRef.current = jobId;
       }
 
