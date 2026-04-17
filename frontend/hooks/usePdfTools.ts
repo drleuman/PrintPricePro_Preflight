@@ -3,7 +3,7 @@ import { pposFetch } from '../lib/apiClient';
 import { createBooklet } from '../utils/imposition';
 import { PreflightResult } from '../types';
 
-import { normalizePreflightResult } from '../utils/payloadNormalization';
+import { normalizePreflightResult, pickCanonicalJobId } from '../utils/payloadNormalization';
 
 type PdfToolsCallbacks = {
     onStatus?: (status: string, progress: number) => void;
@@ -73,7 +73,8 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
             });
 
             // v2.4.135: Strict Canonical ID Preference (jobId || job_id || id)
-            const finalJobId = res.jobId || res.job_id || res.id || res.inlineResult?.meta?.jobId || res.jobMeta?.id;
+            // Blindaje V3: Strict validation against 'job_' prefix
+            const finalJobId = pickCanonicalJobId(res.jobId, res.job_id, res.id, res.inlineResult?.meta?.jobId, res.jobMeta?.id);
             console.log('[TOOL][CANONICAL-ID-RESOLVE]', { resolved: finalJobId, raw: res.id || res.jobId });
             
             console.log('[CREATE-JOB][SUCCESS-BFF]', {
@@ -101,17 +102,17 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
 
     const convertToGrayscaleServer = useCallback(async (file: File) => {
         const res = await startV2Preflight(file, 'DIGITAL_RGB', { mode: 'CONVERT_GRAYSCALE' });
-        return res.jobId || res.job_id || res.id;
+        return pickCanonicalJobId(res.jobId, res.job_id, res.id);
     }, [startV2Preflight]);
 
     const convertColorServer = useCallback(async (file: File, profile: string = 'OFFSET_MODERN_COATED') => {
         const res = await startV2Preflight(file, profile, { mode: 'CONVERT_COLOR' });
-        return res.jobId || res.job_id || res.id;
+        return pickCanonicalJobId(res.jobId, res.job_id, res.id);
     }, [startV2Preflight]);
 
     const rebuildPdfServer = useCallback(async (file: File, dpi: number = 300) => {
         const res = await startV2Preflight(file, 'OFFSET_MODERN_COATED', { mode: 'REBUILD', dpi });
-        return res.jobId || res.job_id || res.id;
+        return pickCanonicalJobId(res.jobId, res.job_id, res.id);
     }, [startV2Preflight]);
 
     const autoFixServer = useCallback(async (

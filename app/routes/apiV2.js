@@ -348,9 +348,11 @@ router.get('/:jobId', async (req, res) => {
         delete data.result;
     } 
 
-    // v2.4.135: Canonical ID Enforcement Bridge
-    // If the OS returns a numeric ID, we fallback to the request param jobId (which is canonical)
-    data.jobId = data.jobId || data.job_id || data.id || jobId;
+    // v2.4.135: Strict Canonical ID Enforcement Bridge
+    // If the OS returns a numeric ID, we fallback strictly to the request param jobId (which is canonical).
+    // This removes the risk of numeric database primary keys (like '32') leaking as public identifiers.
+    const candidates = [data.jobId, data.job_id, data.id, jobId];
+    data.jobId = candidates.find(v => typeof v === 'string' && v.startsWith('job_')) || jobId;
     data.id = data.jobId; // Unify root identifiers to prevent frontend ambiguity
 
     if (data.status === 'COMPLETED' && !data.type) {
@@ -479,12 +481,22 @@ router.post('/:jobId/actions/fix', async (req, res) => {
 
     const data = await response.json();
     
-    // v2.4.135: Action Response ID Normalization
-    const upstreamId = data.jobId || data.job_id || data.id;
-    console.log('[BFF][FIX-ACTION][RESPONSE-ID]', { raw: upstreamId, jobId: data.jobId });
+    // v2.4.135: Action Response ID Normalization (Blindaje V3)
+    const upstreamCandidates = [data.jobId, data.job_id, data.id];
+    const canonicalId = upstreamCandidates.find(v => typeof v === 'string' && v.startsWith('job_'));
+    
+    if (!canonicalId) {
+        console.warn('[BFF][FIX-ACTION][REJECTED-ID]', { 
+            message: 'Upstream OS returned a non-canonical ID for an action response. Forcing parent jobId preservation.',
+            candidates: upstreamCandidates,
+            sourceJobId: jobId
+        });
+    }
+
+    console.log('[BFF][FIX-ACTION][RESPONSE-ID]', { raw: canonicalId || 'N/A', original: jobId });
     
     // Ensure we always return a canonical jobId field to the frontend
-    data.jobId = upstreamId || jobId; // Fallback to parent if action didn't return a new ID
+    data.jobId = canonicalId || jobId; 
     data.id = data.jobId;
 
     return res.status(200).json(data);

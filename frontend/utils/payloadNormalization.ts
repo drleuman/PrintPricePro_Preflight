@@ -173,6 +173,23 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
 }
 
 /**
+ * Strict canonical ID resolver.
+ * Only accepts values that are strings and start with the contract prefix 'job_'.
+ * This prevents numeric database IDs (e.g., '32') from leaking into public identifiers.
+ */
+export function pickCanonicalJobId(...candidates: any[]): string | null {
+    for (const c of candidates) {
+        if (typeof c === 'string' && c.startsWith('job_')) {
+            return c;
+        }
+        if (c && (typeof c === 'number' || !c.toString().startsWith('job_'))) {
+            console.warn('[JOB-ID][REJECTED] Ignoring non-canonical identifier candidate:', c);
+        }
+    }
+    return null;
+}
+
+/**
  * Maps various backend severity strings to canonical frontend Severity enum.
  */
 function mapSeverity(sev: string): Severity {

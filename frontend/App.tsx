@@ -22,7 +22,7 @@ import {
   HeatmapData,
   AppMode,
 } from './types';
-import { normalizePreflightResult } from './utils/payloadNormalization';
+import { normalizePreflightResult, pickCanonicalJobId } from './utils/payloadNormalization';
 import { normalizeDownloadFilename } from './utils/formatters';
 import { usePreflightWorker } from './hooks/usePreflightWorker';
 import { usePdfTools } from './hooks/usePdfTools';
@@ -280,7 +280,7 @@ function AppContent() {
         // v2.4.113: Synchronous Resilient Artifact Resolution
         // v2.4.120: Forensic ID Propagation Bridge
         // We prioritize root keys then nested meta to ensure artifacts can resolve
-        const jobId = res.jobId || res.job_id || res.id || normalized.meta?.jobId || res.jobMeta?.id;
+        const jobId = pickCanonicalJobId(res.jobId, res.job_id, res.id, normalized.meta?.jobId, res.jobMeta?.id);
         if (jobId) {
           console.log('[APP][CANONICAL-JOB-ID]', { new: jobId, previous: activeJobId });
           setActiveJobId(jobId);
@@ -370,7 +370,7 @@ function AppContent() {
         jobId: activeJobIdRef.current 
       });
       // Backend Contract: jobId might be in root, jobId, job_id, or nested in result
-      let jobId = res.jobId || res.job_id || res.id || res.result?.meta?.jobId || res.inlineResult?.meta?.jobId;
+      let jobId = pickCanonicalJobId(res.jobId, res.job_id, res.id, res.result?.meta?.jobId, res.inlineResult?.meta?.jobId);
       console.log('[APP][FIX][NEXT-JOB-ID]', { jobId, sourceId: activeJobIdRef.current });
       
       if (jobId) {
