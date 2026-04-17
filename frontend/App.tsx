@@ -177,7 +177,7 @@ function AppContent() {
     onStatus: (st: string) => { setLdmStatus(st); },
     onComplete: (normalized: any) => {
       // Point of Application (Validation C): Check jobId BEFORE any state change
-      const completedJobId = normalized.meta?.jobId || normalized.id;
+      const completedJobId = pickCanonicalJobId(normalized.meta?.jobId, normalized.id);
       if (completedJobId && activeJobIdRef.current && completedJobId !== activeJobIdRef.current) {
         console.warn('[APP][STALE-JOB-DETECTED]', { completed: completedJobId, active: activeJobIdRef.current });
         return;
@@ -327,7 +327,7 @@ function AppContent() {
         return;
       }
 
-      const jobId = res.jobId || res.job_id || res.id;
+      const jobId = pickCanonicalJobId(res.jobId, res.job_id, res.id);
       if (jobId) {
         activeJobIdRef.current = jobId;
         console.log('[APP][V2-START] Async mode, Job ID set to', jobId);
@@ -369,7 +369,7 @@ function AppContent() {
         jobId: activeJobIdRef.current 
       });
       // Backend Contract: jobId might be in root, jobId, job_id, or nested in result
-      let jobId = pickCanonicalJobId(res.jobId, res.job_id, res.id, res.result?.meta?.jobId, res.inlineResult?.meta?.jobId);
+      let jobId = pickCanonicalJobId(res.jobId, res.job_id, res.id, res.result?.meta?.jobId, res.inlineResult?.meta?.jobId, activeJobIdRef.current);
       console.log('[APP][FIX][NEXT-JOB-ID]', { jobId, sourceId: activeJobIdRef.current });
       
       if (jobId) {

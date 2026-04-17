@@ -161,7 +161,7 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
             fileName: payload.meta?.fileName ?? payload.report?.meta?.fileName ?? payload.filename ?? 'unknown',
             fileSize: payload.meta?.fileSize ?? payload.report?.meta?.fileSize ?? payload.size ?? 0,
             pageCount: pageCount ?? 0,
-            jobId: payload.jobId ?? payload.job_id ?? payload.id ?? payload.meta?.jobId
+            jobId: payload.jobId || payload.job_id || payload.meta?.jobId || payload.id
         }
     };
 

@@ -123,13 +123,16 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
         // If we have an existing jobId from the analysis phase, we use the stateful action endpoint
         if (opts?.jobId) {
             console.log(`[FIX][STATEFUL-ACTION] Triggering fix for existing job: ${opts.jobId}`);
-            return await pposFetch<any>(`/api/v2/jobs/${opts.jobId}/actions/fix`, {
+            const res = await pposFetch<any>(`/api/v2/jobs/${opts.jobId}/actions/fix`, {
                 method: 'POST',
                 body: JSON.stringify({
                     policy: opts.policy || 'OFFSET_MODERN_COATED',
                     options: opts.options || {}
                 })
             });
+            // Ensure stateful fix response ID preservation
+            const finalId = pickCanonicalJobId(res.jobId, res.job_id, res.id) || opts.jobId;
+            return { ...res, jobId: finalId, id: finalId };
         }
 
         // Stateless Fallback: Re-upload for standalone fix runs
@@ -207,7 +210,7 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
 
     const getAuthenticatedBlobUrl = useCallback(async (jobId: string, artifactId: string = 'final_fixed_pdf') => {
         const url = getDownloadUrl(jobId, artifactId);
-        console.log('[APP][ARTIFACT][AUTH-BLOB-FETCH] Fetching protected artifact:', { url });
+        console.log(`[APP][ARTIFACT][CANONICAL-ID] Fetching protected artifact: ${url}`);
         try {
             const blob = await pposFetch<Blob>(url);
             if (!(blob instanceof Blob)) {

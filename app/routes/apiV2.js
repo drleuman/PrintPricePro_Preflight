@@ -355,6 +355,8 @@ router.get('/:jobId', async (req, res) => {
     data.jobId = candidates.find(v => typeof v === 'string' && v.startsWith('job_')) || jobId;
     data.id = data.jobId; // Unify root identifiers to prevent frontend ambiguity
 
+    console.log(`[BFF][CANONICAL-ID][POLL] Status check for Job: ${jobId} -> Resolved: ${data.jobId}`);
+
     if (data.status === 'COMPLETED' && !data.type) {
         data.type = 'ANALYZE';
     }
@@ -482,6 +484,7 @@ router.post('/:jobId/actions/fix', async (req, res) => {
     const data = await response.json();
     
     // v2.4.135: Action Response ID Normalization (Blindaje V3)
+    // Enforce priority: payload.jobId || payload.job_id || req.params.jobId || payload.id
     const upstreamCandidates = [data.jobId, data.job_id, data.id];
     const canonicalId = upstreamCandidates.find(v => typeof v === 'string' && v.startsWith('job_'));
     
@@ -493,7 +496,7 @@ router.post('/:jobId/actions/fix', async (req, res) => {
         });
     }
 
-    console.log('[BFF][FIX-ACTION][RESPONSE-ID]', { raw: canonicalId || 'N/A', original: jobId });
+    console.log(`[BFF][CANONICAL-ID][FIX] Response for Job: ${jobId} -> Resolved: ${canonicalId || jobId}`);
     
     // Ensure we always return a canonical jobId field to the frontend
     data.jobId = canonicalId || jobId; 
