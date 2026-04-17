@@ -346,7 +346,14 @@ router.get('/:jobId', async (req, res) => {
 
         // Clean up the nested wrapper now that preservation is complete
         delete data.result;
-    } else if (data.status === 'COMPLETED' && !data.type) {
+    } 
+
+    // v2.4.135: Canonical ID Enforcement Bridge
+    // If the OS returns a numeric ID, we fallback to the request param jobId (which is canonical)
+    data.jobId = data.jobId || data.job_id || data.id || jobId;
+    data.id = data.jobId; // Unify root identifiers to prevent frontend ambiguity
+
+    if (data.status === 'COMPLETED' && !data.type) {
         data.type = 'ANALYZE';
     }
     // ------------------------------------------------------------------
@@ -471,6 +478,15 @@ router.post('/:jobId/actions/fix', async (req, res) => {
     }
 
     const data = await response.json();
+    
+    // v2.4.135: Action Response ID Normalization
+    const upstreamId = data.jobId || data.job_id || data.id;
+    console.log('[BFF][FIX-ACTION][RESPONSE-ID]', { raw: upstreamId, jobId: data.jobId });
+    
+    // Ensure we always return a canonical jobId field to the frontend
+    data.jobId = upstreamId || jobId; // Fallback to parent if action didn't return a new ID
+    data.id = data.jobId;
+
     return res.status(200).json(data);
   } catch (error) {
     const traceId = requestId;

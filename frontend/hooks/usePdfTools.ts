@@ -72,7 +72,9 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
                 body: formData,
             });
 
+            // v2.4.135: Strict Canonical ID Preference (jobId || job_id || id)
             const finalJobId = res.jobId || res.job_id || res.id || res.inlineResult?.meta?.jobId || res.jobMeta?.id;
+            console.log('[TOOL][CANONICAL-ID-RESOLVE]', { resolved: finalJobId, raw: res.id || res.jobId });
             
             console.log('[CREATE-JOB][SUCCESS-BFF]', {
                 jobId: finalJobId,

@@ -281,8 +281,11 @@ function AppContent() {
         // v2.4.120: Forensic ID Propagation Bridge
         // We prioritize root keys then nested meta to ensure artifacts can resolve
         const jobId = res.jobId || res.job_id || res.id || normalized.meta?.jobId || res.jobMeta?.id;
-        
         if (jobId) {
+          console.log('[APP][CANONICAL-JOB-ID]', { new: jobId, previous: activeJobId });
+          setActiveJobId(jobId);
+          activeJobIdRef.current = jobId;
+
           const artifacts = normalized.artifacts || {};
           const bestArtifactKey = artifacts.final_fixed_pdf || null;
           
@@ -368,8 +371,15 @@ function AppContent() {
       });
       // Backend Contract: jobId might be in root, jobId, job_id, or nested in result
       let jobId = res.jobId || res.job_id || res.id || res.result?.meta?.jobId || res.inlineResult?.meta?.jobId;
-      let jobResult: any = res.inlineResult || res.result || res.job || null;
+      console.log('[APP][FIX][NEXT-JOB-ID]', { jobId, sourceId: activeJobIdRef.current });
+      
+      if (jobId) {
+        console.log('[APP][CANONICAL-JOB-ID][FROM-FIX]', { new: jobId, previous: activeJobId });
+        setActiveJobId(jobId);
+        activeJobIdRef.current = jobId;
+      }
 
+      let jobResult: any = res.inlineResult || res.result || res.job || null;
       console.log('[APP][FIX-START-RES]', { jobId, isInline: !!jobResult });
 
       if (jobId && !jobResult) {
