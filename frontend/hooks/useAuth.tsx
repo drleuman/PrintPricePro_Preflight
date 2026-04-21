@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { getAuthToken, setAuthToken, clearAuthTokens } from '../lib/apiClient';
+import { getAuthToken, setAuthToken, setRefreshToken, clearAuthTokens } from '../lib/apiClient';
 
 interface User {
     id: string;
@@ -14,7 +14,7 @@ interface User {
 interface AuthContextType {
     isAuthenticated: boolean;
     user: User | null;
-    login: (token: string, userData: User) => void;
+    login: (token: string, userData: User, refreshToken?: string) => void;
     logout: () => void;
     refreshSession: () => Promise<void>;
 }
@@ -61,8 +61,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [refreshSession]);
 
-    const login = useCallback((token: string, userData: User) => {
+    const login = useCallback((token: string, userData: User, refreshToken?: string) => {
         setAuthToken(token);
+        if (refreshToken) {
+            setRefreshToken(refreshToken);
+        }
         setUser(userData);
         setIsAuthenticated(true);
     }, []);

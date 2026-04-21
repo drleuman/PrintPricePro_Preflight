@@ -36,6 +36,20 @@ function getTenantId(req) {
   return req.auth?.tenantId || req.user?.tenantId || 'global';
 }
 
+function canonicalId(data = {}, fallbackId = null) {
+  const candidates = [
+    data.jobId, 
+    data.job_id, 
+    data.id, 
+    data.result?.jobId,
+    data.result?.meta?.jobId,
+    data.inlineResult?.meta?.jobId,
+    data.jobMeta?.id,
+    fallbackId
+  ];
+  return candidates.find(v => typeof v === 'string' && (v.startsWith('job_') || v.startsWith('fix_'))) || fallbackId;
+}
+
 router.post(
   '/',
   upload.single('file'),
@@ -102,7 +116,7 @@ router.post(
 
       // v2.4.120: Forensic ID Propagation Logic
       // We prioritize the local jobId (from Line 47) as the canonical contract ID
-      const finalId = job.jobId || job.id || jobId || job.inlineResult?.meta?.jobId || `job_${Date.now()}`;
+      const finalId = canonicalId(job, jobId);
       
       const responsePayload = {
         ok: true,
@@ -352,8 +366,7 @@ router.get('/:jobId', async (req, res) => {
     // v2.4.135: Strict Canonical ID Enforcement Bridge
     // If the OS returns a numeric ID, we fallback strictly to the request param jobId (which is canonical).
     // This removes the risk of numeric database primary keys (like '32') leaking as public identifiers.
-    const candidates = [data.jobId, data.job_id, data.id, jobId];
-    data.jobId = candidates.find(v => typeof v === 'string' && v.startsWith('job_')) || jobId;
+    data.jobId = canonicalId(data, jobId);
     data.id = data.jobId; // Unify root identifiers to prevent frontend ambiguity
 
     console.log(`[BFF][CANONICAL-ID][POLL] Status check for Job: ${jobId} -> Resolved: ${data.jobId}`);
@@ -515,24 +528,21 @@ router.post('/:jobId/actions/fix', async (req, res) => {
     
     // v2.4.135: Action Response ID Normalization (Blindaje V3)
     // Enforce priority: payload.jobId || payload.job_id || req.params.jobId || payload.id
-    const upstreamCandidates = [data.jobId, data.job_id, data.id];
-    // Support both job_ and fix_ prefixes
-    const canonicalId = upstreamCandidates.find(v => typeof v === 'string' && (v.startsWith('job_') || v.startsWith('fix_')));
+    const resolvedId = canonicalId(data, jobId);
     
-    if (!canonicalId) {
+    if (!resolvedId) {
         console.warn('[BFF][FIX-ACTION][REJECTED-ID]', { 
             message: 'Upstream OS returned a non-canonical ID for an action response. Forcing parent jobId preservation.',
-            candidates: upstreamCandidates,
             sourceJobId: jobId
         });
     }
 
-    console.log(`[APP][AUTOFIX][RESPONSE][${requestId}]`, { sourceJobId: jobId, targetJobId: canonicalId || jobId });
-    console.log(`[BFF][CANONICAL-ID][FIX] Response for Job: ${jobId} -> Resolved: ${canonicalId || jobId}`);
-    console.log(`[APP][AUTOFIX][TARGET-JOB][${requestId}]`, canonicalId || jobId);
+    console.log(`[APP][AUTOFIX][RESPONSE][${requestId}]`, { sourceJobId: jobId, targetJobId: resolvedId || jobId });
+    console.log(`[BFF][CANONICAL-ID][FIX] Response for Job: ${jobId} -> Resolved: ${resolvedId || jobId}`);
+    console.log(`[APP][AUTOFIX][TARGET-JOB][${requestId}]`, resolvedId || jobId);
     
     // Ensure we always return a canonical jobId field to the frontend
-    data.jobId = canonicalId || jobId; 
+    data.jobId = resolvedId || jobId; 
     data.id = data.jobId;
 
     return res.status(200).json(data);

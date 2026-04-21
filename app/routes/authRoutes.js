@@ -112,10 +112,18 @@ router.post('/login', async (req, res) => {
             plan: user.plan || 'FREE' 
         });
 
+        const refreshToken = generateToken({ 
+            userId: user.id, 
+            email: user.email, 
+            role: user.role, 
+            plan: user.plan || 'FREE' 
+        }, '7d');
+
         console.log(`[AUTH-LOGIN-OK] Node authenticated: ${email} (${user.role})`);
 
         res.json({ 
             token, 
+            refreshToken,
             user: { 
                 id: user.id, 
                 email: user.email, 
@@ -164,7 +172,32 @@ async function handleSession(req, res) {
 router.get('/session', requireAuth, handleSession);
 router.get('/me', requireAuth, handleSession);
 
-// 4. LOGOUT (Release Node)
+// 4. REFRESH (Rotate Identity)
+router.post('/refresh', async (req, res) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+        return res.status(400).json({ error: 'MISSING_TOKEN', message: 'Refresh token mandatory.' });
+    }
+
+    try {
+        const { verifyJwt } = require('../auth/verifyJwt');
+        const decoded = verifyJwt(refreshToken);
+        
+        const newToken = generateToken({ 
+            userId: decoded.userId || decoded.sub, 
+            email: decoded.email, 
+            role: decoded.appRole || decoded.role, 
+            plan: decoded.plan 
+        }, '24h');
+
+        res.json({ token: newToken });
+    } catch (err) {
+        console.error('[AUTH-REFRESH-ERROR]', err.message);
+        res.status(401).json({ error: 'INVALID_REFRESH_TOKEN', message: 'Session could not be recovered.' });
+    }
+});
+
+// 5. LOGOUT (Release Node)
 router.post('/logout', (req, res) => {
     // Client should clear the token
     res.json({ status: 'OK', message: 'Node released.' });

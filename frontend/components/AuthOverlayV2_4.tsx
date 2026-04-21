@@ -39,7 +39,7 @@ export const AuthOverlayV2_4: React.FC = () => {
             const data = await res.json();
 
             if (res.ok) {
-                login(data.token, data.user);
+                login(data.token, data.user, data.refreshToken);
             } else {
                 setError(data.message || t('auth.error.invalid'));
             }

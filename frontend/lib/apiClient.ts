@@ -62,6 +62,7 @@ export async function pposFetch<T>(path: string, options?: RequestInit): Promise
     if (res.status === 401) {
         const refreshToken = getRefreshToken();
         if (refreshToken) {
+            console.log(`[API-CLIENT][${requestId}][AUTH-DRIFT] 401 detected. Attempting session recovery via refresh token...`);
             try {
                 const refreshRes = await fetch('/api/auth/refresh', {
                     method: 'POST',
@@ -71,6 +72,7 @@ export async function pposFetch<T>(path: string, options?: RequestInit): Promise
 
                 if (refreshRes.ok) {
                     const { token: newToken } = await refreshRes.json();
+                    console.log(`[API-CLIENT][${requestId}][REFRESH-SUCCESS] Session recovered. Retrying original request.`);
                     setAuthToken(newToken);
                     
                     // Retry original request with new token
@@ -79,10 +81,12 @@ export async function pposFetch<T>(path: string, options?: RequestInit): Promise
                     }
                     res = await fetch(path, { ...options, headers });
                 } else {
+                    console.error(`[API-CLIENT][${requestId}][REFRESH-FAILURE] Refresh terminal. Clearing tokens. Status: ${refreshRes.status}`);
                     clearAuthTokens();
                     window.location.reload(); // Force re-auth
                 }
             } catch (e) {
+                console.error(`[API-CLIENT][${requestId}][REFRESH-CRASH]`, e);
                 clearAuthTokens();
                 throw e;
             }

@@ -102,8 +102,16 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
     }
 
     // --- v2.4.97: Aggressive Source Detection ---
-    if (!sourceFound && (payload.report || payload.score !== undefined || payload.summary)) {
-        console.log('[STEP2][AGGRESSIVE-DETECTION] Source marked as found via report/score existence');
+    // Specifically check if technical indicators exist beyond just top-level object presence
+    const hasTechnicalIndicators = !!(
+        payload.score !== undefined || 
+        payload.summary || 
+        payload.report?.meta || 
+        payload.report?.status === 'COMPLETED'
+    );
+    
+    if (!sourceFound && hasTechnicalIndicators) {
+        console.log('[STEP2][AGGRESSIVE-DETECTION] Source marked as found via technical indicators');
         sourceFound = true;
     }
     // --------------------------------------------
