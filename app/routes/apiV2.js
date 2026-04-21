@@ -36,15 +36,16 @@ function getTenantId(req) {
   return req.auth?.tenantId || req.user?.tenantId || 'global';
 }
 
+function canonicalId(data, fallbackId) {
   const candidates = [
-    data.jobId, 
-    data.job_id, 
-    data.id,
-    data.job?.id,
-    data.result?.jobId,
-    data.result?.meta?.jobId,
-    data.inlineResult?.meta?.jobId,
-    data.jobMeta?.id,
+    data?.jobId, 
+    data?.job_id, 
+    data?.id,
+    data?.job?.id,
+    data?.result?.jobId,
+    data?.result?.meta?.jobId,
+    data?.inlineResult?.meta?.jobId,
+    data?.jobMeta?.id,
     fallbackId
   ];
   // v2.4.165: Robust Canonical filtering
@@ -430,15 +431,17 @@ router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
            } else if (available.fixed_pdf) {
              resolvedArtifactId = 'fixed.pdf';
            } else if (available.final_fixed_pdf) {
-             resolvedArtifactId = 'normalized.pdf'; // Keep mapping for explicit final_fixed_pdf artifact
+             resolvedArtifactId = 'final_fixed_pdf'; 
+           } else if (available.normalized_pdf) {
+             resolvedArtifactId = 'normalized.pdf';
            } else {
-             resolvedArtifactId = 'normalized.pdf'; // Last resort fallback
+             resolvedArtifactId = 'final_fixed_pdf'; // Prevent blind fallbacks
            }
            console.log(`[BFF][ARTIFACT][ALIAS-RESOLVE] Aliased final_fixed_pdf -> ${resolvedArtifactId}`);
          }
        } catch (err) {
          console.warn(`[BFF][ARTIFACT][ALIAS-RESOLVE][WARN] Failed to fetch job status for aliasing: ${err.message}`);
-         resolvedArtifactId = 'normalized.pdf'; // Legacy fallback
+         resolvedArtifactId = 'final_fixed_pdf'; // Legacy fallback removed
        }
     }
 
