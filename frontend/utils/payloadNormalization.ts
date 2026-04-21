@@ -4,7 +4,7 @@ import { PreflightResult, Issue, Severity, WorkflowAnalysis, AppMode } from '../
  * deterministic status flags for UI components.
  */
 
-const RANKED_ARTIFACT_KEYS = ['certified_pdf', 'fixed_pdf', 'final_fixed_pdf'];
+const RANKED_ARTIFACT_KEYS = ['final_fixed_pdf', 'fixed_pdf', 'certified_pdf'];
 
 export function getBestArtifactKey(artifacts: Record<string, string> | undefined | null): string | null {
     if (!artifacts) return null;
@@ -278,10 +278,13 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
  * This prevents numeric database IDs (e.g., '32') from leaking into public identifiers.
  */
 export function pickCanonicalJobId(...candidates: any[]): string | null {
+    const fixId = candidates.find(c => typeof c === 'string' && c.startsWith('fix_'));
+    if (fixId) return fixId;
+
+    const jobId = candidates.find(c => typeof c === 'string' && c.startsWith('job_'));
+    if (jobId) return jobId;
+
     for (const c of candidates) {
-        if (typeof c === 'string' && (c.startsWith('job_') || c.startsWith('fix_'))) {
-            return c;
-        }
         if (c && (typeof c === 'number' || (!c.toString().startsWith('job_') && !c.toString().startsWith('fix_')))) {
             console.warn('[JOB-ID][REJECTED] Ignoring non-canonical identifier candidate:', c);
         }

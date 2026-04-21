@@ -48,8 +48,12 @@ function canonicalId(data, fallbackId) {
     data?.jobMeta?.id,
     fallbackId
   ];
-  // v2.4.165: Robust Canonical filtering
-  const resolved = candidates.find(v => typeof v === 'string' && (v.startsWith('job_') || v.startsWith('fix_')));
+  
+  // v2.4.166: Robust Canonical filtering (Prioritize 'fix_' over 'job_')
+  const fixId = candidates.find(v => typeof v === 'string' && v.startsWith('fix_'));
+  if (fixId) return fixId;
+
+  const resolved = candidates.find(v => typeof v === 'string' && v.startsWith('job_'));
   return resolved || fallbackId;
 }
 
@@ -365,7 +369,27 @@ router.get('/:jobId', async (req, res) => {
 
         // Clean up the nested wrapper now that preservation is complete
         delete data.result;
-    } 
+    }
+
+    // Normalize artifacts to canonical key-value map {type: filename} for frontend compatibility.
+    // PPOS returns a top-level array; spreading it produces numeric keys unusable by getBestArtifactKey.
+    if (data.artifacts) {
+        const artMap = {};
+        if (Array.isArray(data.artifacts)) {
+            data.artifacts.forEach(a => {
+                if (a?.type && a?.name) artMap[a.type] = a.name;
+            });
+        } else if (typeof data.artifacts === 'object') {
+            Object.entries(data.artifacts).forEach(([k, v]) => {
+                if (typeof v === 'object' && v?.type && v?.name) {
+                    artMap[v.type] = v.name;
+                } else if (typeof v === 'string' && isNaN(Number(k))) {
+                    artMap[k] = v;
+                }
+            });
+        }
+        data.artifacts = artMap;
+    }
 
     // v2.4.135: Strict Canonical ID Enforcement Bridge
     // If the OS returns a numeric ID, we fallback strictly to the request param jobId (which is canonical).
@@ -407,7 +431,8 @@ router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
     const artifactMap = {
       'analysis_report': 'report.json',
       'audit_report': 'fix_audit.json',
-      'certified_pdf': 'certified.pdf'
+      'certified_pdf': 'certified.pdf',
+      'fixed_pdf': 'fixed.pdf'
     };
     
     let resolvedArtifactId = artifactMap[artifactId] || artifactId;
@@ -424,18 +449,22 @@ router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
          
          if (jobRes.ok) {
            const jobData = await jobRes.json();
-           const available = jobData.artifacts || jobData.result?.artifacts || {};
+           const available = jobData.result?.artifacts
+              || (Array.isArray(jobData.artifacts)
+                  ? jobData.artifacts.reduce((acc, a) => ({ ...acc, [a.type]: a.name }), {})
+                  : jobData.artifacts)
+              || {};
            
-           if (available.certified_pdf) {
-             resolvedArtifactId = 'certified.pdf';
+           if (available.final_fixed_pdf) {
+             resolvedArtifactId = available.final_fixed_pdf;
            } else if (available.fixed_pdf) {
              resolvedArtifactId = 'fixed.pdf';
-           } else if (available.final_fixed_pdf) {
-             resolvedArtifactId = 'final_fixed_pdf'; 
            } else if (available.normalized_pdf) {
              resolvedArtifactId = 'normalized.pdf';
+           } else if (available.certified_pdf) {
+             resolvedArtifactId = 'certified.pdf';
            } else {
-             resolvedArtifactId = 'final_fixed_pdf'; // Prevent blind fallbacks
+             resolvedArtifactId = 'final_fixed_pdf';
            }
            console.log(`[BFF][ARTIFACT][ALIAS-RESOLVE] Aliased final_fixed_pdf -> ${resolvedArtifactId}`);
          }

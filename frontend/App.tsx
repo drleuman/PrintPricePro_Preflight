@@ -22,7 +22,7 @@ import {
   HeatmapData,
   AppMode,
 } from './types';
-import { normalizePreflightResult, pickCanonicalJobId, analyzeWorkflow, getCanonicalFileName } from './utils/payloadNormalization';
+import { normalizePreflightResult, pickCanonicalJobId, analyzeWorkflow, getCanonicalFileName, getBestArtifactKey } from './utils/payloadNormalization';
 import { normalizeDownloadFilename } from './utils/formatters';
 import { usePreflightWorker } from './hooks/usePreflightWorker';
 import { usePdfTools } from './hooks/usePdfTools';
@@ -144,6 +144,8 @@ function AppContent() {
     setAutoFixAfter(null);
     setAutoFixReport(null);
     setAutoFixRunId(null);
+    setTargetJobId(null);
+    setSourceJobId(null);
     setLdmStatus('');
     setEngineError(null);
     setFixError(null);
@@ -498,8 +500,8 @@ function AppContent() {
 
       // Requirement B: Context-Aware Download
       if (jobId && !jobId.includes('local')) {
-        const artifacts = (result as any)?.artifacts || (autoFixAfter as any)?.artifacts || (autoFixBefore as any)?.artifacts || {};
-        const artifactType = artifacts.certified_pdf ? 'certified_pdf' : (artifacts.fixed_pdf ? 'fixed_pdf' : 'final_fixed_pdf');
+        const artifacts = (autoFixAfter as any)?.artifacts || (result as any)?.artifacts || (autoFixBefore as any)?.artifacts || {};
+        const artifactType = getBestArtifactKey(artifacts) || 'certified_pdf';
         const artifactUrl = `/api/v2/jobs/${jobId}/artifacts/${artifactType}`;
         
         console.log('[DOWNLOAD][AUTHENTICATED-STREAM]', { artifactUrl, artifactType });
@@ -536,7 +538,7 @@ function AppContent() {
         traceId: err.traceId || 'N/A'
       });
     }
-  }, [lastPdfUrl, lastPdfName, fileMeta, targetJobId, sourceJobId, result]);
+  }, [lastPdfUrl, lastPdfName, fileMeta, targetJobId, sourceJobId, result, autoFixAfter, autoFixBefore]);
 
   const handleDownloadReport = useCallback(() => {
     if (!result) return;
