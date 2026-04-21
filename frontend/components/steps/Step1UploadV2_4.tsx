@@ -140,6 +140,11 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
 
             <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
                 {/* Upload Zone */}
+                <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={onDrop}
                     className={`group relative flex flex-col items-center justify-center border-2 border-dashed transition-all duration-700 cursor-pointer min-h-[300px] md:min-h-[500px] w-full lg:flex-[1.2] ${
                         isDragging ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5 shadow-[0_0_40px_rgba(220,0,0,0.1)] scale-[1.01]' : 
                         file ? 'border-[var(--border-color)] bg-[var(--hover-bg)]' : 'border-[var(--border-color)] hover:border-[var(--accent-color)]/30 hover:bg-[var(--hover-bg)]'

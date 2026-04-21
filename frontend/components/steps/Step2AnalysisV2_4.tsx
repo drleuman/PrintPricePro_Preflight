@@ -238,7 +238,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                             
                             <div className="border border-amber-500/30 bg-amber-500/5 p-8 animate-in fade-in duration-500">
                                 <div className="text-[0.7rem] font-black uppercase tracking-[0.2em] text-amber-400 mb-2">
-                                    Analysis complete
+                                    {t('analysisComplete').toUpperCase()}
                                 </div>
 
                                 <h2 className="text-2xl font-black text-[var(--text-primary)] mb-2">
@@ -318,7 +318,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                                 disabled={isRunning}
                                 className={`p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)]`}
                             >
-                                {hasIssues ? t('step.analysis.applyCorrection') : 'CONTINUE TO REVIEW'}
+                                {hasIssues ? t('step.analysis.applyCorrection') : t('continueToReview').toUpperCase()}
                             </button>
                         )}
                     </div>

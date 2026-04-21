@@ -785,4 +785,7 @@ export const es = {
   'step.review.defaultPolicy': 'FOGRA51 / ISO-RECUBIERTO',
   'step.review.pendingId': 'PPOS_INTERNO_PENDIENTE',
   'step.review.defaultOversight': 'SUPERVISIÓN_PREDETERMINADA',
+  'step.review.note': 'Nota Técnica',
+  'analysisComplete': 'Análisis Completado',
+  'continueToReview': 'Continuar a Revisión',
 } as const;

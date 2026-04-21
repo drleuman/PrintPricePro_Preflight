@@ -476,7 +476,6 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 </div>
                             )}
                         </div>
-                    </div>
 
                     {/* Production Hardening Tools */}
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8 space-y-6">
