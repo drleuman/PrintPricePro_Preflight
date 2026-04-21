@@ -207,11 +207,12 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
         });
     }, [getJobStatus]);
 
-    const getDownloadUrl = useCallback((jobId: string, artifactId: string = 'final_fixed_pdf') => {
+    const getDownloadUrl = useCallback((jobId: string, artifactId: string = 'certified_pdf') => {
+        console.log('[APP][ARTIFACT][PREFERRED-KEY]', { jobId, requested: artifactId });
         return `/api/v2/jobs/${jobId}/artifacts/${artifactId}`;
     }, []);
 
-    const getAuthenticatedBlobUrl = useCallback(async (jobId: string, artifactId: string = 'final_fixed_pdf') => {
+    const getAuthenticatedBlobUrl = useCallback(async (jobId: string, artifactId: string = 'certified_pdf') => {
         const url = getDownloadUrl(jobId, artifactId);
         console.log(`[APP][ARTIFACT][CANONICAL-ID] Fetching protected artifact: ${url}`);
         try {

@@ -195,20 +195,9 @@ function AppContent() {
 
       // v2.4.112: Resilient Artifact Selection (Analysis-Only Support)
       if (completedJobId) {
-        const artifacts = normalized.artifacts || normalized.result?.artifacts || {};
-        const bestArtifactKey = artifacts.final_fixed_pdf || null;
-
-        const updateArtifactUrl = async () => {
+          // Selection Logic (Requirement 2 & 3)
           const artifacts = normalized.artifacts || normalized.result?.artifacts || {};
-          const jobType = normalized.type || (result && result.type) || 'ANALYZE';
-          
-          // Selection Logic (Requirement A/B)
-          let bestArtifactKey = null;
-          if (jobType === 'AUTOFIX') {
-            bestArtifactKey = artifacts.final_fixed_pdf || null;
-          } else {
-            bestArtifactKey = artifacts.certified_pdf || artifacts.final_fixed_pdf || null;
-          }
+          const bestArtifactKey = artifacts.certified_pdf || artifacts.fixed_pdf || artifacts.final_fixed_pdf || null;
 
           console.log('[APP][ARTIFACT-RESOLUTION]', { 
             jobType, 
@@ -312,14 +301,7 @@ function AppContent() {
           activeJobIdRef.current = jobId;
 
           const artifacts = normalized.artifacts || {};
-          const jobType = normalized.type || 'ANALYZE';
-          let bestArtifactKey = null;
-          
-          if (jobType === 'AUTOFIX') {
-            bestArtifactKey = artifacts.final_fixed_pdf || null;
-          } else {
-            bestArtifactKey = artifacts.certified_pdf || null;
-          }
+          const bestArtifactKey = artifacts.certified_pdf || artifacts.fixed_pdf || artifacts.final_fixed_pdf || null;
 
           console.log('[APP][V2-START][ARTIFACT-RESOLUTION]', { jobType, selected: bestArtifactKey });
 
@@ -458,16 +440,8 @@ function AppContent() {
         // Final guards for artifact propagation
         if (finalJobId) {
           // v2.4.150: Strict AUTOFIX Artifact Resolution (Requirement A)
-          const availableArtifacts = jobResult.artifacts || {};
-          const jobType = normalizedAfter.type || 'AUTOFIX';
-          
-          let bestArtifactKey = null;
-          if (jobType === 'AUTOFIX') {
-            bestArtifactKey = availableArtifacts.final_fixed_pdf || null;
-            // Requirement A: NEVER fallback silently to certified_pdf for AUTOFIX
-          } else {
-            bestArtifactKey = availableArtifacts.certified_pdf || availableArtifacts.final_fixed_pdf || null;
-          }
+          const artifacts = jobResult.artifacts || {};
+          const bestArtifactKey = artifacts.certified_pdf || artifacts.fixed_pdf || artifacts.final_fixed_pdf || null;
 
           console.log('[APP][FIX][ARTIFACT-RESOLUTION]', { 
             jobType, 
@@ -551,22 +525,12 @@ function AppContent() {
 
       // Requirement B: Context-Aware Download
       if (jobId && !jobId.includes('local')) {
-        const jobType = (result as any)?.type || (autoFixAfter ? 'AUTOFIX' : 'ANALYZE');
-        const artifactType = jobType === 'AUTOFIX' ? 'final_fixed_pdf' : 'certified_pdf';
+        const artifacts = (result as any)?.artifacts || (autoFixAfter as any)?.artifacts || {};
+        const artifactType = artifacts.certified_pdf ? 'certified_pdf' : (artifacts.fixed_pdf ? 'fixed_pdf' : 'final_fixed_pdf');
         const artifactUrl = `/api/v2/jobs/${jobId}/artifacts/${artifactType}`;
         
-        console.log('[DOWNLOAD][AUTHENTICATED-STREAM]', { artifactUrl, jobType });
-        try {
-          blob = await pposFetch<Blob>(artifactUrl);
-        } catch (err: any) {
-          // Fallback only if not AUTOFIX (Requirement A)
-          if (err.status === 404 && jobType !== 'AUTOFIX') {
-             console.log('[DOWNLOAD][FALLBACK] certified_pdf not found, trying final_fixed_pdf');
-             blob = await pposFetch<Blob>(`/api/v2/jobs/${jobId}/artifacts/final_fixed_pdf`);
-          } else {
-            throw err;
-          }
-        }
+        console.log('[DOWNLOAD][AUTHENTICATED-STREAM]', { artifactUrl, artifactType });
+        blob = await pposFetch<Blob>(artifactUrl);
       } else if (lastPdfUrl && lastPdfUrl.startsWith('blob:')) {
         // Fallback for local processing or if server fetch is impossible
         console.log('[DOWNLOAD][LOCAL-BLOB-FALLBACK]');

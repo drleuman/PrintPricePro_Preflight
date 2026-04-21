@@ -382,21 +382,50 @@ router.get('/:jobId', async (req, res) => {
  * Proxy artifact streaming from PPOS.
  */
 router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
+  const { jobId, artifactId } = req.params;
+  const requestId = req.id || `art_${Date.now()}`;
+
   try {
     // --- v2.4.111: BFF-Side Artifact Alias Support ---
-    // Maps frontend artifact keys to real filenames expected by PPOS
     const artifactMap = {
       'analysis_report': 'report.json',
-      'final_fixed_pdf': 'normalized.pdf',
       'audit_report': 'fix_audit.json',
       'certified_pdf': 'certified.pdf'
     };
     
-    // Resolve targeted artifact ID (favoring alias if present)
-    const resolvedArtifactId = artifactMap[req.params.artifactId] || req.params.artifactId;
+    let resolvedArtifactId = artifactMap[artifactId] || artifactId;
+
+    // v2.4.160: Artifact Aliasing Logic (Requirement 4)
+    if (artifactId === 'final_fixed_pdf') {
+       console.log(`[BFF][ARTIFACT][ALIAS-RESOLVE] Resolving alias for ${jobId}/${artifactId}`);
+       const authHeaders = identityService.getAuthHeaders(req.auth || req.user || {});
+       
+       try {
+         const jobRes = await pposRequest(ppos.routes.jobStatus(jobId), {
+           headers: { Authorization: authHeaders.Authorization }
+         });
+         
+         if (jobRes.ok) {
+           const jobData = await jobRes.json();
+           const available = jobData.artifacts || jobData.result?.artifacts || {};
+           
+           if (available.certified_pdf) {
+             resolvedArtifactId = 'certified.pdf';
+           } else if (available.fixed_pdf) {
+             resolvedArtifactId = 'fixed.pdf';
+           } else {
+             resolvedArtifactId = 'normalized.pdf';
+           }
+           console.log(`[BFF][ARTIFACT][ALIAS-RESOLVE] Aliased final_fixed_pdf -> ${resolvedArtifactId}`);
+         }
+       } catch (err) {
+         console.warn(`[BFF][ARTIFACT][ALIAS-RESOLVE][WARN] Failed to fetch job status for aliasing: ${err.message}`);
+         resolvedArtifactId = 'normalized.pdf'; // Legacy fallback
+       }
+    }
 
     const response = await pposRequest(
-      ppos.routes.jobArtifact(req.params.jobId, resolvedArtifactId),
+      ppos.routes.jobArtifact(jobId, resolvedArtifactId),
       {
         method: 'GET',
         headers: {
