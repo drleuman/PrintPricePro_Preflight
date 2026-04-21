@@ -779,4 +779,10 @@ export const es = {
   'finding.ink_limit_violation': 'EXCESO DE COBERTURA DE TINTA',
   'finding.spot_color_warning': 'ADVERTENCIA DE COLORES DIRECTOS',
   'finding.pdf_compliance_error': 'FALLO DE CUMPLIMIENTO PDF/X',
+  'step.review.engineFixBtn': 'Ir al Fix del Motor',
+  'step.review.limitedComparisonDesc': 'El artefacto certificado no es accesible. Puedes finalizar la traza, pero la comparativa directa está limitada al estado de ingreso.',
+  'step.review.backToEngineTitle': 'Volver al Motor de Políticas',
+  'step.review.defaultPolicy': 'FOGRA51 / ISO-RECUBIERTO',
+  'step.review.pendingId': 'PPOS_INTERNO_PENDIENTE',
+  'step.review.defaultOversight': 'SUPERVISIÓN_PREDETERMINADA',
 } as const;

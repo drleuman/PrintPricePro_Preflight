@@ -776,6 +776,12 @@ export const en = {
   'finding.ink_limit_violation': 'INK COVERAGE EXCEEDED',
   'finding.spot_color_warning': 'SPOT COLOR WARNING',
   'finding.pdf_compliance_error': 'PDF/X COMPLIANCE FAULT',
+  'step.review.engineFixBtn': 'Go to Engine Fix',
+  'step.review.limitedComparisonDesc': 'Certified artifact is not accessible. You can finalize the trace, but the direct comparison is limited to the ingress state.',
+  'step.review.backToEngineTitle': 'Return to Policy Engine',
+  'step.review.defaultPolicy': 'FOGRA51 / ISO_COATED',
+  'step.review.pendingId': 'PPOS_INTERNAL_PENDING',
+  'step.review.defaultOversight': 'DEFAULT_OVERSIGHT',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

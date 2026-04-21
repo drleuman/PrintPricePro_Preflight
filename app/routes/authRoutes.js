@@ -184,14 +184,29 @@ router.post('/refresh', async (req, res) => {
     try {
         const { verifyJwt } = require('../auth/verifyJwt');
         const decoded = verifyJwt(refreshToken);
-        
+        const userId = decoded.userId || decoded.sub;
+
+        // Phase 2 Hardening: Verify identity still exists in high-trust node registry
+        const users = await db.execute('SELECT id, email, role FROM users WHERE id = ?', [userId]);
+        if (users.length === 0) {
+            console.error(`[AUTH-REFRESH-DENIED] Refresh attempted for non-existent user: ${userId}`);
+            return res.status(401).json({ error: 'INVALID_SESSION', message: 'Identity context lost.' });
+        }
+
+        const user = users[0];
         const newToken = generateToken({ 
-            userId: decoded.userId || decoded.sub, 
-            email: decoded.email, 
-            role: decoded.appRole || decoded.role, 
+            userId: user.id, 
+            email: user.email, 
+            role: user.role, 
             plan: decoded.plan 
         }, '24h');
 
+        /**
+         * SECURITY NOTE: REFRESH TOKEN ROTATION
+         * Currently, the refresh token itself is not rotated. 
+         * In a future hardening phase, a new refreshToken should be generated 
+         * and the old one revoked (Refresh Token Rotation pattern).
+         */
         res.json({ token: newToken });
     } catch (err) {
         console.error('[AUTH-REFRESH-ERROR]', err.message);

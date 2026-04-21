@@ -319,7 +319,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                                 onClick={onBack}
                                                 className="px-6 py-3 border border-[var(--accent-color)]/30 bg-[var(--accent-color)]/5 text-[var(--accent-color)] text-[0.6rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-color)] hover:text-white transition-all"
                                             >
-                                                Go to Engine Fix
+                                                {t('step.review.engineFixBtn')}
                                             </button>
                                         )}
                                     </div>
@@ -349,7 +349,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             <div className="md:col-span-2 p-4 bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
                                 <CpuChipIcon className="h-5 w-5 text-amber-500 shrink-0" />
                                 <div className="text-[0.7rem] font-bold text-amber-500 uppercase tracking-widest leading-normal">
-                                    Certified artifact is not accessible. You can finalize the trace, but the direct comparison is limited to the ingress state.
+                                    {t('step.review.limitedComparisonDesc')}
                                 </div>
                             </div>
                         )}
@@ -369,18 +369,18 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             title={isReadyForPrint ? t('readyForPrinting') : t('common.processing')} 
                             issuesFound={issuesFound}
                             fixesApplied={fixesApplied}
-                            profile={selectedPolicy || 'FOGRA51 / ISO_COATED'}
+                            profile={selectedPolicy || t('step.review.defaultPolicy')}
                             riskStatus={isReadyForPrint ? "certified" : "warning"} 
                         />
 
                         <div className="pt-6 border-t border-[var(--border-color)] space-y-4">
                             <div className="flex items-center justify-between">
                                 <span className="text-[0.8rem] font-black uppercase tracking-widest text-[var(--text-muted)]">{t('labelCertificateId')}</span>
-                                <span className="text-[0.8rem] font-mono text-[var(--text-secondary)]">{formatLabel(result?.meta?.jobId || 'PPOS_INTERNAL_PENDING')}</span>
+                                <span className="text-[0.8rem] font-mono text-[var(--text-secondary)]">{formatLabel(result?.meta?.jobId || t('step.review.pendingId'))}</span>
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-[0.8rem] font-black uppercase tracking-widest text-[var(--text-muted)]">{t('shell.policyProfile')}</span>
-                                <span className="text-[0.8rem] font-mono text-[var(--text-secondary)] italic truncate max-w-[150px]">{formatLabel(selectedPolicy || 'DEFAULT_OVERSIGHT')}</span>
+                                <span className="text-[0.8rem] font-mono text-[var(--text-secondary)] italic truncate max-w-[150px]">{formatLabel(selectedPolicy || t('step.review.defaultOversight'))}</span>
                             </div>
                              <button 
                                 onClick={onDownloadReport}
@@ -395,7 +395,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 <button 
                                   onClick={onBack}
                                   className="px-4 py-3 border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-muted)] text-[0.7rem] font-black uppercase tracking-[0.2em] hover:text-[var(--text-primary)] hover:border-[var(--text-primary)] transition-all flex items-center gap-2"
-                                  title="Return to Policy Engine"
+                                  title={t('step.review.backToEngineTitle')}
                                 >
                                   <ChevronLeftIcon className="h-4 w-4" />
                                   {t('common.back')}
