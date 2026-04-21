@@ -182,7 +182,7 @@ function AppContent() {
     getAuthenticatedBlobUrl
   } = usePdfTools({
     onStatus: (st: string) => { setLdmStatus(st); },
-    onComplete: (normalized: any) => {
+    onComplete: async (normalized: any) => {
       // Point of Application (Validation C): Check jobId BEFORE any state change
       const completedJobId = pickCanonicalJobId(normalized.meta?.jobId, normalized.id);
       if (completedJobId && activeJobIdRef.current && completedJobId !== activeJobIdRef.current) {
@@ -197,6 +197,7 @@ function AppContent() {
       if (completedJobId) {
           // Selection Logic (Requirement 2 & 3)
           const artifacts = normalized.artifacts || normalized.result?.artifacts || {};
+          const jobType = normalized.type || 'ANALYZE';
           const bestArtifactKey = artifacts.certified_pdf || artifacts.fixed_pdf || artifacts.final_fixed_pdf || null;
 
           console.log('[APP][ARTIFACT-RESOLUTION]', { 
@@ -301,6 +302,7 @@ function AppContent() {
           activeJobIdRef.current = jobId;
 
           const artifacts = normalized.artifacts || {};
+          const jobType = normalized.type || 'ANALYZE';
           const bestArtifactKey = artifacts.certified_pdf || artifacts.fixed_pdf || artifacts.final_fixed_pdf || null;
 
           console.log('[APP][V2-START][ARTIFACT-RESOLUTION]', { jobType, selected: bestArtifactKey });
@@ -441,6 +443,7 @@ function AppContent() {
         if (finalJobId) {
           // v2.4.150: Strict AUTOFIX Artifact Resolution (Requirement A)
           const artifacts = jobResult.artifacts || {};
+          const jobType = normalizedAfter.type || 'AUTOFIX';
           const bestArtifactKey = artifacts.certified_pdf || artifacts.fixed_pdf || artifacts.final_fixed_pdf || null;
 
           console.log('[APP][FIX][ARTIFACT-RESOLUTION]', { 
