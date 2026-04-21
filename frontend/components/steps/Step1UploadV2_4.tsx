@@ -202,7 +202,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
 
                 {/* Configuration Zone */}
                 <div className="flex flex-col justify-between space-y-8 w-full lg:flex-[0.8]">
-                    <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-6 md:p-10 h-full">
+                    <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-10 h-full">
                         <div className="flex items-center justify-between mb-8">
                             <div className="ppp-phase-tag text-[var(--accent-color)] mb-1">
                                 {t('review').toUpperCase()}
@@ -213,7 +213,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                         <div className="space-y-4">
                             <button 
                                 onClick={() => setSelectedMode('magic')}
-                                className={`w-full flex items-center gap-4 p-4 md:p-6 border transition-all duration-500 relative group ${
+                                className={`w-full flex items-center gap-5 p-6 border transition-all duration-500 relative group ${
                                     selectedMode === 'magic' ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5' : 'border-[var(--border-color)] hover:border-[var(--accent-color)] hover:bg-[var(--accent-color)]/5 bg-[var(--bg-primary)]/50'
                                 }`}
                             >
@@ -233,7 +233,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
 
                             <button 
                                 onClick={() => setSelectedMode('manual')}
-                                className={`w-full flex items-center gap-4 p-4 md:p-6 border transition-all duration-500 relative group ${
+                                className={`w-full flex items-center gap-5 p-6 border transition-all duration-500 relative group ${
                                     selectedMode === 'manual' ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5' : 'border-[var(--border-color)] hover:border-[var(--accent-color)] hover:bg-[var(--accent-color)]/5 bg-[var(--bg-primary)]/50'
                                 }`}
                             >

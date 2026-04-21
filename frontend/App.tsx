@@ -296,7 +296,7 @@ function AppContent() {
 
           const bestArtifactKey = analysis.bestArtifactKey;
 
-          console.log('[APP][V2-START][ARTIFACT-RESOLUTION]', { jobType, selected: bestArtifactKey });
+          console.log('[APP][V2-START][ARTIFACT-RESOLUTION]', { appMode, selected: bestArtifactKey });
 
           if (bestArtifactKey) {
             getAuthenticatedBlobUrl(jobId, bestArtifactKey).then(bUrl => {
@@ -427,7 +427,7 @@ function AppContent() {
           const bestArtifactKey = analysis.bestArtifactKey;
 
           console.log('[APP][FIX][ARTIFACT-RESOLUTION]', { 
-            jobType, 
+            appMode, 
             selected: bestArtifactKey, 
             effective: normalizedAfter.meta?.autofix_effective 
           });
@@ -918,6 +918,7 @@ function AppContent() {
 }
 
 function EngineErrorOverlay({ error, onClose }: { error: any, onClose: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="w-full max-w-lg bg-[var(--bg-secondary)] border-2 border-[#dc0000]/30 shadow-[0_30px_60px_rgba(0,0,0,0.5)] overflow-hidden">
