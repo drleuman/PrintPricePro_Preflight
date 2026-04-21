@@ -119,25 +119,32 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
 
     const certMessage = getCertTechStatus();
 
-    // Diagnostics
+    // v2.4.150: Refined Flags (Requirement C)
+    const isAutofix = result?.type === 'AUTOFIX';
+    const autofixEffective = result?.meta?.autofix_effective === true;
+    const noEffectiveChanges = result?.meta?.no_effective_changes === true;
+    const hasFinalArtifact = !!lastPdfUrl;
+
+    // Logic: REAL FIX vs NO CHANGE vs NO OUTPUT
+    const showComparison = isAutofix ? (autofixEffective && hasFinalArtifact) : hasFinalArtifact;
+    const hasFix = hasFinalArtifact && (isAutofix ? autofixEffective : true);
+
+    // Diagnostics (Requirement F)
     console.log('[APP][STEP4][ARTIFACT-RESOLUTION]', { 
-        hasResult: !!result, 
-        hasBefore: !!autoFixBefore, 
-        hasAfter: !!autoFixAfter,
-        lastPdfUrl: !!lastPdfUrl,
-        sourceJobId,
-        targetJobId,
-        isAnalyzeOnly,
+        jobType: result?.type,
+        autofixEffective,
+        noEffectiveChanges,
+        hasFinalArtifact,
         hasFix,
-        finalMode: showBeforeAfter
+        isAnalyzeOnly,
+        isAutofix,
+        lastPdfUrl: !!lastPdfUrl
     });
     
     // Canonical calculation of issues and fixes
     const issuesFound = autoFixBefore?.issues?.length || result?.issues?.length || 0;
     
     // Fixes Applied calculation logic:
-    // 1. Check direct report if available
-    // 2. Otherwise calc delta between before and after results
     const fixesApplied = autoFixAfter?.fixes?.length || 
                         autoFixReport?.fixes?.length || 
                         (autoFixBefore && autoFixAfter ? Math.max(0, autoFixBefore.issues.length - autoFixAfter.issues.length) : 
@@ -145,7 +152,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
 
     const isReadyForPrint = (autoFixAfter?.issues?.length === 0) || (result?.issues?.length === 0);
 
-    console.log('[STEP4][COUNTS]', { issuesFound, fixesApplied, isReadyForPrint });
+    console.log('[STEP4][COUNTS]', { issuesFound, fixesApplied, isReadyForPrint, autofixEffective });
 
     // Viewer Resolution
     // Before: Original File or Initial result
@@ -177,7 +184,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                     <h2 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">{t('step.review.title')}</h2>
                 </div>
                 <StatusBadge 
-                    label={isReadyForPrint ? t('readyForPrinting') : t('issuesFoundMessage')} 
+                    label={isReadyForPrint ? (isAutofix ? "Fixed & Certified" : "Analysis Certified") : t('issuesFoundMessage')} 
                     variant={isReadyForPrint ? "certified" : "warning"} 
                 />
             </div>
@@ -257,13 +264,13 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         {(layoutMode === 'side-by-side' || showBeforeAfter === 'after') && (
                             <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[500px] h-[580px] flex flex-col items-center justify-center bg-[var(--bg-primary)] group">
                                 <div className="absolute top-4 left-4 z-20 px-3 py-1 bg-[var(--accent-color)]/20 backdrop-blur-md border border-[var(--accent-color)]/20 text-[0.6rem] font-black text-[var(--accent-color)] uppercase tracking-[0.2em]">
-                                    Optimized for Print
+                                    {isAutofix ? "Fixed PDF" : "Optimized for Print"}
                                 </div>
                                 
-                                {hasFix && (
+                                {hasFinalArtifact && (
                                     <div className="absolute top-4 right-4 z-20">
                                         <div className="px-2 py-1 bg-green-500/10 border border-green-500/20 text-[0.55rem] font-bold text-green-500 uppercase tracking-widest">
-                                            Certified State
+                                            {isAutofix ? "Fixed (Effective)" : "Analysis Certified"}
                                         </div>
                                     </div>
                                 )}
@@ -277,35 +284,51 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                     </div>
                                 )}
 
-                                {hasFix ? (
-                                    <PageViewer 
-                                        key="viewer-after"
-                                        file={null}
-                                        pdfUrl={lastPdfUrl}
-                                        numPages={numPages}
-                                        currentPage={currentPage}
-                                        onPageChange={onPageChange}
-                                        onNumPagesChange={onNumPagesChange}
-                                        selectedIssue={null}
-                                        hideNavigation={layoutMode === 'side-by-side'}
-                                        heatmapData={null}
-                                        onRunHeatmap={() => {}}
-                                        isHeatmapLoading={false}
-                                        previewPages={requestedMode === 'after' ? previewPages : null}
-                                        previewLoading={requestedMode === 'after' ? previewLoading : false}
-                                    />
+                                {hasFinalArtifact ? (
+                                    (isAutofix && noEffectiveChanges) ? (
+                                        <div className="flex flex-col items-center justify-center p-12 text-center space-y-6">
+                                            <div className="h-20 w-20 bg-amber-500/10 border border-amber-500/30 flex items-center justify-center rotate-45">
+                                                <DocumentCheckIcon className="h-8 w-8 text-amber-500 -rotate-45" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <h4 className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">No Change Required</h4>
+                                                <p className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-relaxed max-w-[200px]">
+                                                    Autofix completed, but no material changes were applied.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <PageViewer 
+                                            key="viewer-after"
+                                            file={null}
+                                            pdfUrl={lastPdfUrl}
+                                            numPages={numPages}
+                                            currentPage={currentPage}
+                                            onPageChange={onPageChange}
+                                            onNumPagesChange={onNumPagesChange}
+                                            selectedIssue={null}
+                                            hideNavigation={layoutMode === 'side-by-side'}
+                                            heatmapData={null}
+                                            onRunHeatmap={() => {}}
+                                            isHeatmapLoading={false}
+                                            previewPages={requestedMode === 'after' ? previewPages : null}
+                                            previewLoading={requestedMode === 'after' ? previewLoading : false}
+                                        />
+                                    )
                                 ) : (
                                     <div className="flex flex-col items-center justify-center p-12 text-center space-y-6">
                                         <div className="h-20 w-20 bg-[var(--bg-secondary)] border border-[var(--border-color)] flex items-center justify-center rotate-45 group-hover:rotate-90 transition-all duration-700">
                                             <CommandLineIcon className="h-8 w-8 text-[var(--text-muted)] -rotate-45 group-hover:-rotate-90 transition-all duration-700" />
                                         </div>
                                         <div className="space-y-2">
-                                            <h4 className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">No Fix Applied Yet</h4>
+                                            <h4 className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">
+                                                {isAutofix ? "No Fixed PDF was generated" : "No Certified PDF"}
+                                            </h4>
                                             <p className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-relaxed max-w-[200px]">
-                                                Run AutoFix to generate the corrected and certified artifact.
+                                                {isAutofix ? "The engine did not produce a corrected artifact." : "Run analysis to generate the certified artifact."}
                                             </p>
                                         </div>
-                                        {!isRunning && (
+                                        {!isRunning && !isAutofix && (
                                             <button 
                                                 onClick={onBack}
                                                 className="px-6 py-3 border border-[var(--accent-color)]/30 bg-[var(--accent-color)]/5 text-[var(--accent-color)] text-[0.6rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-color)] hover:text-white transition-all"
@@ -399,13 +422,13 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 </button>
                             </div>
 
-                            {hasFix && (
+                            {hasFinalArtifact && (
                                 <button 
                                     onClick={onDownload}
                                     className="w-full flex items-center justify-center gap-3 py-5 bg-[var(--bg-primary)] border-2 border-[var(--accent-color)] text-[var(--accent-color)] text-[0.8rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-color)] hover:text-white transition-all shadow-[0_10px_30px_rgba(220,0,0,0.1)] group"
                                 >
                                     <ArrowDownTrayIcon className="h-5 w-5 group-hover:translate-y-0.5 transition-transform" />
-                                    {t('step.review.download')}
+                                    {isAutofix ? "Download Fixed PDF" : "Download Analysis PDF"}
                                 </button>
                             )}
 

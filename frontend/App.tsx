@@ -199,6 +199,24 @@ function AppContent() {
         const bestArtifactKey = artifacts.final_fixed_pdf || null;
 
         const updateArtifactUrl = async () => {
+          const artifacts = normalized.artifacts || normalized.result?.artifacts || {};
+          const jobType = normalized.type || (result && result.type) || 'ANALYZE';
+          
+          // Selection Logic (Requirement A/B)
+          let bestArtifactKey = null;
+          if (jobType === 'AUTOFIX') {
+            bestArtifactKey = artifacts.final_fixed_pdf || null;
+          } else {
+            bestArtifactKey = artifacts.certified_pdf || artifacts.final_fixed_pdf || null;
+          }
+
+          console.log('[APP][ARTIFACT-RESOLUTION]', { 
+            jobType, 
+            available: Object.keys(artifacts), 
+            selected: bestArtifactKey,
+            autofix_effective: normalized.meta?.autofix_effective 
+          });
+
           if (bestArtifactKey) {
             try {
               const bUrl = await getAuthenticatedBlobUrl(completedJobId, bestArtifactKey);
@@ -294,7 +312,16 @@ function AppContent() {
           activeJobIdRef.current = jobId;
 
           const artifacts = normalized.artifacts || {};
-          const bestArtifactKey = artifacts.final_fixed_pdf || null;
+          const jobType = normalized.type || 'ANALYZE';
+          let bestArtifactKey = null;
+          
+          if (jobType === 'AUTOFIX') {
+            bestArtifactKey = artifacts.final_fixed_pdf || null;
+          } else {
+            bestArtifactKey = artifacts.certified_pdf || null;
+          }
+
+          console.log('[APP][V2-START][ARTIFACT-RESOLUTION]', { jobType, selected: bestArtifactKey });
 
           if (bestArtifactKey) {
             getAuthenticatedBlobUrl(jobId, bestArtifactKey).then(bUrl => {
@@ -430,10 +457,23 @@ function AppContent() {
 
         // Final guards for artifact propagation
         if (finalJobId) {
-          // v2.4.98: Intelligent Artifact Resolution
+          // v2.4.150: Strict AUTOFIX Artifact Resolution (Requirement A)
           const availableArtifacts = jobResult.artifacts || {};
-          // Prefer certified_pdf for final step if available
-          const bestArtifactKey = availableArtifacts.certified_pdf || availableArtifacts.final_fixed_pdf || null;
+          const jobType = normalizedAfter.type || 'AUTOFIX';
+          
+          let bestArtifactKey = null;
+          if (jobType === 'AUTOFIX') {
+            bestArtifactKey = availableArtifacts.final_fixed_pdf || null;
+            // Requirement A: NEVER fallback silently to certified_pdf for AUTOFIX
+          } else {
+            bestArtifactKey = availableArtifacts.certified_pdf || availableArtifacts.final_fixed_pdf || null;
+          }
+
+          console.log('[APP][FIX][ARTIFACT-RESOLUTION]', { 
+            jobType, 
+            selected: bestArtifactKey, 
+            effective: normalizedAfter.meta?.autofix_effective 
+          });
 
           if (bestArtifactKey) {
             getAuthenticatedBlobUrl(finalJobId, bestArtifactKey).then(bUrl => {
@@ -509,15 +549,18 @@ function AppContent() {
 
       let blob: Blob;
 
-      // If we have a canonical JobID, we force a fresh authenticated fetch of the certified_pdf artifact
+      // Requirement B: Context-Aware Download
       if (jobId && !jobId.includes('local')) {
-        const artifactUrl = `/api/v2/jobs/${jobId}/artifacts/certified_pdf`;
-        console.log('[DOWNLOAD][AUTHENTICATED-STREAM]', artifactUrl);
+        const jobType = (result as any)?.type || (autoFixAfter ? 'AUTOFIX' : 'ANALYZE');
+        const artifactType = jobType === 'AUTOFIX' ? 'final_fixed_pdf' : 'certified_pdf';
+        const artifactUrl = `/api/v2/jobs/${jobId}/artifacts/${artifactType}`;
+        
+        console.log('[DOWNLOAD][AUTHENTICATED-STREAM]', { artifactUrl, jobType });
         try {
           blob = await pposFetch<Blob>(artifactUrl);
         } catch (err: any) {
-          // Fallback to final_fixed_pdf if certified_pdf is missing
-          if (err.status === 404) {
+          // Fallback only if not AUTOFIX (Requirement A)
+          if (err.status === 404 && jobType !== 'AUTOFIX') {
              console.log('[DOWNLOAD][FALLBACK] certified_pdf not found, trying final_fixed_pdf');
              blob = await pposFetch<Blob>(`/api/v2/jobs/${jobId}/artifacts/final_fixed_pdf`);
           } else {

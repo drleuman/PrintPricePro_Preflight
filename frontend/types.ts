@@ -153,6 +153,9 @@ export interface PreflightResult {
     fileSize: number;
     pageCount: number;
     jobId?: string;
+    primary_artifact_type?: string;
+    autofix_effective?: boolean;
+    no_effective_changes?: boolean;
   };
   productionReport?: {
     spine?: any;

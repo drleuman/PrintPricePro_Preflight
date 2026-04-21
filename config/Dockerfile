@@ -42,7 +42,7 @@ COPY --from=builder /app/dist ./dist
 
 # Final permissions
 RUN mkdir -p ./icc-profiles /tmp/ppp-preflight && \
-    chown -r pppuser:pppuser /app /tmp/ppp-preflight
+  chown -r pppuser:pppuser /app /tmp/ppp-preflight
 
 USER pppuser
 
