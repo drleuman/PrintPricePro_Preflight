@@ -224,10 +224,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         </div>
                     </div>
 
-                    <div className={`grid ${layoutMode === 'side-by-side' ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                    <div className={`grid ${layoutMode === 'side-by-side' ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-4`}>
                         {/* BEFORE VIEW */}
                         {(layoutMode === 'side-by-side' || showBeforeAfter === 'before') && (
-                            <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[500px] h-[650px] flex flex-col items-center bg-[var(--bg-primary)] group">
+                            <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[500px] h-[580px] flex flex-col items-center bg-[var(--bg-primary)] group">
                                 <div className="absolute top-4 left-4 z-20 px-3 py-1 bg-black/40 backdrop-blur-md border border-white/5 text-[0.6rem] font-black text-white uppercase tracking-[0.2em]">
                                     Original Document
                                 </div>
@@ -255,7 +255,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
 
                         {/* AFTER VIEW */}
                         {(layoutMode === 'side-by-side' || showBeforeAfter === 'after') && (
-                            <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[500px] h-[650px] flex flex-col items-center justify-center bg-[var(--bg-primary)] group">
+                            <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[500px] h-[580px] flex flex-col items-center justify-center bg-[var(--bg-primary)] group">
                                 <div className="absolute top-4 left-4 z-20 px-3 py-1 bg-[var(--accent-color)]/20 backdrop-blur-md border border-[var(--accent-color)]/20 text-[0.6rem] font-black text-[var(--accent-color)] uppercase tracking-[0.2em]">
                                     Optimized for Print
                                 </div>
