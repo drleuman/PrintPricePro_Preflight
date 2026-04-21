@@ -264,7 +264,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
     }
   }, [numPages, onPageChange]);
 
-  if (!file) {
+  if (!file && !pdfUrl) {
     return (
       <div className="flex flex-grow items-center justify-center text-[var(--text-muted)]">
         <p>{t('noPdfLoaded')}</p>

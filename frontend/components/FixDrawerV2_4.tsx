@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import type { Issue } from '../types';
 import { pposFetch, getAuthToken } from '../lib/apiClient';
 import { pickAvailableModel, GEMINI_API_VER } from '../lib/gemini';
@@ -122,8 +123,12 @@ export const FixDrawerV2_4: React.FC<Props> = ({
   const displayTitle = issue.title || issue.summary || issue.message || issue.rule || issue.code || "Critical Trace Finding";
   const displayId = issue.id || issue.uuid || issue.rule || issue.code || 'N/A';
 
-  return (
-    <aside className="fixed inset-y-0 right-0 w-[450px] bg-[var(--bg-secondary)] border-l border-[var(--border-color)] shadow-[-50px_0_100px_rgba(0,0,0,0.5)] flex flex-col z-[100] animate-in slide-in-from-right duration-500">
+  const drawerContent = (
+    <div className="fixed inset-0 z-[100] flex justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}>
+      <aside 
+        className="fixed inset-y-0 right-0 w-[450px] bg-[var(--bg-secondary)] border-l border-[var(--border-color)] shadow-[-50px_0_100px_rgba(0,0,0,0.5)] flex flex-col z-[100] animate-in slide-in-from-right duration-500"
+        onClick={(e) => e.stopPropagation()}
+      >
       {/* Header Signal */}
       <div className="p-8 border-b border-[var(--border-color)] flex items-center justify-between bg-[var(--bg-primary)]/40">
         <div className="flex items-center gap-4">
@@ -157,7 +162,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                 <p className="text-[0.9rem] font-medium text-[var(--text-primary)] leading-relaxed">
                     {issue.message}
                 </p>
-                {issue.description && (
+                {issue.description && issue.description !== issue.message && (
                   <p className="text-[0.8rem] text-[var(--text-secondary)] leading-relaxed">
                     {issue.description}
                   </p>
@@ -328,6 +333,10 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                 {t('inspector.dismiss')}
             </button>
       </div>
-    </aside>
+      </aside>
+    </div>
   );
+
+  if (typeof document !== 'undefined') return createPortal(drawerContent, document.body);
+  return drawerContent;
 };

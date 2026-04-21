@@ -228,9 +228,10 @@ function AppContent() {
         // v2.4.120: Premium Filename Resolution (No-Unknown Policy)
         const jobFileName = (normalized as any).meta?.fileName || (normalized as any).filename || (normalized as any).meta?.filename;
         const isInternalUuid = jobFileName && /^[0-9a-f-]{36}/.test(jobFileName);
+        const isGenericName = jobFileName && jobFileName.toLowerCase().includes('unknown');
 
         let finalDisplayName = jobFileName;
-        if (!jobFileName || isInternalUuid) {
+        if (!jobFileName || isInternalUuid || isGenericName) {
           finalDisplayName = fileMeta?.name || file?.name || jobFileName || 'certified_document.pdf';
         }
 
@@ -454,9 +455,10 @@ function AppContent() {
           // v2.4.120: AutoFix Filename Resolution
           const jobFileName = jobResult?.meta?.fileName || jobResult?.filename || jobResult?.meta?.filename;
           const isInternalUuid = jobFileName && /^[0-9a-f-]{36}/.test(jobFileName);
+          const isGenericName = jobFileName && jobFileName.toLowerCase().includes('unknown');
 
           let finalDisplayName = jobFileName;
-          if (!jobFileName || isInternalUuid) {
+          if (!jobFileName || isInternalUuid || isGenericName) {
             finalDisplayName = fileMeta?.name || file?.name || jobFileName || 'certified_pdf.pdf';
           }
 
