@@ -66,17 +66,34 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
         }
     }, [file, result, isRunning, onRunAnalysis, error]);
 
-    const issues = result?.issues || [];
-    const hasErrors = issues.filter(i => i.severity === 'error').length > 0;
-    const hasIssues = issues.length > 0;
-    const dataMissing = (result as any)?._forensicDataMissing;
+    const issues =
+      result?.issues ||
+      result?.findings ||
+      result?.report?.issues ||
+      result?.report?.findings ||
+      [];
+
+    const normalizedIssues = Array.isArray(issues) ? issues : [];
+    const issueCount = normalizedIssues.length;
+    const hasIssues = issueCount > 0;
+    const hasErrors = normalizedIssues.filter(i => i.severity === 'error').length > 0;
+
+    const analysisFailed =
+      !result ||
+      (!!error && !hasIssues) || 
+      (result as any)?._forensicDataMissing;
+
+    const isCompliant = !!result && !analysisFailed && issueCount === 0;
+
     const isDegraded = (result as any)?._isDegraded;
 
-    console.log('[STEP2][RENDER]', {
-        issues: issues.length,
-        hasResult: !!result,
-        dataMissing,
-        isDegraded
+    console.log('[STEP2][STATE]', {
+      hasResult: !!result,
+      issueCount,
+      hasIssues,
+      isCompliant,
+      analysisFailed,
+      isDegraded
     });
 
     return (
@@ -157,50 +174,104 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                            {/* Moving Scan Line */}
                            <div className="absolute left-0 right-0 h-[1px] bg-[var(--accent-color)]/20 animate-[scan_3s_linear_infinite] shadow-[0_0_5px_rgba(220,0,0,0.2)]" />
                         </div>
-                    ) : dataMissing ? (
-                        <div className="flex flex-col items-center justify-center flex-1 border-2 border-dashed border-[var(--accent-color)]/30 bg-[var(--accent-color)]/[0.02] p-12 text-center animate-pulse">
-                            <CommandLineIcon className="h-12 w-12 mb-4 text-[var(--accent-color)]" />
-                            <h3 className="text-xl font-black uppercase tracking-widest text-[var(--accent-color)] mb-3">{t('forensics.dataUnavailable')}</h3>
-                            <p className="text-sm text-[var(--text-secondary)] max-w-[400px] font-medium leading-relaxed">
-                                {t('forensics.dataUnavailableDesc') || 'The forensic engine failed to return valid analysis artifacts. This usually suggests a secure pipe termination or an unsupported PDF envelope.'}
+                    ) : analysisFailed ? (
+                        <div className="border border-red-500/30 bg-red-500/5 p-8 space-y-4 animate-in fade-in duration-500">
+                            <div className="text-[0.7rem] font-black uppercase tracking-[0.2em] text-red-400 mb-2">
+                                Analysis failed
+                            </div>
+                            <h2 className="text-xl font-black text-[var(--text-primary)] mb-2 uppercase tracking-tight">
+                                Forensics data unavailable
+                            </h2>
+                            <p className="text-[var(--text-secondary)] text-[0.85rem] leading-relaxed">
+                                The engine did not return a usable analysis for this document. This usually suggests a secure pipe termination or an unsupported PDF envelope.
                             </p>
-                            <div className="mt-8 px-4 py-2 bg-[var(--accent-color)] text-white text-[0.65rem] font-black uppercase tracking-[0.2em]">
+                            <div className="mt-4 px-4 py-2 border border-red-500/20 text-red-500 text-[0.65rem] font-black uppercase tracking-[0.2em] w-fit">
                                 Terminal Engine Error
                             </div>
                         </div>
-                    ) : result ? (
-                        <div className="space-y-4">
+                    ) : isCompliant ? (
+                        <div className="border border-emerald-500/30 bg-emerald-500/5 p-8 animate-in zoom-in-95 duration-500">
+                            <div className="text-[0.7rem] font-black uppercase tracking-[0.2em] text-emerald-400 mb-2">
+                                Analysis complete
+                            </div>
+
+                            <h2 className="text-2xl font-black text-[var(--text-primary)] mb-2">
+                                0 issues found
+                            </h2>
+
+                            <p className="text-[var(--text-secondary)] text-[0.85rem] mb-8 leading-relaxed max-w-xl">
+                                Your document appears compliant with the selected print policy. No technical violations or layout anomalies were detected.
+                            </p>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-5">
+                                    <div className="text-[0.6rem] uppercase tracking-[0.25em] text-[var(--text-muted)] mb-1 font-bold">
+                                        Status
+                                    </div>
+                                    <div className="text-[0.85rem] font-black text-emerald-400 uppercase">
+                                        Compliant
+                                    </div>
+                                </div>
+
+                                <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-5">
+                                    <div className="text-[0.6rem] uppercase tracking-[0.25em] text-[var(--text-muted)] mb-1 font-bold">
+                                        Issues
+                                    </div>
+                                    <div className="text-[0.85rem] font-black text-[var(--text-primary)] uppercase">
+                                        0 detected
+                                    </div>
+                                </div>
+
+                                <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-5">
+                                    <div className="text-[0.6rem] uppercase tracking-[0.25em] text-[var(--text-muted)] mb-1 font-bold">
+                                        Next step
+                                    </div>
+                                    <div className="text-[0.85rem] font-black text-[var(--text-primary)] uppercase">
+                                        Review / certify
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
                             {isDegraded && (
-                                <div className="p-4 border-l-4 border-[var(--accent-color)] bg-[var(--accent-color)]/5 flex items-start gap-4 mb-6">
-                                    <CommandLineIcon className="h-5 w-5 text-[var(--accent-color)] shrink-0 mt-0.5" />
+                                <div className="p-4 border-l-4 border-amber-500 bg-amber-500/5 flex items-start gap-4">
+                                    <CommandLineIcon className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
                                     <div>
-                                        <div className="text-[0.7rem] font-black uppercase tracking-wider text-[var(--accent-color)] mb-1">Degraded Analysis Signal</div>
+                                        <div className="text-[0.7rem] font-black uppercase tracking-wider text-amber-500 mb-1">Degraded Analysis Signal</div>
                                         <div className="text-[0.75rem] text-[var(--text-secondary)] font-medium">Some forensic inspectors timed out. Results may be incomplete.</div>
                                     </div>
                                 </div>
                             )}
-                            {issues.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center p-12 text-center opacity-40">
-                                    <ShieldCheckIcon className="h-12 w-12 mb-4 text-[var(--accent-color)]" />
-                                    <p className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">{t('step.analysis.cleanTrace')}</p>
-                                    <p className="text-[0.65rem] font-mono text-[var(--text-muted)] mt-2 uppercase tracking-widest">{t('step.analysis.noIssuesDesc')}</p>
+                            
+                            <div className="border border-amber-500/30 bg-amber-500/5 p-8 animate-in fade-in duration-500">
+                                <div className="text-[0.7rem] font-black uppercase tracking-[0.2em] text-amber-400 mb-2">
+                                    Analysis complete
                                 </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {issues.map((issue, idx) => (
-                                        <IssueRow 
-                                            key={issue.id || idx}
-                                            title={translateIssueTitle(issue, t)}
-                                            type={(issue.category || 'GENERAL').toString().toUpperCase()}
-                                            fixAvailable={issue.fixable}
-                                            severity={issue.severity as any}
-                                            onClick={() => onSelectIssue(issue)}
-                                        />
-                                    ))}
-                                </div>
-                            )}
+
+                                <h2 className="text-2xl font-black text-[var(--text-primary)] mb-2">
+                                    {issueCount} issue{issueCount === 1 ? '' : 's'} found
+                                </h2>
+
+                                <p className="text-[var(--text-secondary)] text-[0.85rem] leading-relaxed">
+                                    Review the detected problems before applying fixes. Some issues may require manual adjustment or automatic rebuilding.
+                                </p>
+                            </div>
+
+                            <div className="space-y-4">
+                                {normalizedIssues.map((issue, idx) => (
+                                    <IssueRow 
+                                        key={issue.id || idx}
+                                        title={translateIssueTitle(issue, t)}
+                                        type={(issue.category || 'GENERAL').toString().toUpperCase()}
+                                        fixAvailable={issue.fixable}
+                                        severity={issue.severity as any}
+                                        onClick={() => onSelectIssue(issue)}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                    ) : (
+                    )}
                         <div className="flex flex-col items-center justify-center h-full border border-[var(--border-color)] p-12 text-center">
                             <ArrowPathIcon className="h-12 w-12 text-[var(--text-muted)] animate-spin mb-4" />
                             <p className="text-[var(--text-secondary)] text-sm">{t('analysis.initializing')}</p>
@@ -213,7 +284,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                     {result && !isRunning ? (
                         <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8">
                             <div className="mb-8 flex items-center justify-between">
-                                <StatusBadge label={dataMissing ? t('missingData') : hasIssues ? t('step.analysis.invalidCarrier') : t('step.analysis.validCarrier')} variant={dataMissing || hasIssues ? "warning" : "certified"} />
+                                <StatusBadge label={analysisFailed ? t('missingData') : hasIssues ? t('step.analysis.invalidCarrier') : t('step.analysis.validCarrier')} variant={analysisFailed || hasIssues ? "warning" : "certified"} />
                                 <span className="text-[0.88rem] font-mono text-[var(--text-secondary)] uppercase tracking-widest">{formatLabel(`TRACE_V2.4_${result.score || 'ERR'}`)}</span>
                             </div>
 
@@ -221,13 +292,13 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                                 <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
                                     <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">{t('step.analysis.criticalErrors')}</span>
                                     <span className={`text-xl font-black ${hasErrors ? 'text-[var(--accent-color)]' : 'text-[var(--text-primary)]'}`}>
-                                        {dataMissing ? '?' : issues.filter(i => i.severity === 'error').length}
+                                        {analysisFailed ? '?' : normalizedIssues.filter(i => i.severity === 'error').length}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
                                     <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">{t('step.analysis.warningsFound')}</span>
                                     <span className="text-xl font-black text-[var(--text-primary)]">
-                                        {dataMissing ? '?' : issues.filter(i => i.severity === 'warning').length}
+                                        {analysisFailed ? '?' : normalizedIssues.filter(i => i.severity === 'warning').length}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
@@ -236,7 +307,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-[var(--text-secondary)] text-sm font-bold uppercase tracking-widest text-[0.8rem]">{t('step.analysis.finalSignal')}</span>
-                                    <StatusBadge label={dataMissing ? t('missingData') : hasIssues ? t('step.analysis.actionRequired') : t('step.analysis.ready')} variant={dataMissing || hasIssues ? "warning" : "certified"} />
+                                    <StatusBadge label={analysisFailed ? t('missingData') : hasIssues ? t('step.analysis.actionRequired') : t('step.analysis.ready')} variant={analysisFailed || hasIssues ? "warning" : "certified"} />
                                 </div>
                             </div>
                         </div>
@@ -260,7 +331,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                                 disabled={isRunning}
                                 className={`p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)]`}
                             >
-                                {hasIssues ? t('step.analysis.applyCorrection') : t('step.analysis.finalizeTrace')}
+                                {hasIssues ? t('step.analysis.applyCorrection') : 'CONTINUE TO REVIEW'}
                             </button>
                         )}
                     </div>
