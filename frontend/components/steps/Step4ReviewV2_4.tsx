@@ -127,7 +127,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
 
     // Logic: REAL FIX vs NO CHANGE vs NO OUTPUT
     const showComparison = isAutofix ? (autofixEffective && hasFinalArtifact) : hasFinalArtifact;
-    const hasFix = hasFinalArtifact && (isAutofix ? autofixEffective : true);
+    const hasEffectiveFix = hasFinalArtifact && (isAutofix ? autofixEffective : true);
 
     // Diagnostics (Requirement F)
     console.log('[APP][STEP4][ARTIFACT-RESOLUTION]', { 
@@ -135,7 +135,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
         autofixEffective,
         noEffectiveChanges,
         hasFinalArtifact,
-        hasFix,
+        hasEffectiveFix,
         isAnalyzeOnly,
         isAutofix,
         lastPdfUrl: !!lastPdfUrl
@@ -218,7 +218,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 </button>
                                 <button 
                                     onClick={() => setShowBeforeAfter('after')}
-                                    disabled={!hasFix}
+                                    disabled={!hasEffectiveFix}
                                     className={`px-6 py-1.5 ppp-phase-tag !text-[0.65rem] !tracking-widest transition-all ${showBeforeAfter === 'after' ? 'bg-[var(--accent-color)] text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'} disabled:opacity-30 disabled:cursor-not-allowed`}
                                 >
                                     {t('step.review.after')}
@@ -352,14 +352,14 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         
                         <button 
                             onClick={onNext}
-                            disabled={isRunning || (!hasFix && !isAnalyzeOnly)}
-                            className={`p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all flex items-center justify-center gap-2 w-full ${ (isRunning || (!hasFix && !isAnalyzeOnly)) ? 'bg-[var(--text-muted)] cursor-not-allowed opacity-50' : 'bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)]'}`}
+                            disabled={isRunning || (!hasEffectiveFix && !isAnalyzeOnly)}
+                            className={`p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all flex items-center justify-center gap-2 w-full ${ (isRunning || (!hasEffectiveFix && !isAnalyzeOnly)) ? 'bg-[var(--text-muted)] cursor-not-allowed opacity-50' : 'bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)]'}`}
                         >
-                            <RocketLaunchIcon className="h-4 w-4" /> { (hasFix || isAnalyzeOnly) ? (isAnalyzeOnly ? t('step.analysis.finalizeTrace' as any).toUpperCase() : t('continueToReview').toUpperCase()) : t('waitingForArtifact' as any).toUpperCase()}
+                            <RocketLaunchIcon className="h-4 w-4" /> { (hasEffectiveFix || isAnalyzeOnly) ? (isAnalyzeOnly ? t('step.analysis.finalizeTrace' as any).toUpperCase() : t('continueToReview').toUpperCase()) : t('waitingForArtifact' as any).toUpperCase()}
                         </button>
 
                         {/* Missing Artifact Warning (v2.4.120) */}
-                        {!hasFix && !isRunning && !isAnalyzeOnly && (
+                        {!hasEffectiveFix && !isRunning && !isAnalyzeOnly && (
                             <div className="md:col-span-2 p-4 bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
                                 <CpuChipIcon className="h-5 w-5 text-amber-500 shrink-0" />
                                 <div className="text-[0.7rem] font-bold text-amber-500 uppercase tracking-widest leading-normal">
@@ -434,15 +434,15 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
 
                             <button 
                               onClick={onNext}
-                              disabled={isRunning || (!hasFix && !isAnalyzeOnly)}
-                              className={`w-full bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.8rem] font-black uppercase tracking-[0.2em] py-5 transition-all flex items-center justify-center gap-2 ${ (isRunning || (!hasFix && !isAnalyzeOnly)) ? 'opacity-50 cursor-not-allowed' : 'shadow-[0_10px_30px_rgba(220,0,0,0.2)]'}`}
+                              disabled={isRunning || (!hasEffectiveFix && !isAnalyzeOnly)}
+                              className={`w-full bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.8rem] font-black uppercase tracking-[0.2em] py-5 transition-all flex items-center justify-center gap-2 ${ (isRunning || (!hasEffectiveFix && !isAnalyzeOnly)) ? 'opacity-50 cursor-not-allowed' : 'shadow-[0_10px_30px_rgba(220,0,0,0.2)]'}`}
                             >
-                              {(hasFix || isAnalyzeOnly) ? (isAnalyzeOnly ? t('step.analysis.finalizeTrace' as any) : t('continueToReview_v2' as any)) : t('waitingForArtifact' as any)}
-                              {(hasFix || isAnalyzeOnly) && <span className="text-xl">→</span>}
+                              {(hasEffectiveFix || isAnalyzeOnly) ? (isAnalyzeOnly ? t('step.analysis.finalizeTrace' as any) : t('continueToReview_v2' as any)) : t('waitingForArtifact' as any)}
+                              {(hasEffectiveFix || isAnalyzeOnly) && <span className="text-xl">→</span>}
                             </button>
 
                             {/* Live Certification Terminal (Monolith Extension) */}
-                            {isRunning && !hasFix && (
+                            {isRunning && !hasEffectiveFix && (
                                 <div className="mt-4 p-4 border border-[var(--border-color)] bg-black/40 space-y-3 animate-in fade-in slide-in-from-top-2 duration-500 overflow-hidden relative group">
                                     <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
                                     
