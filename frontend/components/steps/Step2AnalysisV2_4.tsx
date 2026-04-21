@@ -105,12 +105,12 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                         {t('stepNumber', { number: 2 })} / {t('step.analysis.forensic')}
                     </div>
                     <h2 className="text-3xl font-extrabold tracking-tight">
-                        {isRunning ? t('analyzingYourPdf').toUpperCase() : dataMissing ? t('analysisFailed').toUpperCase() : t('analysisComplete').toUpperCase()}
+                        {isRunning ? t('analyzingYourPdf').toUpperCase() : analysisFailed ? t('analysisFailed').toUpperCase() : t('analysisComplete').toUpperCase()}
                     </h2>
                 </div>
                 <StatusBadge 
-                    label={isRunning ? t('analyzingPDF') : dataMissing ? t('missingData').toUpperCase() : hasIssues ? t('analysis').toUpperCase() + " " + t('error').toUpperCase() : t('verified').toUpperCase()} 
-                    variant={isRunning ? "processing" : dataMissing ? "warning" : hasIssues ? "warning" : "certified"} 
+                    label={isRunning ? t('analyzingPDF') : analysisFailed ? t('missingData').toUpperCase() : hasIssues ? t('analysis').toUpperCase() + " " + t('error').toUpperCase() : t('verified').toUpperCase()} 
+                    variant={isRunning ? "processing" : analysisFailed ? "warning" : hasIssues ? "warning" : "certified"} 
                 />
             </div>
 
