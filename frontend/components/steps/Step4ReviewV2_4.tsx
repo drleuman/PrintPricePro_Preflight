@@ -93,21 +93,38 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     sourceJobId,
 }) => {
     const { t } = useTranslation();
-    const [layoutMode, setLayoutMode] = useState<'single' | 'side-by-side'>(showComparison ? 'side-by-side' : 'single');
+    // v2.4.160: Unified Derived State (Requirement 1, 2)
+    // 1. Base Artifacts & Job Context
+    const artifacts = result?.artifacts || result?.result?.artifacts || {};
+    const isAutofix = result?.type === 'AUTOFIX' || (appMode as string) === 'autofix' || targetJobId?.startsWith('fix_');
     const isAnalyzeOnly = result?.type === 'ANALYZE' || (result as any)?.name === 'preflight_job' || (appMode as string) === 'manual';
-    // Robust fix state detection: check if we have a target job and an artifact
-    const hasFix = !!targetJobId && !!lastPdfUrl;
-    
-    // Default to 'after' if we have a fix, otherwise 'before'
-    const [requestedMode, setRequestedMode] = useState<'before' | 'after'>(hasFix ? 'after' : 'before');
+
+    // 2. Violation Compliance
+    const violations = result?.violations || result?.report?.violations || [];
+    const normalizedViolations = Array.isArray(violations) ? violations : [];
+    const hasViolations = normalizedViolations.length > 0;
+
+    // 3. Status Flags
+    const isNoOpFix = isAutofix && !hasViolations;
+    const isRealFix = isAutofix && hasViolations;
+    const hasCertified = !!artifacts.certified_pdf;
+    const hasFixed = !!artifacts.fixed_pdf;
+    const hasFinalArtifact = !!lastPdfUrl;
+
+    // 4. Comparison Logic (Requirement 3)
+    const showComparison = isAutofix ? isRealFix : hasFinalArtifact;
+    const hasEffectiveFix = hasFinalArtifact && (isAutofix ? (isRealFix || isNoOpFix) : true);
+
+    // 5. State Initialization (Depends on derived flags)
+    const [layoutMode, setLayoutMode] = useState<'single' | 'side-by-side'>(showComparison ? 'side-by-side' : 'single');
+    const [requestedMode, setRequestedMode] = useState<'before' | 'after'>(hasFinalArtifact ? 'after' : 'before');
     const [showTechNote, setShowTechNote] = useState(false);
 
-    // Final derived mode for single view: Force 'before' if no artifact is truly available
-    const showBeforeAfter = (requestedMode === 'after' && !hasFix) ? 'before' : requestedMode;
+    // 6. View Helpers
+    const showBeforeAfter = (requestedMode === 'after' && !hasFinalArtifact) ? 'before' : requestedMode;
     const setShowBeforeAfter = (mode: 'before' | 'after') => setRequestedMode(mode);
-    // -------------------------------------------
 
-    // Mapeo de estados de Certificación (Monolith v2.4 Spec)
+    // 7. Tech Status (Monolith v2.4 Spec)
     const getCertTechStatus = () => {
         if (!isRunning) return null;
         if (ldmProgress < 20) return 'INITIATING_ENGINE_HANDSHAKE_V2';
@@ -116,43 +133,21 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
         if (ldmProgress < 80) return 'HARDENING_PDF_STRUCTURES';
         return 'SEALING_CERTIFIED_ARTIFACT_INTEGRITY';
     };
-
     const certMessage = getCertTechStatus();
 
-    // v2.4.150: Refined Flags (Requirement C)
-    const isAutofix = result?.type === 'AUTOFIX' || (appMode as string) === 'autofix';
-    const artifacts = result?.artifacts || result?.result?.artifacts || {};
-    const violations = result?.violations || result?.report?.violations || [];
-    const hasViolations = Array.isArray(violations) && violations.length > 0;
-
-    const hasCertified = !!artifacts.certified_pdf;
-    const hasFixed = !!artifacts.fixed_pdf;
-    const hasFinalArtifact = !!lastPdfUrl;
-
-    // v2.4.160: Detect real autofix vs no-op (Requirement 1)
-    const isNoOpFix = isAutofix && !hasViolations;
-    const isRealFix = isAutofix && hasViolations;
-
-    // Logic: REAL FIX vs NO CHANGE vs NO OUTPUT
-    // showComparison = isRealFix ensures we don't show fraudulent side-by-side if nothing changed
-    const showComparison = isAutofix ? isRealFix : hasFinalArtifact;
-    const hasEffectiveFix = hasFinalArtifact && (isAutofix ? (isRealFix || isNoOpFix) : true);
-
-    // Diagnostics (Requirement 5)
+    // 8. Diagnostics
     console.log('[STEP4][STATE]', { 
         jobType: result?.type || 'UNKNOWN',
         isAutofix,
         hasViolations,
         isNoOpFix,
         isRealFix,
-        hasFinalArtifact,
-        artifacts
+        showComparison,
+        hasFinalArtifact
     });
     
     // Canonical calculation of issues and fixes
     const issuesFound = autoFixBefore?.issues?.length || result?.issues?.length || 0;
-    
-    // Fixes Applied calculation logic:
     const fixesApplied = autoFixAfter?.fixes?.length || 
                         autoFixReport?.fixes?.length || 
                         (autoFixBefore && autoFixAfter ? Math.max(0, autoFixBefore.issues.length - autoFixAfter.issues.length) : 
@@ -160,11 +155,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
 
     const isReadyForPrint = (autoFixAfter?.issues?.length === 0) || (result?.issues?.length === 0);
 
-    console.log('[STEP4][COUNTS]', { issuesFound, fixesApplied, isReadyForPrint, autofixEffective });
-
     // Viewer Resolution
-    // Before: Original File or Initial result
-    // After: Corrected Result (either file or lastPdfUrl)
     const displayFile = showBeforeAfter === 'before' ? (originalFile || file) : (lastPdfUrl ? null : file);
     const displayPdfUrl = showBeforeAfter === 'after' ? lastPdfUrl : null;
     
@@ -174,12 +165,6 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     
     // Loading indicator for certificate viewer
     const isGenerating = showBeforeAfter === 'after' && !!lastPdfUrl && numPages === 0;
-
-    console.log('[STEP4][VIEWER]', { 
-        mode: showBeforeAfter, 
-        hasFile: !!displayFile, 
-        hasUrl: !!displayPdfUrl 
-    });
 
     return (
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 pb-24">
