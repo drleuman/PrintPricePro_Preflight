@@ -413,8 +413,10 @@ router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
              resolvedArtifactId = 'certified.pdf';
            } else if (available.fixed_pdf) {
              resolvedArtifactId = 'fixed.pdf';
+           } else if (available.final_fixed_pdf) {
+             resolvedArtifactId = 'normalized.pdf'; // Keep mapping for explicit final_fixed_pdf artifact
            } else {
-             resolvedArtifactId = 'normalized.pdf';
+             resolvedArtifactId = 'normalized.pdf'; // Last resort fallback
            }
            console.log(`[BFF][ARTIFACT][ALIAS-RESOLVE] Aliased final_fixed_pdf -> ${resolvedArtifactId}`);
          }
