@@ -257,7 +257,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
   return (
     <div className="flex flex-col items-center flex-grow overflow-hidden w-full">
 
-      <div className="pdf-viewer-container relative w-full h-[70vh] min-h-[500px] bg-[var(--bg-primary)]/50 rounded-2xl border border-[var(--border-color)] shadow-inner overflow-hidden flex flex-col items-center justify-center p-8">
+      <div className="pdf-viewer-container relative w-full h-[60vh] min-h-[450px] bg-[var(--bg-primary)]/50 rounded-2xl border border-[var(--border-color)] shadow-inner overflow-hidden flex flex-col items-center justify-center p-4">
         {previewLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[var(--bg-primary)]/90 z-20 backdrop-blur-md rounded-2xl">
             <div className="flex flex-col items-center gap-4">

@@ -182,7 +182,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                 />
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
+            <div className="flex flex-col xl:flex-row gap-8 items-start w-full">
                 {/* Main Content: Preview & Comparison */}
                 <div className="space-y-6 flex-1 min-w-0">
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-1 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -224,7 +224,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         </div>
                     </div>
 
-                    <div className={`grid ${layoutMode === 'side-by-side' ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                    <div className={`grid ${layoutMode === 'side-by-side' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'} gap-4`}>
                         {/* BEFORE VIEW */}
                         {(layoutMode === 'side-by-side' || showBeforeAfter === 'before') && (
                             <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[500px] h-[580px] flex flex-col items-center bg-[var(--bg-primary)] group">
@@ -348,7 +348,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                 </div>
 
                 {/* Sidebar: Certification & Meta */}
-                <div className="space-y-6 w-full lg:w-[380px] shrink-0">
+                <div className="space-y-6 w-full xl:w-[380px] shrink-0">
                     {/* Compliance Panel */}
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8 space-y-8">
                         <div className="flex items-center justify-between">
