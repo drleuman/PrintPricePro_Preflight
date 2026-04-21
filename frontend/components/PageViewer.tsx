@@ -45,7 +45,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
   hideNavigation = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const pdfRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
+  const [pdfInstance, setPdfInstance] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
   const [scale, setScale] = useState(1.5);
 
   const heatmapLayerRef = useRef<HTMLCanvasElement>(null);
@@ -65,16 +65,12 @@ export const PageViewer: React.FC<PageViewerProps> = ({
 
   // Effect to load PDF when file or pdfUrl changes
   useEffect(() => {
+    let currentPdf: pdfjsLib.PDFDocumentProxy | null = null;
+
     const loadPdf = async () => {
-      // Disable gate for Step 4 review to ensure original/inline files render
-      // if (ldmMode) return; 
-      
       const source = pdfUrl || file;
       if (!source) {
-        if (pdfRef.current) {
-          pdfRef.current.destroy();
-          pdfRef.current = null;
-        }
+        setPdfInstance(null);
         onNumPagesChange(0);
         return;
       }
@@ -95,11 +91,12 @@ export const PageViewer: React.FC<PageViewerProps> = ({
         }
         
         const pdf = await loadingTask.promise;
-        pdfRef.current = pdf;
+        currentPdf = pdf;
+        setPdfInstance(pdf);
         onNumPagesChange(pdf.numPages);
-        // Do not reset page if it's already set and valid
       } catch (error: any) {
         console.error("[PDF-LOAD-ERROR]", error);
+        setPdfInstance(null);
         onNumPagesChange(0);
       }
     };
@@ -107,12 +104,11 @@ export const PageViewer: React.FC<PageViewerProps> = ({
     loadPdf();
 
     return () => {
-      if (pdfRef.current) {
-        pdfRef.current.destroy();
-        pdfRef.current = null;
+      if (currentPdf) {
+        currentPdf.destroy();
       }
     };
-  }, [file, pdfUrl, onNumPagesChange, ldmMode]);
+  }, [file, pdfUrl, onNumPagesChange]);
 
   // Render Page
   useEffect(() => {
@@ -124,11 +120,11 @@ export const PageViewer: React.FC<PageViewerProps> = ({
       console.log('[VIEWER][RENDER-TRIGGER]', { 
         currentPage, 
         numPages, 
-        hasPdf: !!pdfRef.current,
+        hasPdf: !!pdfInstance,
         canvas: !!canvas 
       });
 
-      if (!canvas || !pdfRef.current || currentPage < 1 || (numPages > 0 && currentPage > numPages)) {
+      if (!canvas || !pdfInstance || currentPage < 1 || (numPages > 0 && currentPage > numPages)) {
         if (canvas) {
           const context = canvas.getContext('2d');
           if (context) context.clearRect(0, 0, canvas.width, canvas.height);
@@ -137,7 +133,7 @@ export const PageViewer: React.FC<PageViewerProps> = ({
       }
 
       try {
-        const page = await pdfRef.current.getPage(currentPage);
+        const page = await pdfInstance.getPage(currentPage);
         const viewport = page.getViewport({ scale: scale });
         const context = canvas.getContext('2d');
 
@@ -163,24 +159,10 @@ export const PageViewer: React.FC<PageViewerProps> = ({
     };
 
     renderPage();
-  }, [currentPage, numPages, scale, selectedIssue, drawBbox, file, pdfUrl]);
+  }, [currentPage, numPages, scale, selectedIssue, drawBbox, file, pdfUrl, pdfInstance, ldmMode]);
 
   // Logic for heatmap visibility and effects derived from props
   const heatmapVisible = !!heatmapData || isHeatmapLoading;
-
-  // AUTO-TRIGGER PAGE 1: If we have a PDF and numPages > 0, but canvas is empty or we haven't rendered
-  useEffect(() => {
-    if (pdfRef.current && numPages > 0 && currentPage === 1) {
-      console.log('[VIEWER][AUTO-INIT-PAGE-1]');
-      // Small timeout to ensure canvas is ready in DOM
-      const t = setTimeout(() => {
-        // We just need to trigger the render effect, which depends on numPages and currentPage
-        // Since we are already at currentPage 1, and numPages just changed from 0 to N, 
-        // the other effect SHOULD have triggered, but this acts as a safety guard.
-      }, 100);
-      return () => clearTimeout(t);
-    }
-  }, [pdfRef.current, numPages, currentPage]);
 
 
   // Heatmap Drawing
