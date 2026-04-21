@@ -272,11 +272,6 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                             </div>
                         </div>
                     )}
-                        <div className="flex flex-col items-center justify-center h-full border border-[var(--border-color)] p-12 text-center">
-                            <ArrowPathIcon className="h-12 w-12 text-[var(--text-muted)] animate-spin mb-4" />
-                            <p className="text-[var(--text-secondary)] text-sm">{t('analysis.initializing')}</p>
-                        </div>
-                    )}
                 </div>
 
                 {/* Summary / Stats Zone */}
