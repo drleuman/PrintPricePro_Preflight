@@ -49,6 +49,10 @@ export function analyzeWorkflow(
 
     const bestArtifactKey = getBestArtifactKey(artifacts);
     const hasFinalArtifact = !!bestArtifactKey;
+
+    const hasCertified = !!artifacts.certified_pdf;
+    const hasFixedArtifact = !!(artifacts.fixed_pdf || artifacts.final_fixed_pdf);
+
     const hasEffectiveFix = hasFinalArtifact && (isAutofix ? (isRealFix || isNoOpFix) : true);
 
     const showComparison = isAutofix && isRealFix;
