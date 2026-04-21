@@ -229,9 +229,7 @@ function AppContent() {
             setLastPdfUrl(null);
             lastPdfUrlRef.current = null;
           }
-        };
 
-        updateArtifactUrl();
 
         // v2.4.120: Premium Filename Resolution (No-Unknown Policy)
         const jobFileName = (normalized as any).meta?.fileName || (normalized as any).filename || (normalized as any).meta?.filename;
