@@ -782,9 +782,6 @@ export const en = {
   'step.review.defaultPolicy': 'FOGRA51 / ISO_COATED',
   'step.review.pendingId': 'PPOS_INTERNAL_PENDING',
   'step.review.defaultOversight': 'DEFAULT_OVERSIGHT',
-  'step.review.note': 'Technical Note',
-  'analysisComplete': 'Analysis Complete',
-  'continueToReview': 'Continue to Review',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

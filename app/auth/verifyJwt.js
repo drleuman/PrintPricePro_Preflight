@@ -17,7 +17,8 @@ const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'ppos:control';
  * Verifies a JWT token against configured secret/public key and claims.
  */
 function verifyJwt(token) {
-    const secretOrKey = JWT_ALGO.startsWith('RS') ? JWT_PUBLIC_KEY : JWT_SECRET;
+    const JWT_PUBLIC_KEY = process.env.JWT_PUBLIC_KEY || null;
+    const secretOrKey = (JWT_ALGO && JWT_ALGO.startsWith('RS')) ? JWT_PUBLIC_KEY : JWT_SECRET;
     
     if (!secretOrKey) {
         throw new Error(`[AUTH-CONFIG-ERROR] Missing secret/key for algorithm ${JWT_ALGO}`);

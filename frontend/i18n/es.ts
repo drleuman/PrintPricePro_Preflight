@@ -745,7 +745,7 @@ export const es = {
   'systemTerminalError': 'Error_Terminal_Sistema',
   'common.workInProgress': 'Trabajo en progreso. ¿Está seguro de que desea salir?',
   'step.review.analyzeCarrier': 'Analizar Carrier',
-  'continueToReview': 'CONTINUAR A DESCARGA',
+  'continueToReview': 'Continuar a Revisión',
   'generatingCertificate': 'GENERANDO CERTIFICADO...',
   'continueToReview_v2': 'FINALIZAR Y DESCARGAR',
 
@@ -785,7 +785,4 @@ export const es = {
   'step.review.defaultPolicy': 'FOGRA51 / ISO-RECUBIERTO',
   'step.review.pendingId': 'PPOS_INTERNO_PENDIENTE',
   'step.review.defaultOversight': 'SUPERVISIÓN_PREDETERMINADA',
-  'step.review.note': 'Nota Técnica',
-  'analysisComplete': 'Análisis Completado',
-  'continueToReview': 'Continuar a Revisión',
 } as const;
