@@ -178,6 +178,28 @@ export interface PreflightResult {
   };
 }
 
+export interface WorkflowAnalysis {
+  isAutofix: boolean;
+  isAnalyzeOnly: boolean;
+  hasResult: boolean;
+  issueCount: number;
+  errorCount: number;
+  warningCount: number;
+  hasIssues: boolean;
+  hasErrors: boolean;
+  isCompliant: boolean;
+  isFixed: boolean;
+  isNoOpFix: boolean;
+  isRealFix: boolean;
+  isDegraded: boolean;
+  analysisFailed: boolean;
+  hasCertified: boolean;
+  hasFixedArtifact: boolean;
+  showComparison: boolean;
+  bestArtifactKey: string | null;
+  hasEffectiveFix: boolean;
+}
+
 /**
  * Metadata about the analyzed file.
  */

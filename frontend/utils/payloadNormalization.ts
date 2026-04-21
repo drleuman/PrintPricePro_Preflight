@@ -1,4 +1,87 @@
-import { PreflightResult, Issue, Severity } from '../types';
+import { PreflightResult, Issue, Severity, WorkflowAnalysis, AppMode } from '../types';
+
+/**
+ * deterministic status flags for UI components.
+ */
+
+const RANKED_ARTIFACT_KEYS = ['certified_pdf', 'fixed_pdf', 'final_fixed_pdf'];
+
+export function getBestArtifactKey(artifacts: Record<string, string> | undefined | null): string | null {
+    if (!artifacts) return null;
+    for (const key of RANKED_ARTIFACT_KEYS) {
+        if (artifacts[key]) return key;
+    }
+    return null;
+}
+
+export function analyzeWorkflow(
+    result: PreflightResult | null,
+    error: any,
+    appMode: AppMode
+): WorkflowAnalysis {
+    const issues = result?.issues || [];
+    const issueCount = issues.length;
+    const errorCount = issues.filter(i => i.severity === 'error' || i.severity === Severity.ERROR).length;
+    const warningCount = issues.filter(i => i.severity === 'warning' || i.severity === Severity.WARNING).length;
+
+    const artifacts = result?.artifacts || {};
+    const meta = result?.meta || {};
+
+    const isAutofix = result?.type === 'AUTOFIX' || appMode === 'ai' || (result?.meta?.jobId && result.meta.jobId.startsWith('fix_'));
+    const isAnalyzeOnly = result?.type === 'ANALYZE' || appMode === 'manual';
+
+    const hasResult = !!result;
+    const hasIssues = issueCount > 0;
+    const hasErrors = errorCount > 0;
+
+    const forensicDataMissing = (result as any)?._forensicDataMissing;
+    const isDegraded = !!(result as any)?._isDegraded;
+
+    const analysisFailed = !hasResult || (!!error && !hasIssues) || forensicDataMissing;
+
+    const isCompliant = hasResult && !analysisFailed && issueCount === 0;
+
+    // Autofix specific truth
+    // If engine explicitly says no changes, or if we are in autofix but issues are still 0 (and was already 0?)
+    // Actually, Step 4 logic uses: isNoOpFix = isAutofix && !hasViolations;
+    const isNoOpFix = isAutofix && (meta.no_effective_changes === true || (isCompliant && !meta.autofix_effective));
+    const isRealFix = isAutofix && !isNoOpFix;
+
+    const bestArtifactKey = getBestArtifactKey(artifacts);
+    const hasFinalArtifact = !!bestArtifactKey;
+    const hasEffectiveFix = hasFinalArtifact && (isAutofix ? (isRealFix || isNoOpFix) : true);
+
+    const showComparison = isAutofix && isRealFix;
+
+    const analysis: WorkflowAnalysis = {
+        isAutofix,
+        isAnalyzeOnly,
+        hasResult,
+        issueCount,
+        errorCount,
+        warningCount,
+        hasIssues,
+        hasErrors,
+        isCompliant,
+        isFixed: isAutofix && !analysisFailed,
+        isNoOpFix,
+        isRealFix,
+        isDegraded,
+        analysisFailed: !!analysisFailed,
+        hasCertified,
+        hasFixedArtifact,
+        showComparison,
+        bestArtifactKey,
+        hasEffectiveFix
+    };
+
+    if (hasResult) {
+        console.log('[WORKFLOW][ANALYSIS]', analysis);
+    }
+    
+    return analysis;
+}
+
 
 function humanizeRule(code: string | undefined | null): string | null {
     if (!code) return null;
@@ -76,14 +159,8 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
         payload.findings,
         payload.report?.issues,
         payload.report?.findings,
-        payload.analysis?.issues,
-        payload.analysis?.findings,
-        payload.analysis,
-        payload.forensics?.issues,
-        payload.forensics?.findings,
-        payload.forensics,
         payload.result?.report?.issues,
-        payload.result?.report?.findings, // Added v2.4.97
+        payload.result?.report?.findings,
         payload.result?.findings,
         payload.data?.issues,
         payload.data?.findings
@@ -169,7 +246,7 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
             fileName: payload.meta?.fileName ?? payload.report?.meta?.fileName ?? payload.filename ?? 'unknown',
             fileSize: payload.meta?.fileSize ?? payload.report?.meta?.fileSize ?? payload.size ?? 0,
             pageCount: pageCount ?? 0,
-            jobId: payload.jobId || payload.job_id || payload.meta?.jobId || payload.id
+            jobId: pickCanonicalJobId(payload.jobId, payload.job_id, payload.meta?.jobId, payload.id) || 'unknown'
         }
     };
 
@@ -216,4 +293,16 @@ function mapSeverity(sev: string): Severity {
     if (['error', 'critical', 'fatal', 'blocker'].includes(s)) return Severity.ERROR;
     if (['warning', 'alert', 'warn'].includes(s)) return Severity.WARNING;
     return Severity.INFO;
+}
+
+export function getCanonicalFileName(payload: any, originalFile: File | { name: string } | null): string {
+    const meta = payload?.meta || {};
+    const jobFileName = meta.fileName || payload?.filename || meta.filename;
+    const isInternalUuid = jobFileName && /^[0-9a-f-]{36}/.test(jobFileName);
+    const isGenericName = jobFileName && jobFileName.toLowerCase().includes('unknown');
+
+    if (!jobFileName || isInternalUuid || isGenericName) {
+        return originalFile?.name || jobFileName || 'certified_document.pdf';
+    }
+    return jobFileName;
 }

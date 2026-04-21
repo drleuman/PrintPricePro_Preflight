@@ -213,7 +213,14 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
     }, []);
 
     const getAuthenticatedBlobUrl = useCallback(async (jobId: string, artifactId: string = 'certified_pdf') => {
-        const url = getDownloadUrl(jobId, artifactId);
+        // v2.4.165: Terminal ID Guard
+        const safeJobId = pickCanonicalJobId(jobId);
+        if (!safeJobId) {
+            console.error('[APP][ARTIFACT][ABORTED] Non-canonical ID rejected for artifact stream:', jobId);
+            return null;
+        }
+
+        const url = getDownloadUrl(safeJobId, artifactId);
         console.log(`[APP][ARTIFACT][CANONICAL-ID] Fetching protected artifact: ${url}`);
         try {
             const blob = await pposFetch<Blob>(url);

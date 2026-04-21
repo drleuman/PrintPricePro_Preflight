@@ -59,7 +59,7 @@ export const AuthOverlayV2_4: React.FC = () => {
 
     return (
         <div 
-            className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-3xl animate-in fade-in duration-700"
+            className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center backdrop-blur-3xl animate-in fade-in duration-700 overflow-y-auto pt-8 pb-8 sm:p-0"
             style={{ backgroundColor: 'var(--bg-tertiary)' }}
         >
             {/* Subtle Grid Pattern */}
@@ -76,7 +76,7 @@ export const AuthOverlayV2_4: React.FC = () => {
                 {/* Brand Accent Bar */}
                 <div className="h-[2px] bg-[#FF0000] w-full shadow-[0_0_15px_#FF0000]"></div>
 
-                <div className="p-12 space-y-10">
+                <div className="p-6 sm:p-12 space-y-10">
                     {/* Header Section */}
                     <div className="flex flex-col items-center text-center space-y-6">
                         <PPOSLogo className="w-14 h-14 border border-[var(--border-color)] p-3 bg-[var(--hover-bg)] shadow-[0_0_30px_rgba(255,255,255,0.02)]" />
@@ -210,7 +210,7 @@ export const AuthOverlayV2_4: React.FC = () => {
                 </div>
 
                 {/* Secure Footer Indicator */}
-                <div className="px-12 py-6 bg-[var(--bg-tertiary)] border-t border-[var(--border-color)] flex items-center justify-center gap-3">
+                <div className="px-6 sm:px-12 py-6 bg-[var(--bg-tertiary)] border-t border-[var(--border-color)] flex items-center justify-center gap-3">
                     <ShieldCheckIcon className="h-3.5 w-3.5 text-[#32D74B]" />
                     <span className="text-[0.6rem] font-mono text-[var(--text-muted)] tracking-widest uppercase">{t('auth.secureConnection')}</span>
                 </div>

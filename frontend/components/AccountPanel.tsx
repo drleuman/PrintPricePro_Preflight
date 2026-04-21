@@ -123,12 +123,12 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose 
                 tabIndex={-1}
             >
                 {/* Header */}
-                <div className="px-8 py-6 border-b border-[var(--border-color)] flex items-center justify-between bg-[var(--bg-tertiary)]/20 shadow-sm shrink-0">
+                <div className="px-4 md:px-8 py-5 md:py-6 border-b border-[var(--border-color)] flex items-center justify-between bg-[var(--bg-tertiary)]/20 shadow-sm shrink-0">
                     <div className="overflow-hidden pr-4 flex-1">
-                        <div className="text-[0.62rem] font-black text-[var(--accent-color)] uppercase tracking-[0.3em] mb-1 truncate" title={user.email}>
+                        <div className="text-[0.62rem] font-black text-[var(--accent-color)] uppercase tracking-[0.3em] mb-1 truncate break-all" title={user.email}>
                             {user.email} // {t('account.identityContext')}
                         </div>
-                        <h2 id="panel-title" className="text-xl md:text-2xl font-black text-[var(--text-primary)] uppercase tracking-tight truncate">
+                        <h2 id="panel-title" className="text-xl md:text-2xl font-black text-[var(--text-primary)] uppercase tracking-tight truncate break-all">
                             {getViewTitle()}
                         </h2>
                     </div>

@@ -4,14 +4,12 @@
  */
 const jwt = require('jsonwebtoken');
 
+const { generateInternalToken } = require('../services/identityService');
+// We extract the secret via a placeholder generation or we could export jwtConfig.
+// For Phase 1, we will re-implement the priority logic precisely for robustness.
+const JWT_SECRET = process.env.JWT_SECRET || process.env.PPOS_JWT_SECRET || 'ppos-unsecured-dev-secret';
 const JWT_ALGO = process.env.JWT_ALGORITHM || 'HS256';
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET && !JWT_ALGO.startsWith('RS')) {
-    if (process.env.NODE_ENV === 'production') {
-        throw new Error('[CRITICAL] JWT_SECRET is missing in production environment.');
-    }
-    console.warn('[SECURITY] JWT_SECRET missing in verifyJwt.js. JWT validation will fail for HS256.');
-}
+
 const JWT_ISSUER = process.env.JWT_ISSUER || 'https://auth.printprice.pro';
 const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'ppos:control';
 

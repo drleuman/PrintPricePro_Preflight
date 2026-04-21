@@ -4,8 +4,8 @@ const jwt = require('jsonwebtoken');
 
 // Safe configuration fallback
 const jwtConfig = {
-    // Priority: PPOS_JWT_SECRET for engine identity, fallback to JWT_SECRET for sessions
-    secret: process.env.PPOS_JWT_SECRET || process.env.JWT_SECRET || 'ppos-unsecured-dev-secret',
+    // BFF sessions prioritize JWT_SECRET. Fallback to PPOS_JWT_SECRET for legacy engine trust.
+    secret: process.env.JWT_SECRET || process.env.PPOS_JWT_SECRET || 'ppos-unsecured-dev-secret',
     algorithm: 'HS256',
     issuer: process.env.JWT_ISSUER || 'https://auth.printprice.pro',
     audience: process.env.JWT_AUDIENCE || 'ppos:control',

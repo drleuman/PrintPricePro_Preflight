@@ -82,11 +82,11 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                             onClick={onDownloadReport}
                             className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)] hover:underline opacity-60 hover:opacity-100 transition-all"
                         >
-                            Export Technical Analysis Report (JSON)
+                            {t('step.download.exportJson')}
                         </button>
                         <div className="flex items-center gap-2 text-[var(--text-muted)] text-[0.7rem] font-medium uppercase tracking-widest">
                            <DocumentCheckIcon className="h-4 w-4" />
-                           <span>ISO Standard Certified Carrier</span>
+                           <span>{t('step.review.certDocument').toUpperCase()}</span>
                         </div>
                     </div>
                 </div>
@@ -119,9 +119,9 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
             <div className="pt-12 flex flex-col items-center space-y-4">
                 <div className="h-px w-32 bg-gradient-to-r from-transparent via-[var(--border-color)] to-transparent"></div>
                 <div className="flex items-center gap-8 text-[var(--text-muted)] opacity-30">
-                    <span className="text-[0.6rem] font-mono tracking-widest uppercase">PPOS-VERIFIED-NODE-OK</span>
-                    <span className="text-[0.6rem] font-mono tracking-widest uppercase">PDF-X/1A-COMPLIANT</span>
-                    <span className="text-[0.6rem] font-mono tracking-widest uppercase">TRACE-SHA256-SIGN</span>
+                    <span className="text-[0.6rem] font-mono tracking-widest uppercase">{t('PPOS-VERIFIED-NODE-OK' as any)}</span>
+                    <span className="text-[0.6rem] font-mono tracking-widest uppercase">{t('PDF-X/1A-COMPLIANT' as any)}</span>
+                    <span className="text-[0.6rem] font-mono tracking-widest uppercase">{t('TRACE-SHA256-SIGN' as any)}</span>
                 </div>
             </div>
         </div>

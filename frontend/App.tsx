@@ -22,7 +22,7 @@ import {
   HeatmapData,
   AppMode,
 } from './types';
-import { normalizePreflightResult, pickCanonicalJobId } from './utils/payloadNormalization';
+import { normalizePreflightResult, pickCanonicalJobId, analyzeWorkflow, getCanonicalFileName } from './utils/payloadNormalization';
 import { normalizeDownloadFilename } from './utils/formatters';
 import { usePreflightWorker } from './hooks/usePreflightWorker';
 import { usePdfTools } from './hooks/usePdfTools';
@@ -109,13 +109,18 @@ function AppContent() {
 
   const activeJobIdRef = useRef<string | null>(null);
 
+  const analysis = React.useMemo(() => 
+    analyzeWorkflow(result, engineError || fixError, appMode), 
+    [result, engineError, fixError, appMode]
+  );
+
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       // Guard if anything is in progress or if we have a file and are beyond step 1 (upload)
       // This prevents losing the current session (jobId, normalized results, etc) on refresh.
       if (ldmActive || (file && currentStep > 1)) {
         e.preventDefault();
-        e.returnValue = 'Work in progress. Are you sure you want to leave?';
+        e.returnValue = t('common.workInProgress');
         return e.returnValue;
       }
     };
@@ -196,15 +201,15 @@ function AppContent() {
       // v2.4.112: Resilient Artifact Selection (Analysis-Only Support)
       if (completedJobId) {
           // Selection Logic (Requirement 2 & 3)
-          const artifacts = normalized.artifacts || normalized.result?.artifacts || {};
-          const jobType = normalized.type || 'ANALYZE';
-          const bestArtifactKey = artifacts.certified_pdf || artifacts.fixed_pdf || artifacts.final_fixed_pdf || null;
+          const artifacts = normalized.artifacts || {};
+          const bestArtifactKey = analysis.bestArtifactKey;
 
-          console.log('[APP][ARTIFACT-RESOLUTION]', { 
-            jobType, 
-            available: Object.keys(artifacts), 
-            selected: bestArtifactKey,
-            autofix_effective: normalized.meta?.autofix_effective 
+          console.log('[APP][FORENSIC-LIFECYCLE]', { 
+            step: currentStep,
+            jobId: completedJobId,
+            compliant: analysis.isCompliant,
+            artifactFound: !!bestArtifactKey,
+            fixes: normalized.fixes?.length || 0
           });
 
           if (bestArtifactKey) {
@@ -231,17 +236,7 @@ function AppContent() {
           }
 
 
-        // v2.4.120: Premium Filename Resolution (No-Unknown Policy)
-        const jobFileName = (normalized as any).meta?.fileName || (normalized as any).filename || (normalized as any).meta?.filename;
-        const isInternalUuid = jobFileName && /^[0-9a-f-]{36}/.test(jobFileName);
-        const isGenericName = jobFileName && jobFileName.toLowerCase().includes('unknown');
-
-        let finalDisplayName = jobFileName;
-        if (!jobFileName || isInternalUuid || isGenericName) {
-          finalDisplayName = fileMeta?.name || file?.name || jobFileName || 'certified_document.pdf';
-        }
-
-        setLastPdfName(finalDisplayName);
+        setLastPdfName(getCanonicalFileName(normalized, file));
       } else {
         console.warn('[APP][SKIP-ARTIFACT-URL] No jobId found for artifact registration');
         setLastPdfUrl(null);
@@ -281,7 +276,7 @@ function AppContent() {
 
     resetResidues();
     setLdmActive(true);
-    setLdmStatus('Starting PrintPrice OS Engine...');
+    setLdmStatus('loader.engine');
 
     try {
       const res = await startV2Preflight(file, selectedPolicy, { mode: appMode });
@@ -299,9 +294,7 @@ function AppContent() {
           console.log('[APP][CANONICAL-JOB-ID]', { new: jobId, previous: activeJobIdRef.current });
           activeJobIdRef.current = jobId;
 
-          const artifacts = normalized.artifacts || {};
-          const jobType = normalized.type || 'ANALYZE';
-          const bestArtifactKey = artifacts.certified_pdf || artifacts.fixed_pdf || artifacts.final_fixed_pdf || null;
+          const bestArtifactKey = analysis.bestArtifactKey;
 
           console.log('[APP][V2-START][ARTIFACT-RESOLUTION]', { jobType, selected: bestArtifactKey });
 
@@ -323,16 +316,7 @@ function AppContent() {
             setLastPdfUrl(null);
             lastPdfUrlRef.current = null;
           }
-          // v2.4.120: Sync Mode Filename Resolution
-          const jobFileName = (normalized as any).meta?.fileName || (normalized as any).filename || (normalized as any).meta?.filename;
-          const isInternalUuid = jobFileName && /^[0-9a-f-]{36}/.test(jobFileName);
-
-          let finalDisplayName = jobFileName;
-          if (!jobFileName || isInternalUuid) {
-            finalDisplayName = fileMeta?.name || file?.name || jobFileName || 'certified_document.pdf';
-          }
-
-          setLastPdfName(finalDisplayName);
+          setLastPdfName(getCanonicalFileName(normalized, file));
         } else {
           console.error('[APP][CRITICAL-SYNC-FAILURE] Success response received but NO canonical jobId found. Certification artifacts will be broken.');
           setLastPdfUrl(null);
@@ -348,7 +332,7 @@ function AppContent() {
         activeJobIdRef.current = res.jobId;
         setSourceJobId(res.jobId); // Set sourceJobId on initial analyze
         console.log('[APP][V2-START] Async mode, Job ID set to', res.jobId);
-        setLdmStatus('Engine Processing...');
+        setLdmStatus('common.processing');
         await handleV2JobComplete(res.jobId);
 
         // Final guard if onComplete didn't finish or for synchronous success
@@ -380,7 +364,7 @@ function AppContent() {
 
     setLdmActive(true);
     setFixError(null);
-    setLdmStatus('Initializing AI Magic Fix on OS...');
+    setLdmStatus('loader.magic');
     console.log('[APP][STEP3][STATE]', {
       status: 'FIX_INITIALIZING',
       sourceJobId: activeJobIdRef.current,
@@ -440,9 +424,7 @@ function AppContent() {
         // Final guards for artifact propagation
         if (finalJobId) {
           // v2.4.150: Strict AUTOFIX Artifact Resolution (Requirement A)
-          const artifacts = jobResult.artifacts || {};
-          const jobType = normalizedAfter.type || 'AUTOFIX';
-          const bestArtifactKey = artifacts.certified_pdf || artifacts.fixed_pdf || artifacts.final_fixed_pdf || null;
+          const bestArtifactKey = analysis.bestArtifactKey;
 
           console.log('[APP][FIX][ARTIFACT-RESOLUTION]', { 
             jobType, 
@@ -467,17 +449,7 @@ function AppContent() {
             setLastPdfUrl(null);
             lastPdfUrlRef.current = null;
           }
-          // v2.4.120: AutoFix Filename Resolution
-          const jobFileName = jobResult?.meta?.fileName || jobResult?.filename || jobResult?.meta?.filename;
-          const isInternalUuid = jobFileName && /^[0-9a-f-]{36}/.test(jobFileName);
-          const isGenericName = jobFileName && jobFileName.toLowerCase().includes('unknown');
-
-          let finalDisplayName = jobFileName;
-          if (!jobFileName || isInternalUuid || isGenericName) {
-            finalDisplayName = fileMeta?.name || file?.name || jobFileName || 'certified_pdf.pdf';
-          }
-
-          setLastPdfName(finalDisplayName);
+          setLastPdfName(getCanonicalFileName(jobResult, file));
         }
 
         setCurrentPage(1);
@@ -504,7 +476,7 @@ function AppContent() {
   const handleDownload = useCallback(async () => {
     // v2.4.140: Hardened Authenticated Download Stream
     // We prefer fetching a fresh artifact from the server on-demand to ensure auth-integrity
-    const jobId = targetJobId || sourceJobId || result?.meta?.jobId || (result as any)?.id;
+    const jobId = pickCanonicalJobId(targetJobId, sourceJobId, result?.meta?.jobId, (result as any)?.id);
     const finalName = normalizeDownloadFilename(lastPdfName || fileMeta?.name || 'preflight', 'pdf');
 
     console.log('[DOWNLOAD][TRIGGER]', { jobId, name: finalName, hasPrevUrl: !!lastPdfUrl });
@@ -520,13 +492,13 @@ function AppContent() {
 
     try {
       setLdmActive(true);
-      setLdmStatus('Downloading secure artifact...');
+      setLdmStatus('loader.downloading');
 
       let blob: Blob;
 
       // Requirement B: Context-Aware Download
       if (jobId && !jobId.includes('local')) {
-        const artifacts = (result as any)?.artifacts || (autoFixAfter as any)?.artifacts || {};
+        const artifacts = (result as any)?.artifacts || (autoFixAfter as any)?.artifacts || (autoFixBefore as any)?.artifacts || {};
         const artifactType = artifacts.certified_pdf ? 'certified_pdf' : (artifacts.fixed_pdf ? 'fixed_pdf' : 'final_fixed_pdf');
         const artifactUrl = `/api/v2/jobs/${jobId}/artifacts/${artifactType}`;
         
@@ -591,7 +563,7 @@ function AppContent() {
   const handleConvertCMYK = useCallback(async () => {
     if (!file) return;
     setLdmActive(true);
-    setLdmStatus('Enforcing CMYK Policy...');
+    setLdmStatus('loader.cmyk');
     try {
       const jobId = await convertColorServer(file, selectedProfile);
       if (jobId) {
@@ -613,7 +585,7 @@ function AppContent() {
   const handleConvertGrayscale = useCallback(async () => {
     if (!file) return;
     setLdmActive(true);
-    setLdmStatus('Converting to Grayscale...');
+    setLdmStatus('loader.grayscale');
     try {
       const jobId = await convertToGrayscaleServer(file);
       if (jobId) {
@@ -634,7 +606,7 @@ function AppContent() {
   const handleRebuildPdf = useCallback(async () => {
     if (!file) return;
     setLdmActive(true);
-    setLdmStatus('Rebuilding Forensic Carrier...');
+    setLdmStatus('loader.rebuild');
     try {
       const jobId = await rebuildPdfServer(file, 300);
       if (jobId) {
@@ -655,7 +627,7 @@ function AppContent() {
   const handleMakeBooklet = useCallback(async () => {
     if (!file) return;
     setLdmActive(true);
-    setLdmStatus('Generating Booklet Imposition...');
+    setLdmStatus('loader.booklet');
     try {
       const blob = await createBookletClient(file);
       const url = URL.createObjectURL(blob);
@@ -731,7 +703,7 @@ function AppContent() {
                   title="Open AI Inspector"
                 >
                   <CommandLineIcon className="h-3.5 w-3.5 text-[var(--accent-color)]" />
-                  <span className="hidden md:inline">Analyze_Carrier</span>
+                  <span className="hidden md:inline">{t('app.analyzeCarrier')}</span>
                 </button>
                 <UserMenu />
               </div>
@@ -771,6 +743,7 @@ function AppContent() {
                     file={file}
                     fileMeta={fileMeta}
                     result={result}
+                    analysis={analysis}
                     isRunning={isWorkerRunning || ldmActive}
                     ldmStatus={ldmStatus}
                     ldmProgress={ldmProgress}
@@ -795,6 +768,7 @@ function AppContent() {
                     file={file}
                     fileMeta={fileMeta}
                     result={result}
+                    analysis={analysis}
                     autoFixBefore={autoFixBefore}
                     autoFixAfter={autoFixAfter}
                     autoFixReport={autoFixReport}
@@ -843,6 +817,7 @@ function AppContent() {
                     file={file}
                     fileMeta={fileMeta}
                     result={result}
+                    analysis={analysis}
                     numPages={numPages}
                     currentPage={currentPage}
                     lastPdfUrl={lastPdfUrl}
@@ -926,7 +901,7 @@ function AppContent() {
 
         <LoaderOverlay
           isOpen={ldmActive}
-          message={ldmStatus || 'Processing...'}
+          message={t(ldmStatus || 'common.processing') as any}
           stageKey={ldmStatus?.toLowerCase().includes('engine') ? 'upload' : 'preflight'}
         />
 
@@ -949,7 +924,7 @@ function EngineErrorOverlay({ error, onClose }: { error: any, onClose: () => voi
         <div className="bg-[#dc0000] p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-2 w-2 bg-white animate-pulse" />
-            <span className="text-[0.65rem] font-black text-white uppercase tracking-[0.3em]">System_Terminal_Error</span>
+            <span className="text-[0.65rem] font-black text-white uppercase tracking-[0.3em]">{t('systemTerminalError' as any)}</span>
           </div>
           <button onClick={onClose} className="text-white/80 hover:text-white transition-colors">
             <XMarkIcon className="h-5 w-5" />
@@ -958,7 +933,7 @@ function EngineErrorOverlay({ error, onClose }: { error: any, onClose: () => voi
 
         <div className="p-8 space-y-6">
           <div className="space-y-2">
-            <h3 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">ENGINE TERMINATED</h3>
+            <h3 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">{t('error.engineTerminated')}</h3>
             <p className="text-[var(--text-secondary)] text-sm font-medium leading-relaxed">
               {error.message}
             </p>
@@ -966,12 +941,12 @@ function EngineErrorOverlay({ error, onClose }: { error: any, onClose: () => voi
 
           <div className="bg-[var(--bg-tertiary)] p-5 border border-[var(--border-color)] space-y-4">
             <div className="flex justify-between items-center text-[0.65rem] font-black uppercase tracking-widest text-[var(--text-muted)]">
-              <span>Error Code</span>
+              <span>{t('error.errorCode')}</span>
               <span className="text-[var(--accent-color)]">{error.code}</span>
             </div>
             <div className="h-px bg-[var(--border-color)]/50" />
             <div className="flex justify-between items-center text-[0.65rem] font-black uppercase tracking-widest text-[var(--text-muted)]">
-              <span>Trace ID</span>
+              <span>{t('error.traceId')}</span>
               <span className="font-mono text-[var(--text-secondary)]">{error.traceId}</span>
             </div>
           </div>
@@ -981,10 +956,10 @@ function EngineErrorOverlay({ error, onClose }: { error: any, onClose: () => voi
               onClick={onClose}
               className="w-full py-4 border border-[var(--accent-color)]/30 text-[0.75rem] font-bold uppercase tracking-widest text-[var(--accent-color)] hover:bg-[var(--accent-color)] hover:text-white transition-all"
             >
-              Acknowledge & Close
+              {t('error.acknowledgeClose')}
             </button>
             <p className="text-[0.6rem] text-center text-[var(--text-muted)] font-mono uppercase tracking-[0.2em]">
-              Report this trace to PPOS Operations if the problem persists.
+              {t('error.reportTrace')}
             </p>
           </div>
         </div>

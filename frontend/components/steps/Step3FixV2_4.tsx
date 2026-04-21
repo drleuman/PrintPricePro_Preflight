@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PreflightResult, FileMeta, Issue } from '../../types';
+import { PreflightResult, FileMeta, Issue, WorkflowAnalysis } from '../../types';
 import { StatusBadge, IssueRow } from '../../design/preflight_starter_pack';
 import { PageViewer } from '../PageViewer';
 import { FixDrawerV2_4 } from '../FixDrawerV2_4';
@@ -21,6 +21,7 @@ interface Step3FixV2_4Props {
     file: File | null;
     fileMeta: FileMeta | null;
     result: PreflightResult | null;
+    analysis: WorkflowAnalysis;
     autoFixBefore?: PreflightResult | null;
     autoFixAfter?: PreflightResult | null;
     autoFixReport?: any | null;
@@ -66,6 +67,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
     file,
     fileMeta,
     result,
+    analysis,
     autoFixBefore,
     autoFixAfter,
     autoFixReport,
@@ -114,17 +116,16 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
     // Mapeo dinámico para Fix Phase (similar a Step 2 y 4)
     const getFixTechStatus = () => {
         if (!ldmActive) return null;
-        if (ldmProgress < 20) return 'ENQUEUING_ENGINE_JOB...';
-        if (ldmProgress < 50) return 'CORE_RADIOLOGICAL_CORRECTION...';
-        if (ldmProgress < 80) return 'HEURISTIC_LAYOUT_NORMALIZATION...';
-        return 'REBUILDING_COMPLIANT_ARTIFACT...';
+        if (ldmProgress < 20) return t('step.fix.terminal.enqueuing');
+        if (ldmProgress < 50) return t('step.fix.terminal.radiological');
+        if (ldmProgress < 80) return t('step.fix.terminal.heuristic');
+        return t('step.fix.terminal.rebuilding');
     };
 
     const fixMessage = getFixTechStatus();
 
+    const { errorCount, warningCount } = analysis;
     const issues = result?.issues || [];
-    const errorCount = issues.filter((i: Issue) => i.severity === 'error').length;
-    const warningCount = issues.filter((i: Issue) => i.severity === 'warning').length;
     
     // Diagnostics for failure state visibility
     if (error) {
@@ -188,10 +189,10 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                         </div>
                         <div className="flex-1">
                             <div className="text-[0.7rem] font-black uppercase tracking-[0.2em] text-amber-500 mb-1">
-                                {t('step.fix.failed' as any)}
+                                {t('step.fix.failed')}
                             </div>
                             <h3 className="text-xl font-extrabold tracking-tight text-[var(--text-primary)]">
-                                {t('step.fix.engineTerminal' as any)}
+                                {t('step.fix.engineTerminal')}
                             </h3>
                         </div>
                         <StatusBadge label={error.code || 'ABORTED'} variant="warning" />
@@ -200,16 +201,16 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                     <div className="p-4 bg-[var(--bg-primary)] border border-amber-500/20 font-mono text-[0.75rem] text-[var(--text-secondary)] leading-relaxed">
                         <div className="flex items-start gap-3">
                             <span className="text-amber-500 font-bold shrink-0">[ERR]</span>
-                            <span>{error.message || 'The PPOS engine encountered a transient failure during trace hardening.'}</span>
+                            <span>{error.message || t('step.fix.failureNotice')}</span>
                         </div>
                         <div className="flex items-start gap-3 mt-2 opacity-50">
                             <span className="shrink-0 font-bold">[TRACE]</span>
-                            <span>{error.traceId || 'N/A'}</span>
+                            <span>{error.traceId || t('common.na')}</span>
                         </div>
                     </div>
                     
                     <p className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-normal">
-                        {t('step.fix.failureNotice' as any)}
+                        {t('step.fix.failureNotice')}
                     </p>
                 </div>
             )}
@@ -326,7 +327,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                                 <div className="absolute inset-0 z-[15] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
                                     <div className="h-10 w-10 border-2 border-[var(--accent-color)] border-t-transparent rounded-full animate-spin mb-4" />
                                     <div className="text-[0.6rem] font-black uppercase tracking-[0.3em] text-[var(--accent-color)] font-mono">
-                                        CALCULATING_INK_DENSITY...
+                                        {t('step.fix.calculatingInk')}
                                     </div>
                                 </div>
                             )}
@@ -353,7 +354,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                     </div>
 
                     {/* Bottom Action Bar */}
-                    <div className="flex flex-col-reverse md:flex-row items-center justify-between gap-4 mt-4">
+                    <div className="flex flex-col-reverse md:flex-row items-center justify-between gap-4 mt-4 ppp-mobile-sticky-footer">
                         <button 
                             onClick={onBack}
                             className="w-full md:w-auto text-[0.6rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-4 md:p-0 text-center"
@@ -367,6 +368,8 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                             {t('step.fix.completeProtocol')}
                         </button>
                     </div>
+
+                    <div className="ppp-mobile-spacer" />
                 </div>
             </div>
 

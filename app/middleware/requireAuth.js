@@ -29,13 +29,15 @@ module.exports = (req, res, next) => {
             // Success Logging
             console.log(`[AUTH-SUCCESS][${requestId}] JWT validated for tenant ${decoded.tenantId || 'global'}`);
 
-            // Attach to req.auth (Mandatory Structure)
+            // Attach to req.auth (Canonical Structure for the Product App)
             req.auth = {
                 userId: decoded.userId || decoded.sub || null,
-                tenantId: decoded.tenantId || 'default',
-                role: decoded.role || 'GUEST',
+                tenantId: decoded.tenantId || 'global-node',
+                role: decoded.role || 'MEMBER', // Operational PPOS role
+                productRole: decoded.appRole || decoded.role || 'AUTHOR', // Product-level role
+                email: decoded.email || null,
                 scopes: decoded.scopes || [],
-                plan: decoded.plan || 'NONE'
+                plan: decoded.plan || 'FREE'
             };
 
             return next();

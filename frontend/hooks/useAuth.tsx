@@ -8,6 +8,7 @@ interface User {
     plan: 'FREE' | 'PRO' | 'ENTERPRISE';
     ai_magic_fix_enabled: boolean;
     daily_jobs_limit: number;
+    jobs_used_today: number;
     organization_name?: string;
 }
 
@@ -39,6 +40,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             });
             if (res.ok) {
                 const userData = await res.json();
+                console.log('[AUTH][SESSION-RESTORED]', { email: userData.email, plan: userData.plan });
                 setUser(userData);
                 setIsAuthenticated(true);
             } else {

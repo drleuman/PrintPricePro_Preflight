@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { PreflightResult, FileMeta, AppMode, Issue } from '../../types';
+import { PreflightResult, FileMeta, AppMode, Issue, WorkflowAnalysis } from '../../types';
 import { StatusBadge, IssueRow } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
 import { RocketLaunchIcon, ArrowPathIcon, ChevronLeftIcon, ShieldCheckIcon, CommandLineIcon, CpuChipIcon } from '@heroicons/react/24/outline';
@@ -10,6 +10,7 @@ interface Step2AnalysisV2_4Props {
     file: File | null;
     fileMeta: FileMeta | null;
     result: PreflightResult | null;
+    analysis: WorkflowAnalysis;
     isRunning: boolean;
     ldmStatus?: string | null;
     ldmProgress?: number;
@@ -26,6 +27,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
     file,
     fileMeta,
     result,
+    analysis,
     isRunning,
     ldmStatus,
     ldmProgress = 0,
@@ -44,11 +46,11 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
     // Tech mapping for "Monolith 2.4" Forensic Terminal
     const getTechStatus = () => {
         if (!isRunning) return null;
-        if (ldmProgress < 20) return 'ENQUEUING V2 ASYNC JOB...';
-        if (ldmProgress < 40) return 'DETERMINISTIC CORE ANALYSIS (POPPLER/GHOSTSCRIPT)...';
-        if (ldmProgress < 60) return 'HEURISTIC CORE ANALYSIS & LAYOUT INFERENCE...';
-        if (ldmProgress < 85) return 'SCANNING ARTEFACT INTEGRITY & COMPLIANCE...';
-        return 'FINALIZING REPORT AND VALUE METRICS...';
+        if (ldmProgress < 20) return t('step.analysis.terminal.enqueuing');
+        if (ldmProgress < 40) return t('step.analysis.terminal.deterministic');
+        if (ldmProgress < 60) return t('step.analysis.terminal.heuristic');
+        if (ldmProgress < 85) return t('step.analysis.terminal.scanning');
+        return t('step.analysis.terminal.finalizing');
     };
 
     const techMessage = getTechStatus();
@@ -66,26 +68,16 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
         }
     }, [file, result, isRunning, onRunAnalysis, error]);
 
-    const issues =
-      result?.issues ||
-      result?.findings ||
-      result?.report?.issues ||
-      result?.report?.findings ||
-      [];
+    const {
+      issueCount,
+      hasIssues,
+      hasErrors,
+      analysisFailed,
+      isCompliant,
+      isDegraded
+    } = analysis;
 
-    const normalizedIssues = Array.isArray(issues) ? issues : [];
-    const issueCount = normalizedIssues.length;
-    const hasIssues = issueCount > 0;
-    const hasErrors = normalizedIssues.filter(i => i.severity === 'error').length > 0;
-
-    const analysisFailed =
-      !result ||
-      (!!error && !hasIssues) || 
-      (result as any)?._forensicDataMissing;
-
-    const isCompliant = !!result && !analysisFailed && issueCount === 0;
-
-    const isDegraded = (result as any)?._isDegraded;
+    const normalizedIssues = result?.issues || [];
 
     console.log('[STEP2][STATE]', {
       hasResult: !!result,
@@ -177,57 +169,57 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                     ) : analysisFailed ? (
                         <div className="border border-red-500/30 bg-red-500/5 p-8 space-y-4 animate-in fade-in duration-500">
                             <div className="text-[0.7rem] font-black uppercase tracking-[0.2em] text-red-400 mb-2">
-                                Analysis failed
+                                {t('step.analysis.failed.title')}
                             </div>
                             <h2 className="text-xl font-black text-[var(--text-primary)] mb-2 uppercase tracking-tight">
-                                Forensics data unavailable
+                                {t('missingData').toUpperCase()}
                             </h2>
                             <p className="text-[var(--text-secondary)] text-[0.85rem] leading-relaxed">
-                                The engine did not return a usable analysis for this document. This usually suggests a secure pipe termination or an unsupported PDF envelope.
+                                {t('step.analysis.failed.desc')}
                             </p>
                             <div className="mt-4 px-4 py-2 border border-red-500/20 text-red-500 text-[0.65rem] font-black uppercase tracking-[0.2em] w-fit">
-                                Terminal Engine Error
+                                {t('error').toUpperCase()}
                             </div>
                         </div>
                     ) : isCompliant ? (
                         <div className="border border-emerald-500/30 bg-emerald-500/5 p-8 animate-in zoom-in-95 duration-500">
                             <div className="text-[0.7rem] font-black uppercase tracking-[0.2em] text-emerald-400 mb-2">
-                                Analysis complete
+                                {t('analysisComplete').toUpperCase()}
                             </div>
 
                             <h2 className="text-2xl font-black text-[var(--text-primary)] mb-2">
-                                0 issues found
+                                {t('step.analysis.zeroIssues.title')}
                             </h2>
 
                             <p className="text-[var(--text-secondary)] text-[0.85rem] mb-8 leading-relaxed max-w-xl">
-                                Your document appears compliant with the selected print policy. No technical violations or layout anomalies were detected.
+                                {t('step.analysis.zeroIssues.desc')}
                             </p>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-5">
                                     <div className="text-[0.6rem] uppercase tracking-[0.25em] text-[var(--text-muted)] mb-1 font-bold">
-                                        Status
+                                        {t('shell.finalState').toUpperCase()}
                                     </div>
                                     <div className="text-[0.85rem] font-black text-emerald-400 uppercase">
-                                        Compliant
+                                        {t('step.analysis.ready')}
                                     </div>
                                 </div>
 
                                 <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-5">
                                     <div className="text-[0.6rem] uppercase tracking-[0.25em] text-[var(--text-muted)] mb-1 font-bold">
-                                        Issues
+                                        {t('issues').toUpperCase()}
                                     </div>
                                     <div className="text-[0.85rem] font-black text-[var(--text-primary)] uppercase">
-                                        0 detected
+                                        {t('autofix.noIssues')}
                                     </div>
                                 </div>
 
                                 <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-5">
                                     <div className="text-[0.6rem] uppercase tracking-[0.25em] text-[var(--text-muted)] mb-1 font-bold">
-                                        Next step
+                                        {t('common.next').toUpperCase()}
                                     </div>
                                     <div className="text-[0.85rem] font-black text-[var(--text-primary)] uppercase">
-                                        Review / certify
+                                        {t('step.analysis.finalizeTrace')}
                                     </div>
                                 </div>
                             </div>
@@ -238,8 +230,8 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                                 <div className="p-4 border-l-4 border-amber-500 bg-amber-500/5 flex items-start gap-4">
                                     <CommandLineIcon className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
                                     <div>
-                                        <div className="text-[0.7rem] font-black uppercase tracking-wider text-amber-500 mb-1">Degraded Analysis Signal</div>
-                                        <div className="text-[0.75rem] text-[var(--text-secondary)] font-medium">Some forensic inspectors timed out. Results may be incomplete.</div>
+                                        <div className="text-[0.7rem] font-black uppercase tracking-wider text-amber-500 mb-1">{t('step.analysis.degraded.title' as any)}</div>
+                                        <div className="text-[0.75rem] text-[var(--text-secondary)] font-medium">{t('step.analysis.degraded.desc' as any)}</div>
                                     </div>
                                 </div>
                             )}
@@ -312,7 +304,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                         </div>
                     )}
 
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-4 ppp-mobile-sticky-footer">
                         <button 
                             onClick={onBack}
                             className="bg-[var(--hover-bg)] text-[var(--text-secondary)] p-5 text-[0.85rem] font-black uppercase tracking-[0.2em] hover:text-[var(--text-primary)] transition-all border border-[var(--border-color)] flex items-center justify-center gap-2"
@@ -330,6 +322,8 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                             </button>
                         )}
                     </div>
+
+                    <div className="ppp-mobile-spacer" />
                 </div>
             </div>
 

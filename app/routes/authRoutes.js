@@ -129,7 +129,9 @@ router.post('/login', async (req, res) => {
                 email: user.email, 
                 role: user.role, 
                 plan: user.plan,
-                ai_magic_fix_enabled: !!user.ai_magic_fix_enabled
+                ai_magic_fix_enabled: !!user.ai_magic_fix_enabled,
+                daily_jobs_limit: user.daily_jobs_limit || 0,
+                jobs_used_today: user.jobs_used_today || 0
             } 
         });
     } catch (err) {

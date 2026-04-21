@@ -218,16 +218,18 @@ async function enqueueJob(type, payload = {}) {
 
     // v2.4.120: Hardened canonical ID extraction
     // Priority: Upstream explicit fields -> nested metadata -> pre-generated local ID
-    const rawId = data.jobId || data.job_id || data.id || data.job?.id ||
-      data.metadata?.jobId || data.result?.jobId || data.result?.meta?.jobId ||
-      jobId;
+    const rawId = data.jobId || data.job_id || data.id || data.job?.id || 
+                  data.metadata?.jobId || data.result?.jobId || data.result?.meta?.jobId || 
+                  jobId;
 
     // PROTECTION: Never allow mode labels like 'SYNC' or 'ASYNC' to become the canonical ID
-    const canonicalJobId = (rawId && rawId !== 'SYNC' && rawId !== 'ASYNC') ? rawId : jobId;
+    const canonicalJobId = (typeof rawId === 'string' && rawId !== 'SYNC' && rawId !== 'ASYNC' && (rawId.startsWith('job_') || rawId.startsWith('fix_'))) 
+                           ? rawId 
+                           : jobId;
 
-    // Detection of sync/inline mode: It's sync if it contains a full result OR if it's already COMPLETED
-    const hasInlineSigns = !!(data.analysis || data.issues || data.report || data.findings || (data.status === 'COMPLETED' && !canonicalJobId));
-    const mode = hasInlineSigns ? 'sync' : (canonicalJobId ? 'async' : 'unknown');
+    // Detection of sync/inline mode: It's sync if it contains a full report or finding structure
+    const hasInlineSigns = !!(data.issues || data.report || data.findings || data.analysis || data.fixes);
+    const mode = hasInlineSigns ? 'sync' : 'async';
 
     console.log('[CREATE-JOB][MODE-DETECTED]', { mode, jobId: canonicalJobId });
 

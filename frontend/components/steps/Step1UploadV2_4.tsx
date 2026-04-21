@@ -140,12 +140,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
 
             <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
                 {/* Upload Zone */}
-                <div 
-                    onDragOver={(e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); }}
-                    onDragLeave={() => setIsDragging(false)}
-                    onDrop={onDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`group relative flex flex-col items-center justify-center border-2 border-dashed transition-all duration-700 cursor-pointer min-h-[500px] w-full lg:flex-[1.2] ${
+                    className={`group relative flex flex-col items-center justify-center border-2 border-dashed transition-all duration-700 cursor-pointer min-h-[300px] md:min-h-[500px] w-full lg:flex-[1.2] ${
                         isDragging ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5 shadow-[0_0_40px_rgba(220,0,0,0.1)] scale-[1.01]' : 
                         file ? 'border-[var(--border-color)] bg-[var(--hover-bg)]' : 'border-[var(--border-color)] hover:border-[var(--accent-color)]/30 hover:bg-[var(--hover-bg)]'
                     }`}
@@ -202,7 +197,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
 
                 {/* Configuration Zone */}
                 <div className="flex flex-col justify-between space-y-8 w-full lg:flex-[0.8]">
-                    <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-10 h-full">
+                    <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-6 md:p-10 h-full">
                         <div className="flex items-center justify-between mb-8">
                             <div className="ppp-phase-tag text-[var(--accent-color)] mb-1">
                                 {t('review').toUpperCase()}
@@ -213,7 +208,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                         <div className="space-y-4">
                             <button 
                                 onClick={() => setSelectedMode('magic')}
-                                className={`w-full flex items-center gap-5 p-6 border transition-all duration-500 relative group ${
+                                className={`w-full flex items-center gap-4 p-4 md:p-6 border transition-all duration-500 relative group ${
                                     selectedMode === 'magic' ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5' : 'border-[var(--border-color)] hover:border-[var(--accent-color)] hover:bg-[var(--accent-color)]/5 bg-[var(--bg-primary)]/50'
                                 }`}
                             >
@@ -233,7 +228,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
 
                             <button 
                                 onClick={() => setSelectedMode('manual')}
-                                className={`w-full flex items-center gap-5 p-6 border transition-all duration-500 relative group ${
+                                className={`w-full flex items-center gap-4 p-4 md:p-6 border transition-all duration-500 relative group ${
                                     selectedMode === 'manual' ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5' : 'border-[var(--border-color)] hover:border-[var(--accent-color)] hover:bg-[var(--accent-color)]/5 bg-[var(--bg-primary)]/50'
                                 }`}
                             >
@@ -266,7 +261,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                                         />
                                         
                                         {/* Minimal Tooltip Layer */}
-                                        <div className="absolute left-0 bottom-full mb-3 w-[320px] p-4 bg-[var(--bg-primary)] border border-[var(--border-color)] shadow-[0_20px_40px_rgba(0,0,0,0.4)] opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible focus-within:opacity-100 focus-within:visible transition-all duration-300 z-50">
+                                        <div className="absolute left-0 bottom-full mb-3 w-[280px] sm:w-[320px] p-4 bg-[var(--bg-primary)] border border-[var(--border-color)] shadow-[0_20px_40px_rgba(0,0,0,0.4)] opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible focus-within:opacity-100 focus-within:visible transition-all duration-300 z-50">
                                             <div className="text-[0.65rem] font-black uppercase tracking-[0.25em] text-[var(--accent-color)] mb-2">{t('policyInfo.title')}</div>
                                             <p className="text-[0.78rem] text-[var(--text-primary)] leading-relaxed font-medium">
                                                 {t('policyInfo.desc')}
@@ -316,7 +311,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                             </div>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 ppp-mobile-sticky-footer">
                         <button 
                             onClick={handleContinue}
                             disabled={!file}
@@ -332,6 +327,8 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                             <span className="relative z-10">{t('igniteEngine')}</span>
                         </button>
                     </div>
+                    
+                    <div className="ppp-mobile-spacer" />
                 </div>
             </div>
         </div>

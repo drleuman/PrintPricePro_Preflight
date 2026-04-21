@@ -61,7 +61,9 @@ export async function pposFetch<T>(path: string, options?: RequestInit): Promise
     // Handle Auth Failures (401) - Attempt Refresh
     if (res.status === 401) {
         const refreshToken = getRefreshToken();
-        if (refreshToken) {
+        const isRefreshAttempt = path.includes('/api/auth/refresh');
+
+        if (refreshToken && !isRefreshAttempt) {
             console.log(`[API-CLIENT][${requestId}][AUTH-DRIFT] 401 detected. Attempting session recovery via refresh token...`);
             try {
                 const refreshRes = await fetch('/api/auth/refresh', {

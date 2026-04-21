@@ -36,18 +36,20 @@ function getTenantId(req) {
   return req.auth?.tenantId || req.user?.tenantId || 'global';
 }
 
-function canonicalId(data = {}, fallbackId = null) {
   const candidates = [
     data.jobId, 
     data.job_id, 
-    data.id, 
+    data.id,
+    data.job?.id,
     data.result?.jobId,
     data.result?.meta?.jobId,
     data.inlineResult?.meta?.jobId,
     data.jobMeta?.id,
     fallbackId
   ];
-  return candidates.find(v => typeof v === 'string' && (v.startsWith('job_') || v.startsWith('fix_'))) || fallbackId;
+  // v2.4.165: Robust Canonical filtering
+  const resolved = candidates.find(v => typeof v === 'string' && (v.startsWith('job_') || v.startsWith('fix_')));
+  return resolved || fallbackId;
 }
 
 router.post(
@@ -124,7 +126,7 @@ router.post(
         jobId: finalId,
         tenantId,
         policy,
-        mode: job.mode,
+        mode: job.mode || 'async',
         jobMeta: {
           id: finalId,
           fileName: req.file.originalname,
@@ -134,6 +136,7 @@ router.post(
       
       if (job.inlineResult) {
         responsePayload.inlineResult = job.inlineResult;
+        responsePayload.mode = 'sync';
         // Ensure the inline result itself contains the jobId in its metadata
         responsePayload.inlineResult.meta = {
           ...(responsePayload.inlineResult.meta || {}),

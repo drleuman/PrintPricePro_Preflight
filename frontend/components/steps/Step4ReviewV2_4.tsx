@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PreflightResult, FileMeta, AppMode } from '../../types';
+import { PreflightResult, FileMeta, AppMode, WorkflowAnalysis } from '../../types';
 import { StatusBadge, CertificationPanel } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
 import { pposFetch } from '../../lib/apiClient';
@@ -18,11 +18,14 @@ import {
     CommandLineIcon,
     CpuChipIcon
 } from '@heroicons/react/24/outline';
+import { ReviewBanners } from './ReviewBannersV2_4';
+import { CertificationTechnicalNote } from './CertificationTechnicalNoteV2_4';
 
 interface Step4ReviewV2_4Props {
     file: File | null;
     fileMeta: FileMeta | null;
     result: PreflightResult | null;
+    analysis: WorkflowAnalysis;
     numPages: number;
     currentPage: number;
     lastPdfUrl: string | null;
@@ -60,6 +63,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     file,
     fileMeta,
     result,
+    analysis,
     numPages,
     currentPage,
     lastPdfUrl,
@@ -93,27 +97,20 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     sourceJobId,
 }) => {
     const { t } = useTranslation();
-    // v2.4.160: Unified Derived State (Requirement 1, 2)
-    // 1. Base Artifacts & Job Context
-    const artifacts = result?.artifacts || result?.result?.artifacts || {};
-    const isAutofix = result?.type === 'AUTOFIX' || (appMode as string) === 'autofix' || targetJobId?.startsWith('fix_');
-    const isAnalyzeOnly = result?.type === 'ANALYZE' || (result as any)?.name === 'preflight_job' || (appMode as string) === 'manual';
+    const {
+        isAutofix,
+        isAnalyzeOnly,
+        hasIssues: hasViolations,
+        isNoOpFix,
+        isRealFix,
+        hasCertified,
+        hasFixedArtifact: hasFixed,
+        showComparison
+    } = analysis;
 
-    // 2. Violation Compliance
-    const violations = result?.violations || result?.report?.violations || [];
-    const normalizedViolations = Array.isArray(violations) ? violations : [];
-    const hasViolations = normalizedViolations.length > 0;
-
-    // 3. Status Flags
-    const isNoOpFix = isAutofix && !hasViolations;
-    const isRealFix = isAutofix && hasViolations;
-    const hasCertified = !!artifacts.certified_pdf;
-    const hasFixed = !!artifacts.fixed_pdf;
     const hasFinalArtifact = !!lastPdfUrl;
-
-    // 4. Comparison Logic (Requirement 3)
-    const showComparison = isAutofix ? isRealFix : hasFinalArtifact;
-    const hasEffectiveFix = hasFinalArtifact && (isAutofix ? (isRealFix || isNoOpFix) : true);
+    const { hasEffectiveFix } = analysis;
+    const artifacts = result?.artifacts || {};
 
     // 5. State Initialization (Depends on derived flags)
     const [layoutMode, setLayoutMode] = useState<'single' | 'side-by-side'>(showComparison ? 'side-by-side' : 'single');
@@ -127,33 +124,22 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     // 7. Tech Status (Monolith v2.4 Spec)
     const getCertTechStatus = () => {
         if (!isRunning) return null;
-        if (ldmProgress < 20) return 'INITIATING_ENGINE_HANDSHAKE_V2';
-        if (ldmProgress < 40) return 'ENFORCING_ISO_OUTPUT_INTENTS';
-        if (ldmProgress < 60) return 'OPTIMIZING_COLOR_CARRIER_RESPONSE';
-        if (ldmProgress < 80) return 'HARDENING_PDF_STRUCTURES';
-        return 'SEALING_CERTIFIED_ARTIFACT_INTEGRITY';
+        if (ldmProgress < 20) return t('step.review.terminal.handshake');
+        if (ldmProgress < 40) return t('step.review.terminal.intents');
+        if (ldmProgress < 60) return t('step.review.terminal.optimizing');
+        if (ldmProgress < 80) return t('step.review.terminal.hardening');
+        return t('step.review.terminal.sealing');
     };
     const certMessage = getCertTechStatus();
 
     // 8. Diagnostics
-    console.log('[STEP4][STATE]', { 
-        jobType: result?.type || 'UNKNOWN',
-        isAutofix,
-        hasViolations,
-        isNoOpFix,
-        isRealFix,
-        showComparison,
-        hasFinalArtifact
-    });
+    console.log('[STEP4][STATE-ANALYSIS]', analysis);
     
     // Canonical calculation of issues and fixes
-    const issuesFound = autoFixBefore?.issues?.length || result?.issues?.length || 0;
-    const fixesApplied = autoFixAfter?.fixes?.length || 
-                        autoFixReport?.fixes?.length || 
-                        (autoFixBefore && autoFixAfter ? Math.max(0, autoFixBefore.issues.length - autoFixAfter.issues.length) : 
-                        autoFixReport ? 1 : 0);
+    const issuesFound = analysis.issueCount;
+    const fixesApplied = result?.fixes?.length || 0;
 
-    const isReadyForPrint = (autoFixAfter?.issues?.length === 0) || (result?.issues?.length === 0);
+    const isReadyForPrint = analysis.issueCount === 0;
 
     // Viewer Resolution
     const displayFile = showBeforeAfter === 'before' ? (originalFile || file) : (lastPdfUrl ? null : file);
@@ -177,76 +163,20 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                     <h2 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">{t('step.review.title')}</h2>
                 </div>
                 <StatusBadge 
-                    label={isNoOpFix ? "Compliant" : (isReadyForPrint ? (isAutofix ? "Fixed & Certified" : "Analysis Certified") : t('issuesFoundMessage'))} 
+                    label={isNoOpFix ? t('step.analysis.ready') : (isReadyForPrint ? (isAutofix ? t('common.verified') : t('common.verified')) : t('issuesFoundMessage'))} 
                     variant={isNoOpFix ? "certified" : (isReadyForPrint ? "certified" : "warning")} 
                 />
             </div>
 
-            <div className="flex flex-col xl:flex-row gap-8 items-start w-full">
+            <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
                 {/* Main Content: Preview & Comparison */}
                 <div className="space-y-6 flex-1 min-w-0">
-                    {/* v2.4.160: Conditional Status Card (Requirement 1, 2, 3) */}
-                    {isNoOpFix && (
-                        <div className="border-2 border-emerald-500/20 bg-emerald-500/5 p-8 space-y-4 animate-in zoom-in-95 duration-500">
-                            <div className="flex items-center gap-3 text-emerald-500">
-                                <ShieldCheckIcon className="h-8 w-8" />
-                                <h2 className="text-xl font-black uppercase tracking-tight">Document already compliant</h2>
-                            </div>
-                            <p className="text-[var(--text-secondary)] text-[0.85rem] leading-relaxed max-w-xl">
-                                Your PDF already meets the selected print policy. No technical corrections were required to ensure compliance.
-                            </p>
-                            {hasCertified && (
-                                <button 
-                                    onClick={onDownload}
-                                    className="flex items-center gap-2 px-6 py-3 bg-emerald-500 text-white text-[0.7rem] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all"
-                                >
-                                    <ArrowDownTrayIcon className="h-4 w-4" /> Download certified PDF
-                                </button>
-                            )}
-                        </div>
-                    )}
-
-                    {isRealFix && (
-                        <div className="border-2 border-[var(--accent-color)]/20 bg-[var(--accent-color)]/5 p-8 space-y-4 animate-in zoom-in-95 duration-500">
-                            <div className="flex items-center gap-3 text-[var(--accent-color)]">
-                                <PaintBrushIcon className="h-8 w-8" />
-                                <h2 className="text-xl font-black uppercase tracking-tight">Fixes applied successfully</h2>
-                            </div>
-                            <p className="text-[var(--text-secondary)] text-[0.85rem] leading-relaxed max-w-xl">
-                                Multiple issues were detected and corrected to meet ISO standards. You can now compare the changes below.
-                            </p>
-                            {hasFinalArtifact && (
-                                <button 
-                                    onClick={onDownload}
-                                    className="flex items-center gap-2 px-6 py-3 bg-[var(--accent-color)] text-white text-[0.7rem] font-black uppercase tracking-widest hover:bg-[var(--accent-hover)] transition-all"
-                                >
-                                    <ArrowDownTrayIcon className="h-4 w-4" /> Download fixed PDF
-                                </button>
-                            )}
-                        </div>
-                    )}
-
-                    {!isAutofix && (
-                        <div className="border-2 border-[var(--border-color)] bg-[var(--bg-secondary)] p-8 space-y-4 animate-in zoom-in-95 duration-500">
-                            <div className="flex items-center gap-3 text-[var(--text-primary)]">
-                                {hasViolations ? <XMarkIcon className="h-8 w-8 text-amber-500" /> : <DocumentCheckIcon className="h-8 w-8 text-emerald-500" />}
-                                <h2 className="text-xl font-black uppercase tracking-tight">Analysis complete</h2>
-                            </div>
-                            <p className="text-[var(--text-secondary)] text-[0.85rem] leading-relaxed max-w-xl">
-                                {hasViolations 
-                                    ? "Critical findings were detected in your document profile. Review the certification panel for details."
-                                    : "No issues were detected. Your document is fully compliant with the target profile."}
-                            </p>
-                            {hasCertified && (
-                                <button 
-                                    onClick={onDownloadReport}
-                                    className="flex items-center gap-2 px-6 py-3 border border-[var(--border-color)] text-[var(--text-secondary)] text-[0.7rem] font-black uppercase tracking-widest hover:text-[var(--text-primary)] hover:border-[var(--text-primary)] transition-all"
-                                >
-                                    <ArrowDownTrayIcon className="h-4 w-4" /> Download report PDF
-                                </button>
-                            )}
-                        </div>
-                    )}
+                    <ReviewBanners 
+                        analysis={analysis}
+                        onDownload={onDownload}
+                        onDownloadReport={onDownloadReport}
+                        t={t}
+                    />
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-1 flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex bg-[var(--bg-primary)] p-1">
                             <button 
@@ -254,13 +184,13 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 disabled={!showComparison}
                                 className={`px-4 py-1.5 ppp-phase-tag !text-[0.65rem] !tracking-widest transition-all ${layoutMode === 'side-by-side' ? 'bg-[var(--accent-color)] text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'} disabled:opacity-30 disabled:cursor-not-allowed`}
                             >
-                                SIDE-BY-SIDE
+                                {t('step.review.sideBySide')}
                             </button>
                             <button 
                                 onClick={() => setLayoutMode('single')}
                                 className={`px-4 py-1.5 ppp-phase-tag !text-[0.65rem] !tracking-widest transition-all ${layoutMode === 'single' ? 'bg-[var(--accent-color)] text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
                             >
-                                SINGLE VIEW
+                                {t('step.review.singleView')}
                             </button>
                         </div>
                         
@@ -287,16 +217,16 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         </div>
                     </div>
 
-                    <div className={`grid ${layoutMode === 'side-by-side' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                    <div className={`grid ${layoutMode === 'side-by-side' ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-4`}>
                         {/* BEFORE VIEW */}
                         {(layoutMode === 'side-by-side' || showBeforeAfter === 'before') && (
-                            <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[500px] h-[580px] flex flex-col items-center bg-[var(--bg-primary)] group">
+                            <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[300px] h-[400px] md:min-h-[500px] md:h-[580px] flex flex-col items-center bg-[var(--bg-primary)] group">
                                 <div className="absolute top-4 left-4 z-20 px-3 py-1 bg-black/40 backdrop-blur-md border border-white/5 text-[0.6rem] font-black text-white uppercase tracking-[0.2em]">
-                                    Original Document
+                                    {t('step.review.originalDoc')}
                                 </div>
                                 <div className="absolute top-4 right-4 z-20">
                                     <div className="px-2 py-1 bg-amber-500/10 border border-amber-500/20 text-[0.55rem] font-bold text-amber-500 uppercase tracking-widest">
-                                        Ingress State
+                                        {t('step.review.ingressState')}
                                     </div>
                                 </div>
                                 <PageViewer 
@@ -318,15 +248,15 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
 
                         {/* AFTER VIEW */}
                         {(layoutMode === 'side-by-side' || showBeforeAfter === 'after') && (
-                            <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[500px] h-[580px] flex flex-col items-center justify-center bg-[var(--bg-primary)] group">
+                            <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[300px] h-[400px] md:min-h-[500px] md:h-[580px] flex flex-col items-center justify-center bg-[var(--bg-primary)] group">
                                 <div className="absolute top-4 left-4 z-20 px-3 py-1 bg-[var(--accent-color)]/20 backdrop-blur-md border border-[var(--accent-color)]/20 text-[0.6rem] font-black text-[var(--accent-color)] uppercase tracking-[0.2em]">
-                                    {isRealFix ? "Fixed PDF" : "Optimized for Print"}
+                                    {isRealFix ? t('step.review.fixedPdf') : t('step.review.optimizedPrint')}
                                 </div>
                                 
                                 {hasFinalArtifact && (
                                     <div className="absolute top-4 right-4 z-20">
                                         <div className="px-2 py-1 bg-green-500/10 border border-green-500/20 text-[0.55rem] font-bold text-green-500 uppercase tracking-widest">
-                                            {isRealFix ? "Fixed (Effective)" : "Analysis Certified"}
+                                            {isRealFix ? t('step.review.fixedEffective') : t('common.verified')}
                                         </div>
                                     </div>
                                 )}
@@ -347,9 +277,9 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                                 <ShieldCheckIcon className="h-8 w-8 text-emerald-500 -rotate-45" />
                                             </div>
                                             <div className="space-y-2">
-                                                <h4 className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">Document Compliant</h4>
+                                                <h4 className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">{t('step.analysis.ready')}</h4>
                                                 <p className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-relaxed max-w-[200px]">
-                                                    No issues detected. No repairs were applied.
+                                                    {t('autofix.noIssues')}
                                                 </p>
                                             </div>
                                         </div>
@@ -378,10 +308,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                         </div>
                                         <div className="space-y-2">
                                             <h4 className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">
-                                                {isAutofix ? "No Fixed PDF was generated" : "No Certified PDF"}
+                                                {isAutofix ? t('error.magic.fail') : t('analysisFailed')}
                                             </h4>
                                             <p className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-relaxed max-w-[200px]">
-                                                {isAutofix ? "The engine did not produce a corrected artifact." : "Run analysis to generate the certified artifact."}
+                                                {isAutofix ? t('forensics.dataUnavailable') : t('forensics.dataUnavailableDesc')}
                                             </p>
                                         </div>
                                         {!isRunning && !isAutofix && (
@@ -427,7 +357,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                 </div>
 
                 {/* Sidebar: Certification & Meta */}
-                <div className="space-y-6 w-full xl:w-[380px] shrink-0">
+                <div className="space-y-6 w-full lg:w-[380px] shrink-0">
                     {/* Compliance Panel */}
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-8 space-y-8">
                         <div className="flex items-center justify-between">
@@ -452,15 +382,15 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 <span className="text-[0.8rem] font-black uppercase tracking-widest text-[var(--text-muted)]">{t('shell.policyProfile')}</span>
                                 <span className="text-[0.8rem] font-mono text-[var(--text-secondary)] italic truncate max-w-[150px]">{formatLabel(selectedPolicy || 'DEFAULT_OVERSIGHT')}</span>
                             </div>
-                            <button 
+                             <button 
                                 onClick={onDownloadReport}
                                 className="w-full py-2 border-b border-dashed border-[var(--border-color)] text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] hover:text-[var(--accent-color)] transition-all flex items-center justify-between group"
                             >
-                                <span>Export Analysis Report (JSON)</span>
+                                <span>{t('step.review.exportJson')}</span>
                                 <CommandLineIcon className="h-3 w-3 opacity-50 group-hover:opacity-100" />
                             </button>
                         </div>
-                        <div className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-3 ppp-mobile-sticky-footer">
                             <div className="flex gap-2">
                                 <button 
                                   onClick={onBack}
@@ -479,12 +409,12 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             </div>
 
                             {hasFinalArtifact && (
-                                <button 
+                                 <button 
                                     onClick={onDownload}
                                     className="w-full flex items-center justify-center gap-3 py-5 bg-[var(--bg-primary)] border-2 border-[var(--accent-color)] text-[var(--accent-color)] text-[0.8rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-color)] hover:text-white transition-all shadow-[0_10px_30px_rgba(220,0,0,0.1)] group"
                                 >
                                     <ArrowDownTrayIcon className="h-5 w-5 group-hover:translate-y-0.5 transition-transform" />
-                                    {isRealFix ? "Download Fixed PDF" : (isNoOpFix ? "Download Certified PDF" : "Download Analysis PDF")}
+                                    {isRealFix ? t('step.review.downloadFixed') : (isNoOpFix ? t('step.review.downloadCertified') : t('step.review.downloadCertified'))}
                                 </button>
                             )}
 
@@ -496,6 +426,9 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                               {(hasEffectiveFix || isAnalyzeOnly) ? (isAnalyzeOnly ? t('step.analysis.finalizeTrace' as any) : t('continueToReview_v2' as any)) : t('waitingForArtifact' as any)}
                               {(hasEffectiveFix || isAnalyzeOnly) && <span className="text-xl">→</span>}
                             </button>
+                        </div>
+
+                        <div className="ppp-mobile-spacer" />
 
                             {/* Live Certification Terminal (Monolith Extension) */}
                             {isRunning && !hasEffectiveFix && (
@@ -521,11 +454,11 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                         <div className="font-mono text-[0.62rem] leading-relaxed space-y-1 pt-1">
                                             <div className="flex gap-2 text-[var(--text-primary)]">
                                                 <span className="text-[var(--accent-color)] font-bold shrink-0">[LOG]</span>
-                                                <span className="uppercase">{ldmStatus || 'DISPATCHING_REBUILD_AGENT...'}</span>
+                                                <span className="uppercase">{t((ldmStatus || 'step.analysis.terminal.enqueuing') as any)}</span>
                                             </div>
                                             <div className="flex gap-2 text-[var(--text-secondary)] opacity-60 italic">
                                                 <span className="text-[var(--text-muted)] shrink-0 font-bold">[PROCESS]</span>
-                                                <span className="uppercase truncate">{certMessage || 'NORMALIZING_CARRIER...'}</span>
+                                                <span className="uppercase truncate">{certMessage || t('step.review.terminal.optimizing')}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -573,95 +506,16 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
             </div>
 
             {/* Technical Note Modal (Monolith v2.4 Style) */}
-            {showTechNote && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[var(--bg-primary)]/95 backdrop-blur-xl animate-in fade-in duration-300">
-                    <div className="bg-[var(--bg-secondary)] border border-[var(--border-color)] max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-[0_0_100px_rgba(220,0,0,0.1)]">
-                        <div className="p-8 border-b border-[var(--border-color)] flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="h-10 w-10 bg-[var(--accent-color)] flex items-center justify-center">
-                                    <DocumentCheckIcon className="h-6 w-6 text-white" />
-                                </div>
-                                <div>
-                                    <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)]">{t('step.review.techCertNote')}</div>
-                                    <div className="text-xl font-extrabold tracking-tight text-[var(--text-primary)]">{t('step.review.certDocument')}</div>
-                                </div>
-                            </div>
-                            <button onClick={() => setShowTechNote(false)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
-                                <XMarkIcon className="h-6 w-6" />
-                            </button>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
-                            <div className="grid grid-cols-2 gap-8 text-[var(--text-primary)]">
-                                <div className="space-y-4">
-                                    <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">{t('step.review.metricIngress')}</div>
-                                    <div className="space-y-2 font-mono text-[0.85rem]">
-                                        <div className="flex justify-between border-b border-[var(--border-color)] pb-2">
-                                            <span className="text-[var(--text-secondary)]">{t('fileLabel')}:</span>
-                                            <span>{(file?.size || 0) / 1024 / 1024 > 1 ? `${((file?.size || 0) / 1024 / 1024).toFixed(2)}MB` : `${((file?.size || 0) / 1024).toFixed(0)}KB`}</span>
-                                        </div>
-                                        <div className="flex justify-between border-b border-[var(--border-color)] pb-2">
-                                            <span className="text-[var(--text-secondary)]">{t('pageNavigation')}:</span>
-                                            <span>{numPages}</span>
-                                        </div>
-                                        <div className="flex justify-between border-b border-[var(--border-color)] pb-2">
-                                            <span className="text-[var(--text-secondary)]">{t('shell.finalState')}:</span>
-                                            <span className={`${isReadyForPrint ? 'text-[var(--accent-color)]' : 'text-amber-500'} font-black uppercase text-[0.8rem]`}>
-                                                {isReadyForPrint ? t('common.verified') : t('shell.manualReview')}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4 text-[var(--text-primary)]">
-                                    <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">{t('step.review.inkOptimization')}</div>
-                                    <div className="space-y-2 font-mono text-[0.85rem]">
-                                        <div className="flex justify-between border-b border-[var(--border-color)] pb-2">
-                                            <span className="text-[var(--text-secondary)]">{t('labelMaxTac')}</span>
-                                            <span>{autoFixReport?.prepress_summary?.tac_summary?.max_tac || '300'}%</span>
-                                        </div>
-                                        <div className="flex justify-between border-b border-[var(--border-color)] pb-2">
-                                            <span className="text-[var(--text-secondary)]">{t('profileLabel')}</span>
-                                            <span className="truncate max-w-[150px]">{formatLabel(selectedPolicy || 'FOGRA51 / PSO_V3')}</span>
-                                        </div>
-                                        <div className="flex justify-between border-b border-[var(--border-color)] pb-2">
-                                            <span className="text-[var(--text-secondary)]">{t('account.service.tier')}:</span>
-                                            <span className="text-[var(--accent-color)] font-black">{t('step.review.highEfficiency')}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="p-8 bg-[var(--bg-primary)] border border-[var(--border-color)]">
-                                <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)] mb-6">{t('step.review.traceLogs')}</div>
-                                <div className="space-y-3 font-mono text-[0.8rem] text-[var(--text-secondary)]">
-                                    <div className="flex items-start gap-3">
-                                        <span className="text-[var(--accent-color)] font-black uppercase">{t('common.verified')}</span>
-                                        <span>{t('step.review.productionGeometryOk')}</span>
-                                    </div>
-                                    <div className="flex items-start gap-3">
-                                        <span className="text-[var(--accent-color)] font-black uppercase">{t('common.verified')}</span>
-                                        <span>{t('step.review.colorProfilesNormalized')}</span>
-                                    </div>
-                                    <div className="flex items-start gap-3">
-                                        <span className="text-[var(--accent-color)] font-black uppercase">{t('common.verified')}</span>
-                                        <span>{t('step.review.fontEmbeddingConfirmed')}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="p-8 border-t border-[var(--border-color)] flex justify-end">
-                            <button 
-                                onClick={() => setShowTechNote(false)}
-                                className="bg-[var(--accent-color)] text-white px-10 py-4 text-[0.9rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-hover)] transition-all"
-                            >
-                                {t('step.review.acknowledgeClose')}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <CertificationTechnicalNote 
+                show={showTechNote}
+                onClose={() => setShowTechNote(false)}
+                file={file}
+                numPages={numPages}
+                isReadyForPrint={isReadyForPrint}
+                autoFixReport={autoFixReport}
+                selectedPolicy={selectedPolicy}
+                t={t}
+            />
 
             <style>{`
                 @keyframes scan {
