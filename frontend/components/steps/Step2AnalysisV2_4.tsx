@@ -40,7 +40,26 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
     error,
 }) => {
     const { t } = useTranslation();
-    if (appMode === 'ai') return null;
+    
+    // v2.4.180: Surgical Flow Guard. 
+    // If we land here in AI mode, redirect immediately to prevent blank screens.
+    useEffect(() => {
+        if (appMode === 'ai') {
+            console.warn('[APP][FLOW-GUARD] Unexpected Step 2 entry in AI mode. Redirecting to Step 3.');
+            onNext();
+        }
+    }, [appMode, onNext]);
+
+    if (appMode === 'ai') {
+        return (
+            <div className="min-h-[400px] flex flex-col items-center justify-center space-y-4 animate-in fade-in duration-500">
+                <div className="h-8 w-8 border-2 border-[var(--accent-color)] border-t-transparent rounded-full animate-spin" />
+                <p className="text-[0.7rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)] animate-pulse">
+                    {t('common.processing' as any) || 'Redirecting to Engine...'}
+                </p>
+            </div>
+        );
+    }
 
     const hasTriggeredRef = React.useRef(false);
 

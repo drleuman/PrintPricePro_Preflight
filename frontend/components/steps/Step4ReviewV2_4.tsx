@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PreflightResult, FileMeta, AppMode, WorkflowAnalysis } from '../../types';
+import { getReadableFixFailure } from '../../utils/payloadNormalization';
 import { StatusBadge, CertificationPanel } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
 import { pposFetch } from '../../lib/apiClient';
@@ -57,6 +58,7 @@ interface Step4ReviewV2_4Props {
     selectedPolicy?: string;
     targetJobId?: string | null;
     sourceJobId?: string | null;
+    error?: any;
 }
 
 export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
@@ -95,6 +97,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     selectedPolicy,
     targetJobId,
     sourceJobId,
+    error,
 }) => {
     const { t } = useTranslation();
     const {
@@ -138,6 +141,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     // Canonical calculation of issues and fixes
     const issuesFound = analysis.issueCount;
     const fixesApplied = result?.fixes?.length || 0;
+    const readableError = error ? getReadableFixFailure(error) : null;
 
     const isReadyForPrint = analysis.issueCount === 0;
 
@@ -308,11 +312,16 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                         </div>
                                         <div className="space-y-2">
                                             <h4 className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">
-                                                {isAutofix ? t('error.magic.fail') : t('analysisFailed')}
+                                                {readableError ? readableError.title : (isAutofix ? t('error.magic.fail') : t('analysisFailed'))}
                                             </h4>
                                             <p className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-relaxed max-w-[200px]">
-                                                {isAutofix ? t('forensics.dataUnavailable') : t('forensics.dataUnavailableDesc')}
+                                                {readableError ? readableError.summary : (isAutofix ? t('forensics.dataUnavailable') : t('forensics.dataUnavailableDesc'))}
                                             </p>
+                                            {readableError?.detail && (
+                                                <p className="text-[0.55rem] font-mono text-red-500/50 lowercase tracking-tight max-w-[250px] break-words pt-2 border-t border-[var(--border-color)]/20">
+                                                    {readableError.detail}
+                                                </p>
+                                            )}
                                         </div>
                                         {!isRunning && !isAutofix && (
                                             <button 

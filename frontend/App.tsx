@@ -50,6 +50,11 @@ function AppContent() {
   // ---------- Workflow State ----------
   const [currentStep, setCurrentStep] = useState(1);
   const [appMode, setAppMode] = useState<AppMode>(null);
+  const appModeRef = useRef<AppMode>(null);
+
+  useEffect(() => {
+    appModeRef.current = appMode;
+  }, [appMode]);
 
   // V2 Analysis State
   const [file, setFile] = useState<File | null>(null);
@@ -97,6 +102,9 @@ function AppContent() {
     details?: string;
     v2?: boolean;
   } | null>(null);
+
+  // v2.4.185: Deterministic Auto-Trigger Guard
+  const hasAutoTriggeredFixRef = useRef<string | null>(null);
 
   // UI / Loader
   const lastPdfUrlRef = useRef<string | null>(null);
@@ -149,6 +157,7 @@ function AppContent() {
     setLdmStatus('');
     setEngineError(null);
     setFixError(null);
+    hasAutoTriggeredFixRef.current = null;
     // Note: file and fileMeta are generally kept
   }, []);
 
@@ -248,10 +257,9 @@ function AppContent() {
       // If we are in step 1 (upload), move to correct next step
       if (currentStep === 1) {
         setAutoFixBefore(normalized);
-        if (appMode === 'ai') {
+        const effectiveMode = appModeRef.current;
+        if (effectiveMode === 'ai') {
           setCurrentStep(3);
-          // v2.4.170: Auto-trigger fix for fast-path AI mode
-          setTimeout(() => handleAutoFix({}), 100);
         } else {
           setCurrentStep(2);
         }
@@ -279,15 +287,16 @@ function AppContent() {
 
   const handlePageChange = (page: number) => setCurrentPage(page);
 
-  const handleV2Start = useCallback(async () => {
+  const handleV2Start = useCallback(async (overrideMode?: AppMode) => {
     if (!file || ldmActive) return;
 
+    const effectiveMode = overrideMode || appMode;
     resetResidues();
     setLdmActive(true);
     setLdmStatus('loader.engine');
 
     try {
-      const res = await startV2Preflight(file, selectedPolicy, { mode: appMode });
+      const res = await startV2Preflight(file, selectedPolicy, { mode: effectiveMode });
 
       if (res.inlineResult) {
         console.log('[APP][V2-START] Sync mode detected, using inlineResult');
@@ -331,9 +340,8 @@ function AppContent() {
           lastPdfUrlRef.current = null;
         }
 
-        if (appMode === 'ai') {
+        if (effectiveMode === 'ai') {
           setCurrentStep(3);
-          setTimeout(() => handleAutoFix({}), 100);
         } else {
           setCurrentStep(2);
         }
@@ -494,6 +502,31 @@ function AppContent() {
       console.log('[APP][STEP3][STATE]', { status: 'FIX_FAILED', error: err.message });
     }
   }, [file, result, autoFixBefore, autoFixServer, handleV2JobComplete, getAuthenticatedBlobUrl, selectedPolicy, fileMeta]);
+
+  // v2.4.185: Deterministic AI Auto-Fix Trigger
+  useEffect(() => {
+    const jobId = activeJobIdRef.current;
+    
+    // Hardened Readiness Check
+    const isAnalysisComplete = !!result && result.type === 'ANALYZE';
+    const isFixInProgress = ldmActive && ldmStatus?.includes('fix');
+    const isFixDone = !!autoFixAfter || !!fixError;
+    
+    const canAutoTrigger = 
+      appMode === 'ai' && 
+      currentStep === 3 && 
+      isAnalysisComplete && 
+      !isFixInProgress &&
+      !isFixDone &&
+      jobId && 
+      hasAutoTriggeredFixRef.current !== jobId;
+
+    if (canAutoTrigger) {
+      console.log('[APP][AUTO-FIX][TRIGGER-HARDENED]', { jobId, type: result?.type });
+      hasAutoTriggeredFixRef.current = jobId;
+      handleAutoFix({});
+    }
+  }, [appMode, currentStep, result, autoFixAfter, ldmActive, ldmStatus, fixError, handleAutoFix]);
 
   const handleDownload = useCallback(async () => {
     // v2.4.140: Hardened Authenticated Download Stream
@@ -740,6 +773,7 @@ function AppContent() {
                     onFileSelect={onFileSelect}
                     onNext={(mode) => {
                       setAppMode(mode);
+                      appModeRef.current = mode; // Update ref immediately for sync usage
                       resetResidues(); // Clear previous residues
                       
                       if (mode === 'ai') {
@@ -755,7 +789,7 @@ function AppContent() {
                       });
 
                       if (file) {
-                        handleV2Start();
+                        handleV2Start(mode);
                       }
                     }}
                     selectedPolicy={selectedPolicy}
@@ -831,7 +865,14 @@ function AppContent() {
                     onOpenAIAudit={(issue) => { handleSelectIssue(issue); setShowVisualModal(true); }}
                     onOpenEfficiency={() => setShowEfficiencyModal(true)}
                     onNext={() => setCurrentStep(4)}
-                    onBack={() => setCurrentStep(2)}
+                    onBack={() => {
+                      if (appMode === 'ai') {
+                        resetResidues();
+                        setCurrentStep(1);
+                      } else {
+                        setCurrentStep(2);
+                      }
+                    }}
                     lastPdfUrl={lastPdfUrl}
                     serverAvailable={true}
                     previewPages={previewPages}
@@ -877,6 +918,7 @@ function AppContent() {
                     selectedPolicy={selectedPolicy}
                     targetJobId={targetJobId}
                     sourceJobId={sourceJobId}
+                    error={fixError}
                   />
                 )}
 
