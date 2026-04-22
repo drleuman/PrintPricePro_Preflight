@@ -86,6 +86,43 @@ export function analyzeWorkflow(
     return analysis;
 }
 
+/**
+ * Parses raw job error payloads into a structured UI-friendly format.
+ * v2.4.170: Preserves technical detail while providing human context.
+ */
+export function getReadableFixFailure(error: any): { title: string; summary: string; detail: string; code: string } {
+    if (!error) {
+        return {
+            title: 'Automatic fix failed',
+            summary: 'The system encountered an unexpected error during correction.',
+            detail: 'No error information provided.',
+            code: 'UNKNOWN_ERROR'
+        };
+    }
+
+    const rawError = typeof error === 'string' ? error : (error.message || error.error || error.details || JSON.stringify(error));
+    const code = error.code || (rawError.includes('[AUTOFIX-ENGINE-ERROR]') ? 'AUTOFIX_ENGINE_FAILURE' : 'FIX_ABORTED');
+
+    let title = 'Automatic fix failed';
+    let summary = 'The PDF processor could not generate a corrected file.';
+    let detail = rawError;
+
+    // Detect common PPOS engine failures
+    if (rawError.includes('Ghostscript could not produce')) {
+        summary = 'Ghostscript could not produce a corrected PDF from this file.';
+    } else if (rawError.includes('circular reference')) {
+        summary = 'The document contains a circular reference in its internal structure.';
+    } else if (rawError.includes('LuaTeX')) {
+        summary = 'The file contains complex LaTeX structures that are incompatible with standard processing.';
+    } else if (rawError.includes('gs -dNOPAUSE')) {
+        summary = 'The core rendering engine failed to process the document layers.';
+    } else if (rawError.includes('AUTOFIX-INPUT-ERROR')) {
+        summary = 'The engine could not find the input file to begin correction.';
+    }
+
+    return { title, summary, detail, code };
+}
+
 
 function humanizeRule(code: string | undefined | null): string | null {
     if (!code) return null;
@@ -266,6 +303,10 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
             id: result.meta.jobId,
             status: payload.status
         });
+    }
+
+    if (!hasTechnicalData && payload.status === 'FAILED') {
+        console.warn('[STEP2][NORMALIZED][FAILED-JOB] Constructing partial result for failed job.');
     }
 
     console.log('[STEP2][NORMALIZED]', result);

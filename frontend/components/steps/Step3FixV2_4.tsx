@@ -203,7 +203,13 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                             <span className="text-amber-500 font-bold shrink-0">[ERR]</span>
                             <span>{error.message || t('step.fix.failureNotice')}</span>
                         </div>
-                        <div className="flex items-start gap-3 mt-2 opacity-50">
+                        {error.detail && (
+                            <div className="mt-3 p-3 bg-black/20 border-l-2 border-amber-500/50 overflow-x-auto custom-scrollbar">
+                                <div className="text-[0.65rem] opacity-70 mb-1 uppercase tracking-tighter font-bold">Technical Detail:</div>
+                                <div className="whitespace-pre-wrap break-all">{error.detail}</div>
+                            </div>
+                        )}
+                        <div className="flex items-start gap-3 mt-4 opacity-50">
                             <span className="shrink-0 font-bold">[TRACE]</span>
                             <span>{error.traceId || t('common.na')}</span>
                         </div>

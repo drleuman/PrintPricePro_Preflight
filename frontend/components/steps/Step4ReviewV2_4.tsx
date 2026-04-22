@@ -163,8 +163,8 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                     <h2 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">{t('step.review.title')}</h2>
                 </div>
                 <StatusBadge 
-                    label={isNoOpFix ? t('step.analysis.ready') : (isReadyForPrint ? (isAutofix ? t('common.verified') : t('common.verified')) : t('issuesFoundMessage'))} 
-                    variant={isNoOpFix ? "certified" : (isReadyForPrint ? "certified" : "warning")} 
+                    label={isNoOpFix ? t('step.analysis.ready') : (isReadyForPrint ? (isAutofix ? t('common.verified') : t('common.verified')) : (isAutofix && !hasEffectiveFix ? t('step.fix.failed').toUpperCase() : t('issuesFoundMessage')))} 
+                    variant={isNoOpFix ? "certified" : (isReadyForPrint ? "certified" : (isAutofix && !hasEffectiveFix ? "warning" : "warning"))} 
                 />
             </div>
 
@@ -408,7 +408,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 </button>
                             </div>
 
-                            {hasFinalArtifact && (
+                            {hasFinalArtifact && hasEffectiveFix && (
                                  <button 
                                     onClick={onDownload}
                                     className="w-full flex items-center justify-center gap-3 py-5 bg-[var(--bg-primary)] border-2 border-[var(--accent-color)] text-[var(--accent-color)] text-[0.8rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-color)] hover:text-white transition-all shadow-[0_10px_30px_rgba(220,0,0,0.1)] group"

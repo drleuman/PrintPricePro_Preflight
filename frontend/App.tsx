@@ -22,7 +22,7 @@ import {
   HeatmapData,
   AppMode,
 } from './types';
-import { normalizePreflightResult, pickCanonicalJobId, analyzeWorkflow, getCanonicalFileName, getBestArtifactKey } from './utils/payloadNormalization';
+import { normalizePreflightResult, pickCanonicalJobId, analyzeWorkflow, getCanonicalFileName, getBestArtifactKey, getReadableFixFailure } from './utils/payloadNormalization';
 import { normalizeDownloadFilename } from './utils/formatters';
 import { usePreflightWorker } from './hooks/usePreflightWorker';
 import { usePdfTools } from './hooks/usePdfTools';
@@ -464,12 +464,20 @@ function AppContent() {
     } catch (err: any) {
       console.error('[APP][FIX-ERROR]', err);
       setLdmActive(false);
+      
+      // v2.4.170: Structured Fix Failure Mapping
+      const readable = getReadableFixFailure(err);
+      
       const errorObj = {
-        code: err.code || 'ENGINE_AUTOFIX_FAILURE',
-        message: err.message || 'AI Magic Fix encountered a terminal error.',
+        code: readable.code,
+        message: readable.summary,
+        detail: readable.detail,
         traceId: err.traceId || 'N/A'
       };
+      
       setFixError(errorObj);
+      setLastPdfUrl(null); // Force clear to prevent stale views
+      
       console.log('[APP][AUTOFIX][TRIGGER-FAILED]', { error: err.message, code: errorObj.code });
       console.log('[APP][STEP3][STATE]', { status: 'FIX_FAILED', error: err.message });
     }

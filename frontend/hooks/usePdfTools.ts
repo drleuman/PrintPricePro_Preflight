@@ -187,11 +187,19 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
                     resolve(job);
                 } else if (['FAILED', 'ERROR'].includes(status)) {
                     clearInterval(interval);
-                    const jobErr = job.error || {};
-                    const throwErr: any = new Error(jobErr.message || 'Job failed at PrintPrice OS');
-                    throwErr.code = jobErr.code || jobErr.errorCode || 'ENGINE_JOB_FAILED';
-                    throwErr.traceId = jobErr.traceId || job.traceId || 'POLL_ERR_CHAIN';
+                    
+                    // v2.4.170: Robust Error Preservation
+                    const jobErr = job.error;
+                    const errorText = typeof jobErr === 'string' ? jobErr : (jobErr?.message || 'Job failed at PrintPrice OS');
+                    const errorCode = typeof jobErr === 'string' ? 'ENGINE_JOB_FAILED' : (jobErr?.code || jobErr?.errorCode || 'ENGINE_JOB_FAILED');
+                    
+                    const throwErr: any = new Error(errorText);
+                    throwErr.code = errorCode;
+                    throwErr.traceId = job.traceId || jobErr?.traceId || 'POLL_ERR_CHAIN';
                     throwErr.v2 = true;
+                    throwErr.raw = job; // Keep full job state for inspection
+                    
+                    console.error('[POLL][FAILED]', { jobId, status, error: errorText, code: errorCode });
                     reject(throwErr);
                 }
 
