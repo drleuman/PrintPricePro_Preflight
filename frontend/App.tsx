@@ -254,13 +254,13 @@ function AppContent() {
         lastPdfUrlRef.current = null;
       }
 
-      // If we are in step 1 (upload), move to correct next step
-      if (currentStep === 1) {
+      // If we are in step 1 (upload) or in AI mode (first run), move to correct next step and save before state
+      if (currentStep === 1 || (appModeRef.current === 'ai' && !autoFixBefore)) {
         setAutoFixBefore(normalized);
         const effectiveMode = appModeRef.current;
-        if (effectiveMode === 'ai') {
+        if (effectiveMode === 'ai' && currentStep === 1) {
           setCurrentStep(3);
-        } else {
+        } else if (currentStep === 1) {
           setCurrentStep(2);
         }
       }
@@ -311,9 +311,8 @@ function AppContent() {
           console.log('[APP][CANONICAL-JOB-ID]', { new: jobId, previous: activeJobIdRef.current });
           activeJobIdRef.current = jobId;
 
-          const bestArtifactKey = analysis.bestArtifactKey;
-
-          console.log('[APP][V2-START][ARTIFACT-RESOLUTION]', { appMode, selected: bestArtifactKey });
+          const bestArtifactKey = getBestArtifactKey(normalized.artifacts);
+          console.log('[APP][V2-START][ARTIFACT-RESOLUTION]', { effectiveMode, selected: bestArtifactKey });
 
           if (bestArtifactKey) {
             getAuthenticatedBlobUrl(jobId, bestArtifactKey).then(bUrl => {
@@ -328,19 +327,16 @@ function AppContent() {
             console.log('[APP][SET-DOWNLOAD-URL][SYNC-FALLBACK]', { url });
             setLastPdfUrl(url);
             lastPdfUrlRef.current = url;
-          } else {
+          }
+        } else {
             console.error('[APP][CRITICAL-SYNC-FAILURE] Success response received but NO canonical jobId found. Certification artifacts will be broken.');
             setLastPdfUrl(null);
             lastPdfUrlRef.current = null;
-          }
-          setLastPdfName(getCanonicalFileName(normalized, file));
-        } else {
-          console.error('[APP][CRITICAL-SYNC-FAILURE] Success response received but NO canonical jobId found. Certification artifacts will be broken.');
-          setLastPdfUrl(null);
-          lastPdfUrlRef.current = null;
         }
+        setLastPdfName(getCanonicalFileName(normalized, file));
 
         if (effectiveMode === 'ai') {
+          setAutoFixBefore(normalized);
           setCurrentStep(3);
         } else {
           setCurrentStep(2);
@@ -435,44 +431,36 @@ function AppContent() {
         if (jobResult.report) setAutoFixReport(jobResult.report);
 
         const normalizedAfter = normalizePreflightResult(jobResult);
-        setAutoFixAfter(normalizedAfter);
         setResult(normalizedAfter);
+        setAutoFixAfter(normalizedAfter);
+
+        // v2.4.190: Direct artifact resolution from normalized result to avoid stale memo lag
+        const bestArtifactKey = getBestArtifactKey(normalizedAfter.artifacts);
 
         console.log('[APP][STEP4][ARTIFACT-RESOLUTION]', {
           jobId: finalJobId,
-          hasCorrectedArtifact: !!(jobResult.artifacts?.final_fixed_pdf || jobResult.artifacts?.certified_pdf)
+          selected: bestArtifactKey,
+          effective: normalizedAfter.meta?.autofix_effective 
         });
 
-        // Final guards for artifact propagation
-        if (finalJobId) {
-          // v2.4.150: Strict AUTOFIX Artifact Resolution (Requirement A)
-          const bestArtifactKey = analysis.bestArtifactKey;
-
-          console.log('[APP][FIX][ARTIFACT-RESOLUTION]', { 
-            appMode, 
-            selected: bestArtifactKey, 
-            effective: normalizedAfter.meta?.autofix_effective 
-          });
-
-          if (bestArtifactKey) {
-            getAuthenticatedBlobUrl(finalJobId, bestArtifactKey).then(bUrl => {
-              if (bUrl) {
-                console.log('[APP][ARTIFACT-URL]', { key: bestArtifactKey, url: bUrl });
-                setLastPdfUrl(bUrl);
-                lastPdfUrlRef.current = bUrl;
-              }
-            }).catch(err => console.error('[APP][FIX-ARTIFACT-ERROR]', err));
-          } else if (file) {
-            const url = URL.createObjectURL(file);
-            console.log('[APP][ARTIFACT-URL][FALLBACK]', { url });
-            setLastPdfUrl(url);
-            lastPdfUrlRef.current = url;
-          } else {
-            setLastPdfUrl(null);
-            lastPdfUrlRef.current = null;
-          }
-          setLastPdfName(getCanonicalFileName(jobResult, file));
+        if (bestArtifactKey) {
+          getAuthenticatedBlobUrl(finalJobId, bestArtifactKey).then(bUrl => {
+            if (bUrl) {
+              console.log('[APP][AUTOFIX][ARTIFACT-RESOLVED]', { jobId: finalJobId, key: bestArtifactKey, url: bUrl });
+              setLastPdfUrl(bUrl);
+              lastPdfUrlRef.current = bUrl;
+            }
+          }).catch(err => console.error('[APP][AUTOFIX][ARTIFACT-ERROR]', err));
+        } else if (file) {
+          const url = URL.createObjectURL(file);
+          console.log('[APP][ARTIFACT-URL][FALLBACK]', { url });
+          setLastPdfUrl(url);
+          lastPdfUrlRef.current = url;
+        } else {
+          setLastPdfUrl(null);
+          lastPdfUrlRef.current = null;
         }
+        setLastPdfName(getCanonicalFileName(jobResult, file));
 
         setCurrentPage(1);
         setCurrentStep(4);
@@ -482,26 +470,16 @@ function AppContent() {
       }
       setLdmActive(false);
     } catch (err: any) {
-      console.error('[APP][FIX-ERROR]', err);
+      console.error('[APP][AUTOFIX-ERROR]', err);
+      setFixError(err);
       setLdmActive(false);
-      
-      // v2.4.170: Structured Fix Failure Mapping
-      const readable = getReadableFixFailure(err);
-      
-      const errorObj = {
-        code: readable.code,
-        message: readable.summary,
-        detail: readable.detail,
-        traceId: err.traceId || 'N/A'
-      };
-      
-      setFixError(errorObj);
+      setLdmStatus('');
       setLastPdfUrl(null); // Force clear to prevent stale views
       
-      console.log('[APP][AUTOFIX][TRIGGER-FAILED]', { error: err.message, code: errorObj.code });
+      console.log('[APP][AUTOFIX][TRIGGER-FAILED]', { error: err.message });
       console.log('[APP][STEP3][STATE]', { status: 'FIX_FAILED', error: err.message });
     }
-  }, [file, result, autoFixBefore, autoFixServer, handleV2JobComplete, getAuthenticatedBlobUrl, selectedPolicy, fileMeta]);
+  }, [file, result, autoFixBefore, autoFixServer, handleV2JobComplete, getAuthenticatedBlobUrl, selectedPolicy, fileMeta, appMode, analysis]);
 
   // v2.4.185: Deterministic AI Auto-Fix Trigger
   useEffect(() => {

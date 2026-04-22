@@ -61,8 +61,6 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
         );
     }
 
-    const hasTriggeredRef = React.useRef(false);
-
     // Tech mapping for "Monolith 2.4" Forensic Terminal
     const getTechStatus = () => {
         if (!isRunning) return null;
@@ -74,19 +72,6 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
     };
 
     const techMessage = getTechStatus();
-
-    // Trace auto-run decisions to catch leak regression
-    useEffect(() => {
-        // Universal auto-run: If we have a file but no result and aren't running yet.
-        // v2.4.122 Hardening: Do not autorun if we already have a terminal engine error
-        const canAutoRun = !!file && !result && !isRunning && !hasTriggeredRef.current && !error;
-        
-        if (canAutoRun) {
-            console.log('[STEP2][AUTORUN-INITIATED]', { file: file?.name });
-            hasTriggeredRef.current = true;
-            onRunAnalysis();
-        }
-    }, [file, result, isRunning, onRunAnalysis, error]);
 
     const {
       issueCount,
