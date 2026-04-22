@@ -61,6 +61,7 @@ interface Step3FixV2_4Props {
     ldmMode?: boolean;
     ldmJobId?: string | null;
     error?: any | null;
+    appMode?: AppMode;
 }
 
 export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
@@ -107,6 +108,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
     ldmMode = false,
     ldmJobId = null,
     error = null,
+    appMode = null,
 }) => {
     const { t } = useTranslation();
     const [aiAuditOpen, setAiAuditOpen] = useState(false);
@@ -267,8 +269,15 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-4 space-y-4">
                         <div className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">{t('step.fix.quickFix')}</div>
                         <div className="grid grid-cols-2 gap-2">
-                            <button onClick={() => onAutoFix({})} className="p-3 border border-[var(--border-color)] hover:border-[var(--accent-color)]/50 hover:bg-[var(--accent-color)]/5 transition-all text-[0.55rem] font-black uppercase tracking-widest flex flex-col items-center gap-2 text-[var(--text-primary)]">
-                                <SparklesIcon className="h-4 w-4 text-[var(--accent-color)]" />
+                            <button 
+                                onClick={() => onAutoFix({})} 
+                                className={`p-3 border transition-all text-[0.55rem] font-black uppercase tracking-widest flex flex-col items-center gap-2 ${
+                                    appMode === 'ai' 
+                                    ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10 shadow-[0_0_15px_rgba(220,0,0,0.1)]' 
+                                    : 'border-[var(--border-color)] hover:border-[var(--accent-color)]/50 hover:bg-[var(--accent-color)]/5 text-[var(--text-primary)]'
+                                }`}
+                            >
+                                <SparklesIcon className={`h-4 w-4 ${appMode === 'ai' ? 'text-[var(--accent-color)] animate-pulse' : 'text-[var(--accent-color)]'}`} />
                                 {t('step.fix.aiMagicBtn')}
                             </button>
                             <button onClick={onConvertCMYK} className="p-3 border border-[var(--border-color)] hover:border-[var(--accent-color)]/30 transition-all text-[0.55rem] font-black uppercase tracking-widest flex flex-col items-center gap-2 text-[var(--text-primary)]">

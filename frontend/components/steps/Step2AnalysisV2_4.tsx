@@ -40,6 +40,7 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
     error,
 }) => {
     const { t } = useTranslation();
+    if (appMode === 'ai') return null;
 
     const hasTriggeredRef = React.useRef(false);
 

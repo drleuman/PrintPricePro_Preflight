@@ -245,10 +245,16 @@ function AppContent() {
         lastPdfUrlRef.current = null;
       }
 
-      // If we are in step 1 (upload), move to step 2 (results)
+      // If we are in step 1 (upload), move to correct next step
       if (currentStep === 1) {
         setAutoFixBefore(normalized);
-        setCurrentStep(2);
+        if (appMode === 'ai') {
+          setCurrentStep(3);
+          // v2.4.170: Auto-trigger fix for fast-path AI mode
+          setTimeout(() => handleAutoFix({}), 100);
+        } else {
+          setCurrentStep(2);
+        }
       }
 
       setLdmActive(false);
@@ -325,7 +331,13 @@ function AppContent() {
           lastPdfUrlRef.current = null;
         }
 
-        setCurrentStep(2);
+        if (appMode === 'ai') {
+          setCurrentStep(3);
+          setTimeout(() => handleAutoFix({}), 100);
+        } else {
+          setCurrentStep(2);
+        }
+        
         setLdmActive(false);
         return;
       }
@@ -729,7 +741,12 @@ function AppContent() {
                     onNext={(mode) => {
                       setAppMode(mode);
                       resetResidues(); // Clear previous residues
-                      setCurrentStep(2); // Ensure we go to Analysis (Step 2)
+                      
+                      if (mode === 'ai') {
+                        setCurrentStep(3);
+                      } else {
+                        setCurrentStep(2);
+                      }
 
                       console.log('[APP][ANALYSIS-INGRESS]', {
                         mode,
@@ -779,6 +796,7 @@ function AppContent() {
                     fileMeta={fileMeta}
                     result={result}
                     analysis={analysis}
+                    appMode={appMode}
                     autoFixBefore={autoFixBefore}
                     autoFixAfter={autoFixAfter}
                     autoFixReport={autoFixReport}
