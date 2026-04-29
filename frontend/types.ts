@@ -116,6 +116,8 @@ export interface Issue {
   payload?: any;
   evidence?: any; // V2
   fixable?: boolean;
+  repairStrategy?: string; // V2
+  fix_method?: string; // V2
   raw?: any;
   fix?: {
     available: boolean;

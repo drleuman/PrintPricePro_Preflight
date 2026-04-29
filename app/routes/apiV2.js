@@ -540,10 +540,35 @@ router.post('/:jobId/actions/fix', async (req, res) => {
           Authorization: authHeaders.Authorization,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          policy: req.body?.policy || 'OFFSET_MODERN_COATED',
-          options: req.body?.options || {}
-        })
+        body: (() => {
+          const options = req.body?.options || {};
+          const requestedFixes = options.requestedFixes || [];
+          
+          let type = options.type;
+          let strategy = options.strategy;
+          let repairStrategy = options.repairStrategy;
+          
+          const hasTrimBox = requestedFixes.some(f => f.repairStrategy === 'REBUILD_TRIMBOX');
+          if (hasTrimBox) {
+              const existingImportant = ['RGB→CMYK', 'BLEED', 'FLATTEN_PDF'].includes(strategy) || 
+                                        ['RGB→CMYK', 'BLEED', 'FLATTEN_PDF'].includes(repairStrategy);
+              if (!existingImportant) {
+                  type = 'geometry';
+                  strategy = 'REBUILD_TRIMBOX';
+                  repairStrategy = 'REBUILD_TRIMBOX';
+              }
+          }
+
+          return JSON.stringify({
+            policy: req.body?.policy || 'OFFSET_MODERN_COATED',
+            options: {
+                ...options,
+                type,
+                strategy,
+                repairStrategy
+            }
+          });
+        })()
       }
     );
 

@@ -120,6 +120,8 @@ export const es = {
   convertToCMYK: '🎨 Convertir a CMYK',
   convertToGrayscaleBtn: '⚫ Convertir a Escala de Grises',
   rebuildHighRes300dpi: '🛠️ Reconstruir Alta Resolución (300 DPI)',
+  rebuildTrimBox: 'Reconstruir TrimBox',
+  rebuildTrimBoxDesc: 'Crea una TrimBox válida desde la geometría de página.',
   converting: 'Convirtiendo...',
   fixing: 'Corrigiendo...',
 

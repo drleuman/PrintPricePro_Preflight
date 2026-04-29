@@ -4,7 +4,7 @@ import { PreflightResult, Issue, Severity, WorkflowAnalysis, AppMode } from '../
  * deterministic status flags for UI components.
  */
 
-const RANKED_ARTIFACT_KEYS = ['final_fixed_pdf', 'fixed_pdf', 'certified_pdf'];
+const RANKED_ARTIFACT_KEYS = ['final_fixed_pdf', 'fixed_pdf', 'normalized_pdf', 'certified_pdf'];
 
 export function getBestArtifactKey(artifacts: Record<string, string> | undefined | null): string | null {
     if (!artifacts) return null;
@@ -12,6 +12,22 @@ export function getBestArtifactKey(artifacts: Record<string, string> | undefined
         if (artifacts[key]) return key;
     }
     return null;
+}
+
+export function isTrimBoxIssue(issue: any): boolean {
+    if (!issue) return false;
+    const codes = ['TRIMBOX_MISSING', 'TRIM_BOX_ANOMALY', 'IND_GEOM_003', 'IND_TRIM', 'GEOM_TRIMBOX_MISSING'];
+    const id = (issue.id || '').toString().toUpperCase();
+    const code = (issue.code || '').toString().toUpperCase();
+    const type = (issue.type || '').toString().toUpperCase();
+    
+    if (codes.includes(id) || codes.includes(code) || codes.includes(type)) return true;
+    
+    const title = (issue.title || '').toString().toLowerCase();
+    const message = (issue.message || '').toString().toLowerCase();
+    const desc = (issue.description || '').toString().toLowerCase();
+
+    return [title, message, desc].some(t => t.includes('trim box') || t.includes('trimbox'));
 }
 
 export function analyzeWorkflow(
@@ -44,14 +60,14 @@ export function analyzeWorkflow(
     // Autofix specific truth
     // If engine explicitly says no changes, or if we are in autofix but issues are still 0 (and was already 0?)
     // Actually, Step 4 logic uses: isNoOpFix = isAutofix && !hasViolations;
-    const isNoOpFix = isAutofix && (meta.no_effective_changes === true || (isCompliant && !meta.autofix_effective));
+    const isNoOpFix = isAutofix && (meta.no_effective_changes === true || (isCompliant && !meta.autofix_effective && !hasFixedArtifact));
     const isRealFix = isAutofix && !isNoOpFix;
 
     const bestArtifactKey = getBestArtifactKey(artifacts);
     const hasFinalArtifact = !!bestArtifactKey;
 
     const hasCertified = !!artifacts.certified_pdf;
-    const hasFixedArtifact = !!(artifacts.fixed_pdf || artifacts.final_fixed_pdf);
+    const hasFixedArtifact = !!(artifacts.fixed_pdf || artifacts.final_fixed_pdf || artifacts.normalized_pdf);
 
     const hasEffectiveFix = hasFinalArtifact && (isAutofix ? (isRealFix || isNoOpFix) : true);
 
@@ -248,8 +264,9 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
 
         const hRule = humanizeRule(item.rule || item.code || item.id);
         const hDesc = humanizeDescription(item.rule || item.code || item.id);
+        const isTrimBox = isTrimBoxIssue(item);
 
-        const normalized = {
+        const normalized: Issue = {
             ...item,
             id: item.id || item.uuid || item.code || item.rule || `finding-${idx}`,
             title: item.title || item.summary || hRule || item.rule || item.code || (item.id && !item.id.includes('finding-') ? item.id : null) || (item.message !== 'Technical preflight finding' ? item.message : null) || 'Technical preflight finding',
@@ -257,9 +274,11 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
             description: item.description || item.details || item.explanation || hDesc || item.summary || '',
             recommendation: item.recommendation || item.suggested_fix || item.fixText || item.hint || '',
             severity: mapSeverity(item.severity || item.level || 'warning'),
-            category: (item.category || item.type || 'General').toString().toUpperCase(),
+            category: isTrimBox ? 'GEOMETRY' : (item.category || item.type || 'General').toString().toUpperCase(),
             page: item.page ?? item.pageNumber ?? item.metadata?.page ?? null,
-            fixable: !!(item.fixable || item.fixAvailable || item.fix?.available || item.isFixable),
+            fixable: isTrimBox ? true : !!(item.fixable || item.fixAvailable || item.fix?.available || item.isFixable),
+            repairStrategy: isTrimBox ? "REBUILD_TRIMBOX" : item.repairStrategy,
+            fix_method: isTrimBox ? "REBUILD_TRIMBOX" : item.fix_method,
             raw: item // Keep for debugging
         };
 

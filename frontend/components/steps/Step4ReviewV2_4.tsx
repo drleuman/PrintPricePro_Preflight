@@ -140,7 +140,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     
     // Canonical calculation of issues and fixes
     const issuesFound = analysis.issueCount;
-    const fixesApplied = result?.fixes?.length || 0;
+    const fixesApplied = result?.fixes?.length || (result as any)?.repairs?.length || (isRealFix ? 1 : 0);
     const readableError = error ? getReadableFixFailure(error) : null;
 
     const isReadyForPrint = analysis.issueCount === 0;

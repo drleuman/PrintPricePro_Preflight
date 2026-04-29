@@ -270,7 +270,23 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                         <div className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">{t('step.fix.quickFix')}</div>
                         <div className="grid grid-cols-2 gap-2">
                             <button 
-                                onClick={() => onAutoFix({})} 
+                                onClick={() => {
+                                    const trimBoxIssue = issues.find(i => i.repairStrategy === 'REBUILD_TRIMBOX' || i.fix_method === 'REBUILD_TRIMBOX');
+                                    onAutoFix({
+                                        options: {
+                                            selectedIssueCode: selectedIssue?.id,
+                                            repairStrategy: selectedIssue?.repairStrategy || selectedIssue?.fix_method || null,
+                                            issueCodes: issues.map(i => i.id),
+                                            requestedFixes: issues
+                                                .filter(i => i.fixable)
+                                                .map(i => ({
+                                                    id: i.id,
+                                                    repairStrategy: i.repairStrategy || i.fix_method || null
+                                                })),
+                                            ...(trimBoxIssue ? { type: "geometry", strategy: "REBUILD_TRIMBOX" } : {})
+                                        }
+                                    });
+                                }}
                                 className={`p-3 border transition-all text-[0.55rem] font-black uppercase tracking-widest flex flex-col items-center gap-2 ${
                                     appMode === 'ai' 
                                     ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10 shadow-[0_0_15px_rgba(220,0,0,0.1)]' 
