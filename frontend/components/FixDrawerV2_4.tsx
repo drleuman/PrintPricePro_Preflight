@@ -192,6 +192,64 @@ export const FixDrawerV2_4: React.FC<Props> = ({
             </div>
         </div>
 
+        {/* Compliance & Risk (Minimal Intervention V2.5) */}
+        <div className="p-5 border border-[var(--border-color)] bg-[var(--bg-tertiary)]/10 space-y-4">
+            <div className="flex items-center justify-between">
+                <span className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">{t('inspector.riskLevel')}</span>
+                <div className="flex items-center gap-2">
+                    <StatusBadge 
+                        label={t(`inspector.risk${issue.destructiveFixRisk ? issue.destructiveFixRisk.charAt(0) + issue.destructiveFixRisk.slice(1).toLowerCase() : 'Low'}`)} 
+                        variant={issue.destructiveFixRisk === 'HIGH' ? 'warning' : issue.destructiveFixRisk === 'MEDIUM' ? 'default' : 'certified'} 
+                    />
+                </div>
+            </div>
+
+            {issue.confidence !== undefined && (
+                <div className="flex items-center justify-between">
+                    <span className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">{t('inspector.confidence')}</span>
+                    <span className="text-[0.75rem] font-mono font-bold text-[var(--text-primary)]">
+                        {(issue.confidence * 100).toFixed(0)}%
+                    </span>
+                </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-[var(--border-color)]/30">
+                <div className="flex flex-col gap-1">
+                    <span className="text-[0.55rem] font-black uppercase tracking-widest text-[var(--text-muted)]">{t('inspector.fixRequired')}</span>
+                    <span className="text-[0.7rem] font-bold text-[var(--text-primary)]">
+                        {issue.fixRequired ? t('inspector.isFixableYes') : t('inspector.isFixableNo')}
+                    </span>
+                </div>
+                <div className="flex flex-col gap-1 text-right">
+                    <span className="text-[0.55rem] font-black uppercase tracking-widest text-[var(--text-muted)]">{t('inspector.safeToAutofix')}</span>
+                    <span className={`text-[0.7rem] font-bold ${issue.safeToAutofix ? 'text-green-500' : 'text-amber-500'}`}>
+                        {issue.safeToAutofix ? t('inspector.isFixableYes') : t('inspector.isFixableNo')}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        {/* Technical Rationale */}
+        {(issue.raw?.original_state || issue.raw?.applied_repair) && (
+            <div className="space-y-3">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">{t('inspector.whyNeeded')}</div>
+                <div className="bg-black/20 p-4 font-mono text-[0.65rem] space-y-3 border-l-2 border-[var(--border-color)]">
+                    {issue.raw?.original_state && (
+                        <div>
+                            <div className="text-[var(--text-muted)] mb-1 uppercase tracking-tighter opacity-50">{t('inspector.originalState')}</div>
+                            <div className="text-[var(--text-secondary)]">{issue.raw.original_state}</div>
+                        </div>
+                    )}
+                    {issue.raw?.applied_repair && (
+                        <div>
+                            <div className="text-[var(--accent-color)] mb-1 uppercase tracking-tighter opacity-70">{t('inspector.appliedRepair')}</div>
+                            <div className="text-[var(--text-primary)]">{issue.raw.applied_repair}</div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        )}
+
         {/* AI Forensic Support */}
         <div className="space-y-4">
             <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)]">{t('inspector.aiHyperAssist')}</div>

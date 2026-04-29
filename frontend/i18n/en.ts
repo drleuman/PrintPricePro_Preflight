@@ -784,6 +784,20 @@ export const en = {
   'step.review.defaultPolicy': 'FOGRA51 / ISO_COATED',
   'step.review.pendingId': 'PPOS_INTERNAL_PENDING',
   'step.review.defaultOversight': 'DEFAULT_OVERSIGHT',
+  'step.review.banners.noStructuralChangesTitle': 'No structural changes required',
+  'step.review.banners.noStructuralChangesDesc': 'Document already complied with geometry requirements.',
+  'step.review.certification.withoutModification': 'CERTIFIED WITHOUT MODIFICATION',
+  'inspector.riskLevel': 'Rewrite Risk',
+  'inspector.riskLow': 'LOW',
+  'inspector.riskMedium': 'MEDIUM',
+  'inspector.riskHigh': 'HIGH',
+  'inspector.fixRequired': 'Fix Required',
+  'inspector.safeToAutofix': 'Safe to Autofix',
+  'inspector.confidence': 'Detection Confidence',
+  'inspector.rewriteOccurred': 'Binary Rewrite',
+  'inspector.whyNeeded': 'Rationale',
+  'inspector.originalState': 'Original State',
+  'inspector.appliedRepair': 'Applied Repair',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

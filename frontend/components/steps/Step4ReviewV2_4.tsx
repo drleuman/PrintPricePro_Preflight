@@ -172,8 +172,22 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                     <h2 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">{t('step.review.title')}</h2>
                 </div>
                 <StatusBadge 
-                    label={isNoOpFix ? t('step.analysis.ready') : (isReadyForPrint ? (isAutofix ? t('common.verified') : t('common.verified')) : (isAutofix && !hasEffectiveFix ? t('step.fix.failed').toUpperCase() : t('issuesFoundMessage')))} 
-                    variant={isNoOpFix ? "certified" : (isReadyForPrint ? "certified" : (isAutofix && !hasEffectiveFix ? "warning" : "warning"))} 
+                    label={
+                        analysis.certificationMode 
+                            ? t('step.review.certification.withoutModification') 
+                            : (isNoOpFix 
+                                ? t('step.review.banners.compliantTitle') 
+                                : (isReadyForPrint 
+                                    ? t('common.verified') 
+                                    : (isAutofix && !hasEffectiveFix 
+                                        ? t('step.fix.failed').toUpperCase() 
+                                        : t('issuesFoundMessage'))))
+                    } 
+                    variant={
+                        analysis.certificationMode || isNoOpFix || isReadyForPrint 
+                            ? "certified" 
+                            : (isAutofix && !hasEffectiveFix ? "warning" : "warning")
+                    } 
                 />
             </div>
 

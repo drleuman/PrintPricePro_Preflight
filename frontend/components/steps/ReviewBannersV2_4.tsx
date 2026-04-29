@@ -26,14 +26,20 @@ export const ReviewBanners: React.FC<ReviewBannersProps> = ({
 
     return (
         <div className="space-y-6">
-            {isNoOpFix && (
+            {(isNoOpFix || analysis.certificationMode) && (
                 <div className="border-2 border-emerald-500/20 bg-emerald-500/5 p-8 space-y-4 animate-in zoom-in-95 duration-500">
                     <div className="flex items-center gap-3 text-emerald-500">
                         <ShieldCheckIcon className="h-8 w-8" />
-                        <h2 className="text-xl font-black uppercase tracking-tight">{t('step.review.banners.compliantTitle')}</h2>
+                        <h2 className="text-xl font-black uppercase tracking-tight">
+                            {analysis.certificationMode 
+                                ? t('step.review.certification.withoutModification')
+                                : t('step.review.banners.noStructuralChangesTitle')}
+                        </h2>
                     </div>
                     <p className="text-[var(--text-secondary)] text-[0.85rem] leading-relaxed max-w-xl">
-                        {t('step.review.banners.compliantDesc')}
+                        {analysis.certificationMode
+                            ? t('step.review.banners.noIssues')
+                            : t('step.review.banners.noStructuralChangesDesc')}
                     </p>
                     {hasCertified && (
                         <button 

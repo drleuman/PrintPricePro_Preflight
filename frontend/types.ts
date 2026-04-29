@@ -116,6 +116,10 @@ export interface Issue {
   payload?: any;
   evidence?: any; // V2
   fixable?: boolean;
+  fixRequired?: boolean; // V2.5 Minimal Intervention
+  safeToAutofix?: boolean; // V2.5 Minimal Intervention
+  confidence?: number; // 0.0 - 1.0 (V2.5)
+  destructiveFixRisk?: 'LOW' | 'MEDIUM' | 'HIGH'; // V2.5
   repairStrategy?: string; // V2
   fix_method?: string; // V2
   raw?: any;
@@ -158,6 +162,9 @@ export interface PreflightResult {
     primary_artifact_type?: string;
     autofix_effective?: boolean;
     no_effective_changes?: boolean;
+    noopFix?: boolean; // V2.5
+    rewritten?: boolean; // V2.5
+    certificationMode?: string; // V2.5 e.g. "CERTIFIED_WITHOUT_MODIFICATION"
   };
   productionReport?: {
     spine?: any;
@@ -191,7 +198,7 @@ export interface WorkflowAnalysis {
   hasErrors: boolean;
   isCompliant: boolean;
   isFixed: boolean;
-  isNoOpFix: boolean;
+  isNoOpFix: boolean; // Computed or from meta.noopFix
   isRealFix: boolean;
   isDegraded: boolean;
   analysisFailed: boolean;
@@ -200,6 +207,8 @@ export interface WorkflowAnalysis {
   showComparison: boolean;
   bestArtifactKey: string | null;
   hasEffectiveFix: boolean;
+  rewritten: boolean; // V2.5
+  certificationMode: string | null; // V2.5
 }
 
 /**

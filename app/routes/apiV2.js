@@ -543,16 +543,17 @@ router.post('/:jobId/actions/fix', async (req, res) => {
         body: (() => {
           const options = req.body?.options || {};
           const requestedFixes = options.requestedFixes || [];
-          
-          let type = options.type;
-          let strategy = options.strategy;
-          let repairStrategy = options.repairStrategy;
+          let { type, strategy, repairStrategy } = options;
           
           const hasTrimBox = requestedFixes.some(f => f.repairStrategy === 'REBUILD_TRIMBOX');
           if (hasTrimBox) {
-              const existingImportant = ['RGB→CMYK', 'BLEED', 'FLATTEN_PDF'].includes(strategy) || 
-                                        ['RGB→CMYK', 'BLEED', 'FLATTEN_PDF'].includes(repairStrategy);
-              if (!existingImportant) {
+              const hasStructuralFix = requestedFixes.some(f => 
+                  ['RGB→CMYK', 'BLEED', 'FLATTEN_PDF', 'REBUILD', 'CONVERT_GRAYSCALE'].includes(f.repairStrategy)
+              );
+              
+              // Only promote to primary if it's the only meaningful fix requested
+              // or if the frontend hasn't explicitly set a primary strategy yet
+              if (!hasStructuralFix && !strategy) {
                   type = 'geometry';
                   strategy = 'REBUILD_TRIMBOX';
                   repairStrategy = 'REBUILD_TRIMBOX';

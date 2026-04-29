@@ -78,11 +78,18 @@ export function analyzeWorkflow(
 
     // 3. Derived autofix states (strict ordering)
     const isRealFix = isAutofix && (hasRepairMetadata || hasFixedArtifact);
-    const isNoOpFix = isAutofix && (meta.no_effective_changes === true || (isCompliant && !meta.autofix_effective && !hasFixedArtifact));
+    
+    // Check multiple flags for NOOP to gracefully handle evolving API schemas
+    const explicitNoOp = meta.noopFix === true || meta.no_effective_changes === true || meta.certificationMode === 'CERTIFIED_WITHOUT_MODIFICATION';
+    const implicitNoOp = isCompliant && !meta.autofix_effective && !hasFixedArtifact;
+    const isNoOpFix = isAutofix && (explicitNoOp || implicitNoOp);
 
     const hasEffectiveFix = hasFinalArtifact && (isAutofix ? (isRealFix || isNoOpFix) : true);
 
-    const showComparison = isAutofix && isRealFix && hasFinalArtifact;
+    const showComparison = isAutofix && isRealFix && hasFinalArtifact && !isNoOpFix;
+
+    const rewritten = meta.rewritten === true || (!explicitNoOp && hasFixedArtifact);
+    const certificationMode = meta.certificationMode || (explicitNoOp ? 'CERTIFIED_WITHOUT_MODIFICATION' : null);
 
     const analysis: WorkflowAnalysis = {
         isAutofix,
@@ -103,7 +110,9 @@ export function analyzeWorkflow(
         hasFixedArtifact,
         showComparison,
         bestArtifactKey,
-        hasEffectiveFix
+        hasEffectiveFix,
+        rewritten,
+        certificationMode
     };
 
     if (hasResult) {
@@ -288,6 +297,10 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
             category: isTrimBox ? 'GEOMETRY' : (item.category || item.type || 'General').toString().toUpperCase(),
             page: item.page ?? item.pageNumber ?? item.metadata?.page ?? null,
             fixable: isTrimBox ? true : !!(item.fixable || item.fixAvailable || item.fix?.available || item.isFixable),
+            fixRequired: item.fixRequired ?? undefined,
+            safeToAutofix: item.safeToAutofix ?? undefined,
+            confidence: item.confidence ?? undefined,
+            destructiveFixRisk: item.destructiveFixRisk ?? undefined,
             repairStrategy: isTrimBox ? "REBUILD_TRIMBOX" : item.repairStrategy,
             fix_method: isTrimBox ? "REBUILD_TRIMBOX" : item.fix_method,
             raw: item // Keep for debugging
@@ -317,7 +330,12 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
             fileName: payload.meta?.fileName ?? payload.report?.meta?.fileName ?? payload.filename ?? 'unknown',
             fileSize: payload.meta?.fileSize ?? payload.report?.meta?.fileSize ?? payload.size ?? 0,
             pageCount: pageCount ?? 0,
-            jobId: pickCanonicalJobId(payload.jobId, payload.job_id, payload.meta?.jobId, payload.id) || 'unknown'
+            jobId: pickCanonicalJobId(payload.jobId, payload.job_id, payload.meta?.jobId, payload.id) || 'unknown',
+            noopFix: payload.meta?.noopFix ?? payload.noopFix ?? undefined,
+            rewritten: payload.meta?.rewritten ?? payload.rewritten ?? undefined,
+            certificationMode: payload.meta?.certificationMode ?? payload.certificationMode ?? undefined,
+            autofix_effective: payload.meta?.autofix_effective ?? payload.autofix_effective ?? undefined,
+            no_effective_changes: payload.meta?.no_effective_changes ?? payload.no_effective_changes ?? undefined
         }
     };
 
