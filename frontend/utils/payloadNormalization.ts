@@ -57,21 +57,32 @@ export function analyzeWorkflow(
 
     const isCompliant = hasResult && !analysisFailed && issueCount === 0;
 
-    // Autofix specific truth
-    // If engine explicitly says no changes, or if we are in autofix but issues are still 0 (and was already 0?)
-    // Actually, Step 4 logic uses: isNoOpFix = isAutofix && !hasViolations;
-    const isNoOpFix = isAutofix && (meta.no_effective_changes === true || (isCompliant && !meta.autofix_effective && !hasFixedArtifact));
-    const isRealFix = isAutofix && !isNoOpFix;
+    // 1. Extract raw repair metadata robustly
+    const reportRepairs = Array.isArray((result as any)?.report?.repairs) ? (result as any).report.repairs : [];
+    const resultRepairs = Array.isArray((result as any)?.repairs) ? (result as any).repairs : [];
+    const fixes = Array.isArray(result?.fixes) ? result.fixes : [];
+    
+    const allRepairs = [...reportRepairs, ...resultRepairs, ...fixes];
+    const hasRepairMetadata = allRepairs.length > 0;
 
+    // 2. Resolve artifacts
     const bestArtifactKey = getBestArtifactKey(artifacts);
     const hasFinalArtifact = !!bestArtifactKey;
-
     const hasCertified = !!artifacts.certified_pdf;
-    const hasFixedArtifact = !!(artifacts.fixed_pdf || artifacts.final_fixed_pdf || artifacts.normalized_pdf);
+    
+    const hasFixedArtifact = !!(
+        artifacts.fixed_pdf || 
+        artifacts.final_fixed_pdf || 
+        artifacts.normalized_pdf
+    );
+
+    // 3. Derived autofix states (strict ordering)
+    const isRealFix = isAutofix && (hasRepairMetadata || hasFixedArtifact);
+    const isNoOpFix = isAutofix && (meta.no_effective_changes === true || (isCompliant && !meta.autofix_effective && !hasFixedArtifact));
 
     const hasEffectiveFix = hasFinalArtifact && (isAutofix ? (isRealFix || isNoOpFix) : true);
 
-    const showComparison = isAutofix && isRealFix;
+    const showComparison = isAutofix && isRealFix && hasFinalArtifact;
 
     const analysis: WorkflowAnalysis = {
         isAutofix,
