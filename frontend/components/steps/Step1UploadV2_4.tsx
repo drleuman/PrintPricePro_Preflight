@@ -145,7 +145,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={onDrop}
-                    className={`group relative flex flex-col items-center justify-center border-2 border-dashed transition-all duration-700 cursor-pointer min-h-[300px] md:min-h-[500px] w-full lg:flex-[1.2] ${
+                    className={`group relative flex flex-col items-center justify-center border-2 border-dashed transition-all duration-700 cursor-pointer min-h-[300px] md:min-h-[500px] w-full lg:flex-[1.2] min-w-0 overflow-hidden ${
                         isDragging ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5 shadow-[0_0_40px_rgba(220,0,0,0.1)] scale-[1.01]' : 
                         file ? 'border-[var(--border-color)] bg-[var(--hover-bg)]' : 'border-[var(--border-color)] hover:border-[var(--accent-color)]/30 hover:bg-[var(--hover-bg)]'
                     }`}
@@ -164,7 +164,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                     )}
 
                     {file ? (
-                        <div className="flex flex-col items-center text-center p-10 animate-in zoom-in-95 duration-500">
+                        <div className="flex flex-col items-center text-center p-10 animate-in zoom-in-95 duration-500 w-full">
                             <div className="h-24 w-20 bg-[var(--accent-color)] mb-8 flex items-center justify-center relative shadow-[0_0_40px_rgba(220,0,0,0.4)]">
                                 <DocumentCheckIcon className="h-12 w-12 text-white" />
                                 <div className="absolute -bottom-3 -right-3 h-8 w-8 bg-[var(--bg-primary)] flex items-center justify-center border-4 border-[var(--bg-primary)]">
@@ -172,7 +172,7 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                                 </div>
                             </div>
                             <div className="mb-2 text-[0.8rem] font-black text-[var(--accent-color)] uppercase tracking-[0.3em]">{t('selectedLabel')}</div>
-                            <h3 className="text-2xl font-black mb-2 max-w-full truncate px-4">{fileMeta?.name || file.name}</h3>
+                            <h3 className="text-2xl font-black mb-2 w-full truncate px-4" title={fileMeta?.name || file.name}>{fileMeta?.name || file.name}</h3>
                             <div className="text-[0.85rem] font-mono text-[var(--text-muted)] uppercase tracking-widest flex flex-wrap justify-center items-center gap-3">
                                 <span>{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
                                 <span className="h-1 w-1 bg-[var(--border-color)] rounded-full" />
