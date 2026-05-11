@@ -23,6 +23,7 @@ import {
   AppMode,
 } from './types';
 import { normalizePreflightResult, pickCanonicalJobId, analyzeWorkflow, getCanonicalFileName, getBestArtifactKey, getReadableFixFailure } from './utils/payloadNormalization';
+import { useAiMagicFix } from './hooks/useAiMagicFix';
 import { normalizeDownloadFilename } from './utils/formatters';
 import { usePreflightWorker } from './hooks/usePreflightWorker';
 import { usePdfTools } from './hooks/usePdfTools';
@@ -66,13 +67,8 @@ function AppContent() {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
 
   // ---------- AutoFix Pro Session ----------
-  const [autoFixBefore, setAutoFixBefore] = useState<PreflightResult | null>(null);
-  const [autoFixAfter, setAutoFixAfter] = useState<PreflightResult | null>(null);
-  const [autoFixReport, setAutoFixReport] = useState<any | null>(null);
-  const [fixError, setFixError] = useState<any | null>(null);
-  const [autoFixRunId, setAutoFixRunId] = useState<number | null>(null);
+  // AI-specific fix state lives in useAiMagicFix — wired up after usePdfTools below
   const [sourceJobId, setSourceJobId] = useState<string | null>(null);
-  const [targetJobId, setTargetJobId] = useState<string | null>(null);
   const [compareEnabled, setCompareEnabled] = useState(false);
 
   // Visual QA State
@@ -103,9 +99,6 @@ function AppContent() {
     v2?: boolean;
   } | null>(null);
 
-  // v2.4.185: Deterministic Auto-Trigger Guard
-  const hasAutoTriggeredFixRef = useRef<string | null>(null);
-
   // UI / Loader
   const lastPdfUrlRef = useRef<string | null>(null);
   const [lastPdfUrl, setLastPdfUrl] = useState<string | null>(null);
@@ -116,11 +109,6 @@ function AppContent() {
   const { isAuthenticated } = useAuth();
 
   const activeJobIdRef = useRef<string | null>(null);
-
-  const analysis = React.useMemo(() => 
-    analyzeWorkflow(result, engineError || fixError, appMode), 
-    [result, engineError, fixError, appMode]
-  );
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -142,24 +130,7 @@ function AppContent() {
 
   // ---------- Helpers ----------
 
-  const resetResidues = useCallback(() => {
-    activeJobIdRef.current = null;
-    setResult(null);
-    setSelectedIssue(null);
-    setHeatmapData(null);
-    setHeatmapLoading(false);
-    setAutoFixBefore(null);
-    setAutoFixAfter(null);
-    setAutoFixReport(null);
-    setAutoFixRunId(null);
-    setTargetJobId(null);
-    setSourceJobId(null);
-    setLdmStatus('');
-    setEngineError(null);
-    setFixError(null);
-    hasAutoTriggeredFixRef.current = null;
-    // Note: file and fileMeta are generally kept
-  }, []);
+  // resetResidues defined after useAiMagicFix — see below
 
   const cleanupUrl = useCallback(() => {
     if (lastPdfUrlRef.current) {
@@ -211,14 +182,12 @@ function AppContent() {
 
       // v2.4.112: Resilient Artifact Selection (Analysis-Only Support)
       if (completedJobId) {
-          // Selection Logic (Requirement 2 & 3)
-          const artifacts = normalized.artifacts || {};
-          const bestArtifactKey = analysis.bestArtifactKey;
+          const bestArtifactKey = getBestArtifactKey(normalized.artifacts);
 
-          console.log('[APP][FORENSIC-LIFECYCLE]', { 
+          console.log('[APP][FORENSIC-LIFECYCLE]', {
             step: currentStep,
             jobId: completedJobId,
-            compliant: analysis.isCompliant,
+            compliant: !normalized.hasIssues,
             artifactFound: !!bestArtifactKey,
             fixes: normalized.fixes?.length || 0
           });
@@ -246,7 +215,6 @@ function AppContent() {
             lastPdfUrlRef.current = null;
           }
 
-
         setLastPdfName(getCanonicalFileName(normalized, file));
       } else {
         console.warn('[APP][SKIP-ARTIFACT-URL] No jobId found for artifact registration');
@@ -254,13 +222,12 @@ function AppContent() {
         lastPdfUrlRef.current = null;
       }
 
-      // If we are in step 1 (upload) or in AI mode (first run), move to correct next step and save before state
-      if (currentStep === 1 || (appModeRef.current === 'ai' && !autoFixBefore)) {
-        setAutoFixBefore(normalized);
+      // Route to correct next step after analysis completes from Step 1
+      if (currentStep === 1) {
         const effectiveMode = appModeRef.current;
-        if (effectiveMode === 'ai' && currentStep === 1) {
+        if (effectiveMode === 'ai') {
           setCurrentStep(3);
-        } else if (currentStep === 1) {
+        } else {
           setCurrentStep(2);
         }
       }
@@ -268,6 +235,65 @@ function AppContent() {
       setLdmActive(false);
     }
   });
+
+  // ---------- AI Magic Fix — isolated from Diagnostic Mode ----------
+  const {
+    autoFixBefore,
+    autoFixAfter,
+    autoFixReport,
+    fixError,
+    targetJobId,
+    autoFixRunId,
+    triggerAutoFix,
+    resetAiFix,
+    setAutoFixBefore,
+  } = useAiMagicFix({
+    file,
+    fileMeta,
+    appMode,
+    currentStep,
+    result,
+    activeJobIdRef,
+    autoFixServer,
+    handleV2JobComplete,
+    getAuthenticatedBlobUrl,
+    selectedPolicy,
+    ldmActive,
+    ldmStatus,
+    setLdmActive,
+    setLdmStatus,
+    setLdmProgress,
+    setCurrentStep,
+    setCurrentPage,
+    setResult,
+    setLastPdfUrl,
+    lastPdfUrlRef,
+    setLastPdfName,
+  });
+
+  // Persist autoFixBefore whenever a fresh ANALYZE result arrives (covers async path)
+  useEffect(() => {
+    if (result && result.type === 'ANALYZE' && !autoFixBefore) {
+      setAutoFixBefore(result);
+    }
+  }, [result]);
+
+  const analysis = React.useMemo(() =>
+    analyzeWorkflow(result, engineError || fixError, appMode),
+    [result, engineError, fixError, appMode]
+  );
+
+  const resetResidues = useCallback(() => {
+    activeJobIdRef.current = null;
+    setResult(null);
+    setSelectedIssue(null);
+    setHeatmapData(null);
+    setHeatmapLoading(false);
+    resetAiFix();
+    setSourceJobId(null);
+    setLdmStatus('');
+    setEngineError(null);
+  }, [resetAiFix]);
 
   const onFileSelect = (newFile: File | null) => {
     setFile(newFile);
@@ -336,7 +362,6 @@ function AppContent() {
         setLastPdfName(getCanonicalFileName(normalized, file));
 
         if (effectiveMode === 'ai') {
-          setAutoFixBefore(normalized);
           setCurrentStep(3);
         } else {
           setCurrentStep(2);
@@ -370,141 +395,6 @@ function AppContent() {
       });
     }
   }, [file, selectedPolicy, startV2Preflight, handleV2JobComplete, resetResidues, ldmActive, appMode, fileMeta, getAuthenticatedBlobUrl]);
-
-  const handleAutoFix = useCallback(async (opts: any) => {
-    if (!file) return;
-
-    // Save current result as 'before' if not already set
-    if (result && !autoFixBefore) {
-      setAutoFixBefore(result);
-      console.log('[APP][FIX-START] Storing Before state for Step 4 comparison');
-    }
-
-    setLdmActive(true);
-    setFixError(null);
-    setLdmStatus('loader.magic');
-    console.log('[APP][STEP3][STATE]', {
-      status: 'FIX_INITIALIZING',
-      sourceJobId: activeJobIdRef.current,
-      policy: opts?.policy || selectedPolicy
-    });
-
-    try {
-      const res = await autoFixServer(file, {
-        policy: opts?.policy || selectedPolicy,
-        jobId: activeJobIdRef.current
-      });
-
-      // Backend Contract: jobId might be in root, jobId, job_id, or nested in result
-      let jobId = pickCanonicalJobId(res.jobId, res.job_id, res.id, res.result?.meta?.jobId, res.inlineResult?.meta?.jobId);
-
-      console.log('[APP][FIX][NEXT-JOB-ID]', { jobId, sourceId: activeJobIdRef.current });
-
-      if (jobId) {
-        console.log('[APP][CANONICAL-JOB-ID][FROM-FIX]', { new: jobId, previous: activeJobIdRef.current });
-        setTargetJobId(jobId);
-        activeJobIdRef.current = jobId;
-      }
-
-      let jobResult: any = res.inlineResult || res.result || res.job || null;
-      console.log('[APP][FIX-START-RES]', { jobId, isInline: !!jobResult });
-
-      if (jobId && !jobResult) {
-        activeJobIdRef.current = jobId;
-        setLdmProgress(10);
-        console.log('[APP][STEP3][STATE]', { status: 'FIX_POLLING', targetJobId: jobId });
-        jobResult = await handleV2JobComplete(jobId);
-      } else if (jobResult) {
-        // Ensure jobId is synced from the inline result metadata
-        if (!jobId) {
-          jobId = pickCanonicalJobId(jobResult.meta?.jobId, jobResult.job_id, jobResult.id) || jobId;
-          if (jobId) {
-            setTargetJobId(jobId);
-            activeJobIdRef.current = jobId;
-          }
-        }
-      }
-
-      if (jobResult) {
-        const finalJobId = jobId || jobResult.meta?.jobId;
-        console.log('[APP][FIX-COMPLETE-HAF]', { finalJobId, hasReport: !!jobResult.report });
-        if (jobResult.report) setAutoFixReport(jobResult.report);
-
-        const normalizedAfter = normalizePreflightResult(jobResult);
-        setResult(normalizedAfter);
-        setAutoFixAfter(normalizedAfter);
-
-        // v2.4.190: Direct artifact resolution from normalized result to avoid stale memo lag
-        const bestArtifactKey = getBestArtifactKey(normalizedAfter.artifacts);
-
-        console.log('[APP][STEP4][ARTIFACT-RESOLUTION]', {
-          jobId: finalJobId,
-          selected: bestArtifactKey,
-          effective: normalizedAfter.meta?.autofix_effective 
-        });
-
-        if (bestArtifactKey) {
-          getAuthenticatedBlobUrl(finalJobId, bestArtifactKey).then(bUrl => {
-            if (bUrl) {
-              console.log('[APP][AUTOFIX][ARTIFACT-RESOLVED]', { jobId: finalJobId, key: bestArtifactKey, url: bUrl });
-              setLastPdfUrl(bUrl);
-              lastPdfUrlRef.current = bUrl;
-            }
-          }).catch(err => console.error('[APP][AUTOFIX][ARTIFACT-ERROR]', err));
-        } else if (file) {
-          const url = URL.createObjectURL(file);
-          console.log('[APP][ARTIFACT-URL][FALLBACK]', { url });
-          setLastPdfUrl(url);
-          lastPdfUrlRef.current = url;
-        } else {
-          setLastPdfUrl(null);
-          lastPdfUrlRef.current = null;
-        }
-        setLastPdfName(getCanonicalFileName(jobResult, file));
-
-        setCurrentPage(1);
-        setCurrentStep(4);
-      } else {
-        console.error('[APP][FIX-FAILED] No jobResult found in res:', res);
-        throw new Error('Engine returned no result data.');
-      }
-      setLdmActive(false);
-    } catch (err: any) {
-      console.error('[APP][AUTOFIX-ERROR]', err);
-      setFixError(err);
-      setLdmActive(false);
-      setLdmStatus('');
-      setLastPdfUrl(null); // Force clear to prevent stale views
-      
-      console.log('[APP][AUTOFIX][TRIGGER-FAILED]', { error: err.message });
-      console.log('[APP][STEP3][STATE]', { status: 'FIX_FAILED', error: err.message });
-    }
-  }, [file, result, autoFixBefore, autoFixServer, handleV2JobComplete, getAuthenticatedBlobUrl, selectedPolicy, fileMeta, appMode, analysis]);
-
-  // v2.4.185: Deterministic AI Auto-Fix Trigger
-  useEffect(() => {
-    const jobId = activeJobIdRef.current;
-    
-    // Hardened Readiness Check
-    const isAnalysisComplete = !!result && result.type === 'ANALYZE';
-    const isFixInProgress = ldmActive && ldmStatus?.includes('fix');
-    const isFixDone = !!autoFixAfter || !!fixError;
-    
-    const canAutoTrigger = 
-      appMode === 'ai' && 
-      currentStep === 3 && 
-      isAnalysisComplete && 
-      !isFixInProgress &&
-      !isFixDone &&
-      jobId && 
-      hasAutoTriggeredFixRef.current !== jobId;
-
-    if (canAutoTrigger) {
-      console.log('[APP][AUTO-FIX][TRIGGER-HARDENED]', { jobId, type: result?.type });
-      hasAutoTriggeredFixRef.current = jobId;
-      handleAutoFix({});
-    }
-  }, [appMode, currentStep, result, autoFixAfter, ldmActive, ldmStatus, fixError, handleAutoFix]);
 
   const handleDownload = useCallback(async () => {
     // v2.4.140: Hardened Authenticated Download Stream
@@ -833,11 +723,11 @@ function AppContent() {
                     }}
                     onRunHeatmap={handleRunHeatmap}
                     onRunVisualCheck={() => setShowVisualModal(true)}
-                    onFixBleed={() => handleAutoFix({ forceBleed: true })}
+                    onFixBleed={() => triggerAutoFix({ forceBleed: true })}
                     onConvertGrayscale={handleConvertGrayscale}
                     onConvertCMYK={handleConvertCMYK}
                     onRebuildPdf={handleRebuildPdf}
-                    onAutoFix={handleAutoFix}
+                    onAutoFix={triggerAutoFix}
                     onToggleCompare={setCompareEnabled}
                     onProfileChange={setSelectedProfile}
                     onOpenAIAudit={(issue) => { handleSelectIssue(issue); setShowVisualModal(true); }}
@@ -931,7 +821,7 @@ function AppContent() {
           onConvertCMYK={handleConvertCMYK}
           onRebuildPdf={handleRebuildPdf}
           onApplyCorrection={() => {
-            handleAutoFix({});
+            triggerAutoFix({});
             setCurrentStep(3);
           }}
           selectedProfile={selectedProfile}

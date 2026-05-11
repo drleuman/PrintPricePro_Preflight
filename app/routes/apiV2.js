@@ -547,10 +547,10 @@ router.post('/:jobId/actions/fix', async (req, res) => {
           
           const hasTrimBox = requestedFixes.some(f => f.repairStrategy === 'REBUILD_TRIMBOX');
           if (hasTrimBox) {
-              const hasStructuralFix = requestedFixes.some(f => 
+              const hasStructuralFix = requestedFixes.some(f =>
                   ['RGB→CMYK', 'BLEED', 'FLATTEN_PDF', 'REBUILD', 'CONVERT_GRAYSCALE'].includes(f.repairStrategy)
               );
-              
+
               // Only promote to primary if it's the only meaningful fix requested
               // or if the frontend hasn't explicitly set a primary strategy yet
               if (!hasStructuralFix && !strategy) {
@@ -558,6 +558,14 @@ router.post('/:jobId/actions/fix', async (req, res) => {
                   strategy = 'REBUILD_TRIMBOX';
                   repairStrategy = 'REBUILD_TRIMBOX';
               }
+          }
+
+          const hasBleed = requestedFixes.some(f =>
+              f.repairStrategy === 'APPLY_BLEED' || f.repairStrategy === 'BLEED'
+          );
+          if (hasBleed && !type && !repairStrategy) {
+              type = 'bleed';
+              repairStrategy = 'APPLY_BLEED';
           }
 
           return JSON.stringify({

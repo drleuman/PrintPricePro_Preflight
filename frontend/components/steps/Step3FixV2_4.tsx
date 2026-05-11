@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PreflightResult, FileMeta, Issue, WorkflowAnalysis } from '../../types';
+import { PreflightResult, FileMeta, Issue, WorkflowAnalysis, AppMode } from '../../types';
 import { StatusBadge, IssueRow } from '../../design/preflight_starter_pack';
 import { PageViewer } from '../PageViewer';
 import { FixDrawerV2_4 } from '../FixDrawerV2_4';
