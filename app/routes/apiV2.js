@@ -548,7 +548,7 @@ router.post('/:jobId/actions/fix', async (req, res) => {
           const hasTrimBox = requestedFixes.some(f => f.repairStrategy === 'REBUILD_TRIMBOX');
           if (hasTrimBox) {
               const hasStructuralFix = requestedFixes.some(f =>
-                  ['RGB→CMYK', 'BLEED', 'FLATTEN_PDF', 'REBUILD', 'CONVERT_GRAYSCALE'].includes(f.repairStrategy)
+                  ['RGB→CMYK', 'BLEED', 'FLATTEN_PDF', 'REBUILD', 'CONVERT_GRAYSCALE', 'CONVERT_CMYK'].includes(f.repairStrategy)
               );
 
               // Only promote to primary if it's the only meaningful fix requested
@@ -568,13 +568,18 @@ router.post('/:jobId/actions/fix', async (req, res) => {
               repairStrategy = 'APPLY_BLEED';
           }
 
+          const hasCmyk = requestedFixes.some(f =>
+              f.repairStrategy === 'CONVERT_CMYK' || f.repairStrategy === 'RGB→CMYK'
+          );
+
           return JSON.stringify({
             policy: req.body?.policy || 'OFFSET_MODERN_COATED',
             options: {
                 ...options,
                 type,
                 strategy,
-                repairStrategy
+                repairStrategy,
+                ...(hasCmyk ? { target: 'cmyk' } : {})
             }
           });
         })()
