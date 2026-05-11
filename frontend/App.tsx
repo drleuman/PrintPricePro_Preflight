@@ -109,6 +109,7 @@ function AppContent() {
   const { isAuthenticated } = useAuth();
 
   const activeJobIdRef = useRef<string | null>(null);
+  const preflightJobIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -254,6 +255,7 @@ function AppContent() {
     currentStep,
     result,
     activeJobIdRef,
+    preflightJobIdRef,
     autoFixServer,
     handleV2JobComplete,
     getAuthenticatedBlobUrl,
@@ -285,6 +287,7 @@ function AppContent() {
 
   const resetResidues = useCallback(() => {
     activeJobIdRef.current = null;
+    preflightJobIdRef.current = null;
     setResult(null);
     setSelectedIssue(null);
     setHeatmapData(null);
@@ -336,6 +339,7 @@ function AppContent() {
         if (jobId) {
           console.log('[APP][CANONICAL-JOB-ID]', { new: jobId, previous: activeJobIdRef.current });
           activeJobIdRef.current = jobId;
+          preflightJobIdRef.current = jobId;
 
           const bestArtifactKey = getBestArtifactKey(normalized.artifacts);
           console.log('[APP][V2-START][ARTIFACT-RESOLUTION]', { effectiveMode, selected: bestArtifactKey });
@@ -373,6 +377,7 @@ function AppContent() {
 
       if (res.jobId) {
         activeJobIdRef.current = res.jobId;
+        preflightJobIdRef.current = res.jobId;
         setSourceJobId(res.jobId); // Set sourceJobId on initial analyze
         console.log('[APP][V2-START] Async mode, Job ID set to', res.jobId);
         setLdmStatus('common.processing');
@@ -821,6 +826,7 @@ function AppContent() {
           onConvertCMYK={handleConvertCMYK}
           onRebuildPdf={handleRebuildPdf}
           onApplyCorrection={() => {
+            setSelectedIssue(null);
             triggerAutoFix({});
             setCurrentStep(3);
           }}

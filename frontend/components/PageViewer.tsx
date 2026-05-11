@@ -112,17 +112,12 @@ export const PageViewer: React.FC<PageViewerProps> = ({
 
   // Render Page
   useEffect(() => {
+    let cancelled = false;
+    let renderTask: ReturnType<pdfjsLib.PDFPageProxy['render']> | null = null;
+
     const renderPage = async () => {
       if (ldmMode) return;
       const canvas = canvasRef.current;
-      
-      // DIAGNOSTIC
-      console.log('[VIEWER][RENDER-TRIGGER]', { 
-        currentPage, 
-        numPages, 
-        hasPdf: !!pdfInstance,
-        canvas: !!canvas 
-      });
 
       if (!canvas || !pdfInstance || currentPage < 1 || (numPages > 0 && currentPage > numPages)) {
         if (canvas) {
@@ -134,31 +129,36 @@ export const PageViewer: React.FC<PageViewerProps> = ({
 
       try {
         const page = await pdfInstance.getPage(currentPage);
+        if (cancelled) return;
+
         const viewport = page.getViewport({ scale: scale });
         const context = canvas.getContext('2d');
-
-        if (!context) return;
+        if (!context || cancelled) return;
 
         canvas.height = viewport.height;
         canvas.width = viewport.width;
 
-        const renderContext = {
-          canvasContext: context,
-          viewport: viewport,
-        };
+        renderTask = page.render({ canvasContext: context, viewport });
+        await renderTask.promise;
 
-        await page.render(renderContext).promise;
+        if (cancelled) return;
 
         if (selectedIssue && selectedIssue.page === currentPage && selectedIssue.bbox) {
           drawBbox(context, selectedIssue.bbox, viewport.width, viewport.height);
         }
-
-      } catch (error) {
-        console.error(`Error rendering page ${currentPage}: `, error);
+      } catch (error: any) {
+        if (error?.name !== 'RenderingCancelledException') {
+          console.error(`Error rendering page ${currentPage}: `, error);
+        }
       }
     };
 
     renderPage();
+
+    return () => {
+      cancelled = true;
+      renderTask?.cancel();
+    };
   }, [currentPage, numPages, scale, selectedIssue, drawBbox, file, pdfUrl, pdfInstance, ldmMode]);
 
   // Logic for heatmap visibility and effects derived from props

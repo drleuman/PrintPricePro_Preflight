@@ -9,6 +9,7 @@ interface UseAiMagicFixParams {
   currentStep: number;
   result: PreflightResult | null;
   activeJobIdRef: React.MutableRefObject<string | null>;
+  preflightJobIdRef: React.MutableRefObject<string | null>;
   autoFixServer: (file: File, opts: { policy: string; jobId: string | null }) => Promise<any>;
   handleV2JobComplete: (jobId: string) => Promise<any>;
   getAuthenticatedBlobUrl: (jobId: string, key: string) => Promise<string | null>;
@@ -45,6 +46,7 @@ export function useAiMagicFix({
   currentStep,
   result,
   activeJobIdRef,
+  preflightJobIdRef,
   autoFixServer,
   handleV2JobComplete,
   getAuthenticatedBlobUrl,
@@ -100,7 +102,7 @@ export function useAiMagicFix({
     try {
       const res = await autoFixServer(file, {
         policy: opts?.policy || selectedPolicy,
-        jobId: activeJobIdRef.current,
+        jobId: preflightJobIdRef.current || activeJobIdRef.current,
         options: opts?.options || {},
       });
 
@@ -196,6 +198,7 @@ export function useAiMagicFix({
     selectedPolicy,
     fileMeta,
     activeJobIdRef,
+    preflightJobIdRef,
     setLdmActive,
     setLdmStatus,
     setLdmProgress,
