@@ -31,6 +31,8 @@ export const translateIssueTitle = (issue: Issue | null | undefined, t: (key: st
         'IMAGE_LOW_RES': t('finding.low_res_asset'),
         'FONT_NOT_EMBEDDED': t('finding.unembedded_glyph'),
         'BLEED_MISSING': t('finding.bleed_exception'),
+        'INTENT_BOOK': t('finding.book_intent'),
+        'HEURISTIC_TEXT_OUTLINED': t('finding.text_outlined'),
     };
 
     if (codes[code]) return codes[code];

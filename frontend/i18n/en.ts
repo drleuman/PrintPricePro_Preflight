@@ -778,6 +778,8 @@ export const en = {
   'finding.ink_limit_violation': 'INK COVERAGE EXCEEDED',
   'finding.spot_color_warning': 'SPOT COLOR WARNING',
   'finding.pdf_compliance_error': 'PDF/X COMPLIANCE FAULT',
+  'finding.book_intent': 'BOOK / CATALOG INTENT',
+  'finding.text_outlined': 'TEXT CONVERTED TO OUTLINES',
   'step.review.engineFixBtn': 'Go to Engine Fix',
   'step.review.limitedComparisonDesc': 'Certified artifact is not accessible. You can finalize the trace, but the direct comparison is limited to the ingress state.',
   'step.review.backToEngineTitle': 'Return to Policy Engine',
