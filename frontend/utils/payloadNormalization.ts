@@ -241,28 +241,49 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
     let findings: any[] = [];
     let sourceFound = false;
 
-    // Try various canonical and legacy locations
-    const candidatePaths = [
-        payload.issues,
-        payload.findings,
-        payload.report?.issues,
-        payload.report?.findings,
-        payload.result?.report?.issues,
-        payload.result?.report?.findings,
-        payload.result?.findings,
-        payload.data?.issues,
-        payload.data?.findings
+    // Try various canonical and legacy locations including warnings to ensure no diagnostic loss
+    const candidateConfigs = [
+        { path: payload.issues, isWarning: false },
+        { path: payload.findings, isWarning: false },
+        { path: payload.report?.issues, isWarning: false },
+        { path: payload.report?.findings, isWarning: false },
+        { path: payload.result?.report?.issues, isWarning: false },
+        { path: payload.result?.report?.findings, isWarning: false },
+        { path: payload.result?.findings, isWarning: false },
+        { path: payload.data?.issues, isWarning: false },
+        { path: payload.data?.findings, isWarning: false },
+        { path: payload.warnings, isWarning: true },
+        { path: payload.analysis_warnings, isWarning: true },
+        { path: payload.report?.warnings, isWarning: true },
+        { path: payload.analysis?.warnings, isWarning: true },
+        { path: payload.result?.warnings, isWarning: true },
+        { path: payload.result?.analysis_warnings, isWarning: true },
+        { path: payload.result?.analysis?.warnings, isWarning: true },
+        { path: payload.result?.report?.warnings, isWarning: true }
     ];
 
-    candidatePaths.forEach((c, idx) => {
-        if (c) console.log(`[STEP2][CANDIDATE][${idx}]`, typeof c, Array.isArray(c));
+    candidateConfigs.forEach((c, idx) => {
+        if (c.path) console.log(`[STEP2][CANDIDATE][${idx}]`, typeof c.path, Array.isArray(c.path), 'isWarning:', c.isWarning);
     });
 
-    for (const candidate of candidatePaths) {
+    const seenItems = new Set<string>();
+    for (const { path: candidate, isWarning } of candidateConfigs) {
         if (Array.isArray(candidate)) {
-            findings = candidate;
             sourceFound = true;
-            if (candidate.length > 0) break;
+            for (const item of candidate) {
+                if (item !== undefined && item !== null) {
+                    const key = typeof item === 'string' ? item : (item.id || item.uuid || item.code || item.rule || item.message || JSON.stringify(item));
+                    if (!seenItems.has(key)) {
+                        seenItems.add(key);
+                        const findingItem = typeof item === 'string' ? item : {
+                            ...item,
+                            severity: item.severity || item.level || (isWarning ? 'warning' : undefined),
+                            type: item.type || (isWarning ? 'WARNING' : undefined)
+                        };
+                        findings.push(findingItem);
+                    }
+                }
+            }
         }
     }
 

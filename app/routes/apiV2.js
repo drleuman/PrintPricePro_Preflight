@@ -320,14 +320,17 @@ router.get('/:jobId', async (req, res) => {
 
     // --- v2.4.93: Deep Payload Normalization (BFF/FE Contract Sync) ---
     // If the engine returns a 'result' wrapper, hard-flatten it to ensure consistent Step 2/Step 4 behavior
-    if (data.status === 'COMPLETED' && data.result) {
+    const terminalStatus = String(data.status || '').toUpperCase();
+    if (['COMPLETED', 'SUCCEEDED', 'SUCCESS'].includes(terminalStatus) && data.result) {
         console.log(`[BFF][POLL][DEEP-NORMALIZATION] Flattening result for job ${jobId}`);
         const result = data.result;
         
         // Ensure core finding fields are at the root
         data.report = result.report || data.report;
-        data.findings = result.findings || result.report?.findings || data.findings || [];
-        data.issues = result.issues || result.report?.issues || data.issues || [];
+        data.issues = result.issues || result.report?.issues || result.analysis?.issues || data.issues || [];
+        data.findings = result.findings || result.report?.findings || result.analysis?.findings || data.findings || data.issues || [];
+        data.warnings = result.warnings || result.analysis_warnings || result.analysis?.warnings || result.report?.warnings || data.warnings || data.analysis_warnings || [];
+        data.analysis_warnings = data.warnings;
         
         // v2.4.115-116: Forensic Preservation Hierarchy
         // We promote every meaningful field to the root to ensure zero data-loss before pruning the wrapper
@@ -355,8 +358,9 @@ router.get('/:jobId', async (req, res) => {
 
         // --- v2.4.95: Hard-Syncing Boolean Flags after Flattening ---
         data.hasReport = !!data.report;
-        data.hasFindings = (data.findings?.length > 0);
-        data.hasIssues = (data.issues?.length > 0);
+        data.hasFindings = Array.isArray(data.findings) && data.findings.length > 0;
+        data.hasIssues = Array.isArray(data.issues) && data.issues.length > 0;
+        data.hasWarnings = Array.isArray(data.warnings) && data.warnings.length > 0;
         
         // --- v2.4.111: Forensic Job-Type Identification Bridge ---
         const detectedType = result.type || data.type || result.job_type || 'ANALYZE';
@@ -369,6 +373,14 @@ router.get('/:jobId', async (req, res) => {
 
         // Clean up the nested wrapper now that preservation is complete
         delete data.result;
+    } else if (['COMPLETED', 'SUCCEEDED', 'SUCCESS'].includes(terminalStatus)) {
+        // Fallback sync if data.result was not present but status is terminal
+        data.warnings = data.warnings || data.analysis_warnings || data.report?.warnings || data.analysis?.warnings || [];
+        data.analysis_warnings = data.warnings;
+        data.hasReport = !!data.report;
+        data.hasFindings = Array.isArray(data.findings) && data.findings.length > 0;
+        data.hasIssues = Array.isArray(data.issues) && data.issues.length > 0;
+        data.hasWarnings = Array.isArray(data.warnings) && data.warnings.length > 0;
     }
 
     // Normalize artifacts to canonical key-value map {type: filename} for frontend compatibility.
@@ -399,10 +411,23 @@ router.get('/:jobId', async (req, res) => {
 
     console.log(`[BFF][CANONICAL-ID][POLL] Status check for Job: ${jobId} -> Resolved: ${data.jobId}`);
 
-    if (data.status === 'COMPLETED' && !data.type) {
+    if (['COMPLETED', 'SUCCEEDED', 'SUCCESS'].includes(terminalStatus) && !data.type) {
         data.type = 'ANALYZE';
     }
     // ------------------------------------------------------------------
+
+    console.log(`[BFF][POLL][DIAGNOSTIC-SUMMARY][${requestId}]`, {
+      jobId: data.jobId,
+      status: data.status,
+      type: data.type,
+      issues: Array.isArray(data.issues) ? data.issues.length : null,
+      findings: Array.isArray(data.findings) ? data.findings.length : null,
+      warnings: Array.isArray(data.warnings) ? data.warnings.length : null,
+      analysisWarnings: Array.isArray(data.analysis_warnings) ? data.analysis_warnings.length : null,
+      hasIssues: data.hasIssues,
+      hasFindings: data.hasFindings,
+      hasWarnings: data.hasWarnings
+    });
 
     return res.status(response.status).json(data);
 
