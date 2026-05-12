@@ -728,7 +728,13 @@ function AppContent() {
                     }}
                     onRunHeatmap={handleRunHeatmap}
                     onRunVisualCheck={() => setShowVisualModal(true)}
-                    onFixBleed={() => triggerAutoFix({ forceBleed: true })}
+                    onFixBleed={(mode) =>
+                      triggerAutoFix({
+                        forceBleed: true,
+                        fixIntent: appMode === 'manual' ? 'manual_with_cmyk' : 'incremental_magic',
+                        bleedIngressMode: mode,
+                      })
+                    }
                     onConvertGrayscale={handleConvertGrayscale}
                     onConvertCMYK={handleConvertCMYK}
                     onRebuildPdf={handleRebuildPdf}
@@ -825,9 +831,39 @@ function AppContent() {
           onConvertGrayscale={handleConvertGrayscale}
           onConvertCMYK={handleConvertCMYK}
           onRebuildPdf={handleRebuildPdf}
+          onFixBleed={(mode) =>
+            triggerAutoFix({
+              forceBleed: true,
+              fixIntent: appMode === 'manual' ? 'manual_with_cmyk' : 'incremental_magic',
+              bleedIngressMode: mode,
+            })
+          }
           onApplyCorrection={() => {
+            const iss = selectedIssue;
             setSelectedIssue(null);
-            triggerAutoFix({});
+            const isBleedDrawer =
+              iss?.id === 'missing-bleed-info' || iss?.id === 'insufficient-bleed';
+            const rs = iss?.repairStrategy || iss?.fix_method;
+            if (iss?.fixable) {
+              if (rs) {
+                triggerAutoFix({
+                  fixIntent: appMode === 'manual' ? 'manual_with_cmyk' : 'incremental_magic',
+                  options: { requestedFixes: [{ id: iss.id, repairStrategy: rs }] },
+                });
+              } else if (isBleedDrawer) {
+                triggerAutoFix({
+                  forceBleed: true,
+                  fixIntent: appMode === 'manual' ? 'manual_with_cmyk' : 'incremental_magic',
+                });
+              } else {
+                triggerAutoFix({
+                  fixIntent: appMode === 'manual' ? 'manual_with_cmyk' : 'incremental_magic',
+                  options: { selectedIssueCode: iss.id },
+                });
+              }
+            } else {
+              triggerAutoFix({ fixIntent: appMode === 'ai' ? 'full_magic' : 'manual_with_cmyk' });
+            }
             setCurrentStep(3);
           }}
           selectedProfile={selectedProfile}

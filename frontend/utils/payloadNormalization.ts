@@ -1,4 +1,4 @@
-import { PreflightResult, Issue, Severity, WorkflowAnalysis, AppMode } from '../types';
+import { PreflightResult, Issue, Severity, WorkflowAnalysis, AppMode, ISSUE_CATEGORY } from '../types';
 
 /**
  * deterministic status flags for UI components.
@@ -12,6 +12,17 @@ export function getBestArtifactKey(artifacts: Record<string, string> | undefined
         if (artifacts[key]) return key;
     }
     return null;
+}
+
+export function isBleedIssue(issue: any): boolean {
+    if (!issue) return false;
+    const id = (issue.id || '').toString().toLowerCase();
+    const code = (issue.code || '').toString().toUpperCase();
+    if (['missing-bleed-info', 'insufficient-bleed'].includes(id)) return true;
+    if (['BLEED_MISSING', 'BLEED_INSUFFICIENT', 'IND_BLEED'].includes(code)) return true;
+    const msg = (issue.message || '').toString().toLowerCase();
+    if (msg.includes('bleed') && (msg.includes('missing') || msg.includes('insufficient'))) return true;
+    return false;
 }
 
 export function isTrimBoxIssue(issue: any): boolean {
@@ -285,6 +296,7 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
         const hRule = humanizeRule(item.rule || item.code || item.id);
         const hDesc = humanizeDescription(item.rule || item.code || item.id);
         const isTrimBox = isTrimBoxIssue(item);
+        const isBleed = isBleedIssue(item);
 
         const normalized: Issue = {
             ...item,
@@ -294,15 +306,15 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
             description: item.description || item.details || item.explanation || hDesc || item.summary || '',
             recommendation: item.recommendation || item.suggested_fix || item.fixText || item.hint || '',
             severity: mapSeverity(item.severity || item.level || 'warning'),
-            category: isTrimBox ? 'GEOMETRY' : (item.category || item.type || 'General').toString().toUpperCase(),
+            category: isTrimBox ? 'GEOMETRY' : isBleed ? ISSUE_CATEGORY.BLEED_MARGINS : (item.category || item.type || 'General').toString().toUpperCase(),
             page: item.page ?? item.pageNumber ?? item.metadata?.page ?? null,
-            fixable: isTrimBox ? true : !!(item.fixable || item.fixAvailable || item.fix?.available || item.isFixable),
+            fixable: isTrimBox ? true : isBleed ? true : !!(item.fixable || item.fixAvailable || item.fix?.available || item.isFixable),
             fixRequired: item.fixRequired ?? undefined,
             safeToAutofix: item.safeToAutofix ?? undefined,
             confidence: item.confidence ?? undefined,
             destructiveFixRisk: item.destructiveFixRisk ?? undefined,
-            repairStrategy: isTrimBox ? "REBUILD_TRIMBOX" : item.repairStrategy,
-            fix_method: isTrimBox ? "REBUILD_TRIMBOX" : item.fix_method,
+            repairStrategy: isTrimBox ? "REBUILD_TRIMBOX" : isBleed ? "APPLY_BLEED" : item.repairStrategy,
+            fix_method: isTrimBox ? "REBUILD_TRIMBOX" : isBleed ? "APPLY_BLEED" : item.fix_method,
             raw: item // Keep for debugging
         };
 

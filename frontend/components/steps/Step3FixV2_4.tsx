@@ -273,6 +273,7 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                                 onClick={() => {
                                     const trimBoxIssue = issues.find(i => i.repairStrategy === 'REBUILD_TRIMBOX' || i.fix_method === 'REBUILD_TRIMBOX');
                                     onAutoFix({
+                                        fixIntent: appMode === 'ai' ? 'full_magic' : 'manual_with_cmyk',
                                         options: {
                                             selectedIssueCode: selectedIssue?.id,
                                             repairStrategy: selectedIssue?.repairStrategy || selectedIssue?.fix_method || null,

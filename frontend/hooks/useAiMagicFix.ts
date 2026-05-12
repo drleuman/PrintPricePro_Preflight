@@ -2,6 +2,96 @@ import { useCallback, useRef, useState, useEffect } from 'react';
 import { AppMode, FileMeta, PreflightResult } from '../types';
 import { normalizePreflightResult, pickCanonicalJobId, getBestArtifactKey, getCanonicalFileName } from '../utils/payloadNormalization';
 
+export type FixIntent = 'incremental_magic' | 'full_magic' | 'manual_with_cmyk';
+
+type RequestedFixRow = { id?: string; repairStrategy: string | null };
+
+function hasCmykInRequested(requestedFixes: RequestedFixRow[]) {
+  return requestedFixes.some(
+    (f) => f.repairStrategy === 'CONVERT_CMYK' || f.repairStrategy === 'RGB→CMYK',
+  );
+}
+
+function hasBleedInRequested(requestedFixes: RequestedFixRow[]) {
+  return requestedFixes.some(
+    (f) => f.repairStrategy === 'APPLY_BLEED' || f.repairStrategy === 'BLEED',
+  );
+}
+
+/**
+ * Merges caller opts into the JSON `options` sent to POST .../actions/fix.
+ * - `forceBleed` → options.forceBleed + APPLY_BLEED row when needed (BFF + PPOS).
+ * - `fixIntent` drives CMYK bundling: full_magic / manual_with_cmyk append CONVERT_CMYK; incremental_magic does not.
+ * - AI auto-trigger with empty body builds requestedFixes from analysis issues (full_magic).
+ */
+export function mergeStatefulFixOptions(
+  opts: Record<string, any> | undefined,
+  result: PreflightResult | null,
+  appMode: AppMode,
+): Record<string, any> {
+  const base =
+    opts?.options && typeof opts.options === 'object' && !Array.isArray(opts.options)
+      ? { ...opts.options }
+      : {};
+
+  const requestedFixes: RequestedFixRow[] = Array.isArray(base.requestedFixes)
+    ? base.requestedFixes.map((f: any) => ({
+        id: f?.id,
+        repairStrategy: f?.repairStrategy ?? f?.repair_strategy ?? null,
+      }))
+    : [];
+
+  let fixIntent = opts?.fixIntent as FixIntent | undefined;
+
+  const noStructuralPayload =
+    requestedFixes.length === 0 && !opts?.forceBleed && !base.type && !base.repairStrategy;
+
+  if (!fixIntent) {
+    if (appMode === 'manual') {
+      fixIntent = 'manual_with_cmyk';
+    } else if (appMode === 'ai' && noStructuralPayload && result?.issues?.length) {
+      fixIntent = 'full_magic';
+    }
+  }
+
+  if (fixIntent === 'full_magic' && requestedFixes.length === 0 && result?.issues?.length) {
+    const fromIssues = result.issues
+      .filter((i) => i.fixable)
+      .map((i) => ({
+        id: i.id,
+        repairStrategy: (i.repairStrategy || i.fix_method || null) as string | null,
+      }))
+      .filter((x) => x.repairStrategy);
+    requestedFixes.push(...fromIssues);
+  }
+
+  if (opts?.forceBleed === true) {
+    base.forceBleed = true;
+    if (!hasBleedInRequested(requestedFixes)) {
+      requestedFixes.push({ id: 'force-bleed', repairStrategy: 'APPLY_BLEED' });
+    }
+  }
+
+  if (opts?.bleedIngressMode === 'safe' || opts?.bleedIngressMode === 'aggressive') {
+    base.bleedIngressMode = opts.bleedIngressMode;
+  }
+
+  if (fixIntent === 'full_magic' || fixIntent === 'manual_with_cmyk') {
+    if (!hasCmykInRequested(requestedFixes)) {
+      requestedFixes.push({ id: '__bundle_cmyk', repairStrategy: 'CONVERT_CMYK' });
+    }
+  }
+
+  const cleaned = requestedFixes.filter((x) => x.repairStrategy);
+  if (cleaned.length) {
+    base.requestedFixes = cleaned;
+  } else {
+    delete base.requestedFixes;
+  }
+
+  return base;
+}
+
 interface UseAiMagicFixParams {
   file: File | null;
   fileMeta: FileMeta | null;
@@ -68,7 +158,6 @@ export function useAiMagicFix({
   const [autoFixReport, setAutoFixReport] = useState<any | null>(null);
   const [fixError, setFixError] = useState<any | null>(null);
   const [targetJobId, setTargetJobId] = useState<string | null>(null);
-  // Kept for prop compatibility with Step3 (currently always null — never set by engine)
   const [autoFixRunId] = useState<number | null>(null);
 
   const hasAutoTriggeredFixRef = useRef<string | null>(null);
@@ -82,135 +171,141 @@ export function useAiMagicFix({
     hasAutoTriggeredFixRef.current = null;
   }, []);
 
-  const triggerAutoFix = useCallback(async (opts?: any) => {
-    if (!file) return;
+  const triggerAutoFix = useCallback(
+    async (opts?: any) => {
+      if (!file) return;
 
-    if (result && !autoFixBefore) {
-      setAutoFixBefore(result);
-      console.log('[AI-FIX][START] Storing Before state for Step 4 comparison');
-    }
-
-    setLdmActive(true);
-    setFixError(null);
-    setLdmStatus('loader.magic');
-    console.log('[AI-FIX][STEP3][STATE]', {
-      status: 'FIX_INITIALIZING',
-      sourceJobId: activeJobIdRef.current,
-      policy: opts?.policy || selectedPolicy,
-    });
-
-    try {
-      const res = await autoFixServer(file, {
-        policy: opts?.policy || selectedPolicy,
-        jobId: preflightJobIdRef.current || activeJobIdRef.current,
-        options: opts?.options || {},
-      });
-
-      let jobId = pickCanonicalJobId(
-        res.jobId,
-        res.job_id,
-        res.id,
-        res.result?.meta?.jobId,
-        res.inlineResult?.meta?.jobId,
-      );
-
-      console.log('[AI-FIX][NEXT-JOB-ID]', { jobId, sourceId: activeJobIdRef.current });
-
-      if (jobId) {
-        console.log('[AI-FIX][CANONICAL-JOB-ID]', { new: jobId, previous: activeJobIdRef.current });
-        setTargetJobId(jobId);
-        activeJobIdRef.current = jobId;
+      if (result && !autoFixBefore) {
+        setAutoFixBefore(result);
+        console.log('[AI-FIX][START] Storing Before state for Step 4 comparison');
       }
 
-      let jobResult: any = res.inlineResult || res.result || res.job || null;
-      console.log('[AI-FIX][START-RES]', { jobId, isInline: !!jobResult });
+      setLdmActive(true);
+      setFixError(null);
+      setLdmStatus('loader.magic');
+      const mergedOptions = mergeStatefulFixOptions(opts, result, appMode);
+      console.log('[AI-FIX][STEP3][STATE]', {
+        status: 'FIX_INITIALIZING',
+        sourceJobId: activeJobIdRef.current,
+        policy: opts?.policy || selectedPolicy,
+        fixIntent: opts?.fixIntent,
+        mergedKeys: Object.keys(mergedOptions),
+      });
 
-      if (jobId && !jobResult) {
-        activeJobIdRef.current = jobId;
-        setLdmProgress(10);
-        console.log('[AI-FIX][STEP3][STATE]', { status: 'FIX_POLLING', targetJobId: jobId });
-        jobResult = await handleV2JobComplete(jobId);
-      } else if (jobResult && !jobId) {
-        jobId = pickCanonicalJobId(jobResult.meta?.jobId, jobResult.job_id, jobResult.id) ?? jobId;
+      try {
+        const res = await autoFixServer(file, {
+          policy: opts?.policy || selectedPolicy,
+          jobId: preflightJobIdRef.current || activeJobIdRef.current,
+          options: mergedOptions,
+        });
+
+        let jobId = pickCanonicalJobId(
+          res.jobId,
+          res.job_id,
+          res.id,
+          res.result?.meta?.jobId,
+          res.inlineResult?.meta?.jobId,
+        );
+
+        console.log('[AI-FIX][NEXT-JOB-ID]', { jobId, sourceId: activeJobIdRef.current });
+
         if (jobId) {
+          console.log('[AI-FIX][CANONICAL-JOB-ID]', { new: jobId, previous: activeJobIdRef.current });
           setTargetJobId(jobId);
           activeJobIdRef.current = jobId;
         }
-      }
 
-      if (jobResult) {
-        const finalJobId = jobId || jobResult.meta?.jobId;
-        console.log('[AI-FIX][COMPLETE]', { finalJobId, hasReport: !!jobResult.report });
+        let jobResult: any = res.inlineResult || res.result || res.job || null;
+        console.log('[AI-FIX][START-RES]', { jobId, isInline: !!jobResult });
 
-        if (jobResult.report) setAutoFixReport(jobResult.report);
-
-        const normalizedAfter = normalizePreflightResult(jobResult);
-        setResult(normalizedAfter);
-        setAutoFixAfter(normalizedAfter);
-
-        const bestArtifactKey = getBestArtifactKey(normalizedAfter.artifacts);
-        console.log('[AI-FIX][ARTIFACT-RESOLUTION]', { jobId: finalJobId, selected: bestArtifactKey });
-
-        if (bestArtifactKey) {
-          getAuthenticatedBlobUrl(finalJobId, bestArtifactKey)
-            .then(bUrl => {
-              if (bUrl) {
-                console.log('[AI-FIX][ARTIFACT-RESOLVED]', { jobId: finalJobId, key: bestArtifactKey });
-                setLastPdfUrl(bUrl);
-                lastPdfUrlRef.current = bUrl;
-              }
-            })
-            .catch(err => console.error('[AI-FIX][ARTIFACT-ERROR]', err));
-        } else if (file) {
-          const url = URL.createObjectURL(file);
-          setLastPdfUrl(url);
-          lastPdfUrlRef.current = url;
-        } else {
-          setLastPdfUrl(null);
-          lastPdfUrlRef.current = null;
+        if (jobId && !jobResult) {
+          activeJobIdRef.current = jobId;
+          setLdmProgress(10);
+          console.log('[AI-FIX][STEP3][STATE]', { status: 'FIX_POLLING', targetJobId: jobId });
+          jobResult = await handleV2JobComplete(jobId);
+        } else if (jobResult && !jobId) {
+          jobId = pickCanonicalJobId(jobResult.meta?.jobId, jobResult.job_id, jobResult.id) ?? jobId;
+          if (jobId) {
+            setTargetJobId(jobId);
+            activeJobIdRef.current = jobId;
+          }
         }
 
-        setLastPdfName(getCanonicalFileName(jobResult, file));
-        setCurrentPage(1);
-        setCurrentStep(4);
-      } else {
-        console.error('[AI-FIX][FAILED] No jobResult found in res:', res);
-        throw new Error('Engine returned no result data.');
+        if (jobResult) {
+          const finalJobId = jobId || jobResult.meta?.jobId;
+          console.log('[AI-FIX][COMPLETE]', { finalJobId, hasReport: !!jobResult.report });
+
+          if (jobResult.report) setAutoFixReport(jobResult.report);
+
+          const normalizedAfter = normalizePreflightResult(jobResult);
+          setResult(normalizedAfter);
+          setAutoFixAfter(normalizedAfter);
+
+          const bestArtifactKey = getBestArtifactKey(normalizedAfter.artifacts);
+          console.log('[AI-FIX][ARTIFACT-RESOLUTION]', { jobId: finalJobId, selected: bestArtifactKey });
+
+          if (bestArtifactKey) {
+            getAuthenticatedBlobUrl(finalJobId, bestArtifactKey)
+              .then((bUrl) => {
+                if (bUrl) {
+                  console.log('[AI-FIX][ARTIFACT-RESOLVED]', { jobId: finalJobId, key: bestArtifactKey });
+                  setLastPdfUrl(bUrl);
+                  lastPdfUrlRef.current = bUrl;
+                }
+              })
+              .catch((err) => console.error('[AI-FIX][ARTIFACT-ERROR]', err));
+          } else if (file) {
+            const url = URL.createObjectURL(file);
+            setLastPdfUrl(url);
+            lastPdfUrlRef.current = url;
+          } else {
+            setLastPdfUrl(null);
+            lastPdfUrlRef.current = null;
+          }
+
+          setLastPdfName(getCanonicalFileName(jobResult, file));
+          setCurrentPage(1);
+          setCurrentStep(4);
+        } else {
+          console.error('[AI-FIX][FAILED] No jobResult found in res:', res);
+          throw new Error('Engine returned no result data.');
+        }
+
+        setLdmActive(false);
+      } catch (err: any) {
+        console.error('[AI-FIX][ERROR]', err);
+        setFixError(err);
+        setLdmActive(false);
+        setLdmStatus('');
+        setLastPdfUrl(null);
+        lastPdfUrlRef.current = null;
+        console.log('[AI-FIX][TRIGGER-FAILED]', { error: err.message });
       }
+    },
+    [
+      file,
+      result,
+      autoFixBefore,
+      appMode,
+      autoFixServer,
+      handleV2JobComplete,
+      getAuthenticatedBlobUrl,
+      selectedPolicy,
+      fileMeta,
+      activeJobIdRef,
+      preflightJobIdRef,
+      setLdmActive,
+      setLdmStatus,
+      setLdmProgress,
+      setCurrentStep,
+      setCurrentPage,
+      setResult,
+      setLastPdfUrl,
+      lastPdfUrlRef,
+      setLastPdfName,
+    ],
+  );
 
-      setLdmActive(false);
-    } catch (err: any) {
-      console.error('[AI-FIX][ERROR]', err);
-      setFixError(err);
-      setLdmActive(false);
-      setLdmStatus('');
-      setLastPdfUrl(null);
-      lastPdfUrlRef.current = null;
-      console.log('[AI-FIX][TRIGGER-FAILED]', { error: err.message });
-    }
-  }, [
-    file,
-    result,
-    autoFixBefore,
-    autoFixServer,
-    handleV2JobComplete,
-    getAuthenticatedBlobUrl,
-    selectedPolicy,
-    fileMeta,
-    activeJobIdRef,
-    preflightJobIdRef,
-    setLdmActive,
-    setLdmStatus,
-    setLdmProgress,
-    setCurrentStep,
-    setCurrentPage,
-    setResult,
-    setLastPdfUrl,
-    lastPdfUrlRef,
-    setLastPdfName,
-  ]);
-
-  // Deterministic AI Auto-Fix Trigger — only fires in 'ai' mode
   useEffect(() => {
     const jobId = activeJobIdRef.current;
 
@@ -230,7 +325,7 @@ export function useAiMagicFix({
     if (canAutoTrigger) {
       console.log('[AI-FIX][AUTO-TRIGGER]', { jobId, type: result?.type });
       hasAutoTriggeredFixRef.current = jobId;
-      triggerAutoFix({});
+      triggerAutoFix({ fixIntent: 'full_magic' });
     }
   }, [appMode, currentStep, result, autoFixAfter, ldmActive, ldmStatus, fixError, triggerAutoFix, activeJobIdRef]);
 

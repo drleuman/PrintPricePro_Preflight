@@ -560,7 +560,7 @@ router.post('/:jobId/actions/fix', async (req, res) => {
               }
           }
 
-          const hasBleed = requestedFixes.some(f =>
+          const hasBleed = options.forceBleed === true || requestedFixes.some(f =>
               f.repairStrategy === 'APPLY_BLEED' || f.repairStrategy === 'BLEED'
           );
           if (hasBleed && !type && !repairStrategy) {
@@ -568,7 +568,7 @@ router.post('/:jobId/actions/fix', async (req, res) => {
               repairStrategy = 'APPLY_BLEED';
           }
 
-          const hasCmyk = requestedFixes.some(f =>
+          const hasCmyk = options.forceCmykAfterFix === true || requestedFixes.some(f =>
               f.repairStrategy === 'CONVERT_CMYK' || f.repairStrategy === 'RGB→CMYK'
           );
 
