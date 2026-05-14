@@ -369,6 +369,115 @@ function runTests() {
     { gotDegraded: resEnriched._isDegraded, reasons: resEnriched.degraded_reasons }
   );
 
+  // --- Test 8: ANALYZE payload normalization and derivations ---
+  console.log('\n[Test 8] ANALYZE payload normalization and derivations');
+  const sampleAnalyzeInput = {
+    jobId: "job_123",
+    type: "ANALYZE",
+    issues: [
+      { id: "TRIMBOX_MISSING", severity: "error", category: "GEOMETRY", fixable: true, page: 1 },
+      { id: "BLEEDBOX_MISSING", severity: "warning", category: "GEOMETRY", fixable: true, page: 1 },
+      { id: "IND_COLOR_001", severity: "error", category: "COLOR", fixable: true, page: 1 },
+      { id: "IND_COLOR_002", severity: "warning", category: "COLOR", fixable: true, page: 1 },
+      { id: "IND_COMPLIANCE_001", severity: "info", category: "COMPLIANCE", fixable: false, page: 1 }
+    ],
+    artifacts: { analysis_report: "report.json" }
+  };
+
+  const resAnalyze = preflightNormalizer.normalizeAnalyzeJob(sampleAnalyzeInput);
+
+  assertPass(
+    'summary is derived non-null',
+    resAnalyze?.summary !== null && typeof resAnalyze?.summary === 'object',
+    { got: resAnalyze?.summary }
+  );
+  assertPass(
+    'summary.risk_level === "CRITICAL"',
+    resAnalyze?.summary?.risk_level === "CRITICAL",
+    { got: resAnalyze?.summary?.risk_level }
+  );
+  assertPass(
+    'summary.risk_score === 100',
+    resAnalyze?.summary?.risk_score === 100,
+    { got: resAnalyze?.summary?.risk_score }
+  );
+  assertPass(
+    'summary.issue_count === 5',
+    resAnalyze?.summary?.issue_count === 5,
+    { got: resAnalyze?.summary?.issue_count }
+  );
+  assertPass(
+    'summary.error_count === 2',
+    resAnalyze?.summary?.error_count === 2,
+    { got: resAnalyze?.summary?.error_count }
+  );
+  assertPass(
+    'summary.warning_count === 2',
+    resAnalyze?.summary?.warning_count === 2,
+    { got: resAnalyze?.summary?.warning_count }
+  );
+  assertPass(
+    'summary.info_count === 1',
+    resAnalyze?.summary?.info_count === 1,
+    { got: resAnalyze?.summary?.info_count }
+  );
+  assertPass(
+    'summary.derived === true',
+    resAnalyze?.summary?.derived === true,
+    { got: resAnalyze?.summary?.derived }
+  );
+  assertPass(
+    'score === 100',
+    resAnalyze?.score === 100,
+    { got: resAnalyze?.score }
+  );
+
+  assertPass(
+    'categorySummaries includes derived entries correctly',
+    Array.isArray(resAnalyze?.categorySummaries) && resAnalyze.categorySummaries.length === 3,
+    { got: resAnalyze?.categorySummaries }
+  );
+  assertPass(
+    'pages includes derived entries correctly',
+    Array.isArray(resAnalyze?.pages) && resAnalyze.pages.length === 1 && resAnalyze.pages[0].page === 1,
+    { got: resAnalyze?.pages }
+  );
+  assertPass(
+    'missing metadata populates fallback and sets degraded_reasons',
+    resAnalyze?.meta?.fileName === "document.pdf" && resAnalyze?.degraded_reasons?.includes("MISSING_DOCUMENT_METADATA"),
+    { gotMeta: resAnalyze?.meta, gotReasons: resAnalyze?.degraded_reasons }
+  );
+
+  // Preserve upstream summary test
+  const upstreamAnalyzeInput = {
+    jobId: "job_456",
+    type: "ANALYZE",
+    summary: { risk_level: "WARNING", risk_score: 50, original: true },
+    issues: [{ id: "warn", severity: "warning", category: "GENERAL" }]
+  };
+  const resUpstreamAnalyze = preflightNormalizer.normalizeAnalyzeJob(upstreamAnalyzeInput);
+  assertPass(
+    'preserves upstream summary object without overriding',
+    resUpstreamAnalyze?.summary?.original === true,
+    { got: resUpstreamAnalyze?.summary }
+  );
+
+  // Production hotfixes invariant verification
+  const fs = require('fs');
+  const serverJsContent = fs.readFileSync('./app/server.js', 'utf8');
+  const dbJsContent = fs.readFileSync('./app/services/db.js', 'utf8');
+
+  assertPass(
+    'app/server.js utilizes dotenv config override: true',
+    serverJsContent.includes("require('dotenv').config({ override: true })"),
+    { verified: true }
+  );
+  assertPass(
+    'app/services/db.js uses URL parsing for database URL credentials/bridging',
+    dbJsContent.includes("new URL(") && dbJsContent.includes("database:"),
+    { verified: true }
+  );
+
   console.log('\n--- TEST EXECUTION SUMMARY ---');
   console.log(`Total Passed: ${passed}`);
   console.log(`Total Failed: ${failed}`);

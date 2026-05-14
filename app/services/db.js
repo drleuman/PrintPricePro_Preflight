@@ -4,26 +4,37 @@
  */
 
 const mysql = require('mysql2/promise');
+const { URL } = require('url');
 
 let pool;
 
+function buildMysqlConfig() {
+  const parsed = new URL(process.env.DATABASE_URL);
+
+  return {
+    host: parsed.hostname,
+    port: Number(parsed.port || 3306),
+    user: decodeURIComponent(parsed.username),
+    password: decodeURIComponent(parsed.password),
+    database: parsed.pathname.replace(/^\//, ''),
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0,
+  };
+}
+
 const getPool = () => {
   if (pool) return pool;
-  
+
   if (!process.env.DATABASE_URL) {
     console.error('[DB-ERROR] DATABASE_URL is missing in environment!');
     return null;
   }
 
   try {
-    pool = mysql.createPool({
-      uri: process.env.DATABASE_URL,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-      enableKeepAlive: true,
-      keepAliveInitialDelay: 0,
-    });
+    pool = mysql.createPool(buildMysqlConfig());
     return pool;
   } catch (err) {
     console.error('[DB-ERROR] Failed to create bridge pool:', err.message);

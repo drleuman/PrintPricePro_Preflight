@@ -349,13 +349,29 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
 
     const pageCount = payload.meta?.pageCount ?? payload.report?.meta?.pageCount ?? payload.pages?.length ?? payload.report?.pages?.length ?? null;
 
+    let derivedSummaryFallback: any = null;
+    if (normalizedIssues.length > 0) {
+        const errs = normalizedIssues.filter(i => i.severity === Severity.ERROR).length;
+        const warns = normalizedIssues.filter(i => i.severity === Severity.WARNING).length;
+        derivedSummaryFallback = {
+            risk_level: errs > 0 ? 'CRITICAL' : (warns > 0 ? 'WARNING' : 'LOW'),
+            risk_score: errs > 0 ? 100 : (warns > 0 ? 50 : 10),
+            issue_count: normalizedIssues.length,
+            derived: true
+        };
+    }
+
+    const resolvedSummary = payload.summary !== undefined && payload.summary !== null
+        ? payload.summary
+        : (payload.summary_text ?? payload.summary?.before?.text ?? payload.report?.summary ?? derivedSummaryFallback ?? (sourceFound ? null : 'Analysis data unavailable'));
+
     // 3. Construct the PreflightResult
     const result: PreflightResult = {
         type: (payload.type || payload.result?.type || payload.job_type || '').toUpperCase() as any,
         sourceJobId: payload.sourceJobId || payload.meta?.sourceJobId || undefined,
         artifacts: payload.artifacts ?? payload.result?.artifacts ?? {},
-        score: payload.score ?? payload.report?.score ?? (sourceFound ? 0 : null),
-        summary: typeof payload.summary === 'string' ? payload.summary : (payload.summary_text ?? payload.summary?.before?.text ?? payload.report?.summary ?? payload.summary ?? (sourceFound ? null : 'Analysis data unavailable')),
+        score: payload.score ?? payload.report?.score ?? (resolvedSummary?.risk_score ?? (sourceFound ? 0 : null)),
+        summary: resolvedSummary,
         issues: normalizedIssues,
         fixes: payload.fixes ?? payload.repairs ?? payload.result?.fixes ?? payload.result?.repairs ?? [],
         pages: payload.pages ?? payload.report?.pages ?? [],
@@ -375,8 +391,8 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
     };
 
     // Preserve rich fields on result directly if present for Step3/Step4
-    if (payload.summary && typeof payload.summary === 'object') {
-        (result as any).summaryObject = payload.summary;
+    if (resolvedSummary && typeof resolvedSummary === 'object') {
+        (result as any).summaryObject = resolvedSummary;
     }
     if (payload.document) {
         (result as any).document = payload.document;

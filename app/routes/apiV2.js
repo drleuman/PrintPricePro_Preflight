@@ -76,6 +76,22 @@ function isAutofixLikePayload(payload, requestedJobId) {
   );
 }
 
+function isAnalyzeLikePayload(payload, requestedJobId) {
+  const id = String(payload?.jobId || payload?.id || requestedJobId || '');
+  const type = payload?.type || payload?.result?.type || '';
+  const hasFindingsOrIssues = Array.isArray(payload?.findings) || Array.isArray(payload?.issues) || Array.isArray(payload?.result?.findings) || Array.isArray(payload?.result?.issues);
+  const hasAnalysisReport = Boolean(payload?.artifacts?.analysis_report || payload?.result?.artifacts?.analysis_report);
+  const hasSummaryOrDoc = Boolean(payload?.result?.summary || payload?.result?.document || payload?.summary || payload?.document);
+  
+  return (
+    type === 'ANALYZE' ||
+    id.startsWith('job_') ||
+    hasFindingsOrIssues ||
+    hasAnalysisReport ||
+    hasSummaryOrDoc
+  );
+}
+
 router.post(
   '/',
   upload.single('file'),
@@ -532,6 +548,16 @@ router.get('/:jobId', async (req, res) => {
         artifactListCount: Array.isArray(finalResponsePayload.artifactList) ? finalResponsePayload.artifactList.length : 0,
         degraded: finalResponsePayload._isDegraded,
         degradedReasons: finalResponsePayload.degraded_reasons || []
+      });
+    } else if (isAnalyzeLikePayload(data, jobId)) {
+      finalResponsePayload = preflightNormalizer.normalizeAnalyzeJob(data);
+      console.info(`[BFF][POLL][ANALYZE-ENRICHED][${requestId}]`, {
+        requestedJobId: jobId,
+        resolvedJobId: finalResponsePayload?.jobId,
+        hasSummary: Boolean(finalResponsePayload?.summary),
+        isDerivedSummary: finalResponsePayload?.summary?.derived || false,
+        findingsCount: Array.isArray(finalResponsePayload?.findings) ? finalResponsePayload.findings.length : 0,
+        degraded: finalResponsePayload?._isDegraded
       });
     }
 

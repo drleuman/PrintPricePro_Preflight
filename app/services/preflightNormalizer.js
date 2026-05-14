@@ -108,7 +108,7 @@ function isValidDocumentName(name) {
 
 function extractDocumentMetadata(job) {
   if (!job) return null;
-  const doc = job.document || job.result?.document || job.report?.document;
+  const doc = job.document || job.result?.document || job.report?.document || job.result?.report?.document;
   if (doc && isValidDocumentName(doc.name)) {
     return {
       name: doc.name,
@@ -140,6 +140,7 @@ function extractFindings(job) {
   const candidates = [
     target.issues,
     target.findings,
+    target.analysis?.findings,
     target.report?.issues,
     target.report?.findings,
     target.warnings,
@@ -147,6 +148,7 @@ function extractFindings(job) {
     target.report?.warnings,
     job.issues,
     job.findings,
+    job.analysis?.findings,
     job.warnings
   ];
   const list = [];
@@ -273,9 +275,221 @@ function buildDegradedState(reasons) {
   };
 }
 
+function deriveCategorySummaries(findings) {
+  if (!Array.isArray(findings)) return [];
+  const map = new Map();
+
+  findings.forEach(f => {
+    if (!f) return;
+    const cat = (f.category || "GENERAL").toUpperCase();
+    if (!map.has(cat)) {
+      map.set(cat, {
+        category: cat,
+        count: 0,
+        error_count: 0,
+        warning_count: 0,
+        info_count: 0,
+        fixable_count: 0
+      });
+    }
+    const entry = map.get(cat);
+    entry.count++;
+    const sev = (f.severity || f.level || '').toLowerCase();
+    if (sev === 'error' || sev === 'critical') {
+      entry.error_count++;
+    } else if (sev === 'warning') {
+      entry.warning_count++;
+    } else if (sev === 'info') {
+      entry.info_count++;
+    }
+    if (f.fixable || f.fixRequired || f.safeToAutofix || f.fix_method || f.repairStrategy) {
+      entry.fixable_count++;
+    }
+  });
+
+  return Array.from(map.values());
+}
+
+function derivePagesSummaries(findings) {
+  if (!Array.isArray(findings)) return [];
+  const map = new Map();
+
+  findings.forEach(f => {
+    if (!f) return;
+    const pageNum = Number(f.page) || 1;
+    if (!map.has(pageNum)) {
+      map.set(pageNum, {
+        page: pageNum,
+        issue_count: 0,
+        error_count: 0,
+        warning_count: 0,
+        info_count: 0,
+        categoriesSet: new Set()
+      });
+    }
+    const entry = map.get(pageNum);
+    entry.issue_count++;
+    const sev = (f.severity || f.level || '').toLowerCase();
+    if (sev === 'error' || sev === 'critical') {
+      entry.error_count++;
+    } else if (sev === 'warning') {
+      entry.warning_count++;
+    } else if (sev === 'info') {
+      entry.info_count++;
+    }
+    if (f.category) {
+      entry.categoriesSet.add(f.category.toUpperCase());
+    }
+  });
+
+  const res = [];
+  const sortedPages = Array.from(map.keys()).sort((a, b) => a - b);
+  for (const pageNum of sortedPages) {
+    const entry = map.get(pageNum);
+    res.push({
+      page: entry.page,
+      issue_count: entry.issue_count,
+      error_count: entry.error_count,
+      warning_count: entry.warning_count,
+      info_count: entry.info_count,
+      categories: Array.from(entry.categoriesSet)
+    });
+  }
+  return res;
+}
+
 function normalizeAnalyzeJob(rawJob) {
   if (!rawJob) return null;
-  return rawJob;
+
+  const allFindings = extractFindings(rawJob);
+  const issues = Array.isArray(rawJob.issues) && rawJob.issues.length > 0 ? rawJob.issues : allFindings;
+  const findings = Array.isArray(rawJob.findings) && rawJob.findings.length > 0 ? rawJob.findings : allFindings;
+
+  let summary = rawJob.summary || rawJob.result?.summary || rawJob.report?.summary || rawJob.result?.report?.summary;
+
+  if (!summary && allFindings.length > 0) {
+    let critical_count = 0;
+    let error_count = 0;
+    let warning_count = 0;
+    let info_count = 0;
+
+    allFindings.forEach(f => {
+      const sev = (f.severity || f.level || '').toLowerCase();
+      if (sev === 'critical') {
+        critical_count++;
+      } else if (sev === 'error') {
+        error_count++;
+      } else if (sev === 'warning') {
+        warning_count++;
+      } else if (sev === 'info') {
+        info_count++;
+      }
+    });
+
+    const totalCriticalOrError = critical_count + error_count;
+    let risk_level = "LOW";
+    if (totalCriticalOrError > 0) {
+      risk_level = "CRITICAL";
+    } else if (warning_count > 0) {
+      risk_level = "WARNING";
+    }
+
+    let risk_score = 0;
+    if (totalCriticalOrError > 0) {
+      risk_score = 100;
+    } else if (warning_count > 0) {
+      risk_score = 50;
+    } else if (info_count > 0) {
+      risk_score = 10;
+    }
+
+    summary = {
+      risk_level,
+      risk_score,
+      scoreBasis: "DOCUMENT_FINDINGS_DERIVED",
+      issue_count: allFindings.length,
+      critical_count: totalCriticalOrError,
+      error_count,
+      warning_count,
+      info_count,
+      derived: true
+    };
+  }
+
+  let score = rawJob.risk_score ?? rawJob.score ?? 0;
+  if (score === 0 && summary?.risk_score !== undefined) {
+    score = summary.risk_score;
+  }
+
+  const extractedDoc = extractDocumentMetadata(rawJob);
+  let documentObj;
+  let metaObj;
+  const degradedReasons = [];
+
+  const jobIdCandidate = rawJob.jobId || rawJob.id || rawJob.result?.jobId || "job_unknown";
+
+  if (extractedDoc) {
+    documentObj = {
+      name: extractedDoc.name,
+      size: extractedDoc.size,
+      page_count: extractedDoc.page_count,
+      pdf_version: extractedDoc.pdf_version || "1.7"
+    };
+    metaObj = {
+      ...(rawJob.meta || {}),
+      fileName: extractedDoc.name,
+      fileSize: extractedDoc.size,
+      pageCount: extractedDoc.page_count,
+      jobId: jobIdCandidate
+    };
+  } else {
+    documentObj = {
+      name: "document.pdf",
+      size: 0,
+      page_count: 0,
+      pdf_version: "1.7"
+    };
+    metaObj = {
+      ...(rawJob.meta || {}),
+      fileName: "document.pdf",
+      fileSize: 0,
+      pageCount: 0,
+      jobId: jobIdCandidate
+    };
+    degradedReasons.push("MISSING_DOCUMENT_METADATA");
+  }
+
+  let categorySummaries = rawJob.categorySummaries || rawJob.result?.categorySummaries || rawJob.report?.categorySummaries || rawJob.result?.report?.categorySummaries;
+  if (!Array.isArray(categorySummaries) || categorySummaries.length === 0) {
+    categorySummaries = deriveCategorySummaries(allFindings);
+  }
+
+  let pages = rawJob.pages || rawJob.result?.pages || rawJob.report?.pages || rawJob.result?.report?.pages;
+  if (!Array.isArray(pages) || pages.length === 0) {
+    pages = derivePagesSummaries(allFindings);
+  }
+
+  const isDegraded = degradedReasons.length > 0 || (rawJob._isDegraded === true);
+  const existingReasons = Array.isArray(rawJob.degraded_reasons) ? rawJob.degraded_reasons : [];
+  const combinedReasons = Array.from(new Set([...existingReasons, ...degradedReasons]));
+
+  return {
+    ...rawJob,
+    jobId: jobIdCandidate,
+    type: rawJob.type || rawJob.result?.type || "ANALYZE",
+    summary: summary || null,
+    score,
+    document: documentObj,
+    meta: metaObj,
+    issues,
+    findings,
+    categorySummaries,
+    pages,
+    _isDegraded: isDegraded,
+    ...(combinedReasons.length > 0 ? { degraded_reasons: combinedReasons } : {}),
+    normalizerApplied: true,
+    normalizerVersion: "analyze-get-v2-2026-05-14"
+  };
 }
 
 /**

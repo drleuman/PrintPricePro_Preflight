@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-require('dotenv').config();
+require('dotenv').config({ override: true });
 const express = require('express');
 const path = require('path');
 console.log(`[BOOTSTRAP] Starting PrintPrice Engine at ${new Date().toISOString()}`);
