@@ -161,6 +161,7 @@ export function useAiMagicFix({
   const [autoFixRunId] = useState<number | null>(null);
 
   const hasAutoTriggeredFixRef = useRef<string | null>(null);
+  const inFlightFixKeyRef = useRef<string | null>(null);
 
   const resetAiFix = useCallback(() => {
     setAutoFixBefore(null);
@@ -169,11 +170,44 @@ export function useAiMagicFix({
     setFixError(null);
     setTargetJobId(null);
     hasAutoTriggeredFixRef.current = null;
+    inFlightFixKeyRef.current = null;
   }, []);
 
   const triggerAutoFix = useCallback(
     async (opts?: any) => {
       if (!file) return;
+
+      const mergedOptions = mergeStatefulFixOptions(opts, result, appMode);
+      const sourceJobId = preflightJobIdRef.current || activeJobIdRef.current;
+      const policyKey = opts?.policy || selectedPolicy;
+      
+      const reqFixes = mergedOptions.requestedFixes || opts?.requested_fixes || opts?.fixes || [];
+      const fixesStr = Array.isArray(reqFixes)
+        ? reqFixes
+            .map((f: any) =>
+              typeof f === 'string'
+                ? f
+                : f?.repairStrategy || f?.repair_strategy || f?.fix_method || f?.id || '',
+            )
+            .sort()
+            .join(',')
+        : '';
+
+      const sourceKeyObj = {
+        sourceJobId,
+        policy: policyKey,
+        fixes: fixesStr,
+        forceBleed: !!(mergedOptions.forceBleed || opts?.forceBleed),
+        targetProfile: mergedOptions.targetProfile || opts?.targetProfile || '',
+      };
+      const sourceKey = JSON.stringify(sourceKeyObj);
+
+      if (inFlightFixKeyRef.current === sourceKey) {
+        console.log('[AI-FIX][DUPLICATE-SUPPRESSED]', { sourceKey });
+        return;
+      }
+
+      inFlightFixKeyRef.current = sourceKey;
 
       if (result && !autoFixBefore) {
         setAutoFixBefore(result);
@@ -183,7 +217,6 @@ export function useAiMagicFix({
       setLdmActive(true);
       setFixError(null);
       setLdmStatus('loader.magic');
-      const mergedOptions = mergeStatefulFixOptions(opts, result, appMode);
       console.log('[AI-FIX][STEP3][STATE]', {
         status: 'FIX_INITIALIZING',
         sourceJobId: activeJobIdRef.current,
@@ -280,6 +313,8 @@ export function useAiMagicFix({
         setLastPdfUrl(null);
         lastPdfUrlRef.current = null;
         console.log('[AI-FIX][TRIGGER-FAILED]', { error: err.message });
+      } finally {
+        inFlightFixKeyRef.current = null;
       }
     },
     [

@@ -714,7 +714,7 @@ function AppContent() {
                     selectedIssue={selectedIssue}
                     heatmapData={heatmapData}
                     isHeatmapLoading={heatmapLoading}
-                    isRunning={isWorkerRunning}
+                    isRunning={isWorkerRunning || ldmActive}
                     selectedProfile={selectedProfile}
                     ldmActive={ldmActive}
                     ldmProgress={ldmProgress}

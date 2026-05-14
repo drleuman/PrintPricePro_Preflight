@@ -13,6 +13,7 @@ const licenseGuard = require('../middleware/licenseGuard');
 const preflightNormalizer = require('../services/preflightNormalizer');
 
 const router = express.Router();
+const autofixIdempotencyMap = new Map();
 
 if (!fs.existsSync(ppos.tempUploadDir)) {
   fs.mkdirSync(ppos.tempUploadDir, { recursive: true });
@@ -752,7 +753,6 @@ router.post('/:jobId/actions/fix', async (req, res) => {
       console.warn(`[BFF][AUTOFIX] Pre-fetch source job context failed: ${err.message}`);
     }
 
-    // Architectural Requirement: Always proxy to PPOS preflight service
     const body = req.body || {};
 
     const requestedFixes =
@@ -777,126 +777,186 @@ router.post('/:jobId/actions/fix', async (req, res) => {
       body.options?.target_profile ||
       'FOGRA51';
 
-    const options = body.options || {};
-    let { type, strategy, repairStrategy } = options;
-
-    const hasTrimBox = requestedFixes.some(f => f === 'REBUILD_TRIMBOX' || f?.repairStrategy === 'REBUILD_TRIMBOX');
-    if (hasTrimBox) {
-        const hasStructuralFix = requestedFixes.some(f =>
-            ['RGB→CMYK', 'BLEED', 'FLATTEN_PDF', 'REBUILD', 'CONVERT_GRAYSCALE', 'CONVERT_CMYK'].includes(typeof f === 'string' ? f : f?.repairStrategy)
-        );
-
-        if (!hasStructuralFix && !strategy) {
-            type = 'geometry';
-            strategy = 'REBUILD_TRIMBOX';
-            repairStrategy = 'REBUILD_TRIMBOX';
-        }
-    }
-
-    const hasBleedOpt = forceBleed || requestedFixes.some(f =>
-        f === 'APPLY_BLEED' || f === 'BLEED' || f?.repairStrategy === 'APPLY_BLEED' || f?.repairStrategy === 'BLEED'
-    );
-    if (hasBleedOpt && !type && !repairStrategy) {
-        type = 'bleed';
-        repairStrategy = 'APPLY_BLEED';
-    }
-
-    const hasCmyk = options.forceCmykAfterFix === true || requestedFixes.some(f =>
-        f === 'CONVERT_CMYK' || f === 'RGB→CMYK' || f?.repairStrategy === 'CONVERT_CMYK' || f?.repairStrategy === 'RGB→CMYK'
-    );
-
     const policy = body.policy || 'OFFSET_MODERN_COATED';
     const policyId = body.policyId || body.policy || 'OFFSET_MODERN_COATED';
 
-    const servicePayload = {
-      ...body,
-      policy,
-      policyId,
-      fixes: requestedFixes,
-      requested_fixes: requestedFixes,
+    const canonicalFixesStr = requestedFixes
+      .map(f => (typeof f === 'string' ? f : (f?.repairStrategy || f?.repair_strategy || f?.fix_method || f?.id || '')))
+      .sort()
+      .join(',');
+
+    const idempotencyKeyObj = {
+      tenantId,
+      jobId,
+      fixes: canonicalFixesStr,
       forceBleed,
-      force_bleed: forceBleed,
       targetProfile,
-      target_profile: targetProfile,
-      options: {
-        ...options,
-        type,
-        strategy,
-        repairStrategy,
-        ...(hasCmyk ? { target: 'cmyk' } : {}),
+      policyId
+    };
+    const idempotencyKey = JSON.stringify(idempotencyKeyObj);
+
+    console.log(`[BFF][AUTOFIX][IDEMPOTENCY-KEY]`, { idempotencyKey });
+
+    if (autofixIdempotencyMap.has(idempotencyKey)) {
+      console.log(`[BFF][AUTOFIX][IDEMPOTENT-HIT]`, { idempotencyKey });
+      const record = autofixIdempotencyMap.get(idempotencyKey);
+      if (record.pendingPromise) {
+        try {
+          const enrichedData = await record.pendingPromise;
+          return res.status(200).json(enrichedData);
+        } catch (err) {
+          // If previous execution failed, fall through to re-attempt
+        }
+      } else if (record.result) {
+        return res.status(200).json(record.result);
+      }
+    }
+
+    const executeFixAction = async () => {
+      const options = body.options || {};
+      let { type, strategy, repairStrategy } = options;
+
+      const hasTrimBox = requestedFixes.some(f => f === 'REBUILD_TRIMBOX' || f?.repairStrategy === 'REBUILD_TRIMBOX');
+      if (hasTrimBox) {
+          const hasStructuralFix = requestedFixes.some(f =>
+              ['RGB→CMYK', 'BLEED', 'FLATTEN_PDF', 'REBUILD', 'CONVERT_GRAYSCALE', 'CONVERT_CMYK'].includes(typeof f === 'string' ? f : f?.repairStrategy)
+          );
+
+          if (!hasStructuralFix && !strategy) {
+              type = 'geometry';
+              strategy = 'REBUILD_TRIMBOX';
+              repairStrategy = 'REBUILD_TRIMBOX';
+          }
+      }
+
+      const hasBleedOpt = forceBleed || requestedFixes.some(f =>
+          f === 'APPLY_BLEED' || f === 'BLEED' || f?.repairStrategy === 'APPLY_BLEED' || f?.repairStrategy === 'BLEED'
+      );
+      if (hasBleedOpt && !type && !repairStrategy) {
+          type = 'bleed';
+          repairStrategy = 'APPLY_BLEED';
+      }
+
+      const hasCmyk = options.forceCmykAfterFix === true || requestedFixes.some(f =>
+          f === 'CONVERT_CMYK' || f === 'RGB→CMYK' || f?.repairStrategy === 'CONVERT_CMYK' || f?.repairStrategy === 'RGB→CMYK'
+      );
+
+      const servicePayload = {
+        ...body,
+        policy,
+        policyId,
         fixes: requestedFixes,
         requested_fixes: requestedFixes,
         forceBleed,
         force_bleed: forceBleed,
         targetProfile,
-        target_profile: targetProfile
+        target_profile: targetProfile,
+        options: {
+          ...options,
+          type,
+          strategy,
+          repairStrategy,
+          ...(hasCmyk ? { target: 'cmyk' } : {}),
+          fixes: requestedFixes,
+          requested_fixes: requestedFixes,
+          forceBleed,
+          force_bleed: forceBleed,
+          targetProfile,
+          target_profile: targetProfile
+        }
+      };
+
+      console.log(`[BFF][FIX-ACTION][FORWARD-PAYLOAD]`, {
+        sourceJobId: jobId,
+        requestedFixesCount: requestedFixes.length,
+        requestedFixes,
+        forceBleed,
+        targetProfile
+      });
+
+      const response = await pposRequest(
+        `/api/preflight/jobs/${jobId}/actions/fix`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: authHeaders.Authorization,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(servicePayload)
+        }
+      );
+
+      if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error(`[APP][AUTOFIX][ERROR][${requestId}]`, errorData);
+          const err = new Error(errorData.message || 'The PPOS engine rejected the fix action.');
+          err.status = response.status;
+          err.upstreamError = errorData;
+          throw err;
       }
+
+      const data = await response.json();
+      
+      const canonicalFixId = preflightNormalizer.getJobId(data);
+      const resolvedFixId = (canonicalFixId !== "fix_unknown" && canonicalFixId.startsWith("fix_"))
+          ? canonicalFixId
+          : (data.jobId || data.id || data.fixJobId || data.targetJobId || data.result?.jobId || jobId);
+
+      console.log(`[APP][AUTOFIX][RESPONSE][${requestId}]`, { sourceJobId: jobId, targetJobId: resolvedFixId });
+      console.log(`[BFF][CANONICAL-ID][FIX] Response for Job: ${jobId} -> Resolved: ${resolvedFixId}`);
+
+      preflightNormalizer.linkFixJob(resolvedFixId, jobId);
+
+      const cachedSource = preflightNormalizer.getCachedSourceJob(resolvedFixId, data);
+
+      console.info("[BFF][FIX-LINK][CREATE]", {
+        sourceJobId: jobId,
+        fixJobId: resolvedFixId,
+        hasSourceContext: Boolean(cachedSource),
+        sourceFindingsCount: Array.isArray(cachedSource?.findings) ? cachedSource.findings.length : null
+      });
+
+      const enrichedData = preflightNormalizer.normalizeAutofixJob({
+        ...data,
+        jobId: resolvedFixId,
+        id: resolvedFixId,
+        sourceJobId: jobId
+      }, cachedSource);
+
+      enrichedData.jobId = resolvedFixId;
+      enrichedData.sourceJobId = jobId;
+
+      return enrichedData;
     };
 
-    console.log(`[BFF][FIX-ACTION][FORWARD-PAYLOAD]`, {
-      sourceJobId: jobId,
-      requestedFixesCount: requestedFixes.length,
-      requestedFixes,
-      forceBleed,
-      targetProfile
-    });
+    const pendingPromise = executeFixAction();
+    console.log(`[BFF][AUTOFIX][IDEMPOTENT-STORE]`, { idempotencyKey });
+    autofixIdempotencyMap.set(idempotencyKey, { pendingPromise });
 
-    const response = await pposRequest(
-      `/api/preflight/jobs/${jobId}/actions/fix`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: authHeaders.Authorization,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(servicePayload)
-      }
-    );
+    try {
+      const enrichedData = await pendingPromise;
+      autofixIdempotencyMap.set(idempotencyKey, { result: enrichedData });
+      
+      setTimeout(() => {
+        if (autofixIdempotencyMap.get(idempotencyKey)?.result === enrichedData) {
+          autofixIdempotencyMap.delete(idempotencyKey);
+        }
+      }, 65000);
 
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error(`[APP][AUTOFIX][ERROR][${requestId}]`, errorData);
-        return res.status(response.status).json({
-            error: 'FIX_ACTION_FAILED',
-            message: errorData.message || 'The PPOS engine rejected the fix action.',
-            traceId: requestId,
-            v2: true,
-            upstreamError: errorData
-        });
+      return res.status(200).json(enrichedData);
+    } catch (err) {
+      console.log(`[BFF][AUTOFIX][IDEMPOTENT-CLEAR-ON-ERROR]`, { idempotencyKey });
+      autofixIdempotencyMap.delete(idempotencyKey);
+      
+      const status = err.status || 500;
+      return res.status(status).json({
+          error: 'FIX_ACTION_FAILED',
+          message: err.message || 'The PPOS engine rejected the fix action.',
+          traceId: requestId,
+          v2: true,
+          ...(err.upstreamError ? { upstreamError: err.upstreamError } : {})
+      });
     }
-
-    const data = await response.json();
-    
-    const canonicalFixId = preflightNormalizer.getJobId(data);
-    const resolvedFixId = (canonicalFixId !== "fix_unknown" && canonicalFixId.startsWith("fix_"))
-        ? canonicalFixId
-        : (data.jobId || data.id || data.fixJobId || data.targetJobId || data.result?.jobId || jobId);
-
-    console.log(`[APP][AUTOFIX][RESPONSE][${requestId}]`, { sourceJobId: jobId, targetJobId: resolvedFixId });
-    console.log(`[BFF][CANONICAL-ID][FIX] Response for Job: ${jobId} -> Resolved: ${resolvedFixId}`);
-
-    preflightNormalizer.linkFixJob(resolvedFixId, jobId);
-
-    const cachedSource = preflightNormalizer.getCachedSourceJob(resolvedFixId, data);
-
-    console.info("[BFF][FIX-LINK][CREATE]", {
-      sourceJobId: jobId,
-      fixJobId: resolvedFixId,
-      hasSourceContext: Boolean(cachedSource),
-      sourceFindingsCount: Array.isArray(cachedSource?.findings) ? cachedSource.findings.length : null
-    });
-
-    const enrichedData = preflightNormalizer.normalizeAutofixJob({
-      ...data,
-      jobId: resolvedFixId,
-      id: resolvedFixId,
-      sourceJobId: jobId
-    }, cachedSource);
-
-    enrichedData.jobId = resolvedFixId;
-    enrichedData.sourceJobId = jobId;
-
-    return res.status(200).json(enrichedData);
   } catch (error) {
     const traceId = requestId;
     console.error(`[BFF][FIX-ACTION][ERROR][${traceId}]`, error.message);
@@ -909,4 +969,5 @@ router.post('/:jobId/actions/fix', async (req, res) => {
   }
 });
 
+router.autofixIdempotencyMap = autofixIdempotencyMap;
 module.exports = router;
