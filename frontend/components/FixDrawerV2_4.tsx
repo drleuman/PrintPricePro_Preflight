@@ -198,7 +198,7 @@ export const FixDrawerV2_4: React.FC<Props> = ({
                 <span className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">{t('inspector.riskLevel')}</span>
                 <div className="flex items-center gap-2">
                     <StatusBadge 
-                        label={t(`inspector.risk${issue.destructiveFixRisk ? issue.destructiveFixRisk.charAt(0) + issue.destructiveFixRisk.slice(1).toLowerCase() : 'Low'}`)} 
+                        label={t(`inspector.risk${issue.destructiveFixRisk ? issue.destructiveFixRisk.charAt(0) + issue.destructiveFixRisk.slice(1).toLowerCase() : 'Low'}` as any)} 
                         variant={issue.destructiveFixRisk === 'HIGH' ? 'warning' : issue.destructiveFixRisk === 'MEDIUM' ? 'default' : 'certified'} 
                     />
                 </div>

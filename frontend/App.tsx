@@ -881,7 +881,7 @@ function AppContent() {
 
         <LoaderOverlay
           isOpen={ldmActive}
-          message={t(ldmStatus || 'common.processing') as any}
+          message={t((ldmStatus || 'common.processing') as any)}
           stageKey={ldmStatus?.toLowerCase().includes('engine') ? 'upload' : 'preflight'}
         />
 

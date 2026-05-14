@@ -535,6 +535,11 @@ router.get('/:jobId', async (req, res) => {
         ...(finalSourceJobId ? { sourceJobId: finalSourceJobId } : {})
       }, cachedSource);
 
+      const origRepairs = data?.repairs || data?.result?.repairs;
+      if (Array.isArray(origRepairs) && origRepairs.length > 0 && (!finalResponsePayload.repairs || finalResponsePayload.repairs.length === 0)) {
+        console.warn('[BFF][AUTOFIX][REPAIR-PRESERVATION-WARN] Repairs array exists in raw status but is lost during normalization in GET polling.');
+      }
+
       finalResponsePayload._bffNormalizerApplied = true;
       finalResponsePayload._bffNormalizerVersion = "autofix-get-v2-2026-05-14";
 
@@ -705,6 +710,94 @@ router.post('/:jobId/actions/fix', async (req, res) => {
     }
 
     // Architectural Requirement: Always proxy to PPOS preflight service
+    const body = req.body || {};
+
+    const requestedFixes =
+      Array.isArray(body.requested_fixes) ? body.requested_fixes :
+      Array.isArray(body.fixes) ? body.fixes :
+      Array.isArray(body.options?.requested_fixes) ? body.options.requested_fixes :
+      Array.isArray(body.options?.fixes) ? body.options.fixes :
+      [];
+
+    const forceBleed = Boolean(
+      body.forceBleed ??
+      body.force_bleed ??
+      body.options?.forceBleed ??
+      body.options?.force_bleed ??
+      false
+    );
+
+    const targetProfile =
+      body.targetProfile ||
+      body.target_profile ||
+      body.options?.targetProfile ||
+      body.options?.target_profile ||
+      'FOGRA51';
+
+    const options = body.options || {};
+    let { type, strategy, repairStrategy } = options;
+
+    const hasTrimBox = requestedFixes.some(f => f === 'REBUILD_TRIMBOX' || f?.repairStrategy === 'REBUILD_TRIMBOX');
+    if (hasTrimBox) {
+        const hasStructuralFix = requestedFixes.some(f =>
+            ['RGB→CMYK', 'BLEED', 'FLATTEN_PDF', 'REBUILD', 'CONVERT_GRAYSCALE', 'CONVERT_CMYK'].includes(typeof f === 'string' ? f : f?.repairStrategy)
+        );
+
+        if (!hasStructuralFix && !strategy) {
+            type = 'geometry';
+            strategy = 'REBUILD_TRIMBOX';
+            repairStrategy = 'REBUILD_TRIMBOX';
+        }
+    }
+
+    const hasBleedOpt = forceBleed || requestedFixes.some(f =>
+        f === 'APPLY_BLEED' || f === 'BLEED' || f?.repairStrategy === 'APPLY_BLEED' || f?.repairStrategy === 'BLEED'
+    );
+    if (hasBleedOpt && !type && !repairStrategy) {
+        type = 'bleed';
+        repairStrategy = 'APPLY_BLEED';
+    }
+
+    const hasCmyk = options.forceCmykAfterFix === true || requestedFixes.some(f =>
+        f === 'CONVERT_CMYK' || f === 'RGB→CMYK' || f?.repairStrategy === 'CONVERT_CMYK' || f?.repairStrategy === 'RGB→CMYK'
+    );
+
+    const policy = body.policy || 'OFFSET_MODERN_COATED';
+    const policyId = body.policyId || body.policy || 'OFFSET_MODERN_COATED';
+
+    const servicePayload = {
+      ...body,
+      policy,
+      policyId,
+      fixes: requestedFixes,
+      requested_fixes: requestedFixes,
+      forceBleed,
+      force_bleed: forceBleed,
+      targetProfile,
+      target_profile: targetProfile,
+      options: {
+        ...options,
+        type,
+        strategy,
+        repairStrategy,
+        ...(hasCmyk ? { target: 'cmyk' } : {}),
+        fixes: requestedFixes,
+        requested_fixes: requestedFixes,
+        forceBleed,
+        force_bleed: forceBleed,
+        targetProfile,
+        target_profile: targetProfile
+      }
+    };
+
+    console.log(`[BFF][FIX-ACTION][FORWARD-PAYLOAD]`, {
+      sourceJobId: jobId,
+      requestedFixesCount: requestedFixes.length,
+      requestedFixes,
+      forceBleed,
+      targetProfile
+    });
+
     const response = await pposRequest(
       `/api/preflight/jobs/${jobId}/actions/fix`,
       {
@@ -713,49 +806,7 @@ router.post('/:jobId/actions/fix', async (req, res) => {
           Authorization: authHeaders.Authorization,
           'Content-Type': 'application/json'
         },
-        body: (() => {
-          const options = req.body?.options || {};
-          const requestedFixes = options.requestedFixes || [];
-          let { type, strategy, repairStrategy } = options;
-          
-          const hasTrimBox = requestedFixes.some(f => f.repairStrategy === 'REBUILD_TRIMBOX');
-          if (hasTrimBox) {
-              const hasStructuralFix = requestedFixes.some(f =>
-                  ['RGB→CMYK', 'BLEED', 'FLATTEN_PDF', 'REBUILD', 'CONVERT_GRAYSCALE', 'CONVERT_CMYK'].includes(f.repairStrategy)
-              );
-
-              // Only promote to primary if it's the only meaningful fix requested
-              // or if the frontend hasn't explicitly set a primary strategy yet
-              if (!hasStructuralFix && !strategy) {
-                  type = 'geometry';
-                  strategy = 'REBUILD_TRIMBOX';
-                  repairStrategy = 'REBUILD_TRIMBOX';
-              }
-          }
-
-          const hasBleed = options.forceBleed === true || requestedFixes.some(f =>
-              f.repairStrategy === 'APPLY_BLEED' || f.repairStrategy === 'BLEED'
-          );
-          if (hasBleed && !type && !repairStrategy) {
-              type = 'bleed';
-              repairStrategy = 'APPLY_BLEED';
-          }
-
-          const hasCmyk = options.forceCmykAfterFix === true || requestedFixes.some(f =>
-              f.repairStrategy === 'CONVERT_CMYK' || f.repairStrategy === 'RGB→CMYK'
-          );
-
-          return JSON.stringify({
-            policy: req.body?.policy || 'OFFSET_MODERN_COATED',
-            options: {
-                ...options,
-                type,
-                strategy,
-                repairStrategy,
-                ...(hasCmyk ? { target: 'cmyk' } : {})
-            }
-          });
-        })()
+        body: JSON.stringify(servicePayload)
       }
     );
 

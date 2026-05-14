@@ -544,6 +544,124 @@ function runTests() {
     { gotDegraded: resAutofixDerived?._isDegraded, reasons: resAutofixDerived?.degraded_reasons }
   );
 
+  // --- Test 10: Preserve direct Service immediate AUTOFIX response ---
+  console.log('\n[Test 10] Preserve direct Service immediate AUTOFIX response');
+  const rawFixTest10 = {
+    id: "fix_1",
+    jobId: "fix_1",
+    sourceJobId: "job_1",
+    type: "AUTOFIX",
+    repairs: [
+      { code: "REBUILD_TRIMBOX", status: "APPLIED" },
+      { code: "APPLY_BLEED", status: "APPLIED" },
+      { code: "CONVERT_CMYK", status: "FAILED", reason: "Ghostscript failed" },
+      { code: "INJECT_OUTPUT_INTENT", status: "SKIPPED", reason: "ICC policy approval required" }
+    ],
+    fixes: ["APPLY_BLEED", "REBUILD_TRIMBOX", "CONVERT_CMYK", "INJECT_OUTPUT_INTENT"],
+    requested_fixes: ["APPLY_BLEED", "REBUILD_TRIMBOX", "CONVERT_CMYK", "INJECT_OUTPUT_INTENT"]
+  };
+
+  const resTest10 = preflightNormalizer.normalizeAutofixJob(rawFixTest10, sourceAnalyzeJob1);
+  assertPass(
+    'requested_fixes length === 4',
+    resTest10.requested_fixes?.length === 4,
+    { got: resTest10.requested_fixes }
+  );
+  assertPass(
+    'repairs length === 4',
+    resTest10.repairs?.length === 4,
+    { got: resTest10.repairs }
+  );
+  assertPass(
+    'fixes length === 4',
+    resTest10.fixes?.length === 4,
+    { got: resTest10.fixes }
+  );
+  assertPass(
+    'applied_fixes length === 2',
+    resTest10.applied_fixes?.length === 2,
+    { got: resTest10.applied_fixes }
+  );
+  assertPass(
+    'failed_fixes length === 1',
+    resTest10.failed_fixes?.length === 1,
+    { got: resTest10.failed_fixes }
+  );
+  assertPass(
+    'skipped_fixes length === 1',
+    resTest10.skipped_fixes?.length === 1,
+    { got: resTest10.skipped_fixes }
+  );
+  assertPass(
+    'fixes[0] is an object with code/status',
+    typeof resTest10.fixes?.[0] === 'object' && resTest10.fixes[0].code === 'REBUILD_TRIMBOX',
+    { got: resTest10.fixes?.[0] }
+  );
+
+  // --- Test 11: Preserve nested Service status response ---
+  console.log('\n[Test 11] Preserve nested Service status response');
+  const rawFixTest11 = {
+    jobId: "fix_2",
+    type: "AUTOFIX",
+    result: {
+      requested_fixes: ["APPLY_BLEED", "REBUILD_TRIMBOX", "CONVERT_CMYK", "INJECT_OUTPUT_INTENT"],
+      repairs: [
+        { code: "APPLY_BLEED", status: "APPLIED" },
+        { code: "CONVERT_CMYK", status: "FAILED", reason: "Ghostscript failed" }
+      ],
+      failed_fixes: [
+        { code: "CONVERT_CMYK", status: "FAILED", reason: "Ghostscript failed" }
+      ]
+    }
+  };
+
+  const resTest11 = preflightNormalizer.normalizeAutofixJob(rawFixTest11, sourceAnalyzeJob1);
+  assertPass(
+    'nested requested_fixes length === 4',
+    resTest11.requested_fixes?.length === 4,
+    { got: resTest11.requested_fixes }
+  );
+  assertPass(
+    'nested repairs length === 2',
+    resTest11.repairs?.length === 2,
+    { got: resTest11.repairs }
+  );
+  assertPass(
+    'nested fixes length === 2',
+    resTest11.fixes?.length === 2,
+    { got: resTest11.fixes }
+  );
+  assertPass(
+    'nested failed_fixes length === 1',
+    resTest11.failed_fixes?.length === 1,
+    { got: resTest11.failed_fixes }
+  );
+
+  // --- Test 12: String fixes are intent, not repair result ---
+  console.log('\n[Test 12] String fixes are intent, not repair result');
+  const rawFixTest12 = {
+    fixes: ["APPLY_BLEED", "REBUILD_TRIMBOX"],
+    requested_fixes: ["APPLY_BLEED", "REBUILD_TRIMBOX"],
+    repairs: []
+  };
+
+  const resTest12 = preflightNormalizer.normalizeAutofixJob(rawFixTest12, sourceAnalyzeJob1);
+  assertPass(
+    'string fixes yield requested_fixes length === 2',
+    resTest12.requested_fixes?.length === 2,
+    { got: resTest12.requested_fixes }
+  );
+  assertPass(
+    'repairs length === 0',
+    resTest12.repairs?.length === 0,
+    { got: resTest12.repairs }
+  );
+  assertPass(
+    'fixes remains repair-object array only or length 0',
+    resTest12.fixes?.length === 0,
+    { got: resTest12.fixes }
+  );
+
   console.log('\n--- TEST EXECUTION SUMMARY ---');
   console.log(`Total Passed: ${passed}`);
   console.log(`Total Failed: ${failed}`);

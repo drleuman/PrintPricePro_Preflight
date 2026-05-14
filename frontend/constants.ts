@@ -31,6 +31,10 @@ export const ISSUE_CATEGORY_LABELS: Record<IssueCategory | 'other', string> = {
   form_fields: 'Form fields',
   multimedia: 'Multimedia',
   layers: 'Layers',
+  production_geometry: 'Production Geometry',
+  substrate: 'Substrate',
+  ink_saving: 'Ink Saving',
+  print_edition_intent: 'Print Edition Intent',
   other: 'Other',
 };
 

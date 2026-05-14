@@ -192,22 +192,138 @@ function extractSummary(job) {
   };
 }
 
+function extractRequestedFixes(rawFixJob) {
+  if (!rawFixJob) return [];
+  const res = rawFixJob.result || {};
+  const data = rawFixJob.data || {};
+  const options = rawFixJob.options || {};
+
+  const candidates = [
+    rawFixJob.requested_fixes,
+    res.requested_fixes,
+    data.requested_fixes,
+    options.requested_fixes
+  ];
+
+  for (const c of candidates) {
+    if (Array.isArray(c)) {
+      return c.map(x => typeof x === 'string' ? x : (x?.code || x?.repairStrategy || JSON.stringify(x)));
+    }
+  }
+
+  if (Array.isArray(rawFixJob.fixes) && rawFixJob.fixes.length > 0 && typeof rawFixJob.fixes[0] === 'string') {
+    return rawFixJob.fixes;
+  }
+  if (Array.isArray(res.fixes) && res.fixes.length > 0 && typeof res.fixes[0] === 'string') {
+    return res.fixes;
+  }
+
+  return [];
+}
+
+function extractRepairs(rawFixJob) {
+  if (!rawFixJob) return [];
+  const res = rawFixJob.result || {};
+  const data = rawFixJob.data || {};
+
+  const candidates = [
+    rawFixJob.repairs,
+    res.repairs,
+    data.repairs,
+    rawFixJob.fixes,
+    res.fixes,
+    rawFixJob.applied_fixes,
+    res.applied_fixes
+  ];
+
+  for (const c of candidates) {
+    if (Array.isArray(c)) {
+      const objects = c.filter(x => typeof x === 'object' && x !== null && !Array.isArray(x));
+      if (objects.length > 0) {
+        return objects;
+      }
+    }
+  }
+
+  return [];
+}
+
+function extractAppliedFixes(rawFixJob, repairs) {
+  if (!rawFixJob) return [];
+  const res = rawFixJob.result || {};
+  const data = rawFixJob.data || {};
+
+  const candidates = [
+    rawFixJob.applied_fixes,
+    res.applied_fixes,
+    data.applied_fixes
+  ];
+
+  for (const c of candidates) {
+    if (Array.isArray(c) && c.length > 0) {
+      return c;
+    }
+  }
+
+  if (Array.isArray(repairs)) {
+    return repairs.filter(r => r && typeof r === 'object' && r.status === 'APPLIED');
+  }
+
+  return [];
+}
+
+function extractSkippedFixes(rawFixJob, repairs) {
+  if (!rawFixJob) return [];
+  const res = rawFixJob.result || {};
+  const data = rawFixJob.data || {};
+
+  const candidates = [
+    rawFixJob.skipped_fixes,
+    res.skipped_fixes,
+    data.skipped_fixes
+  ];
+
+  for (const c of candidates) {
+    if (Array.isArray(c) && c.length > 0) {
+      return c;
+    }
+  }
+
+  if (Array.isArray(repairs)) {
+    return repairs.filter(r => r && typeof r === 'object' && r.status === 'SKIPPED');
+  }
+
+  return [];
+}
+
+function extractFailedFixes(rawFixJob, repairs) {
+  if (!rawFixJob) return [];
+  const res = rawFixJob.result || {};
+  const data = rawFixJob.data || {};
+
+  const candidates = [
+    rawFixJob.failed_fixes,
+    res.failed_fixes,
+    data.failed_fixes
+  ];
+
+  for (const c of candidates) {
+    if (Array.isArray(c) && c.length > 0) {
+      return c;
+    }
+  }
+
+  if (Array.isArray(repairs)) {
+    return repairs.filter(r => r && typeof r === 'object' && r.status === 'FAILED');
+  }
+
+  return [];
+}
+
 function extractFixes(target) {
-  if (!target) return [];
-  const res = target.result || target;
-  const list =
-    target.fixes ||
-    target.repairs ||
-    target.applied_fixes ||
-    res.fixes ||
-    res.repairs ||
-    res.applied_fixes ||
-    target.autofix?.fixes ||
-    target.autofix?.repairs ||
-    res.autofix?.fixes ||
-    res.autofix?.repairs ||
-    [];
-  return Array.isArray(list) ? list : [];
+  const repairs = extractRepairs(target);
+  if (repairs.length > 0) return repairs;
+  return extractRequestedFixes(target);
 }
 
 function resolveArtifactAliases(rawFixJob, fixResult) {
@@ -509,7 +625,18 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
   const sourceFindings = extractFindings(sourceAnalyzeJob);
 
   const fixResult = rawFixJob?.result || rawFixJob || {};
-  const fixes = extractFixes(rawFixJob);
+  const requested_fixes = extractRequestedFixes(rawFixJob);
+  let repairs = extractRepairs(rawFixJob);
+
+  const rawRepairs = rawFixJob?.repairs || rawFixJob?.result?.repairs;
+  if (Array.isArray(rawRepairs) && rawRepairs.length > 0 && repairs.length === 0) {
+    console.warn('[BFF][AUTOFIX][REPAIR-PRESERVATION-WARN] Raw repairs present but normalized repairs empty. Preserving raw repairs.');
+    repairs = rawRepairs.filter(r => r && typeof r === 'object');
+  }
+
+  const applied_fixes = extractAppliedFixes(rawFixJob, repairs);
+  const skipped_fixes = extractSkippedFixes(rawFixJob, repairs);
+  const failed_fixes = extractFailedFixes(rawFixJob, repairs);
   const artifacts = resolveArtifactAliases(rawFixJob, fixResult);
 
   const finalFileName = sourceDocument?.name || fixDocument?.name || "document.pdf";
@@ -587,8 +714,12 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
     issues: resolvedIssues,
     issues_source: postfixFindings?.length ? "findings_after" : "findings_before",
 
-    fixes,
-    repairs: fixes,
+    requested_fixes,
+    fixes: repairs,
+    repairs,
+    applied_fixes,
+    skipped_fixes,
+    failed_fixes,
     unresolved_findings: unresolvedFindings,
 
     artifacts,

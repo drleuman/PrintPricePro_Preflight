@@ -52,7 +52,7 @@ export function analyzeWorkflow(
     const warningCount = issues.filter(i => i.severity === 'warning' || i.severity === Severity.WARNING).length;
 
     const artifacts = result?.artifacts || {};
-    const meta = result?.meta || {};
+    const meta: any = result?.meta || {};
 
     const isAutofix = result?.type === 'AUTOFIX' || appMode === 'ai' || (result?.meta?.jobId && result.meta.jobId.startsWith('fix_'));
     const isAnalyzeOnly = result?.type === 'ANALYZE' || appMode === 'manual';
@@ -374,6 +374,11 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
         summary: resolvedSummary,
         issues: normalizedIssues,
         fixes: payload.fixes ?? payload.repairs ?? payload.result?.fixes ?? payload.result?.repairs ?? [],
+        repairs: payload.repairs ?? payload.fixes ?? payload.result?.repairs ?? payload.result?.fixes ?? [],
+        requested_fixes: payload.requested_fixes ?? payload.result?.requested_fixes ?? undefined,
+        applied_fixes: payload.applied_fixes ?? payload.result?.applied_fixes ?? undefined,
+        skipped_fixes: payload.skipped_fixes ?? payload.result?.skipped_fixes ?? undefined,
+        failed_fixes: payload.failed_fixes ?? payload.result?.failed_fixes ?? undefined,
         pages: payload.pages ?? payload.report?.pages ?? [],
         categorySummaries: payload.categorySummaries ?? payload.report?.categorySummaries ?? [],
         meta: {

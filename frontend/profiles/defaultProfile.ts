@@ -301,6 +301,26 @@ const CATEGORY_FALLBACKS: Record<IssueCategory, IssueHint> = {
     aiPrompt:
       'Advise on checking layer visibility and, if needed, flattening layers for a single final version. Mention checking for accidental hidden text or duplicate language versions.',
   },
+  [ISSUE_CATEGORY.PRODUCTION_GEOMETRY]: {
+    shortTitle: 'Production Geometry',
+    userFriendlySummary: 'Production geometry box variations detected.',
+    aiPrompt: 'Provide guidance on verifying TrimBox, BleedBox, and MediaBox consistency for production imposition.',
+  },
+  [ISSUE_CATEGORY.SUBSTRATE]: {
+    shortTitle: 'Substrate Properties',
+    userFriendlySummary: 'Substrate or physical ink coverage constraints detected.',
+    aiPrompt: 'Provide guidance on checking total area coverage and paper characteristics.',
+  },
+  [ISSUE_CATEGORY.INK_SAVING]: {
+    shortTitle: 'Ink Saving & Efficiency',
+    userFriendlySummary: 'Opportunities for ink saving or TAC optimization detected.',
+    aiPrompt: 'Provide guidance on gray component replacement (GCR) and undercolor removal (UCR) for ink optimization.',
+  },
+  [ISSUE_CATEGORY.PRINT_EDITION_INTENT]: {
+    shortTitle: 'Print Edition Intent',
+    userFriendlySummary: 'Print process intent recommendations detected.',
+    aiPrompt: 'Provide guidance on aligning layout parameters for digital or offset printing processes.',
+  },
   [ISSUE_CATEGORY.OTHER]: {
     shortTitle: 'Other preflight issue',
     userFriendlySummary:

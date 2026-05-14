@@ -153,6 +153,11 @@ export interface PreflightResult {
   summary: string | any; // A brief overall summary of findings or enriched summary object
   issues: Issue[];
   fixes?: any[]; // Repairs/Applied fixes
+  repairs?: any[];
+  requested_fixes?: string[];
+  applied_fixes?: any[];
+  skipped_fixes?: any[];
+  failed_fixes?: any[];
   pages: Array<{ pageNumber: number; issuesCount: number }>;
   categorySummaries: CategorySummary[];
   meta: {

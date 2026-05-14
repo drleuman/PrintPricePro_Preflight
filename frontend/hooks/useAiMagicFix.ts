@@ -100,7 +100,7 @@ interface UseAiMagicFixParams {
   result: PreflightResult | null;
   activeJobIdRef: React.MutableRefObject<string | null>;
   preflightJobIdRef: React.MutableRefObject<string | null>;
-  autoFixServer: (file: File, opts: { policy: string; jobId: string | null }) => Promise<any>;
+  autoFixServer: (file: File, opts: { policy: string; jobId: string | null; options?: any }) => Promise<any>;
   handleV2JobComplete: (jobId: string) => Promise<any>;
   getAuthenticatedBlobUrl: (jobId: string, key: string) => Promise<string | null>;
   selectedPolicy: string;
