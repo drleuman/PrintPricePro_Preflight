@@ -310,7 +310,7 @@ function deriveCategorySummaries(findings) {
   return Array.from(map.values());
 }
 
-function derivePagesSummaries(findings) {
+function derivePages(findings) {
   if (!Array.isArray(findings)) return [];
   const map = new Map();
 
@@ -357,6 +357,8 @@ function derivePagesSummaries(findings) {
   }
   return res;
 }
+
+const derivePagesSummaries = derivePages;
 
 function normalizeAnalyzeJob(rawJob) {
   if (!rawJob) return null;
@@ -466,7 +468,7 @@ function normalizeAnalyzeJob(rawJob) {
 
   let pages = rawJob.pages || rawJob.result?.pages || rawJob.report?.pages || rawJob.result?.report?.pages;
   if (!Array.isArray(pages) || pages.length === 0) {
-    pages = derivePagesSummaries(allFindings);
+    pages = derivePages(allFindings);
   }
 
   const isDegraded = degradedReasons.length > 0 || (rawJob._isDegraded === true);
@@ -529,7 +531,23 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
   }
 
   const postfixFindings = extractPostfixFindings(rawFixJob);
+  const unresolvedFindings = extractUnresolvedFindings(rawFixJob) || [];
   const resolvedIssues = postfixFindings?.length ? postfixFindings : (sourceFindings || []);
+
+  const summaryFindings =
+    postfixFindings?.length ? postfixFindings :
+    unresolvedFindings?.length ? unresolvedFindings :
+    sourceFindings?.length ? sourceFindings :
+    resolvedIssues?.length ? resolvedIssues :
+    [];
+
+  const derivedPages = rawFixJob?.pages?.length ? rawFixJob.pages :
+    ((sourceAnalyzeJob?.pages || sourceAnalyzeJob?.report?.pages)?.length ? (sourceAnalyzeJob.pages || sourceAnalyzeJob.report.pages) :
+    derivePages(summaryFindings));
+
+  const derivedCategorySummaries = rawFixJob?.categorySummaries?.length ? rawFixJob.categorySummaries :
+    ((sourceAnalyzeJob?.categorySummaries || sourceAnalyzeJob?.report?.categorySummaries)?.length ? (sourceAnalyzeJob.categorySummaries || sourceAnalyzeJob.report.categorySummaries) :
+    deriveCategorySummaries(summaryFindings));
 
   // Preserve summary string for legacy frontend utils
   const summaryString = typeof (sourceSummary?.text || rawFixJob?.summary) === 'string'
@@ -561,8 +579,8 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
     summaryFlat: sourceSummary || null,
     summary_text: summaryString,
     score: extractPostfixSummary(rawFixJob)?.risk_score ?? sourceSummary?.risk_score ?? rawFixJob?.score ?? 0,
-    pages: rawFixJob?.pages?.length ? rawFixJob.pages : (sourceAnalyzeJob?.pages || sourceAnalyzeJob?.report?.pages || []),
-    categorySummaries: rawFixJob?.categorySummaries?.length ? rawFixJob.categorySummaries : (sourceAnalyzeJob?.categorySummaries || sourceAnalyzeJob?.report?.categorySummaries || []),
+    pages: derivedPages,
+    categorySummaries: derivedCategorySummaries,
 
     findings_before: sourceFindings || [],
     findings_after: postfixFindings || [],
@@ -571,7 +589,7 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
 
     fixes,
     repairs: fixes,
-    unresolved_findings: extractUnresolvedFindings(rawFixJob) || [],
+    unresolved_findings: unresolvedFindings,
 
     artifacts,
     artifactList: extractArtifactList(rawFixJob),
@@ -611,5 +629,8 @@ module.exports = {
   extractFindings,
   extractArtifacts: resolveArtifactAliases,
   resolveArtifactAliases,
-  buildDegradedState
+  buildDegradedState,
+  deriveCategorySummaries,
+  derivePages,
+  derivePagesSummaries
 };

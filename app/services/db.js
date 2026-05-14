@@ -50,12 +50,12 @@ async function query(sql, params) {
   const p = getPool();
   if (!p) throw new Error('Database pool not initialized');
   const [results] = await p.execute(sql, params);
-  
+
   // Bridge for code expecting .rows (Postgres style) while using MySql
   if (results && Array.isArray(results)) {
     results.rows = results;
   }
-  
+
   return results;
 }
 

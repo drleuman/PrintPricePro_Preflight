@@ -478,6 +478,72 @@ function runTests() {
     { verified: true }
   );
 
+  // --- Test 9: AUTOFIX derives pages and categorySummaries from findings ---
+  console.log('\n[Test 9] AUTOFIX derives pages and categorySummaries from findings');
+  const sourceAnalyzeJobTest9 = {
+    jobId: "job_src_test9",
+    document: {
+      name: "brochure_fixed.pdf",
+      size: 400000,
+      page_count: 1
+    },
+    summary: { text: "Analyzed brochure", risk_score: 40 },
+    findings: [
+      { id: "TRIMBOX_MISSING", category: "GEOMETRY", severity: "error", page: 1, fixable: true },
+      { id: "BLEEDBOX_MISSING", category: "GEOMETRY", severity: "warning", page: 1, fixable: true },
+      { id: "IND_COLOR_001", category: "COLOR", severity: "error", page: 1, fixable: true },
+      { id: "IND_COLOR_002", category: "COLOR", severity: "warning", page: 1, fixable: true },
+      { id: "IND_COLOR_006", category: "COLOR", severity: "warning", page: 1, fixable: true },
+      { id: "IND_COMPLIANCE_001", category: "COMPLIANCE", severity: "info", page: 1, fixable: false },
+      { id: "IND_MARK_001", category: "MARK", severity: "info", page: 1, fixable: false }
+    ]
+  };
+
+  const rawFixJobTest9 = {
+    jobId: "fix_test9",
+    status: "COMPLETED",
+    ok: true,
+    meta: {
+      fileName: "unknown",
+      fileSize: 0,
+      pageCount: 0
+    }
+  };
+
+  const resAutofixDerived = preflightNormalizer.normalizeAutofixJob(rawFixJobTest9, sourceAnalyzeJobTest9);
+
+  assertPass(
+    'normalized.pages.length > 0',
+    Array.isArray(resAutofixDerived?.pages) && resAutofixDerived.pages.length > 0,
+    { got: resAutofixDerived?.pages }
+  );
+  assertPass(
+    'normalized.pages[0].page === 1',
+    resAutofixDerived?.pages?.[0]?.page === 1,
+    { got: resAutofixDerived?.pages?.[0]?.page }
+  );
+  assertPass(
+    'normalized.pages[0].issue_count === 7',
+    resAutofixDerived?.pages?.[0]?.issue_count === 7,
+    { got: resAutofixDerived?.pages?.[0]?.issue_count }
+  );
+  assertPass(
+    'normalized.categorySummaries.length >= 4',
+    Array.isArray(resAutofixDerived?.categorySummaries) && resAutofixDerived.categorySummaries.length >= 4,
+    { got: resAutofixDerived?.categorySummaries }
+  );
+  const derivedCats = resAutofixDerived?.categorySummaries?.map(c => c.category) || [];
+  assertPass(
+    'categorySummaries includes GEOMETRY, COLOR, COMPLIANCE, MARK',
+    derivedCats.includes("GEOMETRY") && derivedCats.includes("COLOR") && derivedCats.includes("COMPLIANCE") && derivedCats.includes("MARK"),
+    { gotCategories: derivedCats }
+  );
+  assertPass(
+    '_isDegraded remains false if source metadata/summary exist',
+    resAutofixDerived?._isDegraded === false,
+    { gotDegraded: resAutofixDerived?._isDegraded, reasons: resAutofixDerived?.degraded_reasons }
+  );
+
   console.log('\n--- TEST EXECUTION SUMMARY ---');
   console.log(`Total Passed: ${passed}`);
   console.log(`Total Failed: ${failed}`);
