@@ -473,8 +473,51 @@ router.get('/:jobId', async (req, res) => {
     const isAutofixLike = isAutofixLikePayload(data, jobId);
 
     if (isAutofixLike) {
-      const cachedSource = preflightNormalizer.getCachedSourceJob(data.jobId || data.id || jobId, data);
-      finalResponsePayload = preflightNormalizer.normalizeAutofixJob(data, cachedSource);
+      const canonicalFixId = preflightNormalizer.getJobId(data);
+      const resolvedFixId = (canonicalFixId !== "fix_unknown" && canonicalFixId.startsWith("fix_"))
+          ? canonicalFixId
+          : (data.jobId || data.id || jobId);
+
+      let fetchedSourceId = preflightNormalizer.getSourceJobId(data, null);
+      let resolvedSourceJobId = (fetchedSourceId !== "job_unknown")
+          ? fetchedSourceId
+          : preflightNormalizer.getLinkedSourceJobId(resolvedFixId);
+
+      let cachedSource = preflightNormalizer.getCachedSourceJob(resolvedFixId, data);
+
+      if (!cachedSource && resolvedSourceJobId && resolvedSourceJobId.startsWith('job_')) {
+        try {
+          console.log(`[BFF][POLL][SOURCE-FETCH] Source job ${resolvedSourceJobId} not in cache. Fetching from upstream...`);
+          const authHeaders = identityService.getAuthHeaders(req.auth || req.user || {});
+          const srcRes = await pposRequest(ppos.routes.jobStatus(resolvedSourceJobId), {
+            headers: { Authorization: authHeaders.Authorization }
+          });
+          if (srcRes.ok) {
+            const srcData = await srcRes.json();
+            preflightNormalizer.cacheSourceJob(resolvedSourceJobId, srcData);
+            cachedSource = srcData;
+          }
+        } catch (err) {
+          console.warn(`[BFF][POLL][SOURCE-FETCH][WARN] Upstream fetch for source job ${resolvedSourceJobId} failed: ${err.message}`);
+        }
+      }
+
+      const finalSourceJobId = cachedSource?.jobId || cachedSource?.id || resolvedSourceJobId || null;
+
+      console.info("[BFF][FIX-LINK][RESOLVE]", {
+        fixJobId: resolvedFixId,
+        sourceJobId: finalSourceJobId,
+        hasLinkedSource: Boolean(finalSourceJobId),
+        hasSourceContext: Boolean(cachedSource),
+        sourceFindingsCount: cachedSource ? preflightNormalizer.extractFindings(cachedSource).length : null
+      });
+
+      finalResponsePayload = preflightNormalizer.normalizeAutofixJob({
+        ...data,
+        jobId: resolvedFixId,
+        id: resolvedFixId,
+        ...(finalSourceJobId ? { sourceJobId: finalSourceJobId } : {})
+      }, cachedSource);
 
       finalResponsePayload._bffNormalizerApplied = true;
       finalResponsePayload._bffNormalizerVersion = "autofix-get-v2-2026-05-14";
@@ -704,29 +747,34 @@ router.post('/:jobId/actions/fix', async (req, res) => {
 
     const data = await response.json();
     
-    // v2.4.135: Action Response ID Normalization (Blindaje V3)
-    // Enforce priority: payload.jobId || payload.job_id || req.params.jobId || payload.id
-    const resolvedId = canonicalId(data, jobId);
-    
-    if (!resolvedId) {
-        console.warn('[BFF][FIX-ACTION][REJECTED-ID]', { 
-            message: 'Upstream OS returned a non-canonical ID for an action response. Forcing parent jobId preservation.',
-            sourceJobId: jobId
-        });
-    }
+    const canonicalFixId = preflightNormalizer.getJobId(data);
+    const resolvedFixId = (canonicalFixId !== "fix_unknown" && canonicalFixId.startsWith("fix_"))
+        ? canonicalFixId
+        : (data.jobId || data.id || data.fixJobId || data.targetJobId || data.result?.jobId || jobId);
 
-    console.log(`[APP][AUTOFIX][RESPONSE][${requestId}]`, { sourceJobId: jobId, targetJobId: resolvedId || jobId });
-    console.log(`[BFF][CANONICAL-ID][FIX] Response for Job: ${jobId} -> Resolved: ${resolvedId || jobId}`);
-    console.log(`[APP][AUTOFIX][TARGET-JOB][${requestId}]`, resolvedId || jobId);
-    
-    // Ensure we always return a canonical jobId field to the frontend
-    data.jobId = resolvedId || jobId; 
-    data.id = data.jobId;
+    console.log(`[APP][AUTOFIX][RESPONSE][${requestId}]`, { sourceJobId: jobId, targetJobId: resolvedFixId });
+    console.log(`[BFF][CANONICAL-ID][FIX] Response for Job: ${jobId} -> Resolved: ${resolvedFixId}`);
 
-    preflightNormalizer.linkFixJob(data.jobId, jobId);
-    
-    const cachedSource = preflightNormalizer.getCachedSourceJob(data.jobId, data);
-    const enrichedData = preflightNormalizer.normalizeAutofixJob(data, cachedSource);
+    preflightNormalizer.linkFixJob(resolvedFixId, jobId);
+
+    const cachedSource = preflightNormalizer.getCachedSourceJob(resolvedFixId, data);
+
+    console.info("[BFF][FIX-LINK][CREATE]", {
+      sourceJobId: jobId,
+      fixJobId: resolvedFixId,
+      hasSourceContext: Boolean(cachedSource),
+      sourceFindingsCount: Array.isArray(cachedSource?.findings) ? cachedSource.findings.length : null
+    });
+
+    const enrichedData = preflightNormalizer.normalizeAutofixJob({
+      ...data,
+      jobId: resolvedFixId,
+      id: resolvedFixId,
+      sourceJobId: jobId
+    }, cachedSource);
+
+    enrichedData.jobId = resolvedFixId;
+    enrichedData.sourceJobId = jobId;
 
     return res.status(200).json(enrichedData);
   } catch (error) {

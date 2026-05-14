@@ -22,21 +22,20 @@ function linkFixJob(fixJobId, sourceJobId) {
   }
 }
 
+function getLinkedSourceJobId(fixJobId) {
+  if (!fixJobId) return null;
+  return fixJobLinks.get(fixJobId) || null;
+}
+
 function getCachedSourceJob(fixJobId, rawFixJob) {
   let sourceJobId = fixJobLinks.get(fixJobId);
   if (!sourceJobId && rawFixJob) {
-    const candidates = [
-      rawFixJob.sourceJobId,
-      rawFixJob.parentJobId,
-      rawFixJob.originalJobId,
-      rawFixJob.analyzeJobId,
-      rawFixJob.source_job_id,
-      rawFixJob.result?.sourceJobId,
-      rawFixJob.result?.parentJobId
-    ];
-    sourceJobId = candidates.find(c => typeof c === 'string' && c.startsWith('job_'));
+    const fetched = getSourceJobId(rawFixJob, null);
+    if (fetched !== "job_unknown") {
+      sourceJobId = fetched;
+    }
   }
-  if (sourceJobId) {
+  if (sourceJobId && sourceJobId.startsWith('job_')) {
     return sourceJobCache.get(sourceJobId) || null;
   }
   return null;
@@ -45,9 +44,14 @@ function getCachedSourceJob(fixJobId, rawFixJob) {
 function getJobId(rawFixJob) {
   const candidates = [
     rawFixJob?.jobId,
-    rawFixJob?.job_id,
     rawFixJob?.id,
+    rawFixJob?.fixJobId,
+    rawFixJob?.targetJobId,
+    rawFixJob?.job_id,
     rawFixJob?.result?.jobId,
+    rawFixJob?.result?.id,
+    rawFixJob?.result?.fixJobId,
+    rawFixJob?.result?.targetJobId,
     rawFixJob?.result?.meta?.jobId
   ];
   const fixId = candidates.find(c => typeof c === 'string' && c.startsWith('fix_'));
@@ -57,12 +61,21 @@ function getJobId(rawFixJob) {
 }
 
 function getSourceJobId(rawFixJob, sourceAnalyzeJob) {
+  const fixJobId = getJobId(rawFixJob);
   const candidates = [
     rawFixJob?.sourceJobId,
-    rawFixJob?.parentJobId,
-    rawFixJob?.originalJobId,
-    rawFixJob?.analyzeJobId,
     rawFixJob?.source_job_id,
+    rawFixJob?.parentJobId,
+    rawFixJob?.parent_job_id,
+    rawFixJob?.originalJobId,
+    rawFixJob?.original_job_id,
+    rawFixJob?.analyzeJobId,
+    rawFixJob?.analyze_job_id,
+    rawFixJob?.result?.sourceJobId,
+    rawFixJob?.result?.source_job_id,
+    rawFixJob?.result?.parentJobId,
+    rawFixJob?.result?.originalJobId,
+    fixJobId ? fixJobLinks.get(fixJobId) : null,
     sourceAnalyzeJob?.jobId,
     sourceAnalyzeJob?.id,
     sourceAnalyzeJob?.result?.jobId
@@ -71,10 +84,32 @@ function getSourceJobId(rawFixJob, sourceAnalyzeJob) {
   return jobId || "job_unknown";
 }
 
+function isValidDocumentName(name) {
+  if (typeof name !== 'string') return false;
+  const n = name.trim();
+  if (!n) return false;
+  const lower = n.toLowerCase();
+  if (lower.includes('unknown')) return false;
+  const forbidden = [
+    'autofix',
+    'analyze',
+    'type',
+    'status',
+    'analysis_status',
+    'outcome_category',
+    'completed',
+    'succeeded',
+    'failed',
+    'success'
+  ];
+  if (forbidden.includes(lower)) return false;
+  return true;
+}
+
 function extractDocumentMetadata(job) {
   if (!job) return null;
   const doc = job.document || job.result?.document || job.report?.document;
-  if (doc && doc.name && !doc.name.includes('unknown')) {
+  if (doc && isValidDocumentName(doc.name)) {
     return {
       name: doc.name,
       size: doc.size || 0,
@@ -84,13 +119,13 @@ function extractDocumentMetadata(job) {
   }
 
   const meta = job.meta || job.report?.meta || job.result?.meta || job.result?.report?.meta || {};
-  const name = meta.fileName || meta.filename || job.filename || job.name;
+  const nameCandidate = meta.fileName || meta.filename || job.filename || job.name;
   const size = meta.fileSize || meta.size || job.size;
   const page_count = meta.pageCount || meta.page_count || job.pageCount || job.pages?.length || job.report?.pages?.length || 0;
 
-  if (name && !name.toLowerCase().includes('unknown')) {
+  if (isValidDocumentName(nameCandidate)) {
     return {
-      name,
+      name: nameCandidate,
       size: size || 0,
       page_count: page_count || 0,
       pdf_version: meta.pdf_version || meta.pdfVersion || "1.7"
@@ -253,6 +288,7 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
   const sourceJobId = rawSourceJobId === "job_unknown" ? null : rawSourceJobId;
 
   const sourceDocument = extractDocumentMetadata(sourceAnalyzeJob);
+  const fixDocument = extractDocumentMetadata(rawFixJob);
   const sourceSummary = extractSummary(sourceAnalyzeJob);
   const sourceFindings = extractFindings(sourceAnalyzeJob);
 
@@ -260,18 +296,23 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
   const fixes = extractFixes(rawFixJob);
   const artifacts = resolveArtifactAliases(rawFixJob, fixResult);
 
+  const finalFileName = sourceDocument?.name || fixDocument?.name || "document.pdf";
+  const finalFileSize = sourceDocument?.size || fixDocument?.size || rawFixJob?.meta?.fileSize || 0;
+  const finalPageCount = sourceDocument?.page_count || fixDocument?.page_count || rawFixJob?.meta?.pageCount || 0;
+
   const degradedReasons = [];
 
-  if (!sourceAnalyzeJob) degradedReasons.push("MISSING_SOURCE_ANALYSIS");
-  if (!sourceDocument) degradedReasons.push("MISSING_DOCUMENT_METADATA");
-  if (!sourceSummary) degradedReasons.push("MISSING_SOURCE_SUMMARY");
-
-  const finalFileName = (sourceDocument?.name && !sourceDocument.name.includes('unknown'))
-    ? sourceDocument.name
-    : (rawFixJob?.meta?.fileName && !rawFixJob.meta.fileName.includes('unknown') ? rawFixJob.meta.fileName : "document.pdf");
-
-  const finalFileSize = sourceDocument?.size || rawFixJob?.meta?.fileSize || 0;
-  const finalPageCount = sourceDocument?.page_count || rawFixJob?.meta?.pageCount || 0;
+  if (!sourceAnalyzeJob) {
+    degradedReasons.push("MISSING_SOURCE_ANALYSIS");
+  }
+  if (!sourceDocument && finalFileName === "document.pdf") {
+    if (!degradedReasons.includes("MISSING_DOCUMENT_METADATA")) {
+      degradedReasons.push("MISSING_DOCUMENT_METADATA");
+    }
+  }
+  if (!sourceSummary) {
+    degradedReasons.push("MISSING_SOURCE_SUMMARY");
+  }
 
   const postfixFindings = extractPostfixFindings(rawFixJob);
   const resolvedIssues = postfixFindings?.length ? postfixFindings : (sourceFindings || []);
@@ -290,7 +331,7 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
     ok: Boolean(rawFixJob?.ok ?? fixResult.ok ?? artifacts.fixed_pdf ?? true),
     progress: rawFixJob?.progress ?? 100,
 
-    document: sourceDocument || extractDocumentMetadata(rawFixJob) || {
+    document: sourceDocument || fixDocument || {
       name: finalFileName,
       size: finalFileSize,
       page_count: finalPageCount,
@@ -345,7 +386,10 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
 module.exports = {
   cacheSourceJob,
   linkFixJob,
+  getLinkedSourceJobId,
   getCachedSourceJob,
+  getJobId,
+  getSourceJobId,
   normalizeAnalyzeJob,
   normalizeAutofixJob,
   extractDocumentMetadata,

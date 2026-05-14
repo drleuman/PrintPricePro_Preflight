@@ -297,6 +297,77 @@ function runTests() {
     normalized.degraded_reasons?.includes("MISSING_SOURCE_SUMMARY"),
     { got: normalized.degraded_reasons }
   );
+  // --- Test 7: Extended Forensic Resolution and Edge Case Degradation ---
+  console.log('\n[Test 7] Extended Forensic Resolution and Edge Case Degradation');
+  
+  const nestedRawFix = {
+    result: {
+      jobId: "fix_nested_999",
+      meta: {
+        fileName: "AUTOFIX",
+        fileSize: 1048576
+      }
+    },
+    status: "COMPLETED"
+  };
+
+  const mockSourceWithCategories = {
+    jobId: "job_src_cat_1",
+    document: {
+      name: "real_contract.pdf",
+      size: 500000,
+      page_count: 5
+    },
+    findings: [
+      { id: "f1", severity: "error", category: "BLEED" }
+    ],
+    categorySummaries: [
+      { category: "BLEED", issuesCount: 1 }
+    ],
+    summary: {
+      text: "Source analysis complete",
+      risk_score: 45
+    }
+  };
+
+  const resNestedDegraded = preflightNormalizer.normalizeAutofixJob(nestedRawFix, null);
+  assertPass(
+    'Nested upstream fix resolves canonical ID',
+    resNestedDegraded.jobId === "fix_nested_999",
+    { got: resNestedDegraded.jobId }
+  );
+  assertPass(
+    'Forbidden document name "AUTOFIX" defaults to document.pdf',
+    resNestedDegraded.document?.name === "document.pdf",
+    { got: resNestedDegraded.document?.name }
+  );
+  assertPass(
+    'Degraded reasons includes MISSING_DOCUMENT_METADATA for fallback document.pdf',
+    resNestedDegraded.degraded_reasons?.includes("MISSING_DOCUMENT_METADATA"),
+    { got: resNestedDegraded.degraded_reasons }
+  );
+
+  const resEnriched = preflightNormalizer.normalizeAutofixJob(nestedRawFix, mockSourceWithCategories);
+  assertPass(
+    'Enriched document inherits actual source document.name',
+    resEnriched.document?.name === "real_contract.pdf",
+    { got: resEnriched.document?.name }
+  );
+  assertPass(
+    'Enriched payload populates categorySummaries from source',
+    resEnriched.categorySummaries?.length === 1 && resEnriched.categorySummaries[0].category === "BLEED",
+    { got: resEnriched.categorySummaries }
+  );
+  assertPass(
+    'Enriched payload preserves source summary text string',
+    resEnriched.summary_text === "Source analysis complete",
+    { got: resEnriched.summary_text }
+  );
+  assertPass(
+    'Enriched payload _isDegraded becomes false when full source context is mapped',
+    resEnriched._isDegraded === false,
+    { gotDegraded: resEnriched._isDegraded, reasons: resEnriched.degraded_reasons }
+  );
 
   console.log('\n--- TEST EXECUTION SUMMARY ---');
   console.log(`Total Passed: ${passed}`);
