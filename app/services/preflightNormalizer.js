@@ -158,20 +158,31 @@ function extractSummary(job) {
 function extractFixes(target) {
   if (!target) return [];
   const res = target.result || target;
-  const list = res.fixes || res.repairs || res.applied_fixes || target.fixes || target.repairs || [];
+  const list =
+    target.fixes ||
+    target.repairs ||
+    target.applied_fixes ||
+    res.fixes ||
+    res.repairs ||
+    res.applied_fixes ||
+    target.autofix?.fixes ||
+    target.autofix?.repairs ||
+    res.autofix?.fixes ||
+    res.autofix?.repairs ||
+    [];
   return Array.isArray(list) ? list : [];
 }
 
 function resolveArtifactAliases(rawFixJob, fixResult) {
-  const source = fixResult?.artifacts || rawFixJob?.artifacts || {};
+  const source = rawFixJob?.artifacts || rawFixJob?.result?.artifacts || fixResult?.artifacts || {};
   const map = {};
   if (Array.isArray(source)) {
     source.forEach(a => {
       if (a?.type && a?.name) map[a.type] = a.name;
     });
-  } else if (typeof source === 'object') {
+  } else if (typeof source === 'object' && source !== null) {
     Object.entries(source).forEach(([k, v]) => {
-      if (typeof v === 'object' && v?.type && v?.name) {
+      if (typeof v === 'object' && v !== null && v?.type && v?.name) {
         map[v.type] = v.name;
       } else if (typeof v === 'string' && isNaN(Number(k))) {
         map[k] = v;
@@ -182,9 +193,6 @@ function resolveArtifactAliases(rawFixJob, fixResult) {
   const actualFixed = map.final_fixed_pdf || map.fixed_pdf || map.output_file || map.normalized_pdf || map.certified_pdf || "fixed.pdf";
   map.final_fixed_pdf = actualFixed;
   map.fixed_pdf = actualFixed;
-  if (map.output_file) {
-    map.output_file = map.output_file;
-  }
   return map;
 }
 
@@ -241,14 +249,15 @@ function normalizeAnalyzeJob(rawJob) {
  */
 function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
   const fixJobId = getJobId(rawFixJob);
-  const sourceJobId = getSourceJobId(rawFixJob, sourceAnalyzeJob);
+  const rawSourceJobId = getSourceJobId(rawFixJob, sourceAnalyzeJob);
+  const sourceJobId = rawSourceJobId === "job_unknown" ? null : rawSourceJobId;
 
   const sourceDocument = extractDocumentMetadata(sourceAnalyzeJob);
   const sourceSummary = extractSummary(sourceAnalyzeJob);
   const sourceFindings = extractFindings(sourceAnalyzeJob);
 
   const fixResult = rawFixJob?.result || rawFixJob || {};
-  const fixes = extractFixes(fixResult);
+  const fixes = extractFixes(rawFixJob);
   const artifacts = resolveArtifactAliases(rawFixJob, fixResult);
 
   const degradedReasons = [];
@@ -265,7 +274,7 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
   const finalPageCount = sourceDocument?.page_count || rawFixJob?.meta?.pageCount || 0;
 
   const postfixFindings = extractPostfixFindings(rawFixJob);
-  const resolvedIssues = postfixFindings?.length ? postfixFindings : sourceFindings;
+  const resolvedIssues = postfixFindings?.length ? postfixFindings : (sourceFindings || []);
 
   // Preserve summary string for legacy frontend utils
   const summaryString = typeof (sourceSummary?.text || rawFixJob?.summary) === 'string'
@@ -278,7 +287,7 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
     sourceJobId,
     type: "AUTOFIX",
     status: rawFixJob?.status || fixResult.status || "COMPLETED",
-    ok: Boolean(rawFixJob?.ok ?? fixResult.ok ?? artifacts.fixed_pdf),
+    ok: Boolean(rawFixJob?.ok ?? fixResult.ok ?? artifacts.fixed_pdf ?? true),
     progress: rawFixJob?.progress ?? 100,
 
     document: sourceDocument || extractDocumentMetadata(rawFixJob) || {
@@ -302,10 +311,11 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
 
     findings_before: sourceFindings || [],
     findings_after: postfixFindings || [],
-    issues: resolvedIssues || [],
+    issues: resolvedIssues,
     issues_source: postfixFindings?.length ? "findings_after" : "findings_before",
 
     fixes,
+    repairs: fixes,
     unresolved_findings: extractUnresolvedFindings(rawFixJob) || [],
 
     artifacts,

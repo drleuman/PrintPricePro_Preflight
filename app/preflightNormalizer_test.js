@@ -179,6 +179,125 @@ function runTests() {
     { got: res5.artifactList }
   );
 
+  // --- Test 6: Regression test with observed production payload ---
+  console.log('\n[Test 6] Regression test with observed production payload');
+  const rawFix = {
+    id: "fix_1778746174372",
+    jobId: "fix_1778746174372",
+    ok: true,
+    status: "COMPLETED",
+    type: "AUTOFIX",
+    progress: 100,
+    artifacts: {
+      output_file: "1bbacdd1-5d3b-444d-b514-5a7a47523a06_fixed_1778746174381.pdf",
+      final_fixed_pdf: "fixed.pdf"
+    },
+    issues: [],
+    findings: [],
+    warnings: [],
+    repairs: [
+      {
+        code: "APPLY_BLEED",
+        status: "APPLIED",
+        strategy: "BOX_EXPANSION_ONLY",
+        rewritten: true,
+        description: "BleedBox expanded 3mm on all sides via page box adjustment.",
+        bleed_fix_mode: "BLEED_BOX_EXPANSION",
+        destructiveFixRisk: "LOW",
+        industrial_quality: "LIMITED",
+        requires_human_review: true
+      }
+    ]
+  };
+
+  const normalized = preflightNormalizer.normalizeAutofixJob(rawFix, null);
+
+  assertPass(
+    'normalized.jobId === "fix_1778746174372"',
+    normalized.jobId === "fix_1778746174372",
+    { got: normalized.jobId }
+  );
+  assertPass(
+    'normalized.type === "AUTOFIX"',
+    normalized.type === "AUTOFIX",
+    { got: normalized.type }
+  );
+  assertPass(
+    'normalized.summary is an object',
+    normalized.summary && typeof normalized.summary === 'object',
+    { got: normalized.summary }
+  );
+  assertPass(
+    'normalized.summary.before === null',
+    normalized.summary?.before === null,
+    { got: normalized.summary?.before }
+  );
+  assertPass(
+    'normalized.summary.after === null',
+    normalized.summary?.after === null,
+    { got: normalized.summary?.after }
+  );
+  assertPass(
+    'normalized.meta exists',
+    normalized.meta && typeof normalized.meta === 'object',
+    { got: normalized.meta }
+  );
+  assertPass(
+    'normalized.document exists',
+    normalized.document && typeof normalized.document === 'object',
+    { got: normalized.document }
+  );
+  assertPass(
+    'normalized.fixes.length === 1',
+    normalized.fixes?.length === 1,
+    { got: normalized.fixes }
+  );
+  assertPass(
+    'normalized.repairs.length === 1',
+    normalized.repairs?.length === 1,
+    { got: normalized.repairs }
+  );
+  assertPass(
+    'normalized.fixes[0].code === "APPLY_BLEED"',
+    normalized.fixes?.[0]?.code === "APPLY_BLEED",
+    { got: normalized.fixes?.[0]?.code }
+  );
+  assertPass(
+    'normalized.artifacts.final_fixed_pdf === "fixed.pdf"',
+    normalized.artifacts?.final_fixed_pdf === "fixed.pdf",
+    { got: normalized.artifacts?.final_fixed_pdf }
+  );
+  assertPass(
+    'normalized.artifacts.fixed_pdf === "fixed.pdf"',
+    normalized.artifacts?.fixed_pdf === "fixed.pdf",
+    { got: normalized.artifacts?.fixed_pdf }
+  );
+  assertPass(
+    'normalized.artifactList.length >= 3',
+    normalized.artifactList?.length >= 3,
+    { got: normalized.artifactList }
+  );
+  assertPass(
+    'normalized._isDegraded === true',
+    normalized._isDegraded === true,
+    { got: normalized._isDegraded }
+  );
+  assertPass(
+    'normalized.degraded_reasons includes "MISSING_SOURCE_ANALYSIS"',
+    normalized.degraded_reasons?.includes("MISSING_SOURCE_ANALYSIS"),
+    { got: normalized.degraded_reasons }
+  );
+  assertPass(
+    'normalized.degraded_reasons includes "MISSING_DOCUMENT_METADATA"',
+    normalized.degraded_reasons?.includes("MISSING_DOCUMENT_METADATA"),
+    { got: normalized.degraded_reasons }
+  );
+  assertPass(
+    'normalized.degraded_reasons includes "MISSING_SOURCE_SUMMARY"',
+    normalized.degraded_reasons?.includes("MISSING_SOURCE_SUMMARY"),
+    { got: normalized.degraded_reasons }
+  );
+
   console.log('\n--- TEST EXECUTION SUMMARY ---');
   console.log(`Total Passed: ${passed}`);
   console.log(`Total Failed: ${failed}`);

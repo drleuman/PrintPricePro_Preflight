@@ -58,6 +58,24 @@ function canonicalId(data, fallbackId) {
   return resolved || fallbackId;
 }
 
+function isAutofixLikePayload(payload, requestedJobId) {
+  const id = String(payload?.jobId || payload?.id || requestedJobId || '');
+  return (
+    payload?.type === 'AUTOFIX' ||
+    payload?.result?.type === 'AUTOFIX' ||
+    id.startsWith('fix_') ||
+    String(requestedJobId || '').startsWith('fix_') ||
+    Array.isArray(payload?.repairs) ||
+    Array.isArray(payload?.fixes) ||
+    Array.isArray(payload?.result?.repairs) ||
+    Array.isArray(payload?.result?.fixes) ||
+    Boolean(payload?.artifacts?.final_fixed_pdf) ||
+    Boolean(payload?.artifacts?.fixed_pdf) ||
+    Boolean(payload?.result?.artifacts?.final_fixed_pdf) ||
+    Boolean(payload?.result?.artifacts?.fixed_pdf)
+  );
+}
+
 router.post(
   '/',
   upload.single('file'),
@@ -434,11 +452,44 @@ router.get('/:jobId', async (req, res) => {
         preflightNormalizer.cacheSourceJob(data.jobId, data);
     }
 
+    console.info(`[BFF][POLL][NORMALIZE-CHECK][${requestId}]`, {
+      requestedJobId: jobId,
+      resolvedJobId: data?.jobId || data?.id || null,
+      type: data?.type || data?.result?.type || null,
+      startsWithFix: String(jobId || '').startsWith('fix_') || String(data?.jobId || data?.id || '').startsWith('fix_'),
+      hasRepairs: Array.isArray(data?.repairs) || Array.isArray(data?.result?.repairs),
+      repairsCount: Array.isArray(data?.repairs)
+        ? data.repairs.length
+        : (Array.isArray(data?.result?.repairs) ? data.result.repairs.length : 0),
+      hasFixes: Array.isArray(data?.fixes) || Array.isArray(data?.result?.fixes),
+      fixesCount: Array.isArray(data?.fixes)
+        ? data.fixes.length
+        : (Array.isArray(data?.result?.fixes) ? data.result.fixes.length : 0),
+      hasFinalFixedPdf: Boolean(data?.artifacts?.final_fixed_pdf || data?.result?.artifacts?.final_fixed_pdf)
+    });
+
     let finalResponsePayload = data;
-    if (data.type === 'AUTOFIX' || String(jobId).startsWith('fix_')) {
-        const cachedSource = preflightNormalizer.getCachedSourceJob(data.jobId, data);
-        finalResponsePayload = preflightNormalizer.normalizeAutofixJob(data, cachedSource);
-        console.log(`[BFF][POLL][AUTOFIX-ENRICHED][${requestId}] Applied preflightNormalizer to preserve source context.`);
+
+    const isAutofixLike = isAutofixLikePayload(data, jobId);
+
+    if (isAutofixLike) {
+      const cachedSource = preflightNormalizer.getCachedSourceJob(data.jobId || data.id || jobId, data);
+      finalResponsePayload = preflightNormalizer.normalizeAutofixJob(data, cachedSource);
+
+      finalResponsePayload._bffNormalizerApplied = true;
+      finalResponsePayload._bffNormalizerVersion = "autofix-get-v2-2026-05-14";
+
+      console.info(`[BFF][POLL][AUTOFIX-ENRICHED][${requestId}]`, {
+        requestedJobId: jobId,
+        resolvedJobId: finalResponsePayload.jobId,
+        sourceJobId: finalResponsePayload.sourceJobId || null,
+        type: finalResponsePayload.type,
+        fixesCount: Array.isArray(finalResponsePayload.fixes) ? finalResponsePayload.fixes.length : 0,
+        repairsCount: Array.isArray(finalResponsePayload.repairs) ? finalResponsePayload.repairs.length : 0,
+        artifactListCount: Array.isArray(finalResponsePayload.artifactList) ? finalResponsePayload.artifactList.length : 0,
+        degraded: finalResponsePayload._isDegraded,
+        degradedReasons: finalResponsePayload.degraded_reasons || []
+      });
     }
 
     return res.status(response.status).json(finalResponsePayload);
