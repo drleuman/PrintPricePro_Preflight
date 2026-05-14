@@ -353,6 +353,12 @@ router.get('/:jobId', async (req, res) => {
         });
     }
 
+    // Capture original arrays and counts before flattening/deletion logic modifies them
+    data._rawRootRepairsArray = Array.isArray(data.repairs) ? data.repairs : null;
+    data._rawResultRepairsArray = data.result && Array.isArray(data.result.repairs) ? data.result.repairs : null;
+    data._rawRootRepairsCount = Array.isArray(data.repairs) ? data.repairs.length : 0;
+    data._rawResultRepairsCount = data.result && Array.isArray(data.result.repairs) ? data.result.repairs.length : 0;
+
     // --- v2.4.93: Deep Payload Normalization (BFF/FE Contract Sync) ---
     // If the engine returns a 'result' wrapper, hard-flatten it to ensure consistent Step 2/Step 4 behavior
     const terminalStatus = String(data.status || '').toUpperCase();
@@ -388,8 +394,15 @@ router.get('/:jobId', async (req, res) => {
             }
         });
 
-        // Set compatibility duplicates
-        data.repairs = data.fixes || data.repairs; 
+        // Set compatibility duplicates, ensuring we NEVER overwrite object repair records with string intents
+        const isObjArray = Array.isArray(data.repairs) && data.repairs.some(x => x && typeof x === 'object');
+        if (!isObjArray) {
+            data.repairs = data.fixes || data.repairs;
+        }
+        const isFixesObjArray = Array.isArray(data.fixes) && data.fixes.some(x => x && typeof x === 'object');
+        if (!isFixesObjArray && isObjArray) {
+            data.fixes = data.repairs;
+        } 
 
         // --- v2.4.95: Hard-Syncing Boolean Flags after Flattening ---
         data.hasReport = !!data.report;
@@ -535,9 +548,39 @@ router.get('/:jobId', async (req, res) => {
         ...(finalSourceJobId ? { sourceJobId: finalSourceJobId } : {})
       }, cachedSource);
 
-      const origRepairs = data?.repairs || data?.result?.repairs;
-      if (Array.isArray(origRepairs) && origRepairs.length > 0 && (!finalResponsePayload.repairs || finalResponsePayload.repairs.length === 0)) {
-        console.warn('[BFF][AUTOFIX][REPAIR-PRESERVATION-WARN] Repairs array exists in raw status but is lost during normalization in GET polling.');
+      const rawRootRepairsCount = data._rawRootRepairsCount || 0;
+      const rawResultRepairsCount = data._rawResultRepairsCount || 0;
+      const requestedFixesCount = Array.isArray(finalResponsePayload.requested_fixes) ? finalResponsePayload.requested_fixes.length : 0;
+      let normalizedRepairsCount = Array.isArray(finalResponsePayload.repairs) ? finalResponsePayload.repairs.length : 0;
+      let normalizedAppliedCount = Array.isArray(finalResponsePayload.applied_fixes) ? finalResponsePayload.applied_fixes.length : 0;
+      let normalizedSkippedCount = Array.isArray(finalResponsePayload.skipped_fixes) ? finalResponsePayload.skipped_fixes.length : 0;
+      let normalizedFailedCount = Array.isArray(finalResponsePayload.failed_fixes) ? finalResponsePayload.failed_fixes.length : 0;
+
+      console.log("[BFF][POLL][AUTOFIX-REPAIR-PRESERVE]", {
+        jobId: finalResponsePayload.jobId,
+        requestedFixesCount,
+        rawRootRepairsCount,
+        rawResultRepairsCount,
+        normalizedRepairsCount,
+        normalizedAppliedCount,
+        normalizedSkippedCount,
+        normalizedFailedCount
+      });
+
+      if ((rawRootRepairsCount > 0 || rawResultRepairsCount > 0) && normalizedRepairsCount === 0) {
+        console.warn("[BFF][AUTOFIX][REPAIR-PRESERVATION-WARN] Raw root/result repairs count > 0 but normalized repairs count === 0");
+        const rawRepairsToPreserve = data._rawRootRepairsArray || data._rawResultRepairsArray || [];
+        finalResponsePayload.repairs = rawRepairsToPreserve;
+        finalResponsePayload.fixes = rawRepairsToPreserve;
+        finalResponsePayload.applied_fixes = rawRepairsToPreserve.filter(r => r && typeof r === 'object' && (r.status === "APPLIED" || r.status === "SUCCESS"));
+        finalResponsePayload.failed_fixes = rawRepairsToPreserve.filter(r => r && typeof r === 'object' && (r.status === "FAILED" || r.status === "ERROR"));
+        finalResponsePayload.skipped_fixes = rawRepairsToPreserve.filter(r => r && typeof r === 'object' && (r.status === "SKIPPED" || r.status === "UNSUPPORTED" || r.status === "BLOCKED_BY_POLICY" || r.status === "REQUIRES_HUMAN_REVIEW"));
+
+        // Update counts for subsequent enriched log
+        normalizedRepairsCount = finalResponsePayload.repairs.length;
+        normalizedAppliedCount = finalResponsePayload.applied_fixes.length;
+        normalizedSkippedCount = finalResponsePayload.skipped_fixes.length;
+        normalizedFailedCount = finalResponsePayload.failed_fixes.length;
       }
 
       finalResponsePayload._bffNormalizerApplied = true;

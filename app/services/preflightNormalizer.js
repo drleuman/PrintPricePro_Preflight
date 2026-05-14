@@ -192,6 +192,19 @@ function extractSummary(job) {
   };
 }
 
+function isRepairObjectArray(value) {
+  if (!Array.isArray(value)) return false;
+  return value.some(item => 
+    item && typeof item === 'object' && !Array.isArray(item) &&
+    ('code' in item || 'id' in item || 'status' in item || 'strategy' in item || 'reason' in item || 'description' in item)
+  );
+}
+
+function isStringIntentArray(value) {
+  if (!Array.isArray(value)) return false;
+  return value.length > 0 && value.every(item => typeof item === 'string');
+}
+
 function extractRequestedFixes(rawFixJob) {
   if (!rawFixJob) return [];
   const res = rawFixJob.result || {};
@@ -206,15 +219,15 @@ function extractRequestedFixes(rawFixJob) {
   ];
 
   for (const c of candidates) {
-    if (Array.isArray(c)) {
+    if (Array.isArray(c) && c.length > 0) {
       return c.map(x => typeof x === 'string' ? x : (x?.code || x?.repairStrategy || JSON.stringify(x)));
     }
   }
 
-  if (Array.isArray(rawFixJob.fixes) && rawFixJob.fixes.length > 0 && typeof rawFixJob.fixes[0] === 'string') {
+  if (isStringIntentArray(rawFixJob.fixes)) {
     return rawFixJob.fixes;
   }
-  if (Array.isArray(res.fixes) && res.fixes.length > 0 && typeof res.fixes[0] === 'string') {
+  if (isStringIntentArray(res.fixes)) {
     return res.fixes;
   }
 
@@ -232,17 +245,35 @@ function extractRepairs(rawFixJob) {
     data.repairs,
     rawFixJob.fixes,
     res.fixes,
-    rawFixJob.applied_fixes,
-    res.applied_fixes
+    data.fixes
   ];
 
   for (const c of candidates) {
-    if (Array.isArray(c)) {
-      const objects = c.filter(x => typeof x === 'object' && x !== null && !Array.isArray(x));
-      if (objects.length > 0) {
-        return objects;
-      }
+    if (isRepairObjectArray(c)) {
+      return c.filter(x => x && typeof x === 'object' && !Array.isArray(x));
     }
+  }
+
+  // Fallback 7: raw.applied_fixes + raw.failed_fixes + raw.skipped_fixes if any
+  const rawCombined = [
+    ...(Array.isArray(rawFixJob.applied_fixes) ? rawFixJob.applied_fixes : []),
+    ...(Array.isArray(rawFixJob.failed_fixes) ? rawFixJob.failed_fixes : []),
+    ...(Array.isArray(rawFixJob.skipped_fixes) ? rawFixJob.skipped_fixes : [])
+  ].filter(x => x && typeof x === 'object' && !Array.isArray(x));
+
+  if (rawCombined.length > 0) {
+    return rawCombined;
+  }
+
+  // Fallback 8: raw.result.applied_fixes + raw.result.failed_fixes + raw.result.skipped_fixes if any
+  const resCombined = [
+    ...(Array.isArray(res.applied_fixes) ? res.applied_fixes : []),
+    ...(Array.isArray(res.failed_fixes) ? res.failed_fixes : []),
+    ...(Array.isArray(res.skipped_fixes) ? res.skipped_fixes : [])
+  ].filter(x => x && typeof x === 'object' && !Array.isArray(x));
+
+  if (resCombined.length > 0) {
+    return resCombined;
   }
 
   return [];
@@ -260,13 +291,13 @@ function extractAppliedFixes(rawFixJob, repairs) {
   ];
 
   for (const c of candidates) {
-    if (Array.isArray(c) && c.length > 0) {
-      return c;
+    if (isRepairObjectArray(c)) {
+      return c.filter(x => x && typeof x === 'object' && !Array.isArray(x));
     }
   }
 
   if (Array.isArray(repairs)) {
-    return repairs.filter(r => r && typeof r === 'object' && r.status === 'APPLIED');
+    return repairs.filter(r => r && typeof r === 'object' && (r.status === 'APPLIED' || r.status === 'SUCCESS'));
   }
 
   return [];
@@ -284,13 +315,13 @@ function extractSkippedFixes(rawFixJob, repairs) {
   ];
 
   for (const c of candidates) {
-    if (Array.isArray(c) && c.length > 0) {
-      return c;
+    if (isRepairObjectArray(c)) {
+      return c.filter(x => x && typeof x === 'object' && !Array.isArray(x));
     }
   }
 
   if (Array.isArray(repairs)) {
-    return repairs.filter(r => r && typeof r === 'object' && r.status === 'SKIPPED');
+    return repairs.filter(r => r && typeof r === 'object' && (r.status === 'SKIPPED' || r.status === 'UNSUPPORTED' || r.status === 'BLOCKED_BY_POLICY' || r.status === 'REQUIRES_HUMAN_REVIEW'));
   }
 
   return [];
@@ -308,13 +339,13 @@ function extractFailedFixes(rawFixJob, repairs) {
   ];
 
   for (const c of candidates) {
-    if (Array.isArray(c) && c.length > 0) {
-      return c;
+    if (isRepairObjectArray(c)) {
+      return c.filter(x => x && typeof x === 'object' && !Array.isArray(x));
     }
   }
 
   if (Array.isArray(repairs)) {
-    return repairs.filter(r => r && typeof r === 'object' && r.status === 'FAILED');
+    return repairs.filter(r => r && typeof r === 'object' && (r.status === 'FAILED' || r.status === 'ERROR'));
   }
 
   return [];

@@ -662,6 +662,53 @@ function runTests() {
     { got: resTest12.fixes }
   );
 
+  // --- Test 13: Service GET status prioritizes object repairs over string fixes intent ---
+  console.log('\n[Test 13] Service GET status prioritizes object repairs over string fixes intent');
+  const rawFixTest13 = {
+    jobId: "fix_1778764147733",
+    type: "AUTOFIX",
+    fixes: ["APPLY_BLEED", "REBUILD_TRIMBOX", "CONVERT_CMYK", "INJECT_OUTPUT_INTENT"],
+    requested_fixes: ["APPLY_BLEED", "REBUILD_TRIMBOX", "CONVERT_CMYK", "INJECT_OUTPUT_INTENT"],
+    repairs: [
+      { code: "REBUILD_TRIMBOX", status: "APPLIED" },
+      { code: "APPLY_BLEED", status: "APPLIED" },
+      { code: "CONVERT_CMYK", status: "FAILED" },
+      { code: "INJECT_OUTPUT_INTENT", status: "SKIPPED" }
+    ]
+  };
+
+  const resTest13 = preflightNormalizer.normalizeAutofixJob(rawFixTest13, sourceAnalyzeJob1);
+  assertPass(
+    'Test 13: requested_fixes length === 4',
+    resTest13.requested_fixes?.length === 4,
+    { got: resTest13.requested_fixes }
+  );
+  assertPass(
+    'Test 13: repairs length === 4',
+    resTest13.repairs?.length === 4,
+    { got: resTest13.repairs }
+  );
+  assertPass(
+    'Test 13: fixes length === 4 as object execution records',
+    resTest13.fixes?.length === 4 && resTest13.fixes[0] && typeof resTest13.fixes[0] === 'object',
+    { got: resTest13.fixes }
+  );
+  assertPass(
+    'Test 13: applied_fixes length === 2 derived from repairs',
+    resTest13.applied_fixes?.length === 2,
+    { got: resTest13.applied_fixes }
+  );
+  assertPass(
+    'Test 13: failed_fixes length === 1 derived from repairs',
+    resTest13.failed_fixes?.length === 1,
+    { got: resTest13.failed_fixes }
+  );
+  assertPass(
+    'Test 13: skipped_fixes length === 1 derived from repairs',
+    resTest13.skipped_fixes?.length === 1,
+    { got: resTest13.skipped_fixes }
+  );
+
   console.log('\n--- TEST EXECUTION SUMMARY ---');
   console.log(`Total Passed: ${passed}`);
   console.log(`Total Failed: ${failed}`);
