@@ -147,9 +147,10 @@ export type AppMode = 'manual' | 'ai' | 'audit' | null;
  */
 export interface PreflightResult {
   type?: 'ANALYZE' | 'AUTOFIX';
+  sourceJobId?: string;
   artifacts?: Record<string, string>;
   score: number; // Overall score (0-100), higher is better
-  summary: string; // A brief overall summary of findings
+  summary: string | any; // A brief overall summary of findings or enriched summary object
   issues: Issue[];
   fixes?: any[]; // Repairs/Applied fixes
   pages: Array<{ pageNumber: number; issuesCount: number }>;
@@ -159,6 +160,7 @@ export interface PreflightResult {
     fileSize: number;
     pageCount: number;
     jobId?: string;
+    sourceJobId?: string;
     primary_artifact_type?: string;
     autofix_effective?: boolean;
     no_effective_changes?: boolean;

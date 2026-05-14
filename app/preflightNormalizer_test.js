@@ -1,0 +1,191 @@
+'use strict';
+
+/**
+ * Unit Test Suite for preflightNormalizer service.
+ * Verifies preservation of full source ANALYZE intelligence inside AUTOFIX payloads.
+ */
+
+const preflightNormalizer = require('./services/preflightNormalizer');
+
+function runTests() {
+  console.log('--- STARTING PREFLIGHT NORMALIZER TESTS (APP/BFF) ---\n');
+
+  let passed = 0;
+  let failed = 0;
+
+  function assertPass(testName, cond, details) {
+    if (cond) {
+      console.log(`✅ PASS: ${testName}`);
+      passed++;
+    } else {
+      console.error(`❌ FAIL: ${testName}`, details || '');
+      failed++;
+    }
+  }
+
+  // --- Test 1: Autofix preserves source metadata ---
+  console.log('[Test 1] Autofix preserves source metadata');
+  const sourceAnalyzeJob1 = {
+    jobId: 'job_src_1',
+    document: {
+      name: 'annual_report_final.pdf',
+      size: 2523488,
+      page_count: 12
+    }
+  };
+  const rawFixJob1 = {
+    jobId: 'fix_1',
+    meta: {
+      fileName: 'unknown',
+      fileSize: 0,
+      pageCount: 0
+    }
+  };
+
+  const res1 = preflightNormalizer.normalizeAutofixJob(rawFixJob1, sourceAnalyzeJob1);
+  assertPass(
+    'Normalized document uses source metadata (name)',
+    res1.document?.name === 'annual_report_final.pdf',
+    { expected: 'annual_report_final.pdf', got: res1.document?.name }
+  );
+  assertPass(
+    'meta.fileName is not "unknown"',
+    res1.meta?.fileName === 'annual_report_final.pdf',
+    { expected: 'annual_report_final.pdf', got: res1.meta?.fileName }
+  );
+  assertPass(
+    'meta.fileSize is not 0',
+    res1.meta?.fileSize === 2523488,
+    { expected: 2523488, got: res1.meta?.fileSize }
+  );
+  assertPass(
+    'meta.pageCount is not 0',
+    res1.meta?.pageCount === 12,
+    { expected: 12, got: res1.meta?.pageCount }
+  );
+
+
+  // --- Test 2: Autofix preserves source findings ---
+  console.log('\n[Test 2] Autofix preserves source findings');
+  const sourceAnalyzeJob2 = {
+    jobId: 'job_src_2',
+    issues: Array.from({ length: 28 }, (_, i) => ({ id: `issue_${i}`, severity: i < 12 ? 'error' : 'warning' })),
+    score: 65
+  };
+  const rawFixJob2 = {
+    jobId: 'fix_2',
+    issues: []
+  };
+
+  const res2 = preflightNormalizer.normalizeAutofixJob(rawFixJob2, sourceAnalyzeJob2);
+  assertPass(
+    'findings_before length is 28',
+    res2.findings_before?.length === 28,
+    { expected: 28, got: res2.findings_before?.length }
+  );
+  assertPass(
+    'issues is not empty when post-fix verification is missing',
+    res2.issues?.length === 28,
+    { expected: 28, got: res2.issues?.length }
+  );
+  assertPass(
+    'summary.before exists and calculates correctly',
+    res2.summary?.before?.issue_count === 28 && res2.summary?.before?.critical_count === 12,
+    { expectedSummary: { issue_count: 28, critical_count: 12 }, got: res2.summary?.before }
+  );
+
+
+  // --- Test 3: Autofix preserves fixes ---
+  console.log('\n[Test 3] Autofix preserves fixes');
+  const rawFixJob3 = {
+    jobId: 'fix_3',
+    result: {
+      fixes: [
+        {
+          code: 'APPLY_BLEED',
+          status: 'APPLIED',
+          strategy: 'BOX_EXPANSION_ONLY',
+          rewritten: true,
+          description: 'BleedBox expanded 3mm on all sides via page box adjustment.',
+          bleed_fix_mode: 'BLEED_BOX_EXPANSION',
+          destructiveFixRisk: 'LOW',
+          industrial_quality: 'LIMITED',
+          requires_human_review: true
+        }
+      ]
+    }
+  };
+
+  const res3 = preflightNormalizer.normalizeAutofixJob(rawFixJob3, sourceAnalyzeJob2);
+  assertPass(
+    'fixes[] preserved exactly without dropped fields',
+    res3.fixes?.length === 1 && res3.fixes[0].bleed_fix_mode === 'BLEED_BOX_EXPANSION' && res3.fixes[0].requires_human_review === true,
+    { got: res3.fixes }
+  );
+
+
+  // --- Test 4: Missing source analysis marks degraded ---
+  console.log('\n[Test 4] Missing source analysis marks degraded');
+  const rawFixJob4 = {
+    jobId: 'fix_4',
+    meta: {
+      fileName: 'unknown',
+      fileSize: 0,
+      pageCount: 0
+    }
+  };
+
+  const res4 = preflightNormalizer.normalizeAutofixJob(rawFixJob4, null);
+  assertPass(
+    '_isDegraded true when source context is missing',
+    res4._isDegraded === true,
+    { gotDegraded: res4._isDegraded }
+  );
+  assertPass(
+    'degraded_reasons includes MISSING_SOURCE_ANALYSIS',
+    res4.degraded_reasons?.includes('MISSING_SOURCE_ANALYSIS'),
+    { gotReasons: res4.degraded_reasons }
+  );
+  assertPass(
+    'Do not fake clean pageCount/fileSize/fileName values',
+    res4.meta?.fileName === 'document.pdf' && res4.meta?.fileSize === 0,
+    { gotMeta: res4.meta }
+  );
+
+
+  // --- Test 5: Artifact aliases ---
+  console.log('\n[Test 5] Artifact aliases');
+  const rawFixJob5 = {
+    jobId: 'fix_5',
+    artifacts: {
+      output_file: 'job_5_fixed_bleed.pdf'
+    }
+  };
+
+  const res5 = preflightNormalizer.normalizeAutofixJob(rawFixJob5, sourceAnalyzeJob1);
+  assertPass(
+    'artifacts.final_fixed_pdf resolves correctly',
+    res5.artifacts?.final_fixed_pdf === 'job_5_fixed_bleed.pdf',
+    { got: res5.artifacts?.final_fixed_pdf }
+  );
+  assertPass(
+    'artifacts.fixed_pdf resolves correctly',
+    res5.artifacts?.fixed_pdf === 'job_5_fixed_bleed.pdf',
+    { got: res5.artifacts?.fixed_pdf }
+  );
+  assertPass(
+    'artifactList includes available artifacts',
+    res5.artifactList?.some(a => a.type === 'output_file' && a.name === 'job_5_fixed_bleed.pdf'),
+    { got: res5.artifactList }
+  );
+
+  console.log('\n--- TEST EXECUTION SUMMARY ---');
+  console.log(`Total Passed: ${passed}`);
+  console.log(`Total Failed: ${failed}`);
+
+  if (failed > 0) {
+    process.exit(1);
+  }
+}
+
+runTests();

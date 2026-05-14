@@ -10,6 +10,7 @@ const ppos = require('../../config/ppos');
 const identityService = require('../services/identityService');
 const { pposRequest } = require('../services/apiClient');
 const licenseGuard = require('../middleware/licenseGuard');
+const preflightNormalizer = require('../services/preflightNormalizer');
 
 const router = express.Router();
 
@@ -429,7 +430,18 @@ router.get('/:jobId', async (req, res) => {
       hasWarnings: data.hasWarnings
     });
 
-    return res.status(response.status).json(data);
+    if (data.type === 'ANALYZE' && ['COMPLETED', 'SUCCEEDED', 'SUCCESS'].includes(terminalStatus)) {
+        preflightNormalizer.cacheSourceJob(data.jobId, data);
+    }
+
+    let finalResponsePayload = data;
+    if (data.type === 'AUTOFIX' || String(jobId).startsWith('fix_')) {
+        const cachedSource = preflightNormalizer.getCachedSourceJob(data.jobId, data);
+        finalResponsePayload = preflightNormalizer.normalizeAutofixJob(data, cachedSource);
+        console.log(`[BFF][POLL][AUTOFIX-ENRICHED][${requestId}] Applied preflightNormalizer to preserve source context.`);
+    }
+
+    return res.status(response.status).json(finalResponsePayload);
 
   } catch (error) {
     console.error(`[BFF][POLL][ERROR][${requestId}]`, error.message);
@@ -555,7 +567,23 @@ router.post('/:jobId/actions/fix', async (req, res) => {
     console.log(`[APP][AUTOFIX][REQUEST][${requestId}]`, { jobId, policy: req.body?.policy || 'default' });
 
     const authHeaders = identityService.getAuthHeaders(req.auth || req.user || {});
-    
+
+    // Requirement 1: Preserve source job context
+    if (req.body?.sourceJobContext) {
+      preflightNormalizer.cacheSourceJob(jobId, req.body.sourceJobContext);
+    }
+    try {
+      const sourceStatusRes = await pposRequest(ppos.routes.jobStatus(jobId), {
+        headers: { Authorization: authHeaders.Authorization }
+      });
+      if (sourceStatusRes.ok) {
+        const sourceData = await sourceStatusRes.json();
+        preflightNormalizer.cacheSourceJob(jobId, sourceData);
+      }
+    } catch (err) {
+      console.warn(`[BFF][AUTOFIX] Pre-fetch source job context failed: ${err.message}`);
+    }
+
     // Architectural Requirement: Always proxy to PPOS preflight service
     const response = await pposRequest(
       `/api/preflight/jobs/${jobId}/actions/fix`,
@@ -644,7 +672,12 @@ router.post('/:jobId/actions/fix', async (req, res) => {
     data.jobId = resolvedId || jobId; 
     data.id = data.jobId;
 
-    return res.status(200).json(data);
+    preflightNormalizer.linkFixJob(data.jobId, jobId);
+    
+    const cachedSource = preflightNormalizer.getCachedSourceJob(data.jobId, data);
+    const enrichedData = preflightNormalizer.normalizeAutofixJob(data, cachedSource);
+
+    return res.status(200).json(enrichedData);
   } catch (error) {
     const traceId = requestId;
     console.error(`[BFF][FIX-ACTION][ERROR][${traceId}]`, error.message);

@@ -352,18 +352,20 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
     // 3. Construct the PreflightResult
     const result: PreflightResult = {
         type: (payload.type || payload.result?.type || payload.job_type || '').toUpperCase() as any,
+        sourceJobId: payload.sourceJobId || payload.meta?.sourceJobId || undefined,
         artifacts: payload.artifacts ?? payload.result?.artifacts ?? {},
         score: payload.score ?? payload.report?.score ?? (sourceFound ? 0 : null),
-        summary: payload.summary ?? payload.report?.summary ?? (sourceFound ? null : 'Analysis data unavailable'),
+        summary: typeof payload.summary === 'string' ? payload.summary : (payload.summary_text ?? payload.summary?.before?.text ?? payload.report?.summary ?? payload.summary ?? (sourceFound ? null : 'Analysis data unavailable')),
         issues: normalizedIssues,
         fixes: payload.fixes ?? payload.repairs ?? payload.result?.fixes ?? payload.result?.repairs ?? [],
         pages: payload.pages ?? payload.report?.pages ?? [],
         categorySummaries: payload.categorySummaries ?? payload.report?.categorySummaries ?? [],
         meta: {
-            fileName: payload.meta?.fileName ?? payload.report?.meta?.fileName ?? payload.filename ?? 'unknown',
-            fileSize: payload.meta?.fileSize ?? payload.report?.meta?.fileSize ?? payload.size ?? 0,
-            pageCount: pageCount ?? 0,
+            fileName: payload.meta?.fileName ?? payload.document?.name ?? payload.report?.meta?.fileName ?? payload.filename ?? 'unknown',
+            fileSize: payload.meta?.fileSize ?? payload.document?.size ?? payload.report?.meta?.fileSize ?? payload.size ?? 0,
+            pageCount: payload.meta?.pageCount ?? payload.document?.page_count ?? pageCount ?? 0,
             jobId: pickCanonicalJobId(payload.jobId, payload.job_id, payload.meta?.jobId, payload.id) || 'unknown',
+            sourceJobId: payload.sourceJobId || payload.meta?.sourceJobId || undefined,
             noopFix: payload.meta?.noopFix ?? payload.noopFix ?? undefined,
             rewritten: payload.meta?.rewritten ?? payload.rewritten ?? undefined,
             certificationMode: payload.meta?.certificationMode ?? payload.certificationMode ?? undefined,
@@ -371,6 +373,29 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
             no_effective_changes: payload.meta?.no_effective_changes ?? payload.no_effective_changes ?? undefined
         }
     };
+
+    // Preserve rich fields on result directly if present for Step3/Step4
+    if (payload.summary && typeof payload.summary === 'object') {
+        (result as any).summaryObject = payload.summary;
+    }
+    if (payload.document) {
+        (result as any).document = payload.document;
+    }
+    if (payload.findings_before) {
+        (result as any).findings_before = payload.findings_before;
+    }
+    if (payload.findings_after) {
+        (result as any).findings_after = payload.findings_after;
+    }
+    if (payload.unresolved_findings) {
+        (result as any).unresolved_findings = payload.unresolved_findings;
+    }
+    if (payload.artifactList) {
+        (result as any).artifactList = payload.artifactList;
+    }
+    if (payload.degraded_reasons) {
+        (result as any).degraded_reasons = payload.degraded_reasons;
+    }
 
     // --- v2.4.140: Fail-Loud Forensic Detection ---
     const hasTechnicalData = sourceFound || (normalizedIssues.length > 0) || (result.score !== null);
