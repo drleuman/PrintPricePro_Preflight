@@ -136,31 +136,56 @@ function extractDocumentMetadata(job) {
 
 function extractFindings(job) {
   if (!job) return [];
-  const target = job.result || job;
   const candidates = [
-    target.issues,
-    target.findings,
-    target.analysis?.findings,
-    target.report?.issues,
-    target.report?.findings,
-    target.warnings,
-    target.analysis_warnings,
-    target.report?.warnings,
-    job.issues,
     job.findings,
+    job.issues,
     job.analysis?.findings,
-    job.warnings
+    job.analysis?.issues,
+    job.forensics?.findings,
+    job.report?.findings,
+    job.report?.issues,
+    job.result?.findings,
+    job.result?.issues,
+    job.result?.analysis?.findings,
+    job.result?.analysis?.issues,
+    job.result?.forensics?.findings,
+    job.warnings,
+    job.analysis_warnings
   ];
+
   const list = [];
-  const seen = new Set();
+  const seenIds = new Set();
+  const seenComposites = new Set();
+
   for (const arr of candidates) {
     if (Array.isArray(arr)) {
       for (const item of arr) {
         if (item) {
-          const key = typeof item === 'string' ? item : (item.id || item.code || item.message || JSON.stringify(item));
-          if (!seen.has(key)) {
-            seen.add(key);
-            list.push(item);
+          if (typeof item === 'string') {
+            const key = `str:${item}`;
+            if (!seenIds.has(key)) {
+              seenIds.add(key);
+              list.push(item);
+            }
+          } else {
+            const id = item.id || item.uuid;
+            if (id) {
+              const idStr = String(id);
+              if (!seenIds.has(idStr)) {
+                seenIds.add(idStr);
+                list.push(item);
+              }
+            } else {
+              const code = item.code || item.rule || '';
+              const page = item.page ?? item.pageNumber ?? '';
+              const severity = item.severity || item.level || '';
+              const message = item.message || item.user_message || '';
+              const compositeKey = `${code}|${page}|${severity}|${message}`;
+              if (!seenComposites.has(compositeKey)) {
+                seenComposites.add(compositeKey);
+                list.push(item);
+              }
+            }
           }
         }
       }

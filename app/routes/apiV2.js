@@ -11,6 +11,7 @@ const identityService = require('../services/identityService');
 const { pposRequest } = require('../services/apiClient');
 const licenseGuard = require('../middleware/licenseGuard');
 const preflightNormalizer = require('../services/preflightNormalizer');
+const statusHelpers = require('../services/statusHelpers');
 
 const router = express.Router();
 const autofixIdempotencyMap = new Map();
@@ -254,7 +255,16 @@ router.get('/policies', async (req, res) => {
       upstreamCount: policies.length
     });
 
-    return res.json({ policies });
+    return res.json({
+      ok: data.ok ?? true,
+      source: data.source || 'UNKNOWN',
+      fallbackMode: data.fallbackMode ?? false,
+      policyVersion: data.policyVersion || null,
+      loadedAt: data.loadedAt || null,
+      policies,
+      ...(data.error ? { error: data.error } : {}),
+      ...(data.reason ? { reason: data.reason } : {})
+    });
   } catch (error) {
     const traceId = req.id || `req_pol_${Date.now()}`;
     console.error(`[POLICIES_ERROR][${traceId}]`, error?.response?.data || error.message);
@@ -341,7 +351,9 @@ router.get('/:jobId', async (req, res) => {
     }
 
     // --- PHASE 1 DIAGNOSTIC ---
-    console.log(`[BFF][V2-POLL-RAW][${requestId}] FULL PAYLOAD:`, JSON.stringify(data, null, 2));
+    if (process.env.DEBUG_PREFLIGHT_PAYLOAD === 'true') {
+      console.log(`[BFF][V2-POLL-RAW][${requestId}] FULL PAYLOAD:`, JSON.stringify(data, null, 2));
+    }
     // ---------------------------
 
     if (!response.ok) {
@@ -363,7 +375,7 @@ router.get('/:jobId', async (req, res) => {
     // --- v2.4.93: Deep Payload Normalization (BFF/FE Contract Sync) ---
     // If the engine returns a 'result' wrapper, hard-flatten it to ensure consistent Step 2/Step 4 behavior
     const terminalStatus = String(data.status || '').toUpperCase();
-    if (['COMPLETED', 'SUCCEEDED', 'SUCCESS'].includes(terminalStatus) && data.result) {
+    if (statusHelpers.isTerminalDiagnosticStatus(terminalStatus) && data.result) {
         console.log(`[BFF][POLL][DEEP-NORMALIZATION] Flattening result for job ${jobId}`);
         const result = data.result;
         
@@ -381,7 +393,14 @@ router.get('/:jobId', async (req, res) => {
             'fixes', 'repairs', 'applied_fixes', 
             'artifacts', 'output', 'reports', 
             'compliance', 'certification', 'trace', 
-            'policy', 'metadata', 'audit'
+            'policy', 'metadata', 'audit',
+            'findings', 'issues', 'warnings', 'analysis_warnings',
+            'analyzerCoverage', 'analyzer_coverage',
+            'analysisIntegrity', 'artifactIntegrity',
+            'toolchainIntegrity', 'runtimeIntegrity',
+            'summary', 'outcome_category', 'analysis_status',
+            'missingTools', 'missingArtifacts',
+            'certifiable', 'partial', 'degraded_reasons'
         ];
         
         forensicFields.forEach(field => {
@@ -422,7 +441,7 @@ router.get('/:jobId', async (req, res) => {
 
         // Clean up the nested wrapper now that preservation is complete
         delete data.result;
-    } else if (['COMPLETED', 'SUCCEEDED', 'SUCCESS'].includes(terminalStatus)) {
+    } else if (statusHelpers.isTerminalDiagnosticStatus(terminalStatus)) {
         // Fallback sync if data.result was not present but status is terminal
         data.warnings = data.warnings || data.analysis_warnings || data.report?.warnings || data.analysis?.warnings || [];
         data.analysis_warnings = data.warnings;
@@ -460,7 +479,7 @@ router.get('/:jobId', async (req, res) => {
 
     console.log(`[BFF][CANONICAL-ID][POLL] Status check for Job: ${jobId} -> Resolved: ${data.jobId}`);
 
-    if (['COMPLETED', 'SUCCEEDED', 'SUCCESS'].includes(terminalStatus) && !data.type) {
+    if (statusHelpers.isTerminalDiagnosticStatus(terminalStatus) && !data.type) {
         data.type = 'ANALYZE';
     }
     // ------------------------------------------------------------------
@@ -478,7 +497,7 @@ router.get('/:jobId', async (req, res) => {
       hasWarnings: data.hasWarnings
     });
 
-    if (data.type === 'ANALYZE' && ['COMPLETED', 'SUCCEEDED', 'SUCCESS'].includes(terminalStatus)) {
+    if (data.type === 'ANALYZE' && statusHelpers.isTerminalDiagnosticStatus(terminalStatus)) {
         preflightNormalizer.cacheSourceJob(data.jobId, data);
     }
 
@@ -689,6 +708,35 @@ router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
         }
       }
     );
+
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type') || '';
+      let body = {};
+      try {
+        if (contentType.includes('application/json')) {
+          body = await response.json();
+        } else {
+          const text = await response.text();
+          body = { message: text };
+        }
+      } catch (e) {
+        body = { message: 'Failed to parse error response body.' };
+      }
+
+      console.warn(`[BFF][ARTIFACT][ERROR] Upstream artifact request failed with status ${response.status}`, body);
+
+      return res.status(response.status).json({
+        error: body.error || 'ARTIFACT_STREAM_FAILED',
+        message: body.message || 'Failed to retrieve requested artifact.',
+        jobId,
+        artifactId,
+        requestedAlias: body.requestedAlias || resolvedArtifactId || null,
+        availableArtifacts: body.availableArtifacts || null,
+        upstream: body,
+        traceId: requestId,
+        v2: true
+      });
+    }
 
     response.headers.forEach((value, key) => {
       res.setHeader(key, value);

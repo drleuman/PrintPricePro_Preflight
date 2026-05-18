@@ -243,19 +243,23 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
 
     // Try various canonical and legacy locations including warnings to ensure no diagnostic loss
     const candidateConfigs = [
-        { path: payload.issues, isWarning: false },
         { path: payload.findings, isWarning: false },
-        { path: payload.report?.issues, isWarning: false },
+        { path: payload.issues, isWarning: false },
+        { path: payload.analysis?.findings, isWarning: false },
+        { path: payload.analysis?.issues, isWarning: false },
+        { path: payload.forensics?.findings, isWarning: false },
         { path: payload.report?.findings, isWarning: false },
-        { path: payload.result?.report?.issues, isWarning: false },
-        { path: payload.result?.report?.findings, isWarning: false },
+        { path: payload.report?.issues, isWarning: false },
         { path: payload.result?.findings, isWarning: false },
-        { path: payload.data?.issues, isWarning: false },
-        { path: payload.data?.findings, isWarning: false },
+        { path: payload.result?.issues, isWarning: false },
+        { path: payload.result?.analysis?.findings, isWarning: false },
+        { path: payload.result?.analysis?.issues, isWarning: false },
+        { path: payload.result?.forensics?.findings, isWarning: false },
         { path: payload.warnings, isWarning: true },
         { path: payload.analysis_warnings, isWarning: true },
+        { path: payload.data?.issues, isWarning: false },
+        { path: payload.data?.findings, isWarning: false },
         { path: payload.report?.warnings, isWarning: true },
-        { path: payload.analysis?.warnings, isWarning: true },
         { path: payload.result?.warnings, isWarning: true },
         { path: payload.result?.analysis_warnings, isWarning: true },
         { path: payload.result?.analysis?.warnings, isWarning: true },
@@ -266,21 +270,49 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
         if (c.path) console.log(`[STEP2][CANDIDATE][${idx}]`, typeof c.path, Array.isArray(c.path), 'isWarning:', c.isWarning);
     });
 
-    const seenItems = new Set<string>();
+    const seenIds = new Set<string>();
+    const seenComposites = new Set<string>();
+
     for (const { path: candidate, isWarning } of candidateConfigs) {
         if (Array.isArray(candidate)) {
             sourceFound = true;
             for (const item of candidate) {
                 if (item !== undefined && item !== null) {
-                    const key = typeof item === 'string' ? item : (item.id || item.uuid || item.code || item.rule || item.message || JSON.stringify(item));
-                    if (!seenItems.has(key)) {
-                        seenItems.add(key);
-                        const findingItem = typeof item === 'string' ? item : {
-                            ...item,
-                            severity: item.severity || item.level || (isWarning ? 'warning' : undefined),
-                            type: item.type || (isWarning ? 'WARNING' : undefined)
-                        };
-                        findings.push(findingItem);
+                    if (typeof item === 'string') {
+                        const key = `str:${item}`;
+                        if (!seenIds.has(key)) {
+                            seenIds.add(key);
+                            findings.push(item);
+                        }
+                    } else {
+                        const id = item.id || item.uuid;
+                        if (id) {
+                            const idStr = String(id);
+                            if (!seenIds.has(idStr)) {
+                                seenIds.add(idStr);
+                                const findingItem = {
+                                    ...item,
+                                    severity: item.severity || item.level || (isWarning ? 'warning' : undefined),
+                                    type: item.type || (isWarning ? 'WARNING' : undefined)
+                                };
+                                findings.push(findingItem);
+                            }
+                        } else {
+                            const code = item.code || item.rule || '';
+                            const page = item.page ?? item.pageNumber ?? '';
+                            const severity = item.severity || item.level || (isWarning ? 'warning' : '');
+                            const message = item.message || item.user_message || '';
+                            const compositeKey = `${code}|${page}|${severity}|${message}`;
+                            if (!seenComposites.has(compositeKey)) {
+                                seenComposites.add(compositeKey);
+                                const findingItem = {
+                                    ...item,
+                                    severity: item.severity || item.level || (isWarning ? 'warning' : undefined),
+                                    type: item.type || (isWarning ? 'WARNING' : undefined)
+                                };
+                                findings.push(findingItem);
+                            }
+                        }
                     }
                 }
             }

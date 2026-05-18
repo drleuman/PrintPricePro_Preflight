@@ -5,6 +5,8 @@ import { PdfComparisonViewer } from './PdfComparisonViewer';
 import { ProductionIntelligencePanel } from './V3/ProductionIntelligencePanel';
 import { formatLabel } from '../utils/formatters';
 import { pposFetch } from '../lib/apiClient';
+import { isTerminalStatus, isTerminalDiagnosticStatus } from '../utils/statusHelpers';
+
 
 interface V2ReportViewerProps {
     jobId: string;
@@ -29,7 +31,7 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalU
                 setJob(data);
                 pollCount++;
 
-                if (data.status === 'SUCCEEDED' || data.status === 'FAILED') {
+                if (isTerminalStatus(data.status)) {
                     setLoading(false);
                     clearInterval(pollTimer);
                 } else {
@@ -82,11 +84,27 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalU
     const report = job?.report;
     const delta = job?.delta;
 
+    const getFindings = () => {
+        const candidates = [
+            job?.findings,
+            job?.issues,
+            report?.findings,
+            report?.issues
+        ];
+        for (const c of candidates) {
+            if (Array.isArray(c) && c.length > 0) {
+                return c;
+            }
+        }
+        return [];
+    };
+    const findingsList = getFindings();
+
     // Calculate Risk Score
     const calculateRiskScore = () => {
-        if (!report?.findings) return 0;
+        if (!findingsList || findingsList.length === 0) return 0;
         let score = 0;
-        report.findings.forEach((f: any) => {
+        findingsList.forEach((f: any) => {
             if (f.severity === 'ERROR' || f.severity === 'CRITICAL') score += 30;
             else if (f.severity === 'WARNING') score += 10;
             else if (f.severity === 'INFO') score += 2;
@@ -102,7 +120,7 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalU
     else if (job?.status === 'RUNNING' && job?.progress < 30) currentStep = 1;
     else if (job?.progress >= 30 && job?.progress < 70) currentStep = 2;
     else if (job?.progress >= 70 && job?.progress < 100) currentStep = 3;
-    if (job?.status === 'SUCCEEDED') currentStep = 4;
+    if (isTerminalDiagnosticStatus(job?.status)) currentStep = 4;
 
     const hasResolved = (id: string) => delta?.resolved_ids?.includes(id);
 
@@ -133,6 +151,65 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalU
                     {onClose && <button onClick={onClose} className="v2-btn-outline">Exit Demo</button>}
                 </div>
             </div>
+
+            {/* Phase 10 Diagnostic Banners */}
+            {job?.status && (
+                <div className="v2-status-banners" style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {job.status === 'DEGRADED' && (
+                        <div className="p-4 rounded-none border border-zinc-800 border-l-2 border-l-yellow-500 bg-zinc-950/90 text-yellow-200 flex items-start gap-3">
+                            <span className="text-xl">⚠️</span>
+                            <div>
+                                <strong className="block text-yellow-400 text-sm font-semibold uppercase tracking-wider">Degraded Analysis</strong>
+                                <p className="text-sm mt-0.5 opacity-90">Analysis completed with reduced diagnostic coverage due to transient environment limits or missing toolchains.</p>
+                                {job.degraded_reasons?.length > 0 && (
+                                    <div className="mt-2 text-xs flex gap-2">
+                                        <strong>Reasons:</strong>
+                                        {job.degraded_reasons.map((r: string) => (
+                                            <span key={r} className="bg-yellow-500/20 px-2 py-0.5 rounded border border-yellow-500/30 font-mono text-[10px]">{r}</span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    {job.status === 'PARTIAL' && (
+                        <div className="p-4 rounded-none border border-zinc-800 border-l-2 border-l-orange-500 bg-zinc-950/90 text-orange-200 flex items-start gap-3">
+                            <span className="text-xl">⚡</span>
+                            <div>
+                                <strong className="block text-orange-400 text-sm font-semibold uppercase tracking-wider">Partial Diagnostics</strong>
+                                <p className="text-sm mt-0.5 opacity-90">Some checks were skipped or incomplete due to document complexity or nested format variations.</p>
+                            </div>
+                        </div>
+                    )}
+                    {job.status === 'PARTIAL_ARTIFACTS' && (
+                        <div className="p-4 rounded-none border border-zinc-800 border-l-2 border-l-blue-500 bg-zinc-950/90 text-blue-200 flex items-start gap-3">
+                            <span className="text-xl">📦</span>
+                            <div>
+                                <strong className="block text-blue-400 text-sm font-semibold uppercase tracking-wider">Partial Artifacts Ready</strong>
+                                <p className="text-sm mt-0.5 opacity-90">Preflight completed but some output artifacts or comparison files could not be fully built or cached.</p>
+                            </div>
+                        </div>
+                    )}
+                    {job.status === 'COMPLETED_WITH_FINDINGS' && (
+                        <div className="p-4 rounded-none border border-zinc-800 border-l-2 border-l-amber-500 bg-zinc-950/90 text-amber-200 flex items-start gap-3">
+                            <span className="text-xl">🔍</span>
+                            <div>
+                                <strong className="block text-amber-400 text-sm font-semibold uppercase tracking-wider">Completed with Findings</strong>
+                                <p className="text-sm mt-0.5 opacity-90">The preflight check completed successfully and detected multiple critical or warning findings requiring prepress review.</p>
+                            </div>
+                        </div>
+                    )}
+                    {job.status === 'FAILED_RUNTIME_ENVIRONMENT' && (
+                        <div className="p-4 rounded-none border border-zinc-800 border-l-2 border-l-red-500 bg-zinc-950/90 text-red-200 flex items-start gap-3">
+                            <span className="text-xl">🚨</span>
+                            <div>
+                                <strong className="block text-red-400 text-sm font-semibold uppercase tracking-wider">Runtime Environment Failure</strong>
+                                <p className="text-sm mt-0.5 opacity-90">Core engine or worker dependencies failed to initialize. Please contact system administrator.</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Timeline */}
             <div className="v2-timeline v2-report-glass">
@@ -288,21 +365,21 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalU
             )}
 
             {/* Findings List */}
-            {report && (
+            {(report || findingsList.length > 0) && (
                 <div className="v2-report-glass" style={{ marginTop: '2rem' }}>
                     <h2 className="v2-section-title">
-                        {viewMode === 'executive' ? 'Remaining Action Items' : `Findings Registry (${report.findings.length})`}
+                        {viewMode === 'executive' ? 'Remaining Action Items' : `Findings Registry (${findingsList.length})`}
                     </h2>
 
                     <div className="v2-findings-list">
-                        {report.findings.length === 0 ? (
+                        {findingsList.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
                                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</div>
                                 <h3 style={{ margin: 0, color: '#f8f9fa' }}>Zero Issues Detected</h3>
                                 <p className="v2-stat-label" style={{ marginTop: '0.5rem' }}>This document is flawlessly prepared for production.</p>
                             </div>
                         ) : (
-                            report.findings.map((f: any, i: number) => {
+                            findingsList.map((f: any, i: number) => {
                                 const isExpanded = expandedFindings.includes(f.id);
                                 return (
                                     <div key={i} className="v2-finding-item">

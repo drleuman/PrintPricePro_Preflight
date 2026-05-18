@@ -4,6 +4,8 @@ import { createBooklet } from '../utils/imposition';
 import { PreflightResult } from '../types';
 
 import { normalizePreflightResult, pickCanonicalJobId } from '../utils/payloadNormalization';
+import { isTerminalDiagnosticStatus, isTerminalFailureStatus } from '../utils/statusHelpers';
+
 
 type PdfToolsCallbacks = {
     onStatus?: (status: string, progress: number) => void;
@@ -182,10 +184,10 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
 
                 // Normalize status names from PPOS
                 const status = (job.status || '').toUpperCase();
-                if (['COMPLETED', 'SUCCEEDED', 'SUCCESS'].includes(status)) {
+                if (isTerminalDiagnosticStatus(status)) {
                     clearInterval(interval);
                     resolve(job);
-                } else if (['FAILED', 'ERROR'].includes(status)) {
+                } else if (isTerminalFailureStatus(status)) {
                     clearInterval(interval);
                     
                     // v2.4.170: Robust Error Preservation
