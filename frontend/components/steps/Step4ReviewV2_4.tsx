@@ -397,8 +397,8 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             <ShieldCheckIcon className={`h-5 w-5 ${isReadyForPrint ? 'text-[var(--accent-color)]' : 'text-[var(--text-muted)]'}`} />
                         </div>
 
-                        <CertificationPanel 
-                            title={isReadyForPrint ? t('readyForPrinting') : t('common.processing')} 
+                        <CertificationPanel
+                            title={isRunning ? t('common.processing') : (isReadyForPrint ? t('readyForPrinting') : t('summary.title' as any))}
                             issuesFound={issuesFound}
                             fixesApplied={fixesApplied}
                             profile={selectedPolicy || t('step.review.defaultPolicy')}
