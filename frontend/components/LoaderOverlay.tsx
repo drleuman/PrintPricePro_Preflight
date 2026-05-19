@@ -89,7 +89,7 @@ export const LoaderOverlay: React.FC<Props> = ({
   const currentStep = pipeline[Math.max(0, pipeline.findIndex((s) => statuses[s.key] === 'active'))];
 
   const overlay = (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 backdrop-blur-3xl overflow-hidden font-mono text-[var(--text-primary)]">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-[var(--bg-primary)]/95 backdrop-blur-3xl overflow-hidden font-mono text-[var(--text-primary)]">
       
       {/* Monolith Grid Background */}
       <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(var(--accent-color) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
@@ -134,19 +134,19 @@ export const LoaderOverlay: React.FC<Props> = ({
                         />
                     </svg>
                     
-                    <span className="text-2xl font-black tracking-tighter text-white">V2.4</span>
+                    <span className="text-2xl font-black tracking-tighter text-[var(--text-primary)]">V2.4</span>
                 </div>
             </div>
 
             {/* Information Node */}
             <div className="flex-1 space-y-6">
                 <div>
-                   <h2 className="text-2xl font-black tracking-tighter text-white mb-2 uppercase italic">{currentStep.title}</h2>
+                   <h2 className="text-2xl font-black tracking-tighter text-[var(--text-primary)] mb-2 uppercase italic">{currentStep.title}</h2>
                    <p className="text-[0.65rem] text-[var(--text-secondary)] uppercase tracking-[0.2em] font-normal">{currentStep.description}</p>
                 </div>
 
                 {/* Technical Log Terminal */}
-                <div className="bg-white/[0.03] border border-[var(--border-color)] p-4 space-y-3 relative">
+                <div className="bg-[var(--bg-secondary)] border border-[var(--border-color)] p-4 space-y-3 relative">
                     <div className="flex items-center gap-2 mb-2">
                         <div className="h-1 w-1 bg-[#dc0000]" />
                         <span className="text-[0.6rem] font-bold uppercase tracking-widest opacity-60">Log_Stream_Active</span>
@@ -160,7 +160,7 @@ export const LoaderOverlay: React.FC<Props> = ({
                 {/* Pipeline Progression */}
                 <div className="flex gap-2">
                     {pipeline.map((s) => (
-                        <div key={s.key} className={`h-1.5 flex-1 transition-all duration-700 ${statuses[s.key] === 'active' ? 'bg-[#dc0000] shadow-[0_0_10px_rgba(220,0,0,0.5)]' : statuses[s.key] === 'done' ? 'bg-[#dc0000]/60' : 'bg-white/10'}`} />
+                        <div key={s.key} className={`h-1.5 flex-1 transition-all duration-700 ${statuses[s.key] === 'active' ? 'bg-[#dc0000] shadow-[0_0_10px_rgba(220,0,0,0.5)]' : statuses[s.key] === 'done' ? 'bg-[#dc0000]/60' : 'bg-[var(--bg-tertiary)]'}`} />
                     ))}
                 </div>
             </div>
