@@ -555,6 +555,8 @@ export const en = {
   'step.analysis.ignite': 'Ignite Forensic Engine',
   'step.analysis.applyCorrection': 'Apply Correction',
   'step.analysis.finalizeTrace': 'Finalize Trace',
+  'step.analysis.degraded.title': 'Partial Analysis',
+  'step.analysis.degraded.desc': 'Analysis completed with limited data. Some checks may be unavailable.',
 
   // Shell & Branding
   'shell.awaitingFile': 'Awaiting File',

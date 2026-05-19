@@ -553,6 +553,8 @@ export const es = {
   'step.analysis.ignite': 'Ignite Forensic Engine',
   'step.analysis.applyCorrection': 'Aplicar Corrección',
   'step.analysis.finalizeTrace': 'Finalizar Traza',
+  'step.analysis.degraded.title': 'Análisis Parcial',
+  'step.analysis.degraded.desc': 'Análisis completado con datos limitados. Algunas verificaciones pueden no estar disponibles.',
 
   // Shell & Branding
   'shell.awaitingFile': 'Esperando Archivo',
