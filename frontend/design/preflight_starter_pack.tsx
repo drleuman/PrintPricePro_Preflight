@@ -167,12 +167,14 @@ export const CertificationPanel = ({
     fixesApplied = 0,
     profile = "BOOK_STANDARD",
     riskStatus = "certified",
+    traceId,
 }: {
     title?: string;
     issuesFound?: number;
     fixesApplied?: number;
     profile?: string;
     riskStatus?: 'certified' | 'warning' | 'processing' | 'default';
+    traceId?: string;
 }) => {
     const { t } = useTranslation();
     return (
@@ -180,7 +182,7 @@ export const CertificationPanel = ({
         <div className="mb-6 flex items-start justify-between gap-6 overflow-hidden">
           <StatusBadge label={title} variant={riskStatus} />
           <span className="text-[0.65rem] uppercase tracking-[0.25em] text-[var(--text-muted)] font-mono shrink-0 whitespace-nowrap pt-1.5 min-w-fit border-l border-[var(--border-color)] pl-4">
-            Trace 0x48a
+            {traceId ?? '—'}
           </span>
         </div>
     

@@ -402,7 +402,8 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             issuesFound={issuesFound}
                             fixesApplied={fixesApplied}
                             profile={selectedPolicy || t('step.review.defaultPolicy')}
-                            riskStatus={isReadyForPrint ? "certified" : "warning"} 
+                            riskStatus={isReadyForPrint ? "certified" : "warning"}
+                            traceId={result?.meta?.jobId}
                         />
 
                         <div className="pt-6 border-t border-[var(--border-color)] space-y-4">
