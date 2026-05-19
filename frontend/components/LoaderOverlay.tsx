@@ -54,17 +54,24 @@ export const LoaderOverlay: React.FC<Props> = ({
   const [visualProgress, setVisualProgress] = useState(0);
 
   const pipeline = useMemo(() => steps ?? DEFAULT_STEPS, [steps]);
-  const statuses = useMemo(() => computeStatuses(pipeline, stageKey), [pipeline, stageKey]);
+  const statuses = useMemo(
+    () => computeStatuses(pipeline, isOpen ? stageKey : undefined),
+    [pipeline, stageKey, isOpen]
+  );
 
   useEffect(() => {
     if (!isOpen) { setVisualProgress(0); return; }
     const total = pipeline.length;
     const activeIdx = Math.max(0, pipeline.findIndex((s) => statuses[s.key] === 'active'));
+    const stageFloor = (activeIdx / total) * 100;
     const target = ((activeIdx + 1) / total) * 100;
+
+    setVisualProgress((prev) => Math.max(prev, stageFloor));
 
     const interval = setInterval(() => {
       setVisualProgress((prev) => {
-        if (prev >= target - 0.5) return Math.min(99.9, prev + 0.05);
+        if (prev >= target) return prev;
+        if (prev >= target - 0.5) return Math.min(target, prev + 0.05);
         return prev + (target - prev) * 0.1;
       });
     }, 100);

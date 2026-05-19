@@ -600,6 +600,17 @@ function AppContent() {
   }, [currentPage]); // Re-run if page changes and data was already visible
 
 
+  const stageKeyFromStatus = (s: string | null): string => {
+    if (!s) return 'upload';
+    const l = s.toLowerCase();
+    if (l.includes('engine')) return 'upload';
+    if (l.includes('processing') || l.includes('preflight')) return 'preflight';
+    if (l.includes('cmyk') || l.includes('grayscale') || l.includes('rebuild') || l.includes('booklet')) return 'analyze';
+    if (l.includes('magic') || l.includes('fix')) return 'fix';
+    if (l.includes('download')) return 'verify';
+    return 'preflight';
+  };
+
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] selection:bg-[#dc0000] selection:text-white transition-colors duration-300">
@@ -878,7 +889,7 @@ function AppContent() {
         <LoaderOverlay
           isOpen={ldmActive}
           message={t((ldmStatus || 'common.processing') as any)}
-          stageKey={ldmStatus?.toLowerCase().includes('engine') ? 'upload' : 'preflight'}
+          stageKey={stageKeyFromStatus(ldmStatus)}
         />
 
         <EfficiencyAuditModalV2_4
