@@ -258,7 +258,7 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
 
         const normalizedResult = normalizePreflightResult(res);
         if (normalizedResult && callbacks?.onComplete) {
-            callbacks.onComplete(normalizedResult);
+            await callbacks.onComplete(normalizedResult);
         }
         return normalizedResult || res;
     }, [pollJob, callbacks]);

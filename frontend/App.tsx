@@ -382,11 +382,7 @@ function AppContent() {
         console.log('[APP][V2-START] Async mode, Job ID set to', res.jobId);
         setLdmStatus('common.processing');
         await handleV2JobComplete(res.jobId);
-
-        // Final guard if onComplete didn't finish or for synchronous success
-        if (activeJobIdRef.current === res.jobId) {
-          setLdmActive(false);
-        }
+        // onComplete is responsible for closing the loader via setLdmActive(false)
       }
     } catch (err: any) {
       console.error('[APP][V2-ERROR]', err);

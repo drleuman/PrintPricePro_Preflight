@@ -69,7 +69,7 @@ export const LoaderOverlay: React.FC<Props> = ({
       });
     }, 100);
     return () => clearInterval(interval);
-  }, [isOpen, stageKey, pipeline, statuses]);
+  }, [isOpen, stageKey, pipeline]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -84,12 +84,13 @@ export const LoaderOverlay: React.FC<Props> = ({
     return () => { document.body.style.overflow = prev; };
   }, [isOpen, lockUI]);
 
-  if (!isOpen) return null;
-
   const currentStep = pipeline[Math.max(0, pipeline.findIndex((s) => statuses[s.key] === 'active'))];
 
   const overlay = (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-[var(--bg-primary)]/95 backdrop-blur-3xl overflow-hidden font-mono text-[var(--text-primary)]">
+    <div
+      className={`fixed inset-0 z-[99999] flex items-center justify-center bg-[var(--bg-primary)]/95 backdrop-blur-3xl overflow-hidden font-mono text-[var(--text-primary)] transition-opacity duration-150 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+      aria-hidden={!isOpen}
+    >
       
       {/* Monolith Grid Background */}
       <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(var(--accent-color) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
