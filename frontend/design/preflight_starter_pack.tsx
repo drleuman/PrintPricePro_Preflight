@@ -168,6 +168,7 @@ export const CertificationPanel = ({
     profile = "BOOK_STANDARD",
     riskStatus = "certified",
     traceId,
+    finalStateLabel,
 }: {
     title?: string;
     issuesFound?: number;
@@ -175,6 +176,7 @@ export const CertificationPanel = ({
     profile?: string;
     riskStatus?: 'certified' | 'warning' | 'processing' | 'default';
     traceId?: string;
+    finalStateLabel?: string;
 }) => {
     const { t } = useTranslation();
     return (
@@ -201,7 +203,7 @@ export const CertificationPanel = ({
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[var(--text-secondary)] text-[0.8rem] font-black uppercase tracking-widest">{t('shell.finalState')}</span>
-            <StatusBadge label={riskStatus === 'certified' ? 'shell.ready' : 'shell.action'} variant={riskStatus} />
+            <StatusBadge label={finalStateLabel ?? (riskStatus === 'certified' ? t('shell.ready') : t('shell.action'))} variant={riskStatus} />
           </div>
         </div>
       </div>

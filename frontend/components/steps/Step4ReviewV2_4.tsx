@@ -154,6 +154,16 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
 
     const isReadyForPrint = analysis.issueCount === 0;
 
+    const finalStateLabel = analysis.certificationMode
+        ? t('step.review.certification.withoutModification')
+        : isNoOpFix
+            ? t('step.review.banners.compliantTitle')
+            : (isRealFix || hasEffectiveFix)
+                ? t('step.review.fixedEffective')
+                : isReadyForPrint
+                    ? t('shell.ready')
+                    : t('shell.manualReview');
+
     // Viewer Resolution
     const displayFile = showBeforeAfter === 'before' ? (originalFile || file) : (lastPdfUrl ? null : file);
     const displayPdfUrl = showBeforeAfter === 'after' ? lastPdfUrl : null;
@@ -404,6 +414,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             profile={selectedPolicy || t('step.review.defaultPolicy')}
                             riskStatus={isReadyForPrint ? "certified" : "warning"}
                             traceId={result?.meta?.jobId}
+                            finalStateLabel={finalStateLabel}
                         />
 
                         <div className="pt-6 border-t border-[var(--border-color)] space-y-4">
