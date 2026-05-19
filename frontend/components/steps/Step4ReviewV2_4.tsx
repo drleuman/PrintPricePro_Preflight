@@ -142,12 +142,14 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     const issuesFound = (isAutofix && autoFixBefore?.issues != null)
         ? autoFixBefore.issues.length
         : analysis.issueCount;
-    const reportRepairsLen = Array.isArray((result as any)?.report?.repairs) ? (result as any).report.repairs.length : 0;
-    const resultRepairsLen = Array.isArray((result as any)?.repairs) ? (result as any).repairs.length : 0;
-    const fixesLen = Array.isArray(result?.fixes) ? result.fixes.length : 0;
-    const totalRepairs = reportRepairsLen + resultRepairsLen + fixesLen;
-
-    const fixesApplied = totalRepairs > 0 ? totalRepairs : (isRealFix ? 1 : 0);
+    const fixesApplied = (() => {
+        const af = (result as any)?.applied_fixes;
+        const afLen = typeof af === 'number' ? af : (Array.isArray(af) ? af.length : 0);
+        const repairsLen = Array.isArray((result as any)?.repairs) ? (result as any).repairs.length : 0;
+        const fixesLen = Array.isArray(result?.fixes) ? result.fixes.length : 0;
+        const maxCount = Math.max(afLen, repairsLen, fixesLen);
+        return maxCount > 0 ? maxCount : (isRealFix ? 1 : 0);
+    })();
     const readableError = error ? getReadableFixFailure(error) : null;
 
     const isReadyForPrint = analysis.issueCount === 0;
