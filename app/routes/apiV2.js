@@ -12,6 +12,7 @@ const { pposRequest } = require('../services/apiClient');
 const licenseGuard = require('../middleware/licenseGuard');
 const preflightNormalizer = require('../services/preflightNormalizer');
 const statusHelpers = require('../services/statusHelpers');
+const { enrollJobInRegistry } = require('../services/jobRegistryEnrichment');
 
 const router = express.Router();
 const autofixIdempotencyMap = new Map();
@@ -184,12 +185,13 @@ router.post(
         originalFilename: req.file?.originalname || null
       });
 
-      // Fire-and-forget: enrich preflight_job_registry after PPOS creates the row
-      const { enrichJobRegistry } = require('../services/jobRegistryEnrichment');
+      // Fire-and-forget: create/enrich preflight_job_registry row with origin identity
       setImmediate(() => {
-        enrichJobRegistry(finalId, origin).catch(err =>
-          console.error('[PREFLIGHT-JOB-SCOPE][ENRICH-ERROR]', err.message)
-        );
+        enrollJobInRegistry(finalId, origin, {
+          policy:   policy,
+          fileSize: req.file?.size    || 0,
+          filename: req.file?.originalname || null
+        });
       });
 
       const responsePayload = {
