@@ -12,7 +12,7 @@ async function enrichJobRegistry(jobId, origin, { maxRetries = 5, retryDelayMs =
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const [result] = await db.execute(
+      const result = await db.execute(
         `UPDATE preflight_job_registry
          SET
            printhouse_id = COALESCE(printhouse_id, ?),
@@ -34,16 +34,9 @@ async function enrichJobRegistry(jobId, origin, { maxRetries = 5, retryDelayMs =
         return;
       }
 
-      // affectedRows === 0 can mean:
-      // (a) row does not exist yet (PPOS lag) → retry
-      // (b) origin already set → idempotent exit
-      // Distinguish by checking if attempt === 1 (first try → likely lag)
-      if (attempt > 1) {
-        console.log(`[REGISTRY-ENRICH][SKIP] job_id=${jobId} origin already present or row still absent`);
-        return;
-      }
-
-      console.log(`[REGISTRY-ENRICH][WAIT] job_id=${jobId} row not found yet, retrying...`);
+      // affectedRows === 0: row may not exist yet (PPOS lag) or origin already set.
+      // Keep retrying — on the last attempt we'll log FAIL and give up.
+      console.log(`[REGISTRY-ENRICH][WAIT] job_id=${jobId} no rows updated on attempt ${attempt}, retrying...`);
     } catch (err) {
       if (err.code === 'ER_NO_SUCH_TABLE') {
         console.warn(`[REGISTRY-ENRICH][SKIP] preflight_job_registry table not yet available`);
