@@ -97,7 +97,8 @@ async function enqueueJob(type, payload = {}) {
     metadata: {
       source: 'printprice-preflight-app',
       requestId: payload.requestId || null,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      origin: payload.origin || null
     }
   };
 
@@ -160,6 +161,7 @@ async function enqueueJob(type, payload = {}) {
         source: 'printprice-preflight-app',
         requestId: payload.requestId || null,
         timestamp: new Date().toISOString(),
+        origin: payload.origin || null,
         ...payload.metadata
       }));
 

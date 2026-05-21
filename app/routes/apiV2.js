@@ -104,6 +104,15 @@ router.post(
     // FORCE: Generate a unique jobId here to ensure PPOS contract safety
     const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
+    const origin = {
+      source: 'PREFLIGHT_APP',
+      userId: req.auth?.userId || req.auth?.sub || null,
+      email: req.auth?.email || null,
+      appRole: req.auth?.appRole || req.auth?.productRole || null,
+      tenantId: req.auth?.tenantId || null,
+      printhouseId: req.auth?.printhouseId || null
+    };
+
     try {
       console.log(`[BFF][V2-JOB-START][${requestId}]`, {
         hasFile: !!req.file,
@@ -142,7 +151,8 @@ router.post(
         filePath: req.file.path,
         size: req.file.size,
         userToken: internalToken,
-        authContext
+        authContext,
+        origin
       });
 
       console.log('[BFF][JOB-CREATE-SUCCESS]', {
@@ -161,7 +171,27 @@ router.post(
       // v2.4.120: Forensic ID Propagation Logic
       // We prioritize the local jobId (from Line 47) as the canonical contract ID
       const finalId = canonicalId(job, jobId);
-      
+
+      console.log('[PREFLIGHT-JOB-SCOPE]', {
+        requestId,
+        jobId: finalId,
+        email: origin.email,
+        userId: origin.userId,
+        appRole: origin.appRole,
+        tenantId: origin.tenantId,
+        printhouseId: origin.printhouseId,
+        upstreamTenantId: tenantId,
+        originalFilename: req.file?.originalname || null
+      });
+
+      // Fire-and-forget: enrich preflight_job_registry after PPOS creates the row
+      const { enrichJobRegistry } = require('../services/jobRegistryEnrichment');
+      setImmediate(() => {
+        enrichJobRegistry(finalId, origin).catch(err =>
+          console.error('[PREFLIGHT-JOB-SCOPE][ENRICH-ERROR]', err.message)
+        );
+      });
+
       const responsePayload = {
         ok: true,
         id: finalId,

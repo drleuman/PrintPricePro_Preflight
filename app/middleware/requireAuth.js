@@ -37,6 +37,8 @@ module.exports = (req, res, next) => {
                 tenantId: decoded.tenantId || 'global-node',
                 role: decoded.role || 'MEMBER', // Operational PPOS role
                 productRole: decoded.appRole || decoded.role || 'AUTHOR', // Product-level role
+                appRole: decoded.appRole || decoded.role || 'AUTHOR', // Alias for origin block construction
+                printhouseId: decoded.printhouseId || null,
                 email: decoded.email || null,
                 scopes: decoded.scopes || [],
                 plan: decoded.plan || 'FREE'

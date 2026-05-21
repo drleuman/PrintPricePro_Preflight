@@ -21,11 +21,30 @@ module.exports = {
                     password_hash VARCHAR(255) NOT NULL,
                     role ENUM('AUTHOR', 'PUBLISHER', 'PRINT_HOUSE', 'DEVELOPER') DEFAULT 'AUTHOR',
                     organization_name VARCHAR(255),
+                    printhouse_id VARCHAR(64) NULL,
+                    tenant_id VARCHAR(64) NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     last_login TIMESTAMP NULL,
                     status ENUM('ACTIVE', 'SUSPENDED', 'PENDING') DEFAULT 'ACTIVE'
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             `);
+
+            // Migration: add columns to existing users tables (MySQL 5.7+ compatible)
+            const [phCols] = await db.execute(
+                `SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'printhouse_id'`
+            );
+            if (phCols.cnt === 0) {
+                await db.execute(`ALTER TABLE users ADD COLUMN printhouse_id VARCHAR(64) NULL`);
+            }
+
+            const [tidCols] = await db.execute(
+                `SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'tenant_id'`
+            );
+            if (tidCols.cnt === 0) {
+                await db.execute(`ALTER TABLE users ADD COLUMN tenant_id VARCHAR(64) NULL`);
+            }
 
             // 2. Licenses table (Resource Access Control)
             await db.execute(`
@@ -139,9 +158,10 @@ module.exports = {
                 const { v4: uuidv4 } = require('uuid');
 
                 const testUsers = [
-                    { email: 'author@printprice.pro', role: 'AUTHOR', plan: 'FREE' },
-                    { email: 'admin@printprice.pro', role: 'DEVELOPER', plan: 'PRO' },
-                    { email: 'publisher@printprice.pro', role: 'PUBLISHER', plan: 'PRO' }
+                    { email: 'author@printprice.pro', role: 'AUTHOR', plan: 'FREE', printhouse_id: null, tenant_id: null },
+                    { email: 'admin@printprice.pro', role: 'DEVELOPER', plan: 'PRO', printhouse_id: null, tenant_id: null },
+                    { email: 'publisher@printprice.pro', role: 'PUBLISHER', plan: 'PRO', printhouse_id: null, tenant_id: null },
+                    { email: 'demo-printhouse@printprice.pro', role: 'PRINT_HOUSE', plan: 'PRO', printhouse_id: 'node-demo-123', tenant_id: 'ph-demo-123' }
                 ];
 
                 const passHash = await bcrypt.hash('password123', 10);
@@ -151,8 +171,8 @@ module.exports = {
                     const licenseId = uuidv4();
 
                     await db.execute(
-                        'INSERT INTO users (id, email, password_hash, role, status) VALUES (?, ?, ?, ?, ?)',
-                        [userId, u.email, passHash, u.role, 'ACTIVE']
+                        'INSERT INTO users (id, email, password_hash, role, status, printhouse_id, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                        [userId, u.email, passHash, u.role, 'ACTIVE', u.printhouse_id, u.tenant_id]
                     );
 
                     await db.execute(
@@ -160,7 +180,7 @@ module.exports = {
                         [licenseId, userId, u.plan, u.plan === 'PRO' ? 500 : 50, u.plan === 'PRO' ? 50 : 5, u.plan === 'PRO']
                     );
                 }
-                console.log('[SCHEMA-SEED] OK: 3 identities initialized.');
+                console.log('[SCHEMA-SEED] OK: 4 identities initialized.');
             }
 
             return true;
