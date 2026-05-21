@@ -782,6 +782,8 @@ export const en = {
   'finding.pdf_compliance_error': 'PDF/X COMPLIANCE FAULT',
   'finding.book_intent': 'BOOK / CATALOG INTENT',
   'finding.text_outlined': 'TEXT CONVERTED TO OUTLINES',
+  'finding.compliance_violation': 'COMPLIANCE VIOLATION',
+  'finding.structure_fault': 'DOCUMENT STRUCTURE FAULT',
   'step.review.engineFixBtn': 'Go to Engine Fix',
   'step.review.limitedComparisonDesc': 'Certified artifact is not accessible. You can finalize the trace, but the direct comparison is limited to the ingress state.',
   'step.review.backToEngineTitle': 'Return to Policy Engine',
