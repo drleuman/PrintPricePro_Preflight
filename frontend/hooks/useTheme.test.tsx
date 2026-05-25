@@ -19,9 +19,9 @@ afterEach(() => {
 
 describe('ThemeProvider / useTheme', () => {
   describe('initial theme', () => {
-    it('defaults to "dark" when localStorage has no saved theme', () => {
+    it('defaults to "light" when localStorage has no saved theme', () => {
       const { result } = renderHook(() => useTheme(), { wrapper });
-      expect(result.current.theme).toBe('dark');
+      expect(result.current.theme).toBe('light');
     });
 
     it('restores the saved theme from localStorage', () => {
@@ -34,24 +34,24 @@ describe('ThemeProvider / useTheme', () => {
   describe('DOM side effects', () => {
     it('adds the current theme class to documentElement', () => {
       renderHook(() => useTheme(), { wrapper });
-      expect(document.documentElement.classList.contains('dark')).toBe(true);
+      expect(document.documentElement.classList.contains('light')).toBe(true);
     });
 
     it('persists the current theme to localStorage', () => {
       renderHook(() => useTheme(), { wrapper });
-      expect(localStorage.getItem('ppos_theme')).toBe('dark');
+      expect(localStorage.getItem('ppos_theme')).toBe('light');
     });
   });
 
   describe('toggleTheme', () => {
-    it('switches from dark to light', () => {
+    it('switches from light to dark', () => {
       const { result } = renderHook(() => useTheme(), { wrapper });
 
       act(() => {
         result.current.toggleTheme();
       });
 
-      expect(result.current.theme).toBe('light');
+      expect(result.current.theme).toBe('dark');
     });
 
     it('switches from light back to dark', () => {
@@ -72,8 +72,8 @@ describe('ThemeProvider / useTheme', () => {
         result.current.toggleTheme();
       });
 
-      expect(document.documentElement.classList.contains('light')).toBe(true);
-      expect(document.documentElement.classList.contains('dark')).toBe(false);
+      expect(document.documentElement.classList.contains('dark')).toBe(true);
+      expect(document.documentElement.classList.contains('light')).toBe(false);
     });
 
     it('persists the toggled theme to localStorage', () => {
@@ -83,7 +83,7 @@ describe('ThemeProvider / useTheme', () => {
         result.current.toggleTheme();
       });
 
-      expect(localStorage.getItem('ppos_theme')).toBe('light');
+      expect(localStorage.getItem('ppos_theme')).toBe('dark');
     });
   });
 
