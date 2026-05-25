@@ -32,7 +32,7 @@ export const es = {
   // Navigation
   back: '← Atrás',
   next: 'Siguiente →',
-  igniteEngine: 'Probar Motor V2',
+  igniteEngine: 'Iniciar Corrección',
   fixIssues: 'Corregir Incidencias →',
   startOver: 'Empezar de Nuevo',
 

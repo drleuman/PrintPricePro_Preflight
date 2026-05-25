@@ -32,7 +32,7 @@ export const en = {
   // Navigation
   back: '← Back',
   next: 'Next →',
-  igniteEngine: 'Ignite V2 Engine',
+  igniteEngine: 'Start Correction',
   continueToReview: 'Continue to Review →',
   startOver: 'Start Over',
 
