@@ -87,14 +87,19 @@ async function getLimits(tenantId, bearerToken) {
     const governance = await getGovernance(tenantId, bearerToken);
     if (!governance) return null;
 
-    // The Control Plane places limits under governance.limits or governance.effective_limits
+    // Phase 39.0 CP returns limits under governance.limits (camelCase)
     const limits = governance.limits || governance.effective_limits || governance.file_limits || null;
     if (!limits) return null;
 
     return {
-        max_file_size_mb: limits.max_file_size_mb ?? limits.maxFileSizeMb ?? null,
-        max_job_size_mb:  limits.max_job_size_mb  ?? limits.maxJobSizeMb  ?? null,
-        daily_jobs_limit: limits.daily_jobs_limit  ?? limits.dailyJobsLimit ?? null,
+        // Support both camelCase (Phase 39.0) and snake_case (legacy consumers)
+        max_file_size_mb:  limits.maxFileSizeMb   ?? limits.max_file_size_mb  ?? null,
+        max_job_size_mb:   limits.maxJobSizeMb    ?? limits.max_job_size_mb   ?? null,
+        daily_jobs_limit:  limits.maxJobsPerMonth ?? limits.daily_jobs_limit  ?? limits.dailyJobsLimit ?? null,
+        // Also expose camelCase so new consumers can use either
+        maxFileSizeMb:     limits.maxFileSizeMb   ?? limits.max_file_size_mb  ?? null,
+        maxJobSizeMb:      limits.maxJobSizeMb    ?? limits.max_job_size_mb   ?? null,
+        retentionDays:     limits.retentionDays   ?? limits.retention_days    ?? null,
     };
 }
 
@@ -111,8 +116,19 @@ async function isFeatureEnabled(tenantId, featureName, bearerToken) {
     const governance = await getGovernance(tenantId, bearerToken);
     if (!governance) return false;
 
+    // Phase 39.0: feature flags live in governance.modules or governance.actions
+    // Legacy: governance.entitlements or governance.features
+    const modules  = governance.modules  || {};
+    const actions  = governance.actions  || {};
     const entitlements = governance.entitlements || governance.features || {};
-    return entitlements[featureName] === true;
+
+    // Check all possible locations; camelCase and snake_case variants
+    const camel = featureName.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+    return (
+        modules[featureName]  === true || modules[camel]  === true ||
+        actions[featureName]  === true || actions[camel]  === true ||
+        entitlements[featureName] === true || entitlements[camel] === true
+    );
 }
 
 /**
@@ -127,7 +143,8 @@ async function getPlanCode(tenantId, bearerToken) {
     const governance = await getGovernance(tenantId, bearerToken);
     if (!governance) return 'FREE';
 
-    return governance.plan_code || governance.planCode || governance.plan || 'FREE';
+    // Phase 39.0 uses camelCase 'planCode'; legacy used 'plan_code' / 'plan'
+    return governance.planCode || governance.plan_code || governance.plan || 'FREE';
 }
 
 /**
@@ -144,9 +161,11 @@ async function getCommercialStatus(tenantId, bearerToken) {
         return { active: false, status: 'UNKNOWN', inGrace: false };
     }
 
-    const status = governance.commercial_status || governance.commercialStatus || 'UNKNOWN';
-    const active = status === 'ACTIVE' || status === 'GRACE_PERIOD' || status === 'TRIAL';
-    const inGrace = status === 'GRACE_PERIOD';
+    // Phase 39.0 uses 'commercialStatus' (camelCase); legacy used 'commercial_status'
+    const status = governance.commercialStatus || governance.commercial_status || 'UNKNOWN';
+    // Phase 39.0 may use 'GRACE' (short) or 'GRACE_PERIOD' — both count as grace
+    const active = ['ACTIVE', 'GRACE_PERIOD', 'GRACE', 'TRIAL'].includes(status);
+    const inGrace = status === 'GRACE_PERIOD' || status === 'GRACE';
 
     return { active, status, inGrace };
 }
