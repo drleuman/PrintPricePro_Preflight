@@ -25,21 +25,43 @@ async function enrichWithGovernance(user, bearerToken) {
 
         if (!governance) return user;
 
+        const planCodeVal = governance.planCode || governance.plan_code || governance.plan || user.plan || 'FREE';
+        const commercialStatusVal = governance.commercialStatus || governance.commercial_status || 'UNKNOWN';
+        const accessLevelVal = governance.accessLevel || governance.access_level || null;
+
+        // Grace resolution
+        const grace = governance.grace || {};
+        const inGracePeriod = grace.active ?? governance.grace_period ?? (commercialStatusVal === 'GRACE_PERIOD' || commercialStatusVal === 'GRACE');
+        const graceExpired = grace.expired ?? false;
+        const graceEndsAt = grace.endsAt ?? grace.ends_at ?? null;
+
+        // Limits resolution
+        const limitSource = limits || governance.limits || governance.effective_limits || governance.file_limits || {};
+        const maxFileSizeMbVal = limitSource.maxFileSizeMb ?? limitSource.max_file_size_mb ?? user.max_file_size_mb ?? null;
+        const maxJobSizeMbVal = limitSource.maxJobSizeMb ?? limitSource.max_job_size_mb ?? null;
+        const dailyJobsLimitVal = limitSource.maxJobsPerMonth ?? limitSource.daily_jobs_limit ?? limitSource.dailyJobsLimit ?? user.daily_jobs_limit ?? null;
+
+        // Entitlements
+        const modules = governance.modules || {};
+        const actions = governance.actions || {};
+        const entitlements = governance.entitlements || governance.features || {};
+        const aiMagicFix = modules.ai_magic_fix ?? modules.aiMagicFix ?? actions.ai_magic_fix ?? actions.aiMagicFix ?? entitlements.ai_magic_fix ?? !!user.ai_magic_fix_enabled;
+
         return {
             ...user,
-            // Plan from Control Plane overrides local license table
-            plan: governance.plan_code || governance.plan || user.plan || 'FREE',
-            commercial_status: governance.commercial_status || 'UNKNOWN',
-            access_level: governance.access_level || null,
-            in_grace_period: (governance.commercial_status === 'GRACE_PERIOD'),
-            // Effective limits from Control Plane (with local fallback)
-            max_file_size_mb: limits?.max_file_size_mb ?? user.max_file_size_mb ?? null,
-            max_job_size_mb:  limits?.max_job_size_mb  ?? null,
-            daily_jobs_limit: limits?.daily_jobs_limit  ?? user.daily_jobs_limit ?? null,
-            // Entitlements
-            ai_magic_fix_enabled: governance.entitlements?.ai_magic_fix ?? !!user.ai_magic_fix_enabled,
-            // Governance source flag
-            _governance_source: 'CONTROL_PLANE',
+            plan: planCodeVal,
+            planCode: planCodeVal,
+            plan_code: planCodeVal,
+            commercial_status: commercialStatusVal,
+            access_level: accessLevelVal,
+            in_grace_period: !!inGracePeriod,
+            grace_expired: !!graceExpired,
+            grace_ends_at: graceEndsAt,
+            max_file_size_mb: maxFileSizeMbVal,
+            max_job_size_mb: maxJobSizeMbVal,
+            daily_jobs_limit: dailyJobsLimitVal,
+            ai_magic_fix_enabled: !!aiMagicFix,
+            _governance_source: governance.source || 'CONTROL_PLANE',
         };
     } catch (err) {
         console.warn('[AUTH][CP-ENRICH-FAIL] Governance enrichment failed, using local values:', err.message);

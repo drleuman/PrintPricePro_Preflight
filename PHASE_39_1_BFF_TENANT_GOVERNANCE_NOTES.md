@@ -204,3 +204,23 @@ node scripts/smoke_phase_39_1_bff_tenant_governance_alignment.js
 - Redis-backed distributed cache for multi-node deployments.
 - Frontend `commercialStatus` / `in_grace_period` UX messaging.
 - CP webhook handler for cache invalidation on governance change events.
+
+---
+
+## Phase 39.1.1 Session Mapping Hotfix
+
+The `/api/auth/me` and `/api/auth/session` endpoints now fully map the Control Plane Phase 39.0 governance structure into the Preflight BFF session payload. 
+
+### Field Mappings Implemented:
+- `governance.planCode` ➔ `user.plan`, `user.planCode`, `user.plan_code` (preserves `FOUNDING_PRINTHOUSE`)
+- `governance.commercialStatus` ➔ `user.commercial_status`
+- `governance.accessLevel` ➔ `user.access_level`
+- `governance.grace.active` ➔ `user.in_grace_period`
+- `governance.grace.expired` ➔ `user.grace_expired`
+- `governance.grace.endsAt` ➔ `user.grace_ends_at`
+- `governance.limits.maxFileSizeMb` ➔ `user.max_file_size_mb`
+- `governance.limits.maxJobSizeMb` ➔ `user.max_job_size_mb`
+- `governance.limits.maxJobsPerMonth` ➔ `user.daily_jobs_limit`
+- `governance.source` ➔ `user._governance_source` (defaults to `CONTROL_PLANE`)
+
+This allows the frontend to dynamically read high-resolution limits and grace statuses, enabling rich UX banners and customized onboarding states for Founding Printhouses and Pilot programs without relying on legacy/placeholder enterprise fallbacks.

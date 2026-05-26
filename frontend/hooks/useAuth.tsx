@@ -7,14 +7,18 @@ interface User {
     role: 'AUTHOR' | 'PUBLISHER' | 'PRINT_HOUSE' | 'DEVELOPER';
     // Phase 39.1: plan now sourced from Control Plane (may include FOUNDING_PRINTHOUSE, CUSTOM, SYSTEM)
     plan: 'FREE' | 'PRO' | 'ENTERPRISE' | 'FOUNDING_PRINTHOUSE' | 'CUSTOM' | 'SYSTEM';
+    planCode?: string;
+    plan_code?: string;
     ai_magic_fix_enabled: boolean;
     daily_jobs_limit: number | null;
     jobs_used_today: number;
     organization_name?: string;
     // Phase 39.1: Control Plane governance fields
-    commercial_status?: 'ACTIVE' | 'GRACE_PERIOD' | 'SUSPENDED' | 'TRIAL' | 'UNKNOWN';
+    commercial_status?: 'ACTIVE' | 'GRACE_PERIOD' | 'SUSPENDED' | 'TRIAL' | 'UNKNOWN' | 'GRACE';
     access_level?: string | null;
     in_grace_period?: boolean;
+    grace_expired?: boolean;
+    grace_ends_at?: string | null;
     max_file_size_mb?: number | null;
     max_job_size_mb?: number | null;
     _governance_source?: 'CONTROL_PLANE' | 'LOCAL_FALLBACK';
