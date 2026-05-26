@@ -207,11 +207,17 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
 
                 if (attempt > 300) { // 10 min timeout
                     clearInterval(interval);
-                    const timeoutErr: any = new Error('Job polling timed out.');
-                    timeoutErr.code = 'POLLING_TIMEOUT';
-                    timeoutErr.traceId = 'BFF_TIMEOUT';
-                    timeoutErr.v2 = true;
-                    reject(timeoutErr);
+                    const currentStatus = (job?.status || '').toUpperCase();
+                    if (isTerminalStatus(currentStatus)) {
+                        console.warn('[POLL][TIMEOUT-BUT-TERMINAL] Polling reached max attempts but status is terminal. Finalizing with latest payload.', job);
+                        resolve(job);
+                    } else {
+                        const timeoutErr: any = new Error('Job polling timed out.');
+                        timeoutErr.code = 'POLLING_TIMEOUT';
+                        timeoutErr.traceId = 'BFF_TIMEOUT';
+                        timeoutErr.v2 = true;
+                        reject(timeoutErr);
+                    }
                 }
             }, 2000);
         });
