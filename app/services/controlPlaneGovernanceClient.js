@@ -6,7 +6,7 @@
  *
  * ROOT CAUSE OF 404:
  *   Phase 39.1 was initially written against a placeholder endpoint path
- *   (the legacy tenant route: /api/control-plane-tenants/:id/governance). The real Control Plane
+ *   (the legacy tenant route: /api/legacy-tenant-route/:id/governance). The real Control Plane
  *   Phase 39.0 exposes the canonical admin tenant-governance routes at:
  *
  *     GET  /api/admin/tenant-governance/:tenantId/entitlements
@@ -178,7 +178,7 @@ async function getTenantEntitlements(tenantId, bearerToken) {
 
 /**
  * Backward-compatible alias for getTenantEntitlements.
- * Previously called the legacy tenant route (/api/control-plane-tenants/:id/governance) — now routes
+ * Previously called the legacy tenant route (/api/legacy-tenant-route/:id/governance) — now routes
  * to the canonical Phase 39.0 endpoint.
  *
  * @param {string} tenantId
