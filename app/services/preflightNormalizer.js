@@ -864,12 +864,22 @@ function normalizeAutofixFinalState(report) {
     requiresReview === false &&
     highestRisk !== 'HIGH';
 
+  // Determine if an output artifact exists
+  const hasArtifactsField = report.artifacts !== undefined || report.artifactList !== undefined;
+  const hasOutputArtifact = !hasArtifactsField || !!(
+    report.artifacts?.final_fixed_pdf || 
+    report.artifacts?.fixed_pdf || 
+    report.artifacts?.certified_pdf || 
+    report.artifacts?.normalized_pdf ||
+    (Array.isArray(report.artifactList) && report.artifactList.some(a => ['final_fixed_pdf', 'fixed_pdf', 'certified_pdf', 'normalized_pdf'].includes(a.type)))
+  );
+
   // Determine final status
   let status = report.status || report.final_status || 'AUTOFIX_COMPLETED';
 
   if (report._isDegraded === true || (report.degraded_reasons && report.degraded_reasons.length > 0)) {
     status = 'AUTOFIX_DEGRADED';
-  } else if (failedFixes.length > 0) {
+  } else if (failedFixes.length > 0 || !hasOutputArtifact) {
     status = 'AUTOFIX_FAILED';
   } else if (unresolved.length > 0 || skippedFixes.length > 0) {
     status = 'AUTOFIX_PARTIAL';
@@ -951,6 +961,12 @@ function normalizeAutofixFinalState(report) {
     after.destructive_risk = after.destructive_risk ?? highestRisk;
     after.status = after.status ?? status;
   }
+
+  // Sync both summary and summaryObject consistently
+  report.summaryObject = {
+    before: report.summary.before,
+    after: report.summary.after
+  };
 
   // Top-level fields
   report.status = status;

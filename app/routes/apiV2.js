@@ -789,6 +789,25 @@ router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
     }
 
     const arrayBuffer = await response.arrayBuffer();
+
+    // --- v2.4.172: Normalize JSON Report Artifacts at Boundary ---
+    const isReportJson = artifactId === 'analysis_report' || artifactId === 'report.json' || resolvedArtifactId === 'report.json';
+    if (isReportJson) {
+      try {
+        const text = Buffer.from(arrayBuffer).toString('utf8');
+        let json = JSON.parse(text);
+        if (json && (json.type === 'AUTOFIX' || json.summary || json.summaryObject)) {
+          console.log(`[BFF][ARTIFACT][NORMALIZE] Normalizing downloaded report for job: ${jobId}`);
+          json = preflightNormalizer.normalizeAutofixFinalState(json);
+        }
+        const finalBuf = Buffer.from(JSON.stringify(json, null, 2));
+        res.setHeader('Content-Length', finalBuf.length);
+        return res.end(finalBuf);
+      } catch (e) {
+        console.warn(`[BFF][ARTIFACT][NORMALIZE][WARN] Failed to parse and normalize report for ${jobId}: ${e.message}`);
+      }
+    }
+
     return res.end(Buffer.from(arrayBuffer));
 
   } catch (error) {

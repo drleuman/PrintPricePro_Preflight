@@ -1,0 +1,106 @@
+{
+  "type": "AUTOFIX",
+  "status": "COMPLETED",
+  "final_status": "COMPLETED",
+  "summary": {
+    "before": {
+      "risk_level": "CRITICAL",
+      "issue_count": 7
+    },
+    "after": null
+  },
+  "summaryObject": {
+    "before": {
+      "risk_level": "CRITICAL",
+      "issue_count": 7
+    },
+    "after": null
+  },
+  "findings_before": [
+    { "code": "TRIMBOX_MISSING", "severity": "error" },
+    { "code": "BLEED_MISSING", "severity": "error" },
+    { "code": "COLOR_RGB", "severity": "warning" },
+    { "code": "FONT_NOT_EMBEDDED", "severity": "warning" },
+    { "code": "IMAGE_LOW_RESOLUTION", "severity": "warning" },
+    { "code": "SPOT_COLOR", "severity": "info" },
+    { "code": "OVERPRINT_ISSUE", "severity": "warning" }
+  ],
+  "findings_after": [],
+  "unresolved_findings": [],
+  "failed_fixes": [],
+  "skipped_fixes": [],
+  "applied_fixes": [
+    {
+      "code": "REBUILD_TRIMBOX",
+      "status": "APPLIED"
+    },
+    {
+      "code": "APPLY_BLEED",
+      "status": "APPLIED",
+      "industrial_quality": "LIMITED",
+      "requires_human_review": true
+    },
+    {
+      "code": "CONVERT_CMYK",
+      "status": "APPLIED",
+      "destructiveFixRisk": "HIGH",
+      "requires_human_review": true
+    },
+    {
+      "code": "INJECT_OUTPUT_INTENT",
+      "status": "APPLIED"
+    }
+  ],
+  "fixes": [
+    {
+      "code": "REBUILD_TRIMBOX",
+      "status": "APPLIED"
+    },
+    {
+      "code": "APPLY_BLEED",
+      "status": "APPLIED",
+      "industrial_quality": "LIMITED",
+      "requires_human_review": true
+    },
+    {
+      "code": "CONVERT_CMYK",
+      "status": "APPLIED",
+      "destructiveFixRisk": "HIGH",
+      "requires_human_review": true
+    },
+    {
+      "code": "INJECT_OUTPUT_INTENT",
+      "status": "APPLIED"
+    }
+  ],
+  "repairs": [
+    {
+      "code": "REBUILD_TRIMBOX",
+      "status": "APPLIED"
+    },
+    {
+      "code": "APPLY_BLEED",
+      "status": "APPLIED",
+      "industrial_quality": "LIMITED",
+      "requires_human_review": true
+    },
+    {
+      "code": "CONVERT_CMYK",
+      "status": "APPLIED",
+      "destructiveFixRisk": "HIGH",
+      "requires_human_review": true
+    },
+    {
+      "code": "INJECT_OUTPUT_INTENT",
+      "status": "APPLIED"
+    }
+  ],
+  "artifacts": {
+    "final_fixed_pdf": "Dialnet-LaElite-certified.pdf",
+    "analysis_report": "Dialnet-LaElite-report.json"
+  },
+  "artifactList": [
+    { "type": "final_fixed_pdf", "name": "Dialnet-LaElite-certified.pdf" },
+    { "type": "analysis_report", "name": "Dialnet-LaElite-report.json" }
+  ]
+}

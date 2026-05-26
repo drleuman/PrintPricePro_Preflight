@@ -300,14 +300,25 @@ router.get('/:id/download', v2ReadLimiter, async (req, res) => {
             // 1. Add per-file JSON report
             if (job.report_data) {
                 try {
-                    const reportBuf = Buffer.from(
-                        typeof job.report_data === 'string'
-                            ? job.report_data
-                            : JSON.stringify(job.report_data, null, 2)
-                    );
+                    let reportObj = typeof job.report_data === 'string' ? JSON.parse(job.report_data) : job.report_data;
+                    if (reportObj && (reportObj.type === 'AUTOFIX' || reportObj.summary || reportObj.summaryObject)) {
+                        const preflightNormalizer = require('../services/preflightNormalizer');
+                        reportObj = preflightNormalizer.normalizeAutofixFinalState(reportObj);
+                    }
+                    const reportBuf = Buffer.from(JSON.stringify(reportObj, null, 2));
                     const reportName = filename.replace(/\.pdf$/i, '') + '_report.json';
                     outZip.addFile(`reports/${reportName}`, reportBuf);
-                } catch (_) { /* skip malformed reports */ }
+                } catch (_) { 
+                    try {
+                        const reportBuf = Buffer.from(
+                            typeof job.report_data === 'string'
+                                ? job.report_data
+                                : JSON.stringify(job.report_data, null, 2)
+                        );
+                        const reportName = filename.replace(/\.pdf$/i, '') + '_report.json';
+                        outZip.addFile(`reports/${reportName}`, reportBuf);
+                    } catch (__) {}
+                }
             }
 
             // 2. Add fixed PDF
