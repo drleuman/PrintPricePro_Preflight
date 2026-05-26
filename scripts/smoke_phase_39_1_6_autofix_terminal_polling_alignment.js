@@ -55,26 +55,33 @@ function verifyStaticCode() {
     fail('frontend/utils/statusHelpers.ts missing statuses', missingFrontendStatuses.join(', '));
   }
 
-  // Verify polling loop in usepdftools.ts handles COMPLETED_WITH_REVIEW
-  const usePdfToolsContent = fs.readFileSync(path.join(__dirname, '../frontend/hooks/usepdftools.ts'), 'utf8');
+  // Verify polling loop in usePdfTools.ts handles COMPLETED_WITH_REVIEW
+  let usePdfToolsPath = path.join(__dirname, '../frontend/hooks/usePdfTools.ts');
+  if (!fs.existsSync(usePdfToolsPath)) {
+    usePdfToolsPath = path.join(__dirname, '../frontend/hooks/usepdftools.ts');
+  }
+
+  const usePdfToolsContent = fs.readFileSync(usePdfToolsPath, 'utf8');
+  const baseName = path.basename(usePdfToolsPath);
+
   if (usePdfToolsContent.includes('isTerminalDiagnosticStatus(status)')) {
-    pass('usepdftools.ts uses isTerminalDiagnosticStatus which now covers COMPLETED_WITH_REVIEW');
+    pass(`${baseName} uses isTerminalDiagnosticStatus which now covers COMPLETED_WITH_REVIEW`);
   } else {
-    fail('usepdftools.ts polling check', 'does not use isTerminalDiagnosticStatus');
+    fail(`${baseName} polling check`, 'does not use isTerminalDiagnosticStatus');
   }
 
   // Verify polling loop does not require hasReport === true
   if (!usePdfToolsContent.includes('hasReport === true') && !usePdfToolsContent.includes('hasReport ===') && !usePdfToolsContent.includes('!report')) {
-    pass('usepdftools.ts polling check does not require hasReport === true');
+    pass(`${baseName} polling check does not require hasReport === true`);
   } else {
-    fail('usepdftools.ts hasReport check', 'polling requires hasReport');
+    fail(`${baseName} hasReport check`, 'polling requires hasReport');
   }
 
-  // Verify usepdftools.ts contains timeout resolution for terminal statuses
+  // Verify usePdfTools.ts contains timeout resolution for terminal statuses
   if (usePdfToolsContent.includes('isTerminalStatus(currentStatus)')) {
-    pass('usepdftools.ts resolves with latest payload on timeout if status is terminal');
+    pass(`${baseName} resolves with latest payload on timeout if status is terminal`);
   } else {
-    fail('usepdftools.ts timeout fail-safe', 'missing terminal status resolution on timeout');
+    fail(`${baseName} timeout fail-safe`, 'missing terminal status resolution on timeout');
   }
 }
 
