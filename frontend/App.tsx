@@ -22,7 +22,7 @@ import {
   HeatmapData,
   AppMode,
 } from './types';
-import { normalizePreflightResult, pickCanonicalJobId, analyzeWorkflow, getCanonicalFileName, getBestArtifactKey, getReadableFixFailure } from './utils/payloadNormalization';
+import { normalizePreflightResult, pickCanonicalJobId, analyzeWorkflow, getCanonicalFileName, getBestArtifactKey, getReadableFixFailure, normalizeAutofixResultState } from './utils/payloadNormalization';
 import { useAiMagicFix } from './hooks/useAiMagicFix';
 import { normalizeDownloadFilename } from './utils/formatters';
 import { usePreflightWorker } from './hooks/usePreflightWorker';
@@ -465,7 +465,8 @@ function AppContent() {
   const handleDownloadReport = useCallback(() => {
     if (!result) return;
     try {
-      const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+      const payloadToDownload = normalizeAutofixResultState(JSON.parse(JSON.stringify(result)));
+      const blob = new Blob([JSON.stringify(payloadToDownload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

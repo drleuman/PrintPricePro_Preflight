@@ -669,6 +669,31 @@ router.get('/:jobId', async (req, res) => {
       });
     }
 
+    finalResponsePayload = preflightNormalizer.normalizeAutofixResultState(finalResponsePayload);
+
+    let normalizedReport = null;
+    if (finalResponsePayload?.type === 'AUTOFIX') {
+      normalizedReport = finalResponsePayload;
+    } else {
+      const nestedToCheck = [
+        finalResponsePayload?.result,
+        finalResponsePayload?.data?.result,
+        finalResponsePayload?.report,
+        finalResponsePayload?.data?.report,
+        finalResponsePayload?.job?.result,
+        finalResponsePayload?.job?.report,
+        finalResponsePayload?.fixResult,
+        finalResponsePayload?.autofixResult
+      ];
+      normalizedReport = nestedToCheck.find(r => r?.type === 'AUTOFIX');
+    }
+
+    if (normalizedReport) {
+      res.setHeader('X-PPOS-Autofix-Result-Normalized', 'true');
+      res.setHeader('X-PPOS-Autofix-Status', normalizedReport.status || 'COMPLETED_WITH_REVIEW');
+      console.log(`[AUTOFIX_RESULT_NORMALIZED_FOR_FRONTEND]\nroute=apiV2_status\njobId=${jobId}\nstatus=${normalizedReport.status}`);
+    }
+
     return res.status(response.status).json(finalResponsePayload);
 
   } catch (error) {
@@ -840,6 +865,33 @@ router.post('/:jobId/actions/fix', async (req, res) => {
   const requestId = req.get('x-request-id') || `fix_${Date.now()}`;
   const tenantId = getTenantId(req);
 
+  const sendNormalizedFixResponse = (statusCode, data) => {
+    const finalData = preflightNormalizer.normalizeAutofixResultState(data);
+    let normalizedReport = null;
+    if (finalData?.type === 'AUTOFIX') {
+      normalizedReport = finalData;
+    } else {
+      const nestedToCheck = [
+        finalData?.result,
+        finalData?.data?.result,
+        finalData?.report,
+        finalData?.data?.report,
+        finalData?.job?.result,
+        finalData?.job?.report,
+        finalData?.fixResult,
+        finalData?.autofixResult
+      ];
+      normalizedReport = nestedToCheck.find(r => r?.type === 'AUTOFIX');
+    }
+
+    if (normalizedReport) {
+      res.setHeader('X-PPOS-Autofix-Result-Normalized', 'true');
+      res.setHeader('X-PPOS-Autofix-Status', normalizedReport.status || 'COMPLETED_WITH_REVIEW');
+      console.log(`[AUTOFIX_RESULT_NORMALIZED_FOR_FRONTEND]\nroute=apiV2_fix\njobId=${jobId}\nstatus=${normalizedReport.status}`);
+    }
+    return res.status(statusCode).json(finalData);
+  };
+
   try {
     if (!jobId) {
         return res.status(400).json({
@@ -918,12 +970,12 @@ router.post('/:jobId/actions/fix', async (req, res) => {
       if (record.pendingPromise) {
         try {
           const enrichedData = await record.pendingPromise;
-          return res.status(200).json(enrichedData);
+          return sendNormalizedFixResponse(200, enrichedData);
         } catch (err) {
           // If previous execution failed, fall through to re-attempt
         }
       } else if (record.result) {
-        return res.status(200).json(record.result);
+        return sendNormalizedFixResponse(200, record.result);
       }
     }
 
@@ -1058,7 +1110,7 @@ router.post('/:jobId/actions/fix', async (req, res) => {
         }
       }, 65000);
 
-      return res.status(200).json(enrichedData);
+      return sendNormalizedFixResponse(200, enrichedData);
     } catch (err) {
       console.log(`[BFF][AUTOFIX][IDEMPOTENT-CLEAR-ON-ERROR]`, { idempotencyKey });
       autofixIdempotencyMap.delete(idempotencyKey);

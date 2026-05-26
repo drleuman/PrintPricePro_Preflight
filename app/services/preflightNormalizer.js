@@ -987,6 +987,53 @@ function normalizeAutofixFinalState(report) {
   return report;
 }
 
+function normalizeAutofixResultState(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return payload;
+  }
+
+  try {
+    const hasAppliedFixes = Array.isArray(payload.applied_fixes) || Array.isArray(payload.repairs) || Array.isArray(payload.fixes);
+    const hasFixedPdf = payload.final_fixed_pdf || payload.fixed_pdf || payload.artifacts?.final_fixed_pdf || payload.artifacts?.fixed_pdf || (Array.isArray(payload.artifactList) && payload.artifactList.some(a => a.type === 'final_fixed_pdf' || a.type === 'fixed_pdf'));
+    const isAutofix = payload.type === 'AUTOFIX' || (hasAppliedFixes && hasFixedPdf);
+
+    if (isAutofix) {
+      return normalizeAutofixFinalState(payload);
+    }
+
+    const nestedPaths = [
+      ['result'],
+      ['data', 'result'],
+      ['report'],
+      ['data', 'report'],
+      ['job', 'result'],
+      ['job', 'report'],
+      ['fixResult'],
+      ['autofixResult']
+    ];
+
+    for (const path of nestedPaths) {
+      let current = payload;
+      for (let i = 0; i < path.length - 1; i++) {
+        current = current ? current[path[i]] : undefined;
+      }
+      const lastKey = path[path.length - 1];
+      if (current && typeof current === 'object' && current[lastKey] && typeof current[lastKey] === 'object') {
+        const nestedObj = current[lastKey];
+        const nestedHasAppliedFixes = Array.isArray(nestedObj.applied_fixes) || Array.isArray(nestedObj.repairs) || Array.isArray(nestedObj.fixes);
+        const nestedHasFixedPdf = nestedObj.final_fixed_pdf || nestedObj.fixed_pdf || nestedObj.artifacts?.final_fixed_pdf || nestedObj.artifacts?.fixed_pdf || (Array.isArray(nestedObj.artifactList) && nestedObj.artifactList.some(a => a.type === 'final_fixed_pdf' || a.type === 'fixed_pdf'));
+        const nestedIsAutofix = nestedObj.type === 'AUTOFIX' || (nestedHasAppliedFixes && nestedHasFixedPdf);
+        if (nestedIsAutofix) {
+          current[lastKey] = normalizeAutofixFinalState(nestedObj);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[BFF][NORMALIZER][RESULT][WARN] Failed to normalize result state: ${err.message}`);
+  }
+  return payload;
+}
+
 function maybeNormalizeAutofixReportArtifact(report) {
   if (!report || typeof report !== 'object') {
     return report;
@@ -1017,6 +1064,7 @@ module.exports = {
   normalizeAutofixJob,
   normalizeAutofixFinalState,
   maybeNormalizeAutofixReportArtifact,
+  normalizeAutofixResultState,
   extractDocumentMetadata,
   extractSummary,
   extractFindings,

@@ -226,14 +226,16 @@ function humanizeDescription(code: string | undefined | null): string | null {
 export function normalizePreflightResult(rawPayload: any): PreflightResult | null {
     if (!rawPayload) return null;
 
-    console.log('[STEP2][RAW-PAYLOAD]', rawPayload);
+    const normalizedPayload = normalizeAutofixResultState(rawPayload);
+
+    console.log('[STEP2][RAW-PAYLOAD]', normalizedPayload);
 
     // --- v2.4.94: Deep Flattening of Async Payloads ---
     // If the data is nested in 'result' (canonical async format), bring it to the root
-    let payload = rawPayload;
-    if (rawPayload.result && typeof rawPayload.result === 'object') {
+    let payload = normalizedPayload;
+    if (normalizedPayload.result && typeof normalizedPayload.result === 'object') {
         console.log('[STEP2][FLATTENING] Merging nested result into payload root');
-        payload = { ...rawPayload, ...rawPayload.result };
+        payload = { ...normalizedPayload, ...normalizedPayload.result };
     }
     // -------------------------------------------------
 
@@ -522,4 +524,234 @@ export function getCanonicalFileName(payload: any, originalFile: File | { name: 
         return originalFile?.name || jobFileName || 'certified_document.pdf';
     }
     return jobFileName;
+}
+
+export function normalizeAutofixFinalState(report: any): any {
+  if (!report) return report;
+
+  // Ensure report has summary object
+  if (!report.summary) {
+    report.summary = { before: null, after: null };
+  }
+
+  // Support summaryObject mapping
+  const summaryObject = report.summaryObject || {};
+  if (!report.summary.before && summaryObject.before) {
+    report.summary.before = summaryObject.before;
+  }
+  if (!report.summary.after && summaryObject.after) {
+    report.summary.after = summaryObject.after;
+  }
+
+  // Extract fixes arrays
+  const unresolved = report.unresolved_findings || report.findings_after || [];
+  const failedFixes = report.failed_fixes || [];
+  const skippedFixes = report.skipped_fixes || [];
+  const appliedFixes = report.applied_fixes || report.fixes || report.repairs || [];
+
+  // Determine review requirements
+  const requiresReview = appliedFixes.some((f: any) =>
+    f && (
+      f.requires_human_review === true ||
+      f.requiresHumanReview === true ||
+      f.destructiveFixRisk === 'HIGH' ||
+      f.destructive_fix_risk === 'HIGH' ||
+      f.industrial_quality === 'LIMITED' ||
+      f.industrialQuality === 'LIMITED'
+    )
+  );
+
+  // Derive highest destructive risk
+  let highestRisk = 'LOW';
+  appliedFixes.forEach((f: any) => {
+    if (!f) return;
+    const risk = (f.destructiveFixRisk || f.destructive_fix_risk || '').toUpperCase();
+    if (risk === 'HIGH') {
+      highestRisk = 'HIGH';
+    } else if (risk === 'MEDIUM' && highestRisk !== 'HIGH') {
+      highestRisk = 'MEDIUM';
+    }
+  });
+
+  // Calculate technical fixed status
+  const technicallyFixed =
+    failedFixes.length === 0 &&
+    unresolved.length === 0 &&
+    appliedFixes.length > 0 &&
+    report._isDegraded !== true;
+
+  // Calculate production certified status
+  const productionCertified =
+    technicallyFixed &&
+    requiresReview === false &&
+    highestRisk !== 'HIGH';
+
+  // Determine if an output artifact exists
+  const hasArtifactsField = report.artifacts !== undefined || report.artifactList !== undefined;
+  const hasOutputArtifact = !hasArtifactsField || !!(
+    report.artifacts?.final_fixed_pdf || 
+    report.artifacts?.fixed_pdf || 
+    report.artifacts?.certified_pdf || 
+    report.artifacts?.normalized_pdf ||
+    (Array.isArray(report.artifactList) && report.artifactList.some((a: any) => ['final_fixed_pdf', 'fixed_pdf', 'certified_pdf', 'normalized_pdf'].includes(a.type)))
+  );
+
+  // Determine final status
+  let status = report.status || report.final_status || 'AUTOFIX_COMPLETED';
+
+  if (report._isDegraded === true || (report.degraded_reasons && report.degraded_reasons.length > 0)) {
+    status = 'AUTOFIX_DEGRADED';
+  } else if (failedFixes.length > 0 || !hasOutputArtifact) {
+    status = 'AUTOFIX_FAILED';
+  } else if (unresolved.length > 0 || skippedFixes.length > 0) {
+    status = 'AUTOFIX_PARTIAL';
+  } else if (technicallyFixed) {
+    if (requiresReview || highestRisk === 'HIGH') {
+      status = 'COMPLETED_WITH_REVIEW';
+    } else {
+      status = 'AUTOFIX_COMPLETED';
+    }
+  }
+
+  // Extract review reasons
+  const reviewReasons: string[] = [];
+  appliedFixes.forEach((f: any) => {
+    if (!f) return;
+    if (
+      f.requires_human_review === true ||
+      f.requiresHumanReview === true ||
+      f.destructiveFixRisk === 'HIGH' ||
+      f.destructive_fix_risk === 'HIGH' ||
+      f.industrial_quality === 'LIMITED' ||
+      f.industrialQuality === 'LIMITED'
+    ) {
+      const code = f.code || f.strategy || f.repairStrategy || 'UNKNOWN_REPAIR';
+      if (!reviewReasons.includes(code)) {
+        reviewReasons.push(code);
+      }
+    }
+  });
+
+  // Derive final risk level
+  let finalRiskLevel = 'LOW';
+  if (status === 'COMPLETED_WITH_REVIEW') {
+    finalRiskLevel = 'REVIEW_REQUIRED';
+  } else if (status === 'AUTOFIX_FAILED') {
+    finalRiskLevel = 'CRITICAL';
+  } else if (status === 'AUTOFIX_PARTIAL') {
+    finalRiskLevel = 'WARNING';
+  }
+
+  // Derive risk score
+  const scoreBasis = 'AUTOFIX_FINAL_STATE';
+  const riskScore = status === 'AUTOFIX_COMPLETED' ? 100 : (status === 'COMPLETED_WITH_REVIEW' ? 20 : 0);
+
+  // Generate or enrich summary.after
+  if (!report.summary.after) {
+    report.summary.after = {
+      risk_level: finalRiskLevel,
+      risk_score: riskScore,
+      scoreBasis,
+      issue_count: unresolved.length,
+      unresolved_count: unresolved.length,
+      failed_fix_count: failedFixes.length,
+      skipped_fix_count: skippedFixes.length,
+      applied_fix_count: appliedFixes.length,
+      technically_fixed: technicallyFixed,
+      production_certified: productionCertified,
+      requires_human_review: requiresReview,
+      review_required_count: reviewReasons.length,
+      review_reasons: reviewReasons,
+      destructive_risk: highestRisk,
+      status
+    };
+  } else {
+    const after = report.summary.after;
+    after.risk_level = after.risk_level ?? finalRiskLevel;
+    after.risk_score = after.risk_score ?? riskScore;
+    after.scoreBasis = after.scoreBasis ?? scoreBasis;
+    after.issue_count = after.issue_count ?? unresolved.length;
+    after.unresolved_count = after.unresolved_count ?? unresolved.length;
+    after.failed_fix_count = after.failed_fix_count ?? failedFixes.length;
+    after.skipped_fix_count = after.skipped_fix_count ?? skippedFixes.length;
+    after.applied_fix_count = after.applied_fix_count ?? appliedFixes.length;
+    after.technically_fixed = after.technically_fixed ?? technicallyFixed;
+    after.production_certified = after.production_certified ?? productionCertified;
+    after.requires_human_review = after.requires_human_review ?? requiresReview;
+    after.review_required_count = after.review_required_count ?? reviewReasons.length;
+    after.review_reasons = after.review_reasons ?? reviewReasons;
+    after.destructive_risk = after.destructive_risk ?? highestRisk;
+    after.status = after.status ?? status;
+  }
+
+  // Sync both summary and summaryObject consistently
+  report.summaryObject = {
+    before: report.summary.before,
+    after: report.summary.after
+  };
+
+  // Top-level fields
+  report.status = status;
+  report.final_status = status;
+  report.technicallyFixed = technicallyFixed;
+  report.productionCertified = productionCertified;
+  report.requiresHumanReview = requiresReview;
+  report.reviewReasons = reviewReasons;
+  report.destructiveRiskSummary = highestRisk;
+  report.finalRiskLevel = finalRiskLevel;
+  report.finalScoreBasis = scoreBasis;
+
+  // Fallback score setting
+  if (report.score === undefined || report.score === null || report.score === 100 || report.score === 0) {
+    report.score = report.summary.after.risk_score;
+  }
+
+  return report;
+}
+
+export function normalizeAutofixResultState(payload: any): any {
+  if (!payload || typeof payload !== 'object') {
+    return payload;
+  }
+
+  try {
+    const hasAppliedFixes = Array.isArray(payload.applied_fixes) || Array.isArray(payload.repairs) || Array.isArray(payload.fixes);
+    const hasFixedPdf = payload.final_fixed_pdf || payload.fixed_pdf || payload.artifacts?.final_fixed_pdf || payload.artifacts?.fixed_pdf || (Array.isArray(payload.artifactList) && payload.artifactList.some((a: any) => a.type === 'final_fixed_pdf' || a.type === 'fixed_pdf'));
+    const isAutofix = payload.type === 'AUTOFIX' || (hasAppliedFixes && hasFixedPdf);
+
+    if (isAutofix) {
+      return normalizeAutofixFinalState(payload);
+    }
+
+    const nestedPaths = [
+      ['result'],
+      ['data', 'result'],
+      ['report'],
+      ['data', 'report'],
+      ['job', 'result'],
+      ['job', 'report'],
+      ['fixResult'],
+      ['autofixResult']
+    ];
+
+    for (const path of nestedPaths) {
+      let current = payload;
+      for (let i = 0; i < path.length - 1; i++) {
+        current = current ? current[path[i]] : undefined;
+      }
+      const lastKey = path[path.length - 1];
+      if (current && typeof current === 'object' && current[lastKey] && typeof current[lastKey] === 'object') {
+        const nestedObj = current[lastKey];
+        const nestedHasAppliedFixes = Array.isArray(nestedObj.applied_fixes) || Array.isArray(nestedObj.repairs) || Array.isArray(nestedObj.fixes);
+        const nestedHasFixedPdf = nestedObj.final_fixed_pdf || nestedObj.fixed_pdf || nestedObj.artifacts?.final_fixed_pdf || nestedObj.artifacts?.fixed_pdf || (Array.isArray(nestedObj.artifactList) && nestedObj.artifactList.some((a: any) => a.type === 'final_fixed_pdf' || a.type === 'fixed_pdf'));
+        const nestedIsAutofix = nestedObj.type === 'AUTOFIX' || (nestedHasAppliedFixes && nestedHasFixedPdf);
+        if (nestedIsAutofix) {
+          current[lastKey] = normalizeAutofixFinalState(nestedObj);
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn(`[FE][NORMALIZER][RESULT][WARN] Failed to normalize result state: ${err.message}`);
+  }
+  return payload;
 }
