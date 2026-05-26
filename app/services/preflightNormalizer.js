@@ -987,6 +987,25 @@ function normalizeAutofixFinalState(report) {
   return report;
 }
 
+function maybeNormalizeAutofixReportArtifact(report) {
+  if (!report || typeof report !== 'object') {
+    return report;
+  }
+
+  try {
+    const hasAppliedFixes = Array.isArray(report.applied_fixes) || Array.isArray(report.repairs) || Array.isArray(report.fixes);
+    const hasFixedPdf = report.final_fixed_pdf || report.fixed_pdf || report.artifacts?.final_fixed_pdf || report.artifacts?.fixed_pdf || (Array.isArray(report.artifactList) && report.artifactList.some(a => a.type === 'final_fixed_pdf' || a.type === 'fixed_pdf'));
+    const isAutofix = report.type === 'AUTOFIX' || (hasAppliedFixes && hasFixedPdf);
+
+    if (isAutofix) {
+      return normalizeAutofixFinalState(report);
+    }
+  } catch (err) {
+    console.warn(`[BFF][NORMALIZER][CENTRAL][WARN] Failed to inspect or normalize report JSON: ${err.message}`);
+  }
+  return report;
+}
+
 module.exports = {
   cacheSourceJob,
   linkFixJob,
@@ -997,6 +1016,7 @@ module.exports = {
   normalizeAnalyzeJob,
   normalizeAutofixJob,
   normalizeAutofixFinalState,
+  maybeNormalizeAutofixReportArtifact,
   extractDocumentMetadata,
   extractSummary,
   extractFindings,

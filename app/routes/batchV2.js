@@ -301,10 +301,8 @@ router.get('/:id/download', v2ReadLimiter, async (req, res) => {
             if (job.report_data) {
                 try {
                     let reportObj = typeof job.report_data === 'string' ? JSON.parse(job.report_data) : job.report_data;
-                    if (reportObj && (reportObj.type === 'AUTOFIX' || reportObj.summary || reportObj.summaryObject)) {
-                        const preflightNormalizer = require('../services/preflightNormalizer');
-                        reportObj = preflightNormalizer.normalizeAutofixFinalState(reportObj);
-                    }
+                    const preflightNormalizer = require('../services/preflightNormalizer');
+                    reportObj = preflightNormalizer.maybeNormalizeAutofixReportArtifact(reportObj);
                     const reportBuf = Buffer.from(JSON.stringify(reportObj, null, 2));
                     const reportName = filename.replace(/\.pdf$/i, '') + '_report.json';
                     outZip.addFile(`reports/${reportName}`, reportBuf);

@@ -39,13 +39,15 @@ router.use('/', async (req, res) => {
         // Legacy cleanup (no longer needed if OS expects JWT)
         delete headers['x-ppos-api-key'];
 
+        const isReportRequest = req.method === 'GET' && (req.url.endsWith('.json') || req.url.includes('/analysis_report') || req.url.includes('/audit_report') || req.url.includes('/report.json') || req.url.includes('/fix_audit.json'));
+
         const response = await axios({
             method: req.method,
             url: targetUrl,
             data: req.body,
             headers: headers,
             params: req.query,
-            responseType: 'stream',
+            responseType: isReportRequest ? 'text' : 'stream',
             validateStatus: () => true, // Proxy all status codes
             timeout: pposConfig.longTimeoutMs
         });
@@ -56,7 +58,42 @@ router.use('/', async (req, res) => {
         });
 
         res.status(response.status);
-        response.data.pipe(res);
+
+        if (isReportRequest && response.status >= 200 && response.status < 300) {
+            let data = response.data;
+            try {
+                let json = typeof data === 'string' ? JSON.parse(data) : data;
+                if (json) {
+                    const preflightNormalizer = require('../services/preflightNormalizer');
+                    json = preflightNormalizer.maybeNormalizeAutofixReportArtifact(json);
+                    
+                    if (json.type === 'AUTOFIX') {
+                        res.setHeader('X-PPOS-Autofix-Normalized', 'true');
+                        res.setHeader('X-PPOS-Autofix-Status', json.status || 'COMPLETED_WITH_REVIEW');
+                        
+                        const match = req.url.match(/\/jobs\/([^\/]+)/);
+                        const jobId = match ? match[1] : 'unknown';
+                        const artifactMatch = req.url.match(/\/artifacts\/([^\/?#]+)/);
+                        const artifactId = artifactMatch ? artifactMatch[1] : 'report.json';
+                        
+                        console.log(`[AUTOFIX_REPORT_NORMALIZED_AT_DOWNLOAD]\nroute=preflightProxy\njobId=${jobId}\nartifactId=${artifactId}\nstatus=${json.status}`);
+                    }
+                }
+                const finalBuf = Buffer.from(JSON.stringify(json, null, 2));
+                res.setHeader('Content-Type', 'application/json');
+                res.setHeader('Content-Length', finalBuf.length);
+                return res.end(finalBuf);
+            } catch (e) {
+                console.warn(`[AUTOFIX_REPORT_NORMALIZATION_SKIPPED]\nreason=${e.message}\nroute=preflightProxy`);
+                return res.send(data);
+            }
+        } else {
+            if (isReportRequest) {
+                return res.send(response.data);
+            } else {
+                response.data.pipe(res);
+            }
+        }
 
     } catch (error) {
         console.error(`[PROXY][PPOS-ERROR] ${req.method} ${req.url}:`, error.message);
