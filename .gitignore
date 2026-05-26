@@ -19,7 +19,11 @@
 !/app/
 !/frontend/
 !/config/
+!/scripts/
 !/*.sql
+!PHASE_*.md
+!/AUDIT_REPORT.md
+!/RELEASE_NOTES_*.md
 
 # 4. Ignorar explícitamente dentro de las carpetas permitidas
 # --- PPOS OS LEAKS EXCLUSIONS ---

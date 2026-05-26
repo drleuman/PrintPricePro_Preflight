@@ -5,6 +5,47 @@ const { v4: uuidv4 } = require('uuid');
 const { generateToken } = require('../auth/generateToken');
 const db = require('../services/db');
 const requireAuth = require('../middleware/requireAuth');
+const entitlementCache = require('../services/tenantEntitlementCache');
+
+/**
+ * Phase 39.1: Enrich a local user record with Control Plane governance data.
+ * Returns the enriched user object; falls back to local values on CP failure.
+ *
+ * @param {object} user       - Local DB user row
+ * @param {string} bearerToken - JWT to forward to Control Plane
+ * @returns {Promise<object>}
+ */
+async function enrichWithGovernance(user, bearerToken) {
+    const tenantId = user.tenant_id || user.id;
+    try {
+        const [governance, limits] = await Promise.all([
+            entitlementCache.getGovernance(tenantId, bearerToken),
+            entitlementCache.getLimits(tenantId, bearerToken),
+        ]);
+
+        if (!governance) return user;
+
+        return {
+            ...user,
+            // Plan from Control Plane overrides local license table
+            plan: governance.plan_code || governance.plan || user.plan || 'FREE',
+            commercial_status: governance.commercial_status || 'UNKNOWN',
+            access_level: governance.access_level || null,
+            in_grace_period: (governance.commercial_status === 'GRACE_PERIOD'),
+            // Effective limits from Control Plane (with local fallback)
+            max_file_size_mb: limits?.max_file_size_mb ?? user.max_file_size_mb ?? null,
+            max_job_size_mb:  limits?.max_job_size_mb  ?? null,
+            daily_jobs_limit: limits?.daily_jobs_limit  ?? user.daily_jobs_limit ?? null,
+            // Entitlements
+            ai_magic_fix_enabled: governance.entitlements?.ai_magic_fix ?? !!user.ai_magic_fix_enabled,
+            // Governance source flag
+            _governance_source: 'CONTROL_PLANE',
+        };
+    } catch (err) {
+        console.warn('[AUTH][CP-ENRICH-FAIL] Governance enrichment failed, using local values:', err.message);
+        return { ...user, _governance_source: 'LOCAL_FALLBACK' };
+    }
+}
 
 /**
  * PrintPrice OS - Identity & Access Node
@@ -156,7 +197,8 @@ async function handleSession(req, res) {
     try {
         const userId = req.auth.userId;
         const users = await db.execute(`
-            SELECT u.id, u.email, u.role, u.organization_name, l.plan, l.daily_jobs_limit, l.jobs_used_today, l.ai_magic_fix_enabled
+            SELECT u.id, u.email, u.role, u.organization_name, u.tenant_id,
+                   l.plan, l.daily_jobs_limit, l.jobs_used_today, l.ai_magic_fix_enabled, l.max_file_size_mb
             FROM users u
             LEFT JOIN licenses l ON u.id = l.user_id
             WHERE u.id = ?
@@ -166,13 +208,17 @@ async function handleSession(req, res) {
             return res.status(404).json({ error: 'NOT_FOUND', message: 'User context lost.' });
         }
 
-        const user = users[0];
-        // Return direct user object (No { user: ... } wrapper)
-        // Ensure ai_magic_fix_enabled is returning as boolean
-        res.json({
-            ...user,
-            ai_magic_fix_enabled: !!user.ai_magic_fix_enabled
-        });
+        const rawUser = {
+            ...users[0],
+            ai_magic_fix_enabled: !!users[0].ai_magic_fix_enabled
+        };
+
+        // Phase 39.1: Enrich with Control Plane governance
+        const bearerToken = req.headers['authorization'];
+        const enriched = await enrichWithGovernance(rawUser, bearerToken);
+
+        // Return direct user object (No { user: ... } wrapper) — backwards compatible
+        res.json(enriched);
     } catch (err) {
         console.error('[AUTH-SESSION-ERROR]', err);
         res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to retrieve context.' });

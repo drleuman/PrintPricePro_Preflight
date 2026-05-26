@@ -35,11 +35,14 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Limit enforcement from user license
-    const dailyLimit = user?.daily_jobs_limit || 5;
-    const usedToday = 0; // In a real app we'd fetch this or get it from user object
-    const maxMb = user?.plan === 'PRO' ? 500 : 50;
-    const isAiFixAllowed = user?.plan !== 'FREE';
+    // Phase 39.1: Limits and entitlements sourced from Control Plane via session/me endpoint.
+    // user.max_file_size_mb and user.ai_magic_fix_enabled are now CP-governed.
+    // Fallback to conservative FREE-tier defaults when user/CP data is absent.
+    const dailyLimit = user?.daily_jobs_limit ?? 5;
+    const usedToday = user?.jobs_used_today ?? 0;
+    const maxMb = user?.max_file_size_mb ?? 25; // CP-sourced; FREE fallback = 25MB
+    const isAiFixAllowed = user?.ai_magic_fix_enabled === true;
+    const isInGrace = user?.in_grace_period === true;
 
     React.useEffect(() => {
         if (!user) return;

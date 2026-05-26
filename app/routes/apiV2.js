@@ -21,9 +21,17 @@ if (!fs.existsSync(ppos.tempUploadDir)) {
   fs.mkdirSync(ppos.tempUploadDir, { recursive: true });
 }
 
+// Phase 39.1: Infrastructure ceiling = ENTERPRISE/FOUNDING_PRINTHOUSE max (2048 MB).
+// Per-plan enforcement is delegated to licenseGuard (Control Plane-sourced limits).
+// This value must never be lower than the highest plan's max_file_size_mb.
+const INFRA_MAX_FILE_SIZE_MB = parseInt(
+  process.env.INFRA_MAX_FILE_SIZE_MB || '2048',
+  10
+);
+
 const upload = multer({
   dest: ppos.tempUploadDir,
-  limits: { fileSize: 500 * 1024 * 1024 }
+  limits: { fileSize: INFRA_MAX_FILE_SIZE_MB * 1024 * 1024 }
 });
 
 function safeFilename(name) {
