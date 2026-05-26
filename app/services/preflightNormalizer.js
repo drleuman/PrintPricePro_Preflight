@@ -796,10 +796,179 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
       sourceJobId
     },
 
-    _isDegraded: degradedReasons.length > 0,
-    degraded_reasons: degradedReasons,
+    _isDegraded: degradedReasons.length > 0 || Boolean(rawFixJob?._isDegraded),
+    degraded_reasons: degradedReasons.length > 0 ? degradedReasons : (rawFixJob?.degraded_reasons || []),
     _forensicDataMissing: !hasForensics(rawFixJob, sourceAnalyzeJob)
   };
+
+  return normalizeAutofixFinalState(normalized);
+}
+
+function normalizeAutofixFinalState(report) {
+  if (!report) return report;
+
+  // Ensure report has summary object
+  if (!report.summary) {
+    report.summary = { before: null, after: null };
+  }
+
+  // Support summaryObject mapping
+  const summaryObject = report.summaryObject || {};
+  if (!report.summary.before && summaryObject.before) {
+    report.summary.before = summaryObject.before;
+  }
+  if (!report.summary.after && summaryObject.after) {
+    report.summary.after = summaryObject.after;
+  }
+
+  // Extract fixes arrays
+  const unresolved = report.unresolved_findings || report.findings_after || [];
+  const failedFixes = report.failed_fixes || [];
+  const skippedFixes = report.skipped_fixes || [];
+  const appliedFixes = report.applied_fixes || report.fixes || report.repairs || [];
+
+  // Determine review requirements
+  const requiresReview = appliedFixes.some(f =>
+    f && (
+      f.requires_human_review === true ||
+      f.requiresHumanReview === true ||
+      f.destructiveFixRisk === 'HIGH' ||
+      f.destructive_fix_risk === 'HIGH' ||
+      f.industrial_quality === 'LIMITED' ||
+      f.industrialQuality === 'LIMITED'
+    )
+  );
+
+  // Derive highest destructive risk
+  let highestRisk = 'LOW';
+  appliedFixes.forEach(f => {
+    if (!f) return;
+    const risk = (f.destructiveFixRisk || f.destructive_fix_risk || '').toUpperCase();
+    if (risk === 'HIGH') {
+      highestRisk = 'HIGH';
+    } else if (risk === 'MEDIUM' && highestRisk !== 'HIGH') {
+      highestRisk = 'MEDIUM';
+    }
+  });
+
+  // Calculate technical fixed status
+  const technicallyFixed =
+    failedFixes.length === 0 &&
+    unresolved.length === 0 &&
+    appliedFixes.length > 0 &&
+    report._isDegraded !== true;
+
+  // Calculate production certified status
+  const productionCertified =
+    technicallyFixed &&
+    requiresReview === false &&
+    highestRisk !== 'HIGH';
+
+  // Determine final status
+  let status = report.status || report.final_status || 'AUTOFIX_COMPLETED';
+
+  if (report._isDegraded === true || (report.degraded_reasons && report.degraded_reasons.length > 0)) {
+    status = 'AUTOFIX_DEGRADED';
+  } else if (failedFixes.length > 0) {
+    status = 'AUTOFIX_FAILED';
+  } else if (unresolved.length > 0 || skippedFixes.length > 0) {
+    status = 'AUTOFIX_PARTIAL';
+  } else if (technicallyFixed) {
+    if (requiresReview || highestRisk === 'HIGH') {
+      status = 'COMPLETED_WITH_REVIEW';
+    } else {
+      status = 'AUTOFIX_COMPLETED';
+    }
+  }
+
+  // Extract review reasons
+  const reviewReasons = [];
+  appliedFixes.forEach(f => {
+    if (!f) return;
+    if (
+      f.requires_human_review === true ||
+      f.requiresHumanReview === true ||
+      f.destructiveFixRisk === 'HIGH' ||
+      f.destructive_fix_risk === 'HIGH' ||
+      f.industrial_quality === 'LIMITED' ||
+      f.industrialQuality === 'LIMITED'
+    ) {
+      const code = f.code || f.strategy || f.repairStrategy || 'UNKNOWN_REPAIR';
+      if (!reviewReasons.includes(code)) {
+        reviewReasons.push(code);
+      }
+    }
+  });
+
+  // Derive final risk level
+  let finalRiskLevel = 'LOW';
+  if (status === 'COMPLETED_WITH_REVIEW') {
+    finalRiskLevel = 'REVIEW_REQUIRED';
+  } else if (status === 'AUTOFIX_FAILED') {
+    finalRiskLevel = 'CRITICAL';
+  } else if (status === 'AUTOFIX_PARTIAL') {
+    finalRiskLevel = 'WARNING';
+  }
+
+  // Derive risk score
+  const scoreBasis = 'AUTOFIX_FINAL_STATE';
+  const riskScore = status === 'AUTOFIX_COMPLETED' ? 100 : (status === 'COMPLETED_WITH_REVIEW' ? 20 : 0);
+
+  // Generate or enrich summary.after
+  if (!report.summary.after) {
+    report.summary.after = {
+      risk_level: finalRiskLevel,
+      risk_score: riskScore,
+      scoreBasis,
+      issue_count: unresolved.length,
+      unresolved_count: unresolved.length,
+      failed_fix_count: failedFixes.length,
+      skipped_fix_count: skippedFixes.length,
+      applied_fix_count: appliedFixes.length,
+      technically_fixed: technicallyFixed,
+      production_certified: productionCertified,
+      requires_human_review: requiresReview,
+      review_required_count: reviewReasons.length,
+      review_reasons: reviewReasons,
+      destructive_risk: highestRisk,
+      status
+    };
+  } else {
+    const after = report.summary.after;
+    after.risk_level = after.risk_level ?? finalRiskLevel;
+    after.risk_score = after.risk_score ?? riskScore;
+    after.scoreBasis = after.scoreBasis ?? scoreBasis;
+    after.issue_count = after.issue_count ?? unresolved.length;
+    after.unresolved_count = after.unresolved_count ?? unresolved.length;
+    after.failed_fix_count = after.failed_fix_count ?? failedFixes.length;
+    after.skipped_fix_count = after.skipped_fix_count ?? skippedFixes.length;
+    after.applied_fix_count = after.applied_fix_count ?? appliedFixes.length;
+    after.technically_fixed = after.technically_fixed ?? technicallyFixed;
+    after.production_certified = after.production_certified ?? productionCertified;
+    after.requires_human_review = after.requires_human_review ?? requiresReview;
+    after.review_required_count = after.review_required_count ?? reviewReasons.length;
+    after.review_reasons = after.review_reasons ?? reviewReasons;
+    after.destructive_risk = after.destructive_risk ?? highestRisk;
+    after.status = after.status ?? status;
+  }
+
+  // Top-level fields
+  report.status = status;
+  report.final_status = status;
+  report.technicallyFixed = technicallyFixed;
+  report.productionCertified = productionCertified;
+  report.requiresHumanReview = requiresReview;
+  report.reviewReasons = reviewReasons;
+  report.destructiveRiskSummary = highestRisk;
+  report.finalRiskLevel = finalRiskLevel;
+  report.finalScoreBasis = scoreBasis;
+
+  // Fallback score setting
+  if (report.score === undefined || report.score === null || report.score === 100 || report.score === 0) {
+    report.score = report.summary.after.risk_score;
+  }
+
+  return report;
 }
 
 module.exports = {
@@ -811,6 +980,7 @@ module.exports = {
   getSourceJobId,
   normalizeAnalyzeJob,
   normalizeAutofixJob,
+  normalizeAutofixFinalState,
   extractDocumentMetadata,
   extractSummary,
   extractFindings,

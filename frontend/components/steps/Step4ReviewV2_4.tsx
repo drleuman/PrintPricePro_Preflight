@@ -154,15 +154,22 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
 
     const isReadyForPrint = analysis.issueCount === 0;
 
-    const finalStateLabel = analysis.certificationMode
-        ? t('step.review.certification.withoutModification')
-        : isNoOpFix
-            ? t('step.review.banners.compliantTitle')
-            : (isRealFix || hasEffectiveFix)
-                ? t('step.review.fixedEffective')
-                : isReadyForPrint
-                    ? t('shell.ready')
-                    : t('shell.manualReview');
+    const isCompletedWithReview = result?.status === 'COMPLETED_WITH_REVIEW' || (result as any)?.requiresHumanReview === true;
+    const isProductionCertified = (result as any)?.productionCertified === true;
+
+    const finalStateLabel = isCompletedWithReview
+        ? "Fixed — review required"
+        : (isProductionCertified
+            ? "Production-ready"
+            : (analysis.certificationMode
+                ? t('step.review.certification.withoutModification')
+                : isNoOpFix
+                    ? t('step.review.banners.compliantTitle')
+                    : (isRealFix || hasEffectiveFix)
+                        ? "Technically repaired"
+                        : isReadyForPrint
+                            ? t('shell.ready')
+                            : t('shell.manualReview')));
 
     // Viewer Resolution
     const displayFile = showBeforeAfter === 'before' ? (originalFile || file) : (lastPdfUrl ? null : file);
@@ -213,6 +220,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         onDownload={onDownload}
                         onDownloadReport={onDownloadReport}
                         t={t}
+                        result={result}
                     />
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-1 flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex bg-[var(--bg-primary)] p-1">

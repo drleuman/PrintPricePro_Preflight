@@ -450,6 +450,16 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
         (result as any).degraded_reasons = payload.degraded_reasons;
     }
 
+    (result as any).status = payload.status || payload.final_status;
+    (result as any).final_status = payload.final_status || payload.status;
+    (result as any).technicallyFixed = payload.technicallyFixed ?? (payload.summary?.after?.technically_fixed ?? payload.summaryObject?.after?.technically_fixed ?? undefined);
+    (result as any).productionCertified = payload.productionCertified ?? (payload.summary?.after?.production_certified ?? payload.summaryObject?.after?.production_certified ?? undefined);
+    (result as any).requiresHumanReview = payload.requiresHumanReview ?? (payload.summary?.after?.requires_human_review ?? payload.summaryObject?.after?.requires_human_review ?? undefined);
+    (result as any).reviewReasons = payload.reviewReasons ?? (payload.summary?.after?.review_reasons ?? payload.summaryObject?.after?.review_reasons ?? undefined);
+    (result as any).destructiveRiskSummary = payload.destructiveRiskSummary ?? (payload.summary?.after?.destructive_risk ?? payload.summaryObject?.after?.destructive_risk ?? undefined);
+    (result as any).finalRiskLevel = payload.finalRiskLevel ?? (payload.summary?.after?.risk_level ?? payload.summaryObject?.after?.risk_level ?? undefined);
+    (result as any).finalScoreBasis = payload.finalScoreBasis;
+
     // --- v2.4.140: Fail-Loud Forensic Detection ---
     const hasTechnicalData = sourceFound || (normalizedIssues.length > 0) || (result.score !== null);
     const isDegraded = !!(payload.degraded || payload.partial || payload._degraded);
