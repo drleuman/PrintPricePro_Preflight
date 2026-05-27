@@ -21,6 +21,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { ReviewBanners } from './ReviewBannersV2_4';
 import { CertificationTechnicalNote } from './CertificationTechnicalNoteV2_4';
+import { ClientChangeReportDrawer } from '../reports/ClientChangeReportDrawer';
 
 interface Step4ReviewV2_4Props {
     file: File | null;
@@ -119,6 +120,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     const [layoutMode, setLayoutMode] = useState<'single' | 'side-by-side'>(showComparison ? 'side-by-side' : 'single');
     const [requestedMode, setRequestedMode] = useState<'before' | 'after'>(hasFinalArtifact ? 'after' : 'before');
     const [showTechNote, setShowTechNote] = useState(false);
+    const [clientReportOpen, setClientReportOpen] = useState(false);
 
     // 6. View Helpers
     const showBeforeAfter = (requestedMode === 'after' && !hasFinalArtifact) ? 'before' : requestedMode;
@@ -481,6 +483,13 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 </button>
                             </div>
 
+                            <button 
+                                onClick={() => setClientReportOpen(true)}
+                                className="w-full px-4 py-3 border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-muted)] text-[0.7rem] font-black uppercase tracking-[0.2em] hover:text-[var(--text-primary)] hover:border-[var(--text-primary)] transition-all flex items-center justify-center gap-2"
+                            >
+                                {t('clientReport.button' as any)}
+                            </button>
+
                             {hasFinalArtifact && hasEffectiveFix && (
                                  <button 
                                     onClick={onDownload}
@@ -591,6 +600,13 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                 autoFixReport={autoFixReport}
                 selectedPolicy={selectedPolicy}
                 t={t}
+            />
+
+            <ClientChangeReportDrawer
+                open={clientReportOpen}
+                onClose={() => setClientReportOpen(false)}
+                report={autoFixReport}
+                result={result}
             />
 
             <style>{`

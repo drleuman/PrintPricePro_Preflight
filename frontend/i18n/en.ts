@@ -798,6 +798,23 @@ export const en = {
   'inspector.riskMedium': 'MEDIUM',
   'inspector.riskHigh': 'HIGH',
   'inspector.fixRequired': 'Fix Required',
+
+  // Client Change Report
+  'clientReport.drawerTitle': 'What changed in this PDF?',
+  'clientReport.drawerSubtitle': 'Client Change Summary',
+  'clientReport.whatWeFixed': 'What we fixed',
+  'clientReport.whatWasSkipped': 'What was not changed automatically',
+  'clientReport.whatNeedsReview': 'What still needs review',
+  'clientReport.recommendedNextStep': 'Recommended next step',
+  'clientReport.copySummary': 'Copy summary',
+  'clientReport.copied': 'Summary copied to clipboard',
+  'clientReport.close': 'Close',
+  'clientReport.applied': 'Applied',
+  'clientReport.skipped': 'Skipped',
+  'clientReport.technicalCode': 'Technical Code',
+  'clientReport.impact': 'Impact: ',
+  'clientReport.button': 'View Client Change Summary',
+
   'inspector.safeToAutofix': 'Safe to Autofix',
   'inspector.confidence': 'Detection Confidence',
   'inspector.rewriteOccurred': 'Binary Rewrite',

@@ -351,3 +351,30 @@ export interface QuoteOffer {
   price: string;
   description: string;
 }
+
+export type ClientChangeItem = {
+  title: string;
+  plainLanguage: string;
+  technicalCode?: string;
+  severity?: string;
+  impact?: string;
+  status?: 'applied' | 'skipped' | 'review' | 'detected';
+};
+
+export type ClientChangeReport = {
+  headline: string;
+  statusLabel: string;
+  statusTone: 'success' | 'warning' | 'danger' | 'neutral';
+  executiveSummary: string;
+  productionReadiness: {
+    certified: boolean;
+    label: string;
+    explanation: string;
+  };
+  changesApplied: ClientChangeItem[];
+  itemsSkipped: ClientChangeItem[];
+  stillNeedsReview: ClientChangeItem[];
+  detectedBefore: ClientChangeItem[];
+  customerMessage: string;
+  operatorNotes: string[];
+};

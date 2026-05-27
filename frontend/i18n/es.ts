@@ -801,6 +801,23 @@ export const es = {
   'inspector.riskMedium': 'MEDIO',
   'inspector.riskHigh': 'ALTO',
   'inspector.fixRequired': 'Corrección Requerida',
+
+  // Client Change Report
+  'clientReport.drawerTitle': '¿Qué cambió en este PDF?',
+  'clientReport.drawerSubtitle': 'Resumen de cambios para el cliente',
+  'clientReport.whatWeFixed': 'Qué hemos corregido',
+  'clientReport.whatWasSkipped': 'Qué no se modificó automáticamente',
+  'clientReport.whatNeedsReview': 'Qué debe revisar un operador',
+  'clientReport.recommendedNextStep': 'Siguiente paso recomendado',
+  'clientReport.copySummary': 'Copiar resumen',
+  'clientReport.copied': 'Resumen copiado al portapapeles',
+  'clientReport.close': 'Cerrar',
+  'clientReport.applied': 'Aplicado',
+  'clientReport.skipped': 'Omitido',
+  'clientReport.technicalCode': 'Código Técnico',
+  'clientReport.impact': 'Impacto: ',
+  'clientReport.button': 'Ver Resumen para el Cliente',
+
   'inspector.safeToAutofix': 'Seguro para Auto-corrección',
   'inspector.confidence': 'Confianza de Detección',
   'inspector.rewriteOccurred': 'Re-escritura Binaria',
