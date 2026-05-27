@@ -7,12 +7,46 @@ import { PreflightResult, Issue, Severity, WorkflowAnalysis, AppMode, ISSUE_CATE
 const REVIEW_ARTIFACT_KEYS = ['review_pdf', 'final_fixed_pdf', 'fixed_pdf', 'normalized_pdf'];
 const CERTIFIED_ARTIFACT_KEYS = ['certified_pdf', 'final_fixed_pdf', 'fixed_pdf', 'normalized_pdf'];
 
-export function getBestArtifactKey(artifacts: Record<string, string> | undefined | null, requiresReview: boolean = false): string | null {
+export function getBestArtifactKey(artifacts: any, requiresReview: boolean = false): string | null {
     if (!artifacts) return null;
     const keys = requiresReview ? REVIEW_ARTIFACT_KEYS : CERTIFIED_ARTIFACT_KEYS;
+    let bestArtifactKey: string | null = null;
+    
     for (const key of keys) {
-        if (artifacts[key]) return key;
+        if (artifacts[key]) {
+            bestArtifactKey = key;
+            break;
+        }
     }
+
+    // Check fallback for bad artifact mappings
+    if (!bestArtifactKey) {
+        for (const key of Object.keys(artifacts)) {
+            const isPhysicalFilename = /\.pdf$/i.test(key);
+            if (isPhysicalFilename) {
+                const fallbackKey = key.toLowerCase().replace('.pdf', '_pdf');
+                if (keys.includes(fallbackKey)) {
+                    bestArtifactKey = fallbackKey;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (bestArtifactKey) {
+        const isPhysicalFilename = /\.pdf$/i.test(bestArtifactKey);
+        if (isPhysicalFilename) {
+            console.warn("[DOWNLOAD][INVALID-ARTIFACT-KEY]", { bestArtifactKey });
+            const filenameToKey: Record<string, string> = {
+                'fixed.pdf': 'fixed_pdf',
+                'normalized.pdf': 'normalized_pdf',
+                'certified.pdf': 'certified_pdf'
+            };
+            return filenameToKey[bestArtifactKey.toLowerCase()] || bestArtifactKey;
+        }
+        return bestArtifactKey;
+    }
+
     return null;
 }
 
@@ -408,7 +442,52 @@ export function normalizePreflightResult(rawPayload: any): PreflightResult | nul
     const result: PreflightResult = {
         type: (payload.type || payload.result?.type || payload.job_type || '').toUpperCase() as any,
         sourceJobId: payload.sourceJobId || payload.meta?.sourceJobId || undefined,
-        artifacts: payload.artifacts ?? payload.result?.artifacts ?? {},
+        artifacts: (() => {
+            const rawArtifacts = payload.artifacts ?? payload.result?.artifacts ?? {};
+            const normalizedArtifacts: any = {};
+            if (typeof rawArtifacts === 'object' && !Array.isArray(rawArtifacts)) {
+                Object.entries(rawArtifacts).forEach(([k, v]) => {
+                    if (typeof v === 'string') {
+                        normalizedArtifacts[k] = { artifactKey: k, artifactName: v, artifactType: k };
+                    } else if (v && typeof v === 'object') {
+                        const type = (v as any).type || k;
+                        normalizedArtifacts[type] = {
+                            artifactKey: type,
+                            artifactName: (v as any).name || (v as any).filename || `${type}.pdf`,
+                            artifactUrl: (v as any).url,
+                            artifactType: type,
+                            ...v
+                        };
+                    }
+                });
+            } else if (Array.isArray(rawArtifacts)) {
+                rawArtifacts.forEach(a => {
+                    if (a && a.type) {
+                        normalizedArtifacts[a.type] = {
+                            artifactKey: a.type,
+                            artifactName: a.name || a.filename || `${a.type}.pdf`,
+                            artifactUrl: a.url,
+                            artifactType: a.type,
+                            ...a
+                        };
+                    }
+                });
+            }
+            if (Array.isArray(payload.artifactList)) {
+                payload.artifactList.forEach((a: any) => {
+                    if (a && a.type) {
+                        normalizedArtifacts[a.type] = {
+                            artifactKey: a.type,
+                            artifactName: a.name || a.filename || `${a.type}.pdf`,
+                            artifactUrl: a.url,
+                            artifactType: a.type,
+                            ...a
+                        };
+                    }
+                });
+            }
+            return normalizedArtifacts;
+        })(),
         score: payload.score ?? payload.report?.score ?? (resolvedSummary?.risk_score ?? (sourceFound ? 0 : null)),
         summary: resolvedSummary,
         issues: normalizedIssues,

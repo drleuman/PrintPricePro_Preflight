@@ -43,7 +43,7 @@ router.use('/', async (req, res) => {
         const isJsonExpected = req.method === 'GET' && (
             req.url.includes('/jobs/') ||
             isReportRequest
-        ) && !req.url.endsWith('.pdf') && !req.url.includes('/artifacts/certified_pdf') && !req.url.includes('/artifacts/fixed_pdf') && !req.url.includes('/artifacts/final_fixed_pdf') && !req.url.includes('/artifacts/review_pdf');
+        ) && !req.url.endsWith('.pdf') && !req.url.includes('/artifacts/certified_pdf') && !req.url.includes('/artifacts/fixed_pdf') && !req.url.includes('/artifacts/final_fixed_pdf') && !req.url.includes('/artifacts/review_pdf') && !req.url.includes('/artifacts/normalized_pdf');
 
         const response = await axios({
             method: req.method,

@@ -63,6 +63,15 @@ describe('getBestArtifactKey', () => {
     expect(getBestArtifactKey({ certified_pdf: 'cert' }, true)).toBeNull();
   });
 
+  it('Returns correct logical key when values are physical filenames (B)', () => {
+    expect(getBestArtifactKey({ review_pdf: 'fixed.pdf', fixed_pdf: 'fixed.pdf' }, true)).toBe('review_pdf');
+  });
+
+  it('Remaps .pdf keys to logical keys when they are inadvertently passed as keys', () => {
+    expect(getBestArtifactKey({ 'fixed.pdf': 'url' }, false)).toBe('fixed_pdf');
+    expect(getBestArtifactKey({ 'certified.pdf': 'url' }, false)).toBe('certified_pdf');
+  });
+
   it('Certified mode prefers certified_pdf', () => {
     expect(getBestArtifactKey({ certified_pdf: 'cert', fixed_pdf: 'fixed' }, false)).toBe('certified_pdf');
   });

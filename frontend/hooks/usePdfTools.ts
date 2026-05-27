@@ -5,7 +5,19 @@ import { PreflightResult } from '../types';
 
 import { normalizePreflightResult, pickCanonicalJobId } from '../utils/payloadNormalization';
 import { isTerminalDiagnosticStatus, isTerminalFailureStatus } from '../utils/statusHelpers';
+import { sleep } from '../utils/sleep';
 
+export function normalizeArtifactIdForRoute(input: string) {
+    const value = String(input || '').trim();
+    const filenameToKey: Record<string, string> = {
+        'fixed.pdf': 'fixed_pdf',
+        'normalized.pdf': 'normalized_pdf',
+        'certified.pdf': 'certified_pdf',
+        'report.json': 'analysis_report',
+        'fix_audit.json': 'fix_audit'
+    };
+    return filenameToKey[value.toLowerCase()] || value;
+}
 
 type PdfToolsCallbacks = {
     onStatus?: (status: string, progress: number) => void;
@@ -224,7 +236,11 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
     }, [getJobStatus]);
 
     const getDownloadUrl = useCallback((jobId: string, artifactId: string) => {
-        return `/api/v2/jobs/${jobId}/artifacts/${artifactId}`;
+        const safeArtifactId = normalizeArtifactIdForRoute(artifactId);
+        if (safeArtifactId !== artifactId) {
+            console.log('[APP-DOWNLOAD-ARTIFACT-ID-NORMALIZED]', { from: artifactId, to: safeArtifactId });
+        }
+        return `/api/v2/jobs/${jobId}/artifacts/${safeArtifactId}`;
     }, []);
 
     const getAuthenticatedBlobUrl = useCallback(async (jobId: string, artifactId: string) => {
@@ -248,6 +264,21 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
             return blobUrl;
         } catch (err: any) {
             console.error('[APP][ARTIFACT][FAILURE]', err.message);
+            // Diagnostics for fetch failure
+            console.log('[APP-DOWNLOAD-FETCH-THREW]', {
+                url,
+                artifactId,
+                errorName: err.name || 'Error',
+                errorMessage: err.message
+            });
+            if (err.status) {
+                console.log('[APP-DOWNLOAD-NON-OK]', {
+                    status: err.status,
+                    statusText: err.statusText || 'Unknown',
+                    contentType: err.headers?.get?.('content-type') || 'Unknown',
+                    bodyPreview: err.data || 'Unknown'
+                });
+            }
             throw err;
         }
     }, [getDownloadUrl]);

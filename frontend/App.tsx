@@ -427,15 +427,23 @@ function AppContent() {
         const artifacts = (autoFixAfter as any)?.artifacts || (result as any)?.artifacts || (autoFixBefore as any)?.artifacts || {};
         const sourceResult = autoFixAfter || result || autoFixBefore;
         const requiresReview = (sourceResult as any)?.requiresHumanReview === true || (sourceResult as any)?.productionCertified === false;
-        const artifactType = getBestArtifactKey(artifacts, requiresReview);
+        const artifactKey = getBestArtifactKey(artifacts, requiresReview);
         
-        if (!artifactType) {
+        if (!artifactKey) {
            throw new Error('No valid artifact available for download in this context.');
         }
 
-        const artifactUrl = `/api/v2/jobs/${jobId}/artifacts/${artifactType}`;
+        const artifactUrl = getDownloadUrl(jobId, artifactKey);
         
-        console.log('[DOWNLOAD][AUTHENTICATED-STREAM]', { artifactUrl, artifactType });
+        console.log('[APP-DOWNLOAD-ARTIFACT]', {
+          jobId,
+          requiresReview,
+          productionCertified: (sourceResult as any)?.productionCertified,
+          artifactKey,
+          artifactValue: artifacts?.[artifactKey],
+          url: artifactUrl
+        });
+
         blob = await pposFetch<Blob>(artifactUrl);
       } else if (lastPdfUrl && lastPdfUrl.startsWith('blob:')) {
         // Fallback for local processing or if server fetch is impossible

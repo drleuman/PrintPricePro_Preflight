@@ -718,12 +718,9 @@ router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
 
   try {
     // --- v2.4.111: BFF-Side Artifact Alias Support ---
-    const artifactMap = {
+    const artifactMap: Record<string, string> = {
       'analysis_report': 'report.json',
-      'audit_report': 'fix_audit.json',
-      'certified_pdf': 'certified.pdf',
-      'fixed_pdf': 'fixed.pdf',
-      'review_pdf': 'fixed.pdf'
+      'audit_report': 'fix_audit.json'
     };
     
     let resolvedArtifactId = artifactMap[artifactId] || artifactId;
