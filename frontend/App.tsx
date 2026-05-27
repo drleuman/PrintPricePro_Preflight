@@ -427,7 +427,12 @@ function AppContent() {
         const artifacts = (autoFixAfter as any)?.artifacts || (result as any)?.artifacts || (autoFixBefore as any)?.artifacts || {};
         const sourceResult = autoFixAfter || result || autoFixBefore;
         const requiresReview = (sourceResult as any)?.requiresHumanReview === true || (sourceResult as any)?.productionCertified === false;
-        const artifactType = getBestArtifactKey(artifacts, requiresReview) || 'certified_pdf';
+        const artifactType = getBestArtifactKey(artifacts, requiresReview);
+        
+        if (!artifactType) {
+           throw new Error('No valid artifact available for download in this context.');
+        }
+
         const artifactUrl = `/api/v2/jobs/${jobId}/artifacts/${artifactType}`;
         
         console.log('[DOWNLOAD][AUTHENTICATED-STREAM]', { artifactUrl, artifactType });

@@ -4,13 +4,12 @@ import { PreflightResult, Issue, Severity, WorkflowAnalysis, AppMode, ISSUE_CATE
  * deterministic status flags for UI components.
  */
 
-const RANKED_ARTIFACT_KEYS = ['final_fixed_pdf', 'fixed_pdf', 'normalized_pdf', 'certified_pdf', 'review_pdf'];
+const REVIEW_ARTIFACT_KEYS = ['review_pdf', 'final_fixed_pdf', 'fixed_pdf', 'normalized_pdf'];
+const CERTIFIED_ARTIFACT_KEYS = ['certified_pdf', 'final_fixed_pdf', 'fixed_pdf', 'normalized_pdf'];
 
 export function getBestArtifactKey(artifacts: Record<string, string> | undefined | null, requiresReview: boolean = false): string | null {
     if (!artifacts) return null;
-    const keys = requiresReview 
-        ? ['review_pdf', 'final_fixed_pdf', 'fixed_pdf', 'normalized_pdf']
-        : ['certified_pdf', 'final_fixed_pdf', 'fixed_pdf', 'normalized_pdf'];
+    const keys = requiresReview ? REVIEW_ARTIFACT_KEYS : CERTIFIED_ARTIFACT_KEYS;
     for (const key of keys) {
         if (artifacts[key]) return key;
     }
@@ -86,9 +85,11 @@ export function analyzeWorkflow(
     const hasCertified = !!artifacts.certified_pdf;
     
     const hasFixedArtifact = !!(
-        artifacts.fixed_pdf || 
+        artifacts.review_pdf || 
         artifacts.final_fixed_pdf || 
-        artifacts.normalized_pdf
+        artifacts.fixed_pdf || 
+        artifacts.normalized_pdf ||
+        artifacts.certified_pdf
     );
 
     // 3. Derived autofix states (strict ordering)
@@ -593,11 +594,12 @@ export function normalizeAutofixFinalState(report: any): any {
   // Determine if an output artifact exists
   const hasArtifactsField = report.artifacts !== undefined || report.artifactList !== undefined;
   const hasOutputArtifact = !hasArtifactsField || !!(
+    report.artifacts?.review_pdf ||
     report.artifacts?.final_fixed_pdf || 
     report.artifacts?.fixed_pdf || 
     report.artifacts?.certified_pdf || 
     report.artifacts?.normalized_pdf ||
-    (Array.isArray(report.artifactList) && report.artifactList.some((a: any) => ['final_fixed_pdf', 'fixed_pdf', 'certified_pdf', 'normalized_pdf'].includes(a.type)))
+    (Array.isArray(report.artifactList) && report.artifactList.some((a: any) => ['review_pdf', 'final_fixed_pdf', 'fixed_pdf', 'certified_pdf', 'normalized_pdf'].includes(a.type)))
   );
 
   // Determine final status
@@ -720,7 +722,7 @@ export function normalizeAutofixResultState(payload: any): any {
 
   try {
     const hasAppliedFixes = Array.isArray(payload.applied_fixes) || Array.isArray(payload.repairs) || Array.isArray(payload.fixes);
-    const hasFixedPdf = payload.final_fixed_pdf || payload.fixed_pdf || payload.artifacts?.final_fixed_pdf || payload.artifacts?.fixed_pdf || (Array.isArray(payload.artifactList) && payload.artifactList.some((a: any) => a.type === 'final_fixed_pdf' || a.type === 'fixed_pdf'));
+    const hasFixedPdf = payload.review_pdf || payload.final_fixed_pdf || payload.fixed_pdf || payload.artifacts?.review_pdf || payload.artifacts?.final_fixed_pdf || payload.artifacts?.fixed_pdf || (Array.isArray(payload.artifactList) && payload.artifactList.some((a: any) => a.type === 'review_pdf' || a.type === 'final_fixed_pdf' || a.type === 'fixed_pdf'));
     const isAutofix = payload.type === 'AUTOFIX' || (hasAppliedFixes && hasFixedPdf);
 
     if (isAutofix) {
@@ -747,7 +749,7 @@ export function normalizeAutofixResultState(payload: any): any {
       if (current && typeof current === 'object' && current[lastKey] && typeof current[lastKey] === 'object') {
         const nestedObj = current[lastKey];
         const nestedHasAppliedFixes = Array.isArray(nestedObj.applied_fixes) || Array.isArray(nestedObj.repairs) || Array.isArray(nestedObj.fixes);
-        const nestedHasFixedPdf = nestedObj.final_fixed_pdf || nestedObj.fixed_pdf || nestedObj.artifacts?.final_fixed_pdf || nestedObj.artifacts?.fixed_pdf || (Array.isArray(nestedObj.artifactList) && nestedObj.artifactList.some((a: any) => a.type === 'final_fixed_pdf' || a.type === 'fixed_pdf'));
+        const nestedHasFixedPdf = nestedObj.review_pdf || nestedObj.final_fixed_pdf || nestedObj.fixed_pdf || nestedObj.artifacts?.review_pdf || nestedObj.artifacts?.final_fixed_pdf || nestedObj.artifacts?.fixed_pdf || (Array.isArray(nestedObj.artifactList) && nestedObj.artifactList.some((a: any) => a.type === 'review_pdf' || a.type === 'final_fixed_pdf' || a.type === 'fixed_pdf'));
         const nestedIsAutofix = nestedObj.type === 'AUTOFIX' || (nestedHasAppliedFixes && nestedHasFixedPdf);
         if (nestedIsAutofix) {
           current[lastKey] = normalizeAutofixFinalState(nestedObj);

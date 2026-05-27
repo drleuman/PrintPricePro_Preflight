@@ -223,12 +223,11 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
         });
     }, [getJobStatus]);
 
-    const getDownloadUrl = useCallback((jobId: string, artifactId: string = 'certified_pdf') => {
-        console.log('[APP][ARTIFACT][PREFERRED-KEY]', { jobId, requested: artifactId });
+    const getDownloadUrl = useCallback((jobId: string, artifactId: string) => {
         return `/api/v2/jobs/${jobId}/artifacts/${artifactId}`;
     }, []);
 
-    const getAuthenticatedBlobUrl = useCallback(async (jobId: string, artifactId: string = 'certified_pdf') => {
+    const getAuthenticatedBlobUrl = useCallback(async (jobId: string, artifactId: string) => {
         // v2.4.165: Terminal ID Guard
         const safeJobId = pickCanonicalJobId(jobId);
         if (!safeJobId) {

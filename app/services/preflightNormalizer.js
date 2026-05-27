@@ -405,6 +405,49 @@ function resolveArtifactAliases(rawFixJob, fixResult) {
   return map;
 }
 
+function resolveArtifactName(report, requestedKey) {
+  if (!report) return null;
+  const artifacts = report.artifacts || report.result?.artifacts || {};
+  const artifactList = Array.isArray(report.artifactList) ? report.artifactList : (Array.isArray(report.result?.artifactList) ? report.result.artifactList : []);
+
+  const aliasFallbacks = {
+    review_pdf: ["review_pdf", "final_fixed_pdf", "fixed_pdf", "normalized_pdf"],
+    certified_pdf: ["certified_pdf", "final_fixed_pdf", "fixed_pdf", "normalized_pdf"],
+    final_fixed_pdf: ["final_fixed_pdf", "fixed_pdf"],
+    fixed_pdf: ["fixed_pdf", "final_fixed_pdf"],
+    normalized_pdf: ["normalized_pdf", "fixed_pdf", "final_fixed_pdf"],
+    fix_audit: ["fix_audit"]
+  };
+
+  const candidates = aliasFallbacks[requestedKey] || [requestedKey];
+
+  for (const key of candidates) {
+    if (artifacts[key]) {
+      return {
+        requestedKey,
+        resolvedKey: key,
+        filename: typeof artifacts[key] === "string"
+          ? artifacts[key]
+          : artifacts[key].filename || artifacts[key].name || artifacts[key].path,
+        source: "artifacts"
+      };
+    }
+
+    const item = artifactList.find(a => a.type === key);
+    if (item?.name || item?.filename || item?.path) {
+      return {
+        requestedKey,
+        resolvedKey: key,
+        filename: item.name || item.filename || item.path,
+        source: "artifactList"
+      };
+    }
+  }
+
+  return null;
+}
+
+
 function extractArtifactList(rawFixJob) {
   const arts = resolveArtifactAliases(rawFixJob, rawFixJob?.result || rawFixJob);
   return Object.entries(arts).map(([type, name]) => ({ type, name }));
@@ -1095,6 +1138,7 @@ module.exports = {
   extractFindings,
   extractArtifacts: resolveArtifactAliases,
   resolveArtifactAliases,
+  resolveArtifactName,
   buildDegradedState,
   deriveCategorySummaries,
   derivePages,

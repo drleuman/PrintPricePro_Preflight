@@ -722,13 +722,16 @@ router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
       'analysis_report': 'report.json',
       'audit_report': 'fix_audit.json',
       'certified_pdf': 'certified.pdf',
-      'fixed_pdf': 'fixed.pdf'
+      'fixed_pdf': 'fixed.pdf',
+      'review_pdf': 'fixed.pdf'
     };
     
     let resolvedArtifactId = artifactMap[artifactId] || artifactId;
 
+    const needsAliasResolution = ['review_pdf', 'certified_pdf', 'final_fixed_pdf', 'fixed_pdf', 'normalized_pdf', 'fix_audit'].includes(artifactId);
+
     // v2.4.160: Artifact Aliasing Logic (Requirement 4)
-    if (artifactId === 'final_fixed_pdf') {
+    if (needsAliasResolution) {
        console.log(`[BFF][ARTIFACT][ALIAS-RESOLVE] Resolving alias for ${jobId}/${artifactId}`);
        const authHeaders = identityService.getAuthHeaders(req.auth || req.user || {});
        
@@ -739,28 +742,18 @@ router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
          
          if (jobRes.ok) {
            const jobData = await jobRes.json();
-           const available = jobData.result?.artifacts
-              || (Array.isArray(jobData.artifacts)
-                  ? jobData.artifacts.reduce((acc, a) => ({ ...acc, [a.type]: a.name }), {})
-                  : jobData.artifacts)
-              || {};
+           const report = jobData.result || jobData;
            
-           if (available.final_fixed_pdf) {
-             resolvedArtifactId = available.final_fixed_pdf;
-           } else if (available.fixed_pdf) {
-             resolvedArtifactId = 'fixed.pdf';
-           } else if (available.normalized_pdf) {
-             resolvedArtifactId = 'normalized.pdf';
-           } else if (available.certified_pdf) {
-             resolvedArtifactId = 'certified.pdf';
+           const resolution = preflightNormalizer.resolveArtifactName(report, artifactId);
+           if (resolution) {
+               resolvedArtifactId = resolution.filename;
+               console.log(`[BFF][ARTIFACT][ALIAS-RESOLVE] Aliased ${artifactId} -> ${resolvedArtifactId}`);
            } else {
-             resolvedArtifactId = 'final_fixed_pdf';
+               console.log(`[BFF][ARTIFACT][ALIAS-RESOLVE] No alias resolution found for ${artifactId}`);
            }
-           console.log(`[BFF][ARTIFACT][ALIAS-RESOLVE] Aliased final_fixed_pdf -> ${resolvedArtifactId}`);
          }
        } catch (err) {
          console.warn(`[BFF][ARTIFACT][ALIAS-RESOLVE][WARN] Failed to fetch job status for aliasing: ${err.message}`);
-         resolvedArtifactId = 'final_fixed_pdf'; // Legacy fallback removed
        }
     }
 

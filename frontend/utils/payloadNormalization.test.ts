@@ -47,19 +47,32 @@ describe('getBestArtifactKey', () => {
     expect(getBestArtifactKey({ certified_pdf: 'a', normalized_pdf: 'b' })).toBe('normalized_pdf');
   });
 
-  it('prefers final_fixed_pdf over all others', () => {
-    expect(
-      getBestArtifactKey({
-        certified_pdf: 'a',
-        fixed_pdf: 'b',
-        normalized_pdf: 'c',
-        final_fixed_pdf: 'd',
-      })
-    ).toBe('final_fixed_pdf');
+  it('Review mode prefers review_pdf over certified_pdf', () => {
+    expect(getBestArtifactKey({ certified_pdf: 'cert', review_pdf: 'review' }, true)).toBe('review_pdf');
+  });
+
+  it('Review mode falls back to fixed_pdf when review_pdf is missing', () => {
+    expect(getBestArtifactKey({ fixed_pdf: 'fixed', certified_pdf: 'cert' }, true)).toBe('fixed_pdf');
+  });
+
+  it('Review mode does not select certified_pdf if safer review artifacts exist', () => {
+    expect(getBestArtifactKey({ normalized_pdf: 'norm', certified_pdf: 'cert' }, true)).toBe('normalized_pdf');
+  });
+  
+  it('Review mode returns null if no valid review artifacts exist (never certified_pdf)', () => {
+    expect(getBestArtifactKey({ certified_pdf: 'cert' }, true)).toBeNull();
+  });
+
+  it('Certified mode prefers certified_pdf', () => {
+    expect(getBestArtifactKey({ certified_pdf: 'cert', fixed_pdf: 'fixed' }, false)).toBe('certified_pdf');
+  });
+
+  it('Certified mode falls back to final_fixed_pdf when certified_pdf is missing', () => {
+    expect(getBestArtifactKey({ final_fixed_pdf: 'a', fixed_pdf: 'b' }, false)).toBe('final_fixed_pdf');
   });
 
   it('ignores keys with falsy values', () => {
-    expect(getBestArtifactKey({ fixed_pdf: '', certified_pdf: 'url' })).toBe('certified_pdf');
+    expect(getBestArtifactKey({ fixed_pdf: '', certified_pdf: 'url' }, false)).toBe('certified_pdf');
   });
 });
 
