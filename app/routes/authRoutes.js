@@ -37,9 +37,10 @@ async function enrichWithGovernance(user, bearerToken) {
 
         // Limits resolution
         const limitSource = limits || governance.limits || governance.effective_limits || governance.file_limits || {};
-        const maxFileSizeMbVal = limitSource.maxFileSizeMb ?? limitSource.max_file_size_mb ?? user.max_file_size_mb ?? null;
-        const maxJobSizeMbVal = limitSource.maxJobSizeMb ?? limitSource.max_job_size_mb ?? null;
-        const dailyJobsLimitVal = limitSource.maxJobsPerMonth ?? limitSource.daily_jobs_limit ?? limitSource.dailyJobsLimit ?? user.daily_jobs_limit ?? null;
+        const maxFileSizeMbVal = limits?.max_file_size_mb ?? limitSource.maxFileSizeMb ?? limitSource.max_file_size_mb ?? user.max_file_size_mb ?? null;
+        const maxJobSizeMbVal = limits?.max_job_size_mb ?? limitSource.maxJobSizeMb ?? limitSource.max_job_size_mb ?? null;
+        const dailyJobsLimitVal = limits?.daily_jobs_limit ?? limitSource.dailyJobsLimit ?? limitSource.daily_jobs_limit ?? user.daily_jobs_limit ?? null;
+        const monthlyJobsLimitVal = limits?.monthly_jobs_limit ?? limitSource.maxJobsPerMonth ?? limitSource.monthlyJobsLimit ?? limitSource.monthly_jobs_limit ?? null;
 
         // Entitlements
         const modules = governance.modules || {};
@@ -47,22 +48,44 @@ async function enrichWithGovernance(user, bearerToken) {
         const entitlements = governance.entitlements || governance.features || {};
         const aiMagicFix = modules.ai_magic_fix ?? modules.aiMagicFix ?? actions.ai_magic_fix ?? actions.aiMagicFix ?? entitlements.ai_magic_fix ?? !!user.ai_magic_fix_enabled;
 
-        return {
+        const resolvedPlan = planCodeVal;
+
+        const enrichedUser = {
             ...user,
-            plan: planCodeVal,
-            planCode: planCodeVal,
-            plan_code: planCodeVal,
+            plan: resolvedPlan,
+            planCode: resolvedPlan,
+            plan_code: resolvedPlan,
             commercial_status: commercialStatusVal,
             access_level: accessLevelVal,
             in_grace_period: !!inGracePeriod,
             grace_expired: !!graceExpired,
             grace_ends_at: graceEndsAt,
             max_file_size_mb: maxFileSizeMbVal,
+            maxFileSizeMb: maxFileSizeMbVal,
             max_job_size_mb: maxJobSizeMbVal,
+            maxJobSizeMb: maxJobSizeMbVal,
             daily_jobs_limit: dailyJobsLimitVal,
+            dailyJobsLimit: dailyJobsLimitVal,
+            monthly_jobs_limit: monthlyJobsLimitVal,
+            monthlyJobsLimit: monthlyJobsLimitVal,
             ai_magic_fix_enabled: !!aiMagicFix,
             _governance_source: governance.source || 'CONTROL_PLANE',
         };
+
+        console.log('[AUTH-ME-GOVERNANCE-RESOLVED]', {
+            userId: user.id,
+            email: user.email,
+            tenantId,
+            plan: enrichedUser.plan,
+            planCode: enrichedUser.planCode,
+            max_file_size_mb: enrichedUser.max_file_size_mb,
+            max_job_size_mb: enrichedUser.max_job_size_mb,
+            daily_jobs_limit: enrichedUser.daily_jobs_limit,
+            monthly_jobs_limit: enrichedUser.monthly_jobs_limit,
+            source: enrichedUser._governance_source
+        });
+
+        return enrichedUser;
     } catch (err) {
         console.warn('[AUTH][CP-ENRICH-FAIL] Governance enrichment failed, using local values:', err.message);
         return { ...user, _governance_source: 'LOCAL_FALLBACK' };

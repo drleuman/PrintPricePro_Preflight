@@ -15,6 +15,11 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+const INFRA_MAX_FILE_SIZE_MB = parseInt(
+  process.env.INFRA_MAX_FILE_SIZE_MB || '2048',
+  10
+);
+
 const upload = multer({
     storage: multer.diskStorage({
         destination: (_req, _file, cb) => cb(null, uploadDir),
@@ -23,7 +28,7 @@ const upload = multer({
             cb(null, `${Date.now()}_${safe}`);
         },
     }),
-    limits: { fileSize: 500 * 1024 * 1024 }
+    limits: { fileSize: INFRA_MAX_FILE_SIZE_MB * 1024 * 1024 }
 });
 
 const sanitizeFilename = (s) => String(s || '').replace(/[^a-zA-Z0-9._-]/g, '_');

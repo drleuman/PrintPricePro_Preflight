@@ -226,11 +226,17 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // -------- Production Guards --------
 // 1) Reject oversized uploads early (before multer reads body)
-const MAX_UPLOAD_BYTES = Number(process.env.PPP_MAX_UPLOAD_BYTES || 500 * 1024 * 1024);
+const INFRA_MAX_FILE_SIZE_MB = parseInt(process.env.INFRA_MAX_FILE_SIZE_MB || '2048', 10);
+const MAX_UPLOAD_BYTES = INFRA_MAX_FILE_SIZE_MB * 1024 * 1024;
 app.use((req, res, next) => {
   const len = Number(req.headers['content-length'] || 0);
   if (len && len > MAX_UPLOAD_BYTES) {
-    return res.status(413).json({ error: 'Payload too large', maxBytes: MAX_UPLOAD_BYTES });
+    return res.status(413).json({ 
+      ok: false,
+      error: 'INFRA_FILE_TOO_LARGE', 
+      limitMb: INFRA_MAX_FILE_SIZE_MB,
+      source: 'INFRA_MAX_FILE_SIZE_MB'
+    });
   }
   next();
 });
@@ -393,6 +399,19 @@ app.use((err, req, res, next) => {
   const traceId = req.id || `unhandled_${Date.now()}`;
   
   if (req.path.startsWith('/api')) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      const INFRA_MAX_FILE_SIZE_MB = parseInt(process.env.INFRA_MAX_FILE_SIZE_MB || '2048', 10);
+      return res.status(413).json({
+        ok: false,
+        error: 'INFRA_FILE_TOO_LARGE',
+        limitMb: INFRA_MAX_FILE_SIZE_MB,
+        source: 'INFRA_MAX_FILE_SIZE_MB',
+        message: 'File size exceeds infrastructure limits.',
+        traceId,
+        v2: true
+      });
+    }
+
     return res.status(statusCode).json({
       error: err.code || 'UNKNOWN_ERROR',
       message: err.message || 'Internal Server Error',

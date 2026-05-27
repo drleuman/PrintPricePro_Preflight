@@ -40,9 +40,26 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
     // Fallback to conservative FREE-tier defaults when user/CP data is absent.
     const dailyLimit = user?.daily_jobs_limit ?? 5;
     const usedToday = user?.jobs_used_today ?? 0;
-    const maxMb = user?.max_file_size_mb ?? 25; // CP-sourced; FREE fallback = 25MB
+    const resolvedClientMaxMb = user?.max_file_size_mb ?? user?.maxFileSizeMb;
+    const isGuestOrExplicitFree = !user || !user.plan || user.plan === 'FREE';
+    const maxMb = resolvedClientMaxMb ?? (isGuestOrExplicitFree ? 25 : 1024);
     const isAiFixAllowed = user?.ai_magic_fix_enabled === true;
     const isInGrace = user?.in_grace_period === true;
+
+    React.useEffect(() => {
+        console.log('[UPLOAD-GOV-CLIENT-LIMIT]', {
+            authenticated: !!user,
+            email: user?.email,
+            tenantId: user?.tenantId || user?.id,
+            plan: user?.plan,
+            planCode: user?.planCode,
+            max_file_size_mb: user?.max_file_size_mb,
+            maxFileSizeMb: (user as any)?.maxFileSizeMb,
+            resolvedClientMaxMb: maxMb,
+            clientDecision: resolvedClientMaxMb ? 'EXPLICIT_LIMIT' : (isGuestOrExplicitFree ? 'FALLBACK_FREE' : 'FALLBACK_ENTERPRISE_CAPABLE'),
+            governanceSource: (user as any)?._governance_source
+        });
+    }, [user, maxMb, isGuestOrExplicitFree]);
 
     React.useEffect(() => {
         if (!user) return;

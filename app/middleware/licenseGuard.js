@@ -37,10 +37,24 @@ const FALLBACK_LIMITS = {
     FOUNDING_PRINTHOUSE:{ max_file_size_mb: 1024, daily_jobs_limit: null },
     CUSTOM:             { max_file_size_mb: 1024, daily_jobs_limit: null },
     SYSTEM:             { max_file_size_mb: 2048, daily_jobs_limit: null },
+    DEMO:               { max_file_size_mb: 1024, daily_jobs_limit: null },
+    PILOT:              { max_file_size_mb: 1024, daily_jobs_limit: null },
+    TRIAL_ENTERPRISE:   { max_file_size_mb: 1024, daily_jobs_limit: null },
+    ENTERPRISE_TRIAL:   { max_file_size_mb: 1024, daily_jobs_limit: null },
 };
 
+function normalizePlanCode(rawPlan) {
+    if (!rawPlan) return 'FREE';
+    const plan = String(rawPlan).toUpperCase();
+    if (['DEMO', 'PILOT', 'TRIAL_ENTERPRISE', 'ENTERPRISE_TRIAL'].includes(plan)) {
+        return 'ENTERPRISE'; // Map aliases to ENTERPRISE
+    }
+    return plan;
+}
+
 function getFallbackLimits(plan) {
-    return FALLBACK_LIMITS[plan] || FALLBACK_LIMITS['FREE'];
+    const norm = normalizePlanCode(plan);
+    return FALLBACK_LIMITS[norm] || FALLBACK_LIMITS[plan] || FALLBACK_LIMITS['FREE'];
 }
 
 /**
@@ -118,6 +132,21 @@ module.exports = (options = {}) => {
 
             const maxFileSizeMb  = cpLimits?.max_file_size_mb  ?? fallback.max_file_size_mb;
             const dailyJobsLimit = cpLimits?.daily_jobs_limit  ?? user.local_daily_jobs_limit ?? fallback.daily_jobs_limit;
+            const maxJobSizeMb   = cpLimits?.max_job_size_mb   ?? null;
+            const monthlyJobsLimit = cpLimits?.monthly_jobs_limit ?? null;
+
+            console.log(`[GOVERNANCE-LIMIT-RESOLVED]`, {
+                tenantId,
+                userId,
+                planCode: planCode,
+                cpAvailable: !cpUnavailable,
+                cpLimits,
+                resolvedMaxFileSizeMb: maxFileSizeMb,
+                resolvedMaxJobSizeMb: maxJobSizeMb,
+                resolvedDailyJobsLimit: dailyJobsLimit,
+                resolvedMonthlyJobsLimit: monthlyJobsLimit,
+                source: !cpUnavailable ? 'CONTROL_PLANE' : (user.plan ? 'LOCAL_FALLBACK' : 'PLAN_ALIAS_FALLBACK')
+            });
 
             // ── 3. Daily quota check ──────────────────────────────────────────
             // null dailyJobsLimit = unlimited (ENTERPRISE / FOUNDING_PRINTHOUSE / SYSTEM)

@@ -91,16 +91,46 @@ async function getLimits(tenantId, bearerToken) {
     const limits = governance.limits || governance.effective_limits || governance.file_limits || null;
     if (!limits) return null;
 
-    return {
-        // Support both camelCase (Phase 39.0) and snake_case (legacy consumers)
-        max_file_size_mb:  limits.maxFileSizeMb   ?? limits.max_file_size_mb  ?? null,
-        max_job_size_mb:   limits.maxJobSizeMb    ?? limits.max_job_size_mb   ?? null,
-        daily_jobs_limit:  limits.maxJobsPerMonth ?? limits.daily_jobs_limit  ?? limits.dailyJobsLimit ?? null,
-        // Also expose camelCase so new consumers can use either
-        maxFileSizeMb:     limits.maxFileSizeMb   ?? limits.max_file_size_mb  ?? null,
-        maxJobSizeMb:      limits.maxJobSizeMb    ?? limits.max_job_size_mb   ?? null,
-        retentionDays:     limits.retentionDays   ?? limits.retention_days    ?? null,
+    const max_file_size_mb = limits.maxFileSizeMb ?? limits.max_file_size_mb ?? limits.fileUploadMaxMb ?? limits.maxUploadMb ?? limits.uploadMaxMb ?? null;
+    const max_job_size_mb = limits.maxJobSizeMb ?? limits.max_job_size_mb ?? limits.maxProcessingFileSizeMb ?? null;
+    const daily_jobs_limit = limits.dailyJobsLimit ?? limits.daily_jobs_limit ?? limits.maxJobsPerDay ?? limits.max_jobs_per_day ?? null;
+    const monthly_jobs_limit = limits.maxJobsPerMonth ?? limits.monthlyJobsLimit ?? limits.monthly_jobs_limit ?? null;
+
+    const planCode = governance.planCode || governance.plan_code || governance.plan || 'FREE';
+    const commercialStatus = governance.commercialStatus || governance.commercial_status || 'UNKNOWN';
+    const accessLevel = governance.accessLevel || governance.access_level || null;
+
+    const result = {
+        tenantId: governance.tenantId || tenantId,
+        planCode,
+        commercialStatus,
+        accessLevel,
+        max_file_size_mb,
+        maxFileSizeMb: max_file_size_mb,
+        max_job_size_mb,
+        maxJobSizeMb: max_job_size_mb,
+        daily_jobs_limit,
+        dailyJobsLimit: daily_jobs_limit,
+        monthly_jobs_limit,
+        monthlyJobsLimit: monthly_jobs_limit,
+        retentionDays: limits.retentionDays ?? limits.retention_days ?? null,
+        rawLimits: limits,
+        source: governance.source || 'CONTROL_PLANE'
     };
+
+    console.log('[TENANT-ENTITLEMENT-NORMALIZED]', {
+        tenantId: result.tenantId,
+        planCode: result.planCode,
+        commercialStatus: result.commercialStatus,
+        accessLevel: result.accessLevel,
+        max_file_size_mb: result.max_file_size_mb,
+        max_job_size_mb: result.max_job_size_mb,
+        daily_jobs_limit: result.daily_jobs_limit,
+        monthly_jobs_limit: result.monthly_jobs_limit,
+        source: result.source
+    });
+
+    return result;
 }
 
 /**
