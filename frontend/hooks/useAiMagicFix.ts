@@ -274,7 +274,8 @@ export function useAiMagicFix({
           setResult(normalizedAfter);
           setAutoFixAfter(normalizedAfter);
 
-          const bestArtifactKey = getBestArtifactKey(normalizedAfter.artifacts);
+          const requiresReview = normalizedAfter.requiresHumanReview === true || normalizedAfter.productionCertified === false;
+          const bestArtifactKey = getBestArtifactKey(normalizedAfter.artifacts, requiresReview);
           console.log('[AI-FIX][ARTIFACT-RESOLUTION]', { jobId: finalJobId, selected: bestArtifactKey });
 
           if (bestArtifactKey) {

@@ -6,9 +6,12 @@ import { PreflightResult, Issue, Severity, WorkflowAnalysis, AppMode, ISSUE_CATE
 
 const RANKED_ARTIFACT_KEYS = ['final_fixed_pdf', 'fixed_pdf', 'normalized_pdf', 'certified_pdf', 'review_pdf'];
 
-export function getBestArtifactKey(artifacts: Record<string, string> | undefined | null): string | null {
+export function getBestArtifactKey(artifacts: Record<string, string> | undefined | null, requiresReview: boolean = false): string | null {
     if (!artifacts) return null;
-    for (const key of RANKED_ARTIFACT_KEYS) {
+    const keys = requiresReview 
+        ? ['review_pdf', 'final_fixed_pdf', 'fixed_pdf', 'normalized_pdf']
+        : ['certified_pdf', 'final_fixed_pdf', 'fixed_pdf', 'normalized_pdf'];
+    for (const key of keys) {
         if (artifacts[key]) return key;
     }
     return null;
@@ -77,7 +80,8 @@ export function analyzeWorkflow(
     const hasRepairMetadata = allRepairs.length > 0;
 
     // 2. Resolve artifacts
-    const bestArtifactKey = getBestArtifactKey(artifacts);
+    const requiresReview = (result as any)?.requiresHumanReview === true || (result as any)?.productionCertified === false;
+    const bestArtifactKey = getBestArtifactKey(artifacts, requiresReview);
     const hasFinalArtifact = !!bestArtifactKey;
     const hasCertified = !!artifacts.certified_pdf;
     

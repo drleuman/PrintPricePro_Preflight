@@ -183,7 +183,8 @@ function AppContent() {
 
       // v2.4.112: Resilient Artifact Selection (Analysis-Only Support)
       if (completedJobId) {
-          const bestArtifactKey = getBestArtifactKey(normalized.artifacts);
+          const requiresReview = normalized.requiresHumanReview === true || normalized.productionCertified === false;
+          const bestArtifactKey = getBestArtifactKey(normalized.artifacts, requiresReview);
 
           console.log('[APP][FORENSIC-LIFECYCLE]', {
             step: currentStep,
@@ -341,7 +342,8 @@ function AppContent() {
           activeJobIdRef.current = jobId;
           preflightJobIdRef.current = jobId;
 
-          const bestArtifactKey = getBestArtifactKey(normalized.artifacts);
+          const requiresReview = normalized.requiresHumanReview === true || normalized.productionCertified === false;
+          const bestArtifactKey = getBestArtifactKey(normalized.artifacts, requiresReview);
           console.log('[APP][V2-START][ARTIFACT-RESOLUTION]', { effectiveMode, selected: bestArtifactKey });
 
           if (bestArtifactKey) {
@@ -423,7 +425,9 @@ function AppContent() {
       // Requirement B: Context-Aware Download
       if (jobId && !jobId.includes('local')) {
         const artifacts = (autoFixAfter as any)?.artifacts || (result as any)?.artifacts || (autoFixBefore as any)?.artifacts || {};
-        const artifactType = getBestArtifactKey(artifacts) || 'certified_pdf';
+        const sourceResult = autoFixAfter || result || autoFixBefore;
+        const requiresReview = (sourceResult as any)?.requiresHumanReview === true || (sourceResult as any)?.productionCertified === false;
+        const artifactType = getBestArtifactKey(artifacts, requiresReview) || 'certified_pdf';
         const artifactUrl = `/api/v2/jobs/${jobId}/artifacts/${artifactType}`;
         
         console.log('[DOWNLOAD][AUTHENTICATED-STREAM]', { artifactUrl, artifactType });
