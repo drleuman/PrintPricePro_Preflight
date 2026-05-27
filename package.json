@@ -13,7 +13,8 @@
     "preview": "vite preview frontend",
     "test": "vitest",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "seed": "node scripts/seed_demo_account.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.16.1",
