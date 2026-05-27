@@ -831,6 +831,8 @@ function AppContent() {
                     lastPdfUrl={lastPdfUrl}
                     lastPdfName={lastPdfName}
                     file={file}
+                    result={result}
+                    autoFixReport={autoFixReport}
                     onDownload={handleDownload}
                     onDownloadReport={handleDownloadReport}
                     onStartOver={handleStartOver}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from '../../i18n';
 import { 
     ArrowDownTrayIcon, 
@@ -8,11 +8,14 @@ import {
     SparklesIcon
 } from '@heroicons/react/24/outline';
 import { PPOSLogo } from '../../design/preflight_starter_pack';
+import { ClientChangeReportDrawer } from '../reports/ClientChangeReportDrawer';
 
 interface Step5DownloadV2_4Props {
     lastPdfUrl: string | null;
     lastPdfName: string | null;
     file: File | null;
+    result: any;
+    autoFixReport: any;
     onDownload: () => void;
     onDownloadReport: () => void;
     onStartOver: () => void;
@@ -22,11 +25,14 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
     lastPdfUrl,
     lastPdfName,
     file,
+    result,
+    autoFixReport,
     onDownload,
     onDownloadReport,
     onStartOver
 }) => {
     const { t } = useTranslation();
+    const [clientReportOpen, setClientReportOpen] = useState(false);
 
     return (
         <div className="max-w-4xl mx-auto space-y-12 animate-in fade-in zoom-in-95 duration-1000 py-12">
@@ -84,6 +90,12 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                         >
                             {t('step.download.exportJson')}
                         </button>
+                        <button 
+                            onClick={() => setClientReportOpen(true)}
+                            className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline opacity-80 hover:opacity-100 transition-all"
+                        >
+                            {t('clientReport.button' as any)}
+                        </button>
                         <div className="flex items-center gap-2 text-[var(--text-muted)] text-[0.7rem] font-medium uppercase tracking-widest">
                            <DocumentCheckIcon className="h-4 w-4" />
                            <span>{t('step.review.certDocument').toUpperCase()}</span>
@@ -124,6 +136,13 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                     <span className="text-[0.6rem] font-mono tracking-widest uppercase">{t('TRACE-SHA256-SIGN' as any)}</span>
                 </div>
             </div>
+
+            <ClientChangeReportDrawer
+                open={clientReportOpen}
+                onClose={() => setClientReportOpen(false)}
+                report={autoFixReport}
+                result={result}
+            />
         </div>
     );
 };
