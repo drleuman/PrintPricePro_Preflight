@@ -192,25 +192,46 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                     </div>
                     <h2 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">{t('step.review.title')}</h2>
                 </div>
-                <StatusBadge 
-                    label={
-                        analysis.certificationMode 
-                            ? t('step.review.certification.withoutModification') 
-                            : (isNoOpFix 
-                                ? t('step.review.banners.compliantTitle') 
-                                : (isReadyForPrint 
-                                    ? t('common.verified') 
-                                    : (isAutofix && !hasEffectiveFix 
-                                        ? t('step.fix.failed').toUpperCase() 
-                                        : t('issuesFoundMessage'))))
-                    } 
-                    variant={
-                        analysis.certificationMode || isNoOpFix || isReadyForPrint 
-                            ? "certified" 
-                            : (isAutofix && !hasEffectiveFix ? "warning" : "warning")
-                    } 
-                />
-            </div>
+                    <StatusBadge 
+                        label={
+                            isCompletedWithReview
+                                ? "Review Required"
+                                : analysis.certificationMode 
+                                ? t('step.review.certification.withoutModification') 
+                                : (isNoOpFix 
+                                    ? t('step.review.banners.compliantTitle') 
+                                    : (isReadyForPrint 
+                                        ? t('common.verified') 
+                                        : (isAutofix && !hasEffectiveFix 
+                                            ? t('step.fix.failed').toUpperCase() 
+                                            : t('issuesFoundMessage'))))
+                        } 
+                        variant={
+                            isCompletedWithReview
+                                ? "warning"
+                                : analysis.certificationMode || isNoOpFix || isReadyForPrint 
+                                ? "certified" 
+                                : (isAutofix && !hasEffectiveFix ? "warning" : "warning")
+                        } 
+                    />
+                </div>
+
+                {result?.artifact_delta && (
+                    <div className="p-4 border border-amber-500/30 bg-amber-500/10 mb-6 flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                            <DocumentCheckIcon className="w-5 h-5 text-amber-500" />
+                            <h3 className="text-amber-500 font-bold uppercase tracking-widest text-[0.75rem]">Destructive Transform Notice</h3>
+                        </div>
+                        <p className="text-[0.8rem] text-[var(--text-secondary)]">
+                            The file was converted from RGB/Flate image streams to CMYK/JPEG streams (or heavily downsampled). This is a destructive print transform and must be reviewed manually.
+                        </p>
+                        <div className="grid grid-cols-3 gap-4 mt-2 text-[0.75rem] font-mono border-t border-amber-500/20 pt-3 text-[var(--text-primary)]">
+                            <div><span className="text-[var(--text-muted)]">Original:</span> {(result.artifact_delta.original_size_bytes / 1024 / 1024).toFixed(2)} MB</div>
+                            <div><span className="text-[var(--text-muted)]">Fixed:</span> {(result.artifact_delta.fixed_size_bytes / 1024 / 1024).toFixed(2)} MB</div>
+                            <div><span className="text-[var(--text-muted)]">Reduction:</span> {Math.abs(result.artifact_delta.size_delta_percent).toFixed(1)}%</div>
+                        </div>
+                    </div>
+                )}
 
             <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
                 {/* Main Content: Preview & Comparison */}
@@ -466,7 +487,11 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                     className="w-full flex items-center justify-center gap-3 py-5 bg-[var(--bg-primary)] border-2 border-[var(--accent-color)] text-[var(--accent-color)] text-[0.8rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-color)] hover:text-white transition-all shadow-[0_10px_30px_rgba(220,0,0,0.1)] group"
                                 >
                                     <ArrowDownTrayIcon className="h-5 w-5 group-hover:translate-y-0.5 transition-transform" />
-                                    {isRealFix ? t('step.review.downloadFixed') : (isNoOpFix ? t('step.review.downloadCertified') : t('step.review.downloadCertified'))}
+                                    {!isProductionCertified 
+                                        ? "Review PDF — not production certified"
+                                        : isRealFix 
+                                            ? t('step.review.downloadFixed') 
+                                            : t('step.review.downloadCertified')}
                                 </button>
                             )}
 

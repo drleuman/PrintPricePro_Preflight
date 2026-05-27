@@ -796,6 +796,9 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
       sourceJobId
     },
 
+    artifact_delta: rawFixJob?.artifact_delta || rawFixJob?.result?.artifact_delta || null,
+    certification_blockers: rawFixJob?.certification_blockers || rawFixJob?.result?.certification_blockers || [],
+
     _isDegraded: degradedReasons.length > 0 || Boolean(rawFixJob?._isDegraded),
     degraded_reasons: degradedReasons.length > 0 ? degradedReasons : (rawFixJob?.degraded_reasons || []),
     _forensicDataMissing: !hasForensics(rawFixJob, sourceAnalyzeJob)
@@ -967,6 +970,28 @@ function normalizeAutofixFinalState(report) {
     before: report.summary.before,
     after: report.summary.after
   };
+
+  // PHASE 39.1.8 - Artifact Certification Guard
+  if (!productionCertified) {
+    if (report.artifacts) {
+      delete report.artifacts.certified_pdf;
+      if (report.artifacts.fixed_pdf) {
+        report.artifacts.review_pdf = report.artifacts.fixed_pdf;
+      } else if (report.artifacts.final_fixed_pdf) {
+        report.artifacts.review_pdf = report.artifacts.final_fixed_pdf;
+      }
+    }
+    if (Array.isArray(report.artifactList)) {
+      report.artifactList = report.artifactList.filter(a => a.type !== 'certified_pdf');
+      const hasReview = report.artifactList.some(a => a.type === 'review_pdf');
+      if (!hasReview) {
+        const fixedArtifact = report.artifactList.find(a => a.type === 'fixed_pdf' || a.type === 'final_fixed_pdf');
+        if (fixedArtifact) {
+          report.artifactList.push({ type: 'review_pdf', name: fixedArtifact.name });
+        }
+      }
+    }
+  }
 
   // Top-level fields
   report.status = status;

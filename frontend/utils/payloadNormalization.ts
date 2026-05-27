@@ -4,7 +4,7 @@ import { PreflightResult, Issue, Severity, WorkflowAnalysis, AppMode, ISSUE_CATE
  * deterministic status flags for UI components.
  */
 
-const RANKED_ARTIFACT_KEYS = ['final_fixed_pdf', 'fixed_pdf', 'normalized_pdf', 'certified_pdf'];
+const RANKED_ARTIFACT_KEYS = ['final_fixed_pdf', 'fixed_pdf', 'normalized_pdf', 'certified_pdf', 'review_pdf'];
 
 export function getBestArtifactKey(artifacts: Record<string, string> | undefined | null): string | null {
     if (!artifacts) return null;

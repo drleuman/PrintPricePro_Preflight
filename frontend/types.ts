@@ -173,6 +173,22 @@ export interface PreflightResult {
     rewritten?: boolean; // V2.5
     certificationMode?: string; // V2.5 e.g. "CERTIFIED_WITHOUT_MODIFICATION"
   };
+  artifact_delta?: {
+    original_size_bytes: number;
+    fixed_size_bytes: number;
+    size_delta_percent: number;
+    page_count_before: number;
+    page_count_after: number;
+    image_count_before?: number;
+    image_count_after?: number;
+    image_encoding_changes?: boolean;
+    image_colorspace_changes?: boolean;
+    resolution_changes?: boolean;
+    detected_lossy_recompression?: boolean;
+    detected_downsampling?: boolean;
+    certification_blockers?: string[];
+  };
+  certification_blockers?: string[];
   productionReport?: {
     spine?: any;
     imposition?: any;
