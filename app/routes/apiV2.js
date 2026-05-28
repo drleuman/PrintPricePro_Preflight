@@ -860,6 +860,47 @@ router.get('/:jobId/artifacts/:artifactId', async (req, res) => {
   }
 });
 
+function normalizeRequestedFixes(body = {}) {
+  const candidates = [
+    body.requestedFixes,
+    body.requested_fixes,
+    body.fixes,
+    body.options?.requestedFixes,
+    body.options?.requested_fixes,
+    body.options?.fixes
+  ];
+
+  const out = [];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const arr = Array.isArray(candidate) ? candidate : [candidate];
+
+    for (const item of arr) {
+      if (!item) continue;
+
+      if (typeof item === "string") {
+        out.push(item);
+        continue;
+      }
+
+      if (typeof item === "object") {
+        const code =
+          item.code ||
+          item.id ||
+          item.repairStrategy ||
+          item.strategy ||
+          item.fix_method ||
+          item.recommended_fix;
+
+        if (code) out.push(code);
+      }
+    }
+  }
+
+  return [...new Set(out.map(x => String(x).trim()).filter(Boolean))];
+}
+
 /**
  * POST /api/v2/jobs/:jobId/actions/fix
  * Trigger a stateful autofix on an existing job asset.
@@ -949,12 +990,7 @@ router.post('/:jobId/actions/fix', async (req, res) => {
 
     const body = req.body || {};
 
-    const requestedFixes =
-      Array.isArray(body.requested_fixes) ? body.requested_fixes :
-      Array.isArray(body.fixes) ? body.fixes :
-      Array.isArray(body.options?.requested_fixes) ? body.options.requested_fixes :
-      Array.isArray(body.options?.fixes) ? body.options.fixes :
-      [];
+    const requestedFixes = normalizeRequestedFixes(body);
 
     const forceBleed = Boolean(
       body.forceBleed ??
@@ -963,6 +999,19 @@ router.post('/:jobId/actions/fix', async (req, res) => {
       body.options?.force_bleed ??
       false
     );
+
+    const incomingMagicFixProfile =
+      req.body?.magicFixProfile ||
+      req.body?.magic_fix_profile ||
+      req.body?.options?.magicFixProfile ||
+      req.body?.options?.magic_fix_profile ||
+      null;
+
+    const hasCmyk = requestedFixes.includes("CONVERT_CMYK");
+
+    const magicFixProfile =
+      incomingMagicFixProfile ||
+      (hasCmyk ? "MAGIC_FIX_FORCE_CMYK" : "MAGIC_FIX_SAFE");
 
     const targetProfile =
       body.targetProfile ||
@@ -974,17 +1023,15 @@ router.post('/:jobId/actions/fix', async (req, res) => {
     const policy = body.policy || 'OFFSET_MODERN_COATED';
     const policyId = body.policyId || body.policy || 'OFFSET_MODERN_COATED';
 
-    const canonicalFixesStr = requestedFixes
-      .map(f => (typeof f === 'string' ? f : (f?.repairStrategy || f?.repair_strategy || f?.fix_method || f?.id || '')))
-      .sort()
-      .join(',');
+    const canonicalFixesStr = requestedFixes.sort().join(',');
 
     const idempotencyKeyObj = {
       tenantId,
       jobId,
       fixes: canonicalFixesStr,
-      forceBleed,
+      magicFixProfile,
       targetProfile,
+      forceBleed,
       policyId
     };
     const idempotencyKey = JSON.stringify(idempotencyKeyObj);
@@ -1041,11 +1088,13 @@ router.post('/:jobId/actions/fix', async (req, res) => {
         policyId,
         fixes: requestedFixes,
         requested_fixes: requestedFixes,
+        requestedFixes,
         forceBleed,
         force_bleed: forceBleed,
         targetProfile,
         target_profile: targetProfile,
-        magicFixProfile: body.magicFixProfile || body.options?.magicFixProfile,
+        magicFixProfile,
+        magic_fix_profile: magicFixProfile,
         options: {
           ...options,
           type,
@@ -1054,11 +1103,13 @@ router.post('/:jobId/actions/fix', async (req, res) => {
           ...(hasCmyk ? { target: 'cmyk' } : {}),
           fixes: requestedFixes,
           requested_fixes: requestedFixes,
+          requestedFixes,
           forceBleed,
           force_bleed: forceBleed,
           targetProfile,
           target_profile: targetProfile,
-          magicFixProfile: body.magicFixProfile || body.options?.magicFixProfile
+          magicFixProfile,
+          magic_fix_profile: magicFixProfile
         }
       };
 
@@ -1073,9 +1124,10 @@ router.post('/:jobId/actions/fix', async (req, res) => {
       console.log(`[BFF][MAGIC-FIX-FORWARD]`, {
         jobId,
         requestedFixes,
-        magicFixProfile: servicePayload.magicFixProfile,
-        targetProfile: servicePayload.targetProfile,
-        hardeningAction: true
+        requestedFixesCount: requestedFixes.length,
+        magicFixProfile,
+        targetProfile,
+        bodyKeys: Object.keys(req.body || {})
       });
 
       const response = await pposRequest(
