@@ -71,6 +71,14 @@ async function getGovernance(tenantId, bearerToken) {
             console.warn(`[ENTITLEMENT-CACHE] Serving stale governance for tenant ${tenantId} (age: ${Date.now() - entry.fetchedAt}ms)`);
             return entry.governance;
         }
+
+        console.warn(`[TENANT-ENTITLEMENT-FALLBACK]`, {
+            requestedTenantId: tenantId,
+            reason: err.message,
+            fallbackPlanCode: 'FREE',
+            source: 'LOCAL_FALLBACK'
+        });
+
         return null;
     }
 }

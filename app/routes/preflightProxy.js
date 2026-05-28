@@ -4,6 +4,7 @@ const express = require('express');
 const axios = require('axios');
 const identityService = require('../services/identityService');
 const pposConfig = require('../../config/ppos');
+const { resolveCanonicalTenantContext } = require('../services/tenantResolver');
 const router = express.Router();
 
 // Identity logic moved to identityService.js
@@ -57,7 +58,17 @@ router.use('/', async (req, res) => {
         const authHeaders = identityService.getAuthHeaders(req.auth || req.user || {});
         Object.assign(headers, authHeaders);
 
-        console.log(`[PROXY][${req.id || 'system'}][AUTH] Identity Unified: tokenSnippet: ${headers.Authorization?.slice(0, 30)}...`);
+        // Phase 39.1.13: Resolve canonical tenant and inject diagnostics
+        const tenantContext = await resolveCanonicalTenantContext(req);
+        headers['X-Tenant-Id'] = tenantContext.canonicalTenantId;
+        headers['X-Canonical-Tenant-Id'] = tenantContext.canonicalTenantId;
+        headers['X-JWT-Tenant-Id'] = tenantContext.jwtTenantId;
+        headers['X-Execution-Tenant-Id'] = tenantContext.executionTenantId;
+
+        console.log(`[PROXY][${req.id || 'system'}][AUTH] Identity Unified: tokenSnippet: ${headers.Authorization?.slice(0, 30)}...`, {
+            canonicalTenantId: tenantContext.canonicalTenantId,
+            jwtTenantId: tenantContext.jwtTenantId
+        });
 
         // Legacy cleanup (no longer needed if OS expects JWT)
         delete headers['x-ppos-api-key'];

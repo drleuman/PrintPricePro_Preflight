@@ -28,6 +28,7 @@
 
 const db = require('../services/db');
 const entitlementCache = require('../services/tenantEntitlementCache');
+const { resolveCanonicalTenantContext } = require('../services/tenantResolver');
 
 // Conservative fallback limits when the Control Plane is unreachable.
 const FALLBACK_LIMITS = {
@@ -67,7 +68,6 @@ module.exports = (options = {}) => {
     return async (req, res, next) => {
         const { action = 'job', increment = false, checkAiFix = false } = options;
         const userId   = req.auth?.userId;
-        const tenantId = req.auth?.tenantId || userId;
         const requestId = req.headers['x-request-id'] || req.id || 'system';
 
         if (!userId) {
@@ -111,41 +111,54 @@ module.exports = (options = {}) => {
                 });
             }
 
-            // ── 2. Governance limits from Control Plane (cache-first) ─────────
-            let cpLimits = null;
+            // ── 2. Governance limits from Control Plane (via Tenant Resolver) ─
+            let tenantContext;
             let cpUnavailable = false;
-            const bearerToken = req.headers['authorization'];
-
             try {
-                cpLimits = await entitlementCache.getLimits(tenantId, bearerToken);
-            } catch (cpErr) {
+                tenantContext = await resolveCanonicalTenantContext(req);
+                if (tenantContext.source === 'LOCAL_FALLBACK') {
+                    cpUnavailable = true;
+                }
+            } catch (err) {
                 cpUnavailable = true;
-                console.warn(`[GOVERNANCE][${requestId}] Control Plane unavailable, using fallback limits:`, cpErr.message);
+                console.warn(`[GOVERNANCE][${requestId}] Tenant resolver failed, using fallback limits:`, err.message);
+                tenantContext = {
+                    canonicalTenantId: req.auth?.tenantId || userId,
+                    jwtTenantId: req.auth?.tenantId || userId,
+                    planCode: user.plan || 'FREE',
+                    limits: {},
+                    source: 'LOCAL_FALLBACK'
+                };
             }
 
-            // Merge CP limits with local fallback
-            const planCode = (await entitlementCache.getPlanCode(tenantId, bearerToken).catch(() => null))
-                || user.plan
-                || 'FREE';
-
+            const tenantId = tenantContext.canonicalTenantId;
+            const planCode = tenantContext.planCode || 'FREE';
             const fallback = getFallbackLimits(planCode.toUpperCase());
 
-            const maxFileSizeMb  = cpLimits?.max_file_size_mb  ?? fallback.max_file_size_mb;
-            const dailyJobsLimit = cpLimits?.daily_jobs_limit  ?? user.local_daily_jobs_limit ?? fallback.daily_jobs_limit;
-            const maxJobSizeMb   = cpLimits?.max_job_size_mb   ?? null;
-            const monthlyJobsLimit = cpLimits?.monthly_jobs_limit ?? null;
+            const maxFileSizeMb = tenantContext.limits.max_file_size_mb ?? fallback.max_file_size_mb;
+            const maxJobSizeMb = tenantContext.limits.max_job_size_mb ?? null;
+            const monthlyJobsLimit = tenantContext.limits.monthly_jobs_limit ?? null;
+
+            // Fix daily quota bug: Preserve explicit null from CP, else local, else fallback
+            let dailyJobsLimit = fallback.daily_jobs_limit;
+            if (tenantContext.limits.daily_jobs_limit !== undefined) {
+                dailyJobsLimit = tenantContext.limits.daily_jobs_limit;
+            } else if (user.local_daily_jobs_limit !== undefined && user.local_daily_jobs_limit !== null) {
+                dailyJobsLimit = user.local_daily_jobs_limit;
+            }
 
             console.log(`[GOVERNANCE-LIMIT-RESOLVED]`, {
-                tenantId,
                 userId,
+                email: tenantContext.email || user.email,
+                jwtTenantId: tenantContext.jwtTenantId,
+                canonicalTenantId: tenantContext.canonicalTenantId,
+                governanceTenantId: tenantContext.governanceTenantId,
                 planCode: planCode,
-                cpAvailable: !cpUnavailable,
-                cpLimits,
                 resolvedMaxFileSizeMb: maxFileSizeMb,
                 resolvedMaxJobSizeMb: maxJobSizeMb,
                 resolvedDailyJobsLimit: dailyJobsLimit,
                 resolvedMonthlyJobsLimit: monthlyJobsLimit,
-                source: !cpUnavailable ? 'CONTROL_PLANE' : (user.plan ? 'LOCAL_FALLBACK' : 'PLAN_ALIAS_FALLBACK')
+                source: tenantContext.source
             });
 
             // ── 3. Daily quota check ──────────────────────────────────────────
@@ -186,6 +199,7 @@ module.exports = (options = {}) => {
                 // Ask CP first; fall back to local license flag
                 let aiFixAllowed = user.ai_magic_fix_enabled;
                 try {
+                    const bearerToken = req.headers['authorization'];
                     aiFixAllowed = await entitlementCache.isFeatureEnabled(tenantId, 'ai_magic_fix', bearerToken);
                 } catch {
                     // CP unavailable — use local value
@@ -222,6 +236,10 @@ module.exports = (options = {}) => {
             // ── 7. Attach enriched governance context for downstream consumers ─
             req.license = {
                 ...user,
+                tenantId: tenantId,
+                canonicalTenantId: tenantContext.canonicalTenantId,
+                jwtTenantId: tenantContext.jwtTenantId,
+                executionTenantId: tenantContext.executionTenantId,
                 plan: planCode,
                 max_file_size_mb: maxFileSizeMb,
                 daily_jobs_limit: dailyJobsLimit,

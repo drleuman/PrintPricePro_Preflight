@@ -6,6 +6,7 @@ const { generateToken } = require('../auth/generateToken');
 const db = require('../services/db');
 const requireAuth = require('../middleware/requireAuth');
 const entitlementCache = require('../services/tenantEntitlementCache');
+const { resolveCanonicalTenantContext } = require('../services/tenantResolver');
 
 /**
  * Phase 39.1: Enrich a local user record with Control Plane governance data.
@@ -16,73 +17,60 @@ const entitlementCache = require('../services/tenantEntitlementCache');
  * @returns {Promise<object>}
  */
 async function enrichWithGovernance(user, bearerToken) {
-    const tenantId = user.tenant_id || user.id;
     try {
-        const [governance, limits] = await Promise.all([
-            entitlementCache.getGovernance(tenantId, bearerToken),
-            entitlementCache.getLimits(tenantId, bearerToken),
-        ]);
+        const mockReq = { 
+            auth: user, 
+            headers: { authorization: bearerToken } 
+        };
+        const tenantContext = await resolveCanonicalTenantContext(mockReq);
 
-        if (!governance) return user;
-
-        const planCodeVal = governance.planCode || governance.plan_code || governance.plan || user.plan || 'FREE';
-        const commercialStatusVal = governance.commercialStatus || governance.commercial_status || 'UNKNOWN';
-        const accessLevelVal = governance.accessLevel || governance.access_level || null;
-
-        // Grace resolution
-        const grace = governance.grace || {};
-        const inGracePeriod = grace.active ?? governance.grace_period ?? (commercialStatusVal === 'GRACE_PERIOD' || commercialStatusVal === 'GRACE');
+        const grace = tenantContext.rawGovernance?.grace || {};
+        const inGracePeriod = grace.active ?? tenantContext.rawGovernance?.grace_period ?? (tenantContext.commercialStatus === 'GRACE_PERIOD' || tenantContext.commercialStatus === 'GRACE');
         const graceExpired = grace.expired ?? false;
         const graceEndsAt = grace.endsAt ?? grace.ends_at ?? null;
 
-        // Limits resolution
-        const limitSource = limits || governance.limits || governance.effective_limits || governance.file_limits || {};
-        const maxFileSizeMbVal = limits?.max_file_size_mb ?? limitSource.maxFileSizeMb ?? limitSource.max_file_size_mb ?? user.max_file_size_mb ?? null;
-        const maxJobSizeMbVal = limits?.max_job_size_mb ?? limitSource.maxJobSizeMb ?? limitSource.max_job_size_mb ?? null;
-        const dailyJobsLimitVal = limits?.daily_jobs_limit ?? limitSource.dailyJobsLimit ?? limitSource.daily_jobs_limit ?? user.daily_jobs_limit ?? null;
-        const monthlyJobsLimitVal = limits?.monthly_jobs_limit ?? limitSource.maxJobsPerMonth ?? limitSource.monthlyJobsLimit ?? limitSource.monthly_jobs_limit ?? null;
-
-        // Entitlements
-        const modules = governance.modules || {};
-        const actions = governance.actions || {};
-        const entitlements = governance.entitlements || governance.features || {};
+        const modules = tenantContext.rawGovernance?.modules || {};
+        const actions = tenantContext.rawGovernance?.actions || {};
+        const entitlements = tenantContext.rawGovernance?.entitlements || tenantContext.rawGovernance?.features || {};
         const aiMagicFix = modules.ai_magic_fix ?? modules.aiMagicFix ?? actions.ai_magic_fix ?? actions.aiMagicFix ?? entitlements.ai_magic_fix ?? !!user.ai_magic_fix_enabled;
-
-        const resolvedPlan = planCodeVal;
 
         const enrichedUser = {
             ...user,
-            plan: resolvedPlan,
-            planCode: resolvedPlan,
-            plan_code: resolvedPlan,
-            commercial_status: commercialStatusVal,
-            access_level: accessLevelVal,
+            tenantId: tenantContext.canonicalTenantId,
+            canonicalTenantId: tenantContext.canonicalTenantId,
+            jwtTenantId: tenantContext.jwtTenantId,
+            executionTenantId: tenantContext.executionTenantId,
+            governanceTenantId: tenantContext.governanceTenantId,
+            plan: tenantContext.planCode,
+            planCode: tenantContext.planCode,
+            plan_code: tenantContext.planCode,
+            commercial_status: tenantContext.commercialStatus,
+            access_level: tenantContext.accessLevel,
             in_grace_period: !!inGracePeriod,
             grace_expired: !!graceExpired,
             grace_ends_at: graceEndsAt,
-            max_file_size_mb: maxFileSizeMbVal,
-            maxFileSizeMb: maxFileSizeMbVal,
-            max_job_size_mb: maxJobSizeMbVal,
-            maxJobSizeMb: maxJobSizeMbVal,
-            daily_jobs_limit: dailyJobsLimitVal,
-            dailyJobsLimit: dailyJobsLimitVal,
-            monthly_jobs_limit: monthlyJobsLimitVal,
-            monthlyJobsLimit: monthlyJobsLimitVal,
+            max_file_size_mb: tenantContext.limits.max_file_size_mb ?? null,
+            maxFileSizeMb: tenantContext.limits.max_file_size_mb ?? null,
+            max_job_size_mb: tenantContext.limits.max_job_size_mb ?? null,
+            maxJobSizeMb: tenantContext.limits.max_job_size_mb ?? null,
+            daily_jobs_limit: tenantContext.limits.daily_jobs_limit ?? null,
+            dailyJobsLimit: tenantContext.limits.daily_jobs_limit ?? null,
+            monthly_jobs_limit: tenantContext.limits.monthly_jobs_limit ?? null,
+            monthlyJobsLimit: tenantContext.limits.monthly_jobs_limit ?? null,
             ai_magic_fix_enabled: !!aiMagicFix,
-            _governance_source: governance.source || 'CONTROL_PLANE',
+            _governance_source: tenantContext.source || 'CONTROL_PLANE',
+            governance_source: tenantContext.source || 'CONTROL_PLANE'
         };
 
         console.log('[AUTH-ME-GOVERNANCE-RESOLVED]', {
             userId: user.id,
             email: user.email,
-            tenantId,
-            plan: enrichedUser.plan,
-            planCode: enrichedUser.planCode,
+            jwtTenantId: tenantContext.jwtTenantId,
+            canonicalTenantId: tenantContext.canonicalTenantId,
+            governanceTenantId: tenantContext.governanceTenantId,
+            planCode: tenantContext.planCode,
             max_file_size_mb: enrichedUser.max_file_size_mb,
-            max_job_size_mb: enrichedUser.max_job_size_mb,
-            daily_jobs_limit: enrichedUser.daily_jobs_limit,
-            monthly_jobs_limit: enrichedUser.monthly_jobs_limit,
-            source: enrichedUser._governance_source
+            source: tenantContext.source
         });
 
         return enrichedUser;

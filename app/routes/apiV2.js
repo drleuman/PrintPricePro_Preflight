@@ -7,6 +7,7 @@ const path = require('path');
 
 const queue = require('../services/queue');
 const ppos = require('../../config/ppos');
+const { resolveCanonicalTenantContext } = require('../services/tenantResolver');
 const identityService = require('../services/identityService');
 const { pposRequest } = require('../services/apiClient');
 const licenseGuard = require('../middleware/licenseGuard');
@@ -109,24 +110,34 @@ router.post(
   licenseGuard({ action: 'analyze' }),
   async (req, res) => {
     const requestId = req.id || `req_${Date.now()}`;
-    const tenantId = getTenantId(req);
+    const tenantContext = await resolveCanonicalTenantContext(req);
+    const tenantId = tenantContext.canonicalTenantId;
+    
     // FORCE: Generate a unique jobId here to ensure PPOS contract safety
     const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
     const origin = {
       source: 'PREFLIGHT_APP',
-      userId: req.auth?.userId || req.auth?.sub || null,
-      email: req.auth?.email || null,
-      appRole: req.auth?.appRole || req.auth?.productRole || null,
-      tenantId: req.auth?.tenantId || null,
-      printhouseId: req.auth?.printhouseId || null
+      userId: tenantContext.userId,
+      email: tenantContext.email,
+      appRole: tenantContext.appRole,
+      tenantId: tenantContext.canonicalTenantId,
+      printhouseId: tenantContext.printhouseId
     };
 
     try {
       console.log(`[BFF][V2-JOB-START][${requestId}]`, {
+        userId: tenantContext.userId,
+        email: tenantContext.email,
+        jwtTenantId: tenantContext.jwtTenantId,
+        canonicalTenantId: tenantContext.canonicalTenantId,
+        governanceTenantId: tenantContext.governanceTenantId,
+        executionTenantId: tenantContext.executionTenantId,
+        upstreamTenantId: tenantContext.canonicalTenantId,
+        governancePlanCode: tenantContext.planCode,
+        maxFileSizeMb: req.license?.max_file_size_mb || tenantContext.limits?.max_file_size_mb,
         hasFile: !!req.file,
-        contentType: req.get('content-type'),
-        tenantId
+        contentType: req.get('content-type')
       });
 
       if (!req.file) {
@@ -154,7 +165,10 @@ router.post(
         force: true,   // Clear previous job state
         cleanup: true, // Remove ghost tasks
         requestId,
-        tenantId,
+        tenantId: tenantContext.canonicalTenantId,
+        canonicalTenantId: tenantContext.canonicalTenantId,
+        jwtTenantId: tenantContext.jwtTenantId,
+        executionTenantId: tenantContext.executionTenantId,
         policy,
         filename,
         filePath: req.file.path,
