@@ -111,6 +111,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
         hasFixedArtifact: hasFixed,
         hasDiagnosticArtifact,
         isFailedFix,
+        isReviewRequiredOnly,
         showComparison
     } = analysis;
 
@@ -161,7 +162,9 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     const isCompletedWithReview = result?.status === 'COMPLETED_WITH_REVIEW' || (result as any)?.requiresHumanReview === true;
     const isProductionCertified = (result as any)?.productionCertified === true;
 
-    const finalStateLabel = isFailedFix
+    const finalStateLabel = isReviewRequiredOnly
+        ? "Magic Fix needs human approval"
+        : isFailedFix
         ? "Magic Fix failed"
         : isCompletedWithReview
         ? "Fixed — review required"
@@ -214,7 +217,9 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                             : t('issuesFoundMessage'))))
                         } 
                         variant={
-                            isCompletedWithReview
+                            isReviewRequiredOnly
+                                ? "warning"
+                                : isCompletedWithReview
                                 ? "warning"
                                 : analysis.certificationMode || isNoOpFix || isReadyForPrint 
                                 ? "certified" 
@@ -381,10 +386,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                         </div>
                                         <div className="space-y-2">
                                             <h4 className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">
-                                                {isFailedFix ? "Magic Fix failed before producing a reviewable PDF." : (readableError ? readableError.title : (isAutofix ? t('error.magic.fail') : t('analysisFailed')))}
+                                                {isReviewRequiredOnly ? "Magic Fix needs human approval" : (isFailedFix ? "Magic Fix failed before producing a reviewable PDF." : (readableError ? readableError.title : (isAutofix ? t('error.magic.fail') : t('analysisFailed'))))}
                                             </h4>
                                             <p className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-relaxed max-w-[200px]">
-                                                {isFailedFix && hasDiagnosticArtifact ? "Technical output is available for diagnostics, but it is not a production or review PDF." : (readableError ? readableError.summary : (isAutofix ? t('forensics.dataUnavailable') : t('forensics.dataUnavailableDesc')))}
+                                                {isReviewRequiredOnly ? "The PDF was not modified automatically. The detected RGB color issue would require RGB-to-CMYK conversion, which can change the visual appearance of the document. A print operator or designer should review and approve this conversion before production." : (isFailedFix && hasDiagnosticArtifact ? "Technical output is available for diagnostics, but it is not a production or review PDF." : (readableError ? readableError.summary : (isAutofix ? t('forensics.dataUnavailable') : t('forensics.dataUnavailableDesc'))))}
                                             </p>
                                             {readableError?.detail && (
                                                 <p className="text-[0.55rem] font-mono text-red-500/50 lowercase tracking-tight max-w-[250px] break-words pt-2 border-t border-[var(--border-color)]/20">
@@ -392,7 +397,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                                 </p>
                                             )}
                                         </div>
-                                        {!isRunning && !isAutofix && !isFailedFix && (
+                                        {!isRunning && !isAutofix && !isFailedFix && !isReviewRequiredOnly && (
                                             <button 
                                                 onClick={onBack}
                                                 className="px-6 py-3 border border-[var(--accent-color)]/30 bg-[var(--accent-color)]/5 text-[var(--accent-color)] text-[0.6rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-color)] hover:text-white transition-all"
@@ -495,7 +500,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 {t('clientReport.button' as any)}
                             </button>
 
-                            {hasFinalArtifact && (hasEffectiveFix || hasDiagnosticArtifact) && !isFailedFix && (
+                            {hasFinalArtifact && (hasEffectiveFix || hasDiagnosticArtifact) && !isFailedFix && !isReviewRequiredOnly && (
                                  <button 
                                     onClick={onDownload}
                                     className="w-full flex items-center justify-center gap-3 py-5 bg-[var(--bg-primary)] border-2 border-[var(--accent-color)] text-[var(--accent-color)] text-[0.8rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-color)] hover:text-white transition-all shadow-[0_10px_30px_rgba(220,0,0,0.1)] group"

@@ -864,6 +864,16 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
   return normalizeAutofixFinalState(normalized);
 }
 
+function skippedFixRequiresHumanReview(fix) {
+  return Boolean(
+    fix?.requires_human_review === true ||
+    fix?.requiresHumanReview === true ||
+    fix?.destructiveFixRisk === "HIGH" ||
+    String(fix?.code || "").toUpperCase() === "CONVERT_CMYK" ||
+    /destructive|explicit review|human review/i.test(String(fix?.reason || ""))
+  );
+}
+
 function normalizeAutofixFinalState(report) {
   if (!report) return report;
 
@@ -888,7 +898,7 @@ function normalizeAutofixFinalState(report) {
   const appliedFixes = report.applied_fixes || report.fixes || report.repairs || [];
 
   // Determine review requirements
-  const requiresReview = appliedFixes.some(f =>
+  let requiresReview = appliedFixes.some(f =>
     f && (
       f.requires_human_review === true ||
       f.requiresHumanReview === true ||
@@ -937,10 +947,23 @@ function normalizeAutofixFinalState(report) {
   // Determine final status
   let status = report.status || report.final_status || 'AUTOFIX_COMPLETED';
 
+  const skippedRequiresReview = skippedFixes.some(skippedFixRequiresHumanReview);
+  let isFailedFix = false;
+
   if (report._isDegraded === true || (report.degraded_reasons && report.degraded_reasons.length > 0)) {
     status = 'AUTOFIX_DEGRADED';
+  } else if (
+    appliedFixes.length === 0 &&
+    failedFixes.length === 0 &&
+    skippedFixes.length > 0 &&
+    skippedRequiresReview
+  ) {
+    status = 'AUTOFIX_REVIEW_REQUIRED';
+    isFailedFix = false;
+    requiresReview = true;
   } else if (failedFixes.length > 0 || !hasOutputArtifact) {
     status = 'AUTOFIX_FAILED';
+    isFailedFix = true;
   } else if (unresolved.length > 0 || skippedFixes.length > 0) {
     status = 'AUTOFIX_PARTIAL';
   } else if (technicallyFixed) {
@@ -952,7 +975,7 @@ function normalizeAutofixFinalState(report) {
   }
 
   // Extract review reasons
-  const reviewReasons = [];
+  let reviewReasons = [];
   appliedFixes.forEach(f => {
     if (!f) return;
     if (
@@ -969,6 +992,17 @@ function normalizeAutofixFinalState(report) {
       }
     }
   });
+
+  if (status === 'AUTOFIX_REVIEW_REQUIRED') {
+    skippedFixes.forEach(f => {
+      if (f && skippedFixRequiresHumanReview(f)) {
+        const code = f.code || f.strategy || f.repairStrategy || 'UNKNOWN_REPAIR';
+        if (!reviewReasons.includes(code)) {
+          reviewReasons.push(code);
+        }
+      }
+    });
+  }
 
   // Derive final risk level
   let finalRiskLevel = 'LOW';
@@ -1038,10 +1072,20 @@ function normalizeAutofixFinalState(report) {
     }
   }
 
-  const isFailed = status === 'FAILED' || status === 'AUTOFIX_FAILED';
+  const isFailed = status === 'FAILED' || status === 'AUTOFIX_FAILED' || isFailedFix;
   const allowSynthesis = status === 'AUTOFIX_PARTIAL' || status === 'COMPLETED_WITH_REVIEW' || (!productionCertified && requiresReview) || technicallyFixed;
 
-  if (isFailed) {
+  if (status === 'AUTOFIX_REVIEW_REQUIRED') {
+      // Do not synthesize review_pdf/fixed_pdf if no fixes were applied
+      if (report.artifacts) {
+          delete report.artifacts.review_pdf;
+          delete report.artifacts.fixed_pdf;
+          delete report.artifacts.final_fixed_pdf;
+      }
+      if (Array.isArray(report.artifactList)) {
+          report.artifactList = report.artifactList.filter(a => !['review_pdf', 'fixed_pdf', 'final_fixed_pdf'].includes(a.type));
+      }
+  } else if (isFailed) {
       if (report.artifacts) {
           const actualFixed = report.artifacts.output_file || report.artifacts.fixed_pdf || report.artifacts.final_fixed_pdf;
           if (actualFixed) {
@@ -1088,6 +1132,12 @@ function normalizeAutofixFinalState(report) {
   report.destructiveRiskSummary = highestRisk;
   report.finalRiskLevel = finalRiskLevel;
   report.finalScoreBasis = scoreBasis;
+  report.isFailedFix = isFailedFix;
+  
+  if (status === 'AUTOFIX_REVIEW_REQUIRED') {
+      report.technicallyFixed = false;
+      report.productionCertified = false;
+  }
 
   // Fallback score setting
   if (report.score === undefined || report.score === null || report.score === 100 || report.score === 0) {

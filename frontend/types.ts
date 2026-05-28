@@ -234,6 +234,7 @@ export interface WorkflowAnalysis {
   hasEffectiveFix: boolean;
   rewritten: boolean; // V2.5
   certificationMode: string | null; // V2.5
+  isReviewRequiredOnly: boolean;
 }
 
 /**

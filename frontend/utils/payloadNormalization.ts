@@ -141,7 +141,8 @@ export function analyzeWorkflow(
     const rewritten = meta.rewritten === true || (!explicitNoOp && hasFixedArtifact);
     const certificationMode = meta.certificationMode || (explicitNoOp ? 'CERTIFIED_WITHOUT_MODIFICATION' : null);
 
-    const isFailedFix = isAutofix && ((result as any)?.status === 'FAILED' || (result as any)?.status === 'AUTOFIX_FAILED');
+    const isFailedFix = isAutofix && ((result as any)?.status === 'FAILED' || (result as any)?.status === 'AUTOFIX_FAILED' || (result as any)?.isFailedFix === true);
+    const isReviewRequiredOnly = isAutofix && ((result as any)?.status === 'AUTOFIX_REVIEW_REQUIRED');
     const hasDiagnosticArtifact = !!artifacts.diagnostic_output_file;
 
     const analysis: WorkflowAnalysis = {
@@ -167,7 +168,8 @@ export function analyzeWorkflow(
         bestArtifactKey,
         hasEffectiveFix,
         rewritten,
-        certificationMode
+        certificationMode,
+        isReviewRequiredOnly
     };
 
     if (hasResult) {
