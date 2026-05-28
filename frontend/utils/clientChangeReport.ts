@@ -6,9 +6,15 @@ export function generateClientChangeReport(result: any): ClientChangeReport {
   
   const statusTone = isCertified ? 'success' : requiresReview ? 'warning' : 'neutral';
   
+  // Mappings
+  const appliedFixes = Array.isArray(result?.fixes) ? result.fixes : (Array.isArray(result?.applied_fixes) ? result.applied_fixes : []);
+  const skippedFixes = Array.isArray(result?.skipped_fixes) ? result.skipped_fixes : [];
+  const reviewReasons = Array.isArray(result?.reviewReasons) ? result.reviewReasons : [];
+  const issuesBefore = Array.isArray(result?.summary?.before?.issues) ? result.summary.before.issues : (Array.isArray(result?.issues) ? result.issues : []);
+
   const headline = isCertified 
     ? "Your PDF is production certified and ready for printing."
-    : (requiresReview && changesApplied.length === 0) 
+    : (requiresReview && appliedFixes.length === 0) 
       ? "Your PDF was not changed automatically, but it requires production review."
       : "Your PDF was technically repaired, but it still needs production review.";
     
@@ -16,7 +22,7 @@ export function generateClientChangeReport(result: any): ClientChangeReport {
   
   const executiveSummary = isCertified
     ? "We corrected the document structure needed for printing and verified that the file meets all automated production criteria."
-    : (requiresReview && changesApplied.length === 0)
+    : (requiresReview && appliedFixes.length === 0)
       ? "No automatic changes were applied. However, the system detected issues that require human review (such as RGB-to-CMYK conversion) before the file can be used for final production."
       : "We corrected the document structure needed for printing. However, the repaired PDF is not automatically production-certified because some changes (like added bleed) require human confirmation.";
 
@@ -24,12 +30,6 @@ export function generateClientChangeReport(result: any): ClientChangeReport {
   const itemsSkipped: ClientChangeItem[] = [];
   const stillNeedsReview: ClientChangeItem[] = [];
   const detectedBefore: ClientChangeItem[] = [];
-  
-  // Mappings
-  const appliedFixes = Array.isArray(result?.fixes) ? result.fixes : (Array.isArray(result?.applied_fixes) ? result.applied_fixes : []);
-  const skippedFixes = Array.isArray(result?.skipped_fixes) ? result.skipped_fixes : [];
-  const reviewReasons = Array.isArray(result?.reviewReasons) ? result.reviewReasons : [];
-  const issuesBefore = Array.isArray(result?.summary?.before?.issues) ? result.summary.before.issues : (Array.isArray(result?.issues) ? result.issues : []);
 
   appliedFixes.forEach((fix: any) => {
     const code = typeof fix === 'string' ? fix : fix?.type || fix?.code;
