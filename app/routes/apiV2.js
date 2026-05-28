@@ -1045,6 +1045,7 @@ router.post('/:jobId/actions/fix', async (req, res) => {
         force_bleed: forceBleed,
         targetProfile,
         target_profile: targetProfile,
+        magicFixProfile: body.magicFixProfile || body.options?.magicFixProfile,
         options: {
           ...options,
           type,
@@ -1056,7 +1057,8 @@ router.post('/:jobId/actions/fix', async (req, res) => {
           forceBleed,
           force_bleed: forceBleed,
           targetProfile,
-          target_profile: targetProfile
+          target_profile: targetProfile,
+          magicFixProfile: body.magicFixProfile || body.options?.magicFixProfile
         }
       };
 
