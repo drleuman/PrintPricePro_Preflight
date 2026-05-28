@@ -898,6 +898,8 @@ function normalizeAutofixFinalState(report) {
   const appliedFixes = report.applied_fixes || report.fixes || report.repairs || [];
 
   // Determine review requirements
+  const skippedRequiresReview = skippedFixes.some(skippedFixRequiresHumanReview);
+
   let requiresReview = appliedFixes.some(f =>
     f && (
       f.requires_human_review === true ||
@@ -907,7 +909,7 @@ function normalizeAutofixFinalState(report) {
       f.industrial_quality === 'LIMITED' ||
       f.industrialQuality === 'LIMITED'
     )
-  );
+  ) || skippedRequiresReview;
 
   // Derive highest destructive risk
   let highestRisk = 'LOW';
@@ -924,9 +926,9 @@ function normalizeAutofixFinalState(report) {
   // Calculate technical fixed status
   const technicallyFixed =
     failedFixes.length === 0 &&
-    unresolved.length === 0 &&
     appliedFixes.length > 0 &&
-    report._isDegraded !== true;
+    report._isDegraded !== true &&
+    (unresolved.length === 0 || skippedRequiresReview);
 
   // Calculate production certified status
   const productionCertified =
@@ -947,8 +949,7 @@ function normalizeAutofixFinalState(report) {
   // Determine final status
   let status = report.status || report.final_status || 'AUTOFIX_COMPLETED';
 
-  const skippedRequiresReview = skippedFixes.some(skippedFixRequiresHumanReview);
-  let isFailedFix = false;
+  const isFailedFix = failedFixes.length > 0 || !hasOutputArtifact;
 
   if (report._isDegraded === true || (report.degraded_reasons && report.degraded_reasons.length > 0)) {
     status = 'AUTOFIX_DEGRADED';
@@ -959,11 +960,10 @@ function normalizeAutofixFinalState(report) {
     skippedRequiresReview
   ) {
     status = 'AUTOFIX_REVIEW_REQUIRED';
-    isFailedFix = false;
-    requiresReview = true;
-  } else if (failedFixes.length > 0 || !hasOutputArtifact) {
+  } else if (isFailedFix) {
     status = 'AUTOFIX_FAILED';
-    isFailedFix = true;
+  } else if (appliedFixes.length > 0 && skippedRequiresReview) {
+    status = 'AUTOFIX_PARTIAL_REVIEW_REQUIRED';
   } else if (unresolved.length > 0 || skippedFixes.length > 0) {
     status = 'AUTOFIX_PARTIAL';
   } else if (technicallyFixed) {
@@ -993,7 +993,7 @@ function normalizeAutofixFinalState(report) {
     }
   });
 
-  if (status === 'AUTOFIX_REVIEW_REQUIRED') {
+  if (status === 'AUTOFIX_REVIEW_REQUIRED' || status === 'AUTOFIX_PARTIAL_REVIEW_REQUIRED' || requiresReview) {
     skippedFixes.forEach(f => {
       if (f && skippedFixRequiresHumanReview(f)) {
         const code = f.code || f.strategy || f.repairStrategy || 'UNKNOWN_REPAIR';
@@ -1006,7 +1006,7 @@ function normalizeAutofixFinalState(report) {
 
   // Derive final risk level
   let finalRiskLevel = 'LOW';
-  if (status === 'COMPLETED_WITH_REVIEW') {
+  if (status === 'COMPLETED_WITH_REVIEW' || status === 'AUTOFIX_PARTIAL_REVIEW_REQUIRED') {
     finalRiskLevel = 'REVIEW_REQUIRED';
   } else if (status === 'AUTOFIX_FAILED') {
     finalRiskLevel = 'CRITICAL';

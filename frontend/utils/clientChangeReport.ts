@@ -16,7 +16,7 @@ export function generateClientChangeReport(result: any): ClientChangeReport {
     ? "Your PDF is production certified and ready for printing."
     : (requiresReview && appliedFixes.length === 0) 
       ? "Your PDF was not changed automatically, but it requires production review."
-      : "Your PDF was technically repaired, but it still needs production review.";
+      : "Technically improved — human review required";
     
   const statusLabel = isCertified ? "Ready for production" : "Review required";
   
@@ -24,7 +24,7 @@ export function generateClientChangeReport(result: any): ClientChangeReport {
     ? "We corrected the document structure needed for printing and verified that the file meets all automated production criteria."
     : (requiresReview && appliedFixes.length === 0)
       ? "No automatic changes were applied. However, the system detected issues that require human review (such as RGB-to-CMYK conversion) before the file can be used for final production."
-      : "We corrected the document structure needed for printing. However, the repaired PDF is not automatically production-certified because some changes (like added bleed) require human confirmation.";
+      : "We corrected automatic structural issues in the PDF, but one change was not applied automatically because it may alter the visual appearance of the document. RGB-to-CMYK conversion requires approval from a print operator or designer before final production.";
 
   const changesApplied: ClientChangeItem[] = [];
   const itemsSkipped: ClientChangeItem[] = [];
@@ -153,12 +153,9 @@ export function generateClientChangeReport(result: any): ClientChangeReport {
 
   const customerMessage = isCertified
     ? "Your PDF was successfully repaired and is now production certified. We added print output intent/profile information. The document is ready for final printing."
-    : (requiresReview && changesApplied.length === 0)
+    : (requiresReview && appliedFixes.length === 0)
       ? "The PDF was not changed automatically. The system detected RGB color objects, but converting RGB to CMYK can alter the appearance of the document. This change requires approval from a print operator or designer."
-      : "Your PDF was technically repaired but is not yet production certified. " + 
-        (changesApplied.length > 0 ? "We " + changesApplied.map(c => c.plainLanguage.toLowerCase()).join(" ") : "") + 
-        (itemsSkipped.length > 0 ? " " + itemsSkipped.map(c => c.title.toLowerCase() + " because it can change the visual appearance of the document.").join(" ") : "") +
-        " A production operator should review the file and decide on any skipped conversions before final printing.";
+      : "We corrected automatic structural issues in the PDF, but one change was not applied automatically because it may alter the visual appearance of the document. RGB-to-CMYK conversion requires approval from a print operator or designer before final production.";
 
   return {
     headline,
@@ -170,7 +167,7 @@ export function generateClientChangeReport(result: any): ClientChangeReport {
       label: isCertified ? "Production certified" : "Not production certified yet",
       explanation: isCertified 
         ? "The file is technically improved and meets all automated criteria for production."
-        : (requiresReview && changesApplied.length === 0)
+        : (requiresReview && appliedFixes.length === 0)
           ? "The file was not modified automatically because it requires human review before being used for final production."
           : "The file is technically improved, but it needs human review before being used for final production."
     },
