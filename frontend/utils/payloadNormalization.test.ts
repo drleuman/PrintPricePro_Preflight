@@ -39,12 +39,12 @@ describe('getBestArtifactKey', () => {
     expect(getBestArtifactKey({ certified_pdf: 'url/cert.pdf' })).toBe('certified_pdf');
   });
 
-  it('prefers fixed_pdf over certified_pdf', () => {
-    expect(getBestArtifactKey({ certified_pdf: 'a', fixed_pdf: 'b' })).toBe('fixed_pdf');
+  it('prefers certified_pdf over fixed_pdf in Certified Mode', () => {
+    expect(getBestArtifactKey({ certified_pdf: 'a', fixed_pdf: 'b' })).toBe('certified_pdf');
   });
 
-  it('prefers normalized_pdf over certified_pdf', () => {
-    expect(getBestArtifactKey({ certified_pdf: 'a', normalized_pdf: 'b' })).toBe('normalized_pdf');
+  it('prefers certified_pdf over normalized_pdf in Certified Mode', () => {
+    expect(getBestArtifactKey({ certified_pdf: 'a', normalized_pdf: 'b' })).toBe('certified_pdf');
   });
 
   it('Review mode prefers review_pdf over certified_pdf', () => {
@@ -508,7 +508,7 @@ describe('analyzeWorkflow', () => {
   it('returns correct bestArtifactKey', () => {
     const result = { ...baseResult, artifacts: { fixed_pdf: 'a', certified_pdf: 'b' } };
     const analysis = analyzeWorkflow(result, null, 'manual');
-    expect(analysis.bestArtifactKey).toBe('fixed_pdf');
+    expect(analysis.bestArtifactKey).toBe('certified_pdf');
   });
 
   it('sets showComparison=true only for real autofix with a final artifact', () => {
@@ -531,6 +531,47 @@ describe('analyzeWorkflow', () => {
     };
     const analysis = analyzeWorkflow(result, null, 'ai');
     expect(analysis.showComparison).toBe(false);
+  });
+
+  it('ANALYZE preserves certified_pdf (Phase 39.1.15 hotfix)', () => {
+    const result = {
+      ...baseResult,
+      type: "ANALYZE" as const,
+      status: "COMPLETED",
+      artifacts: {
+        certified_pdf: {
+          artifactKey: "certified_pdf",
+          artifactName: "certified.pdf",
+          artifactType: "certified_pdf"
+        },
+        analysis_report: {
+          artifactKey: "analysis_report",
+          artifactName: "report.json",
+          artifactType: "analysis_report"
+        }
+      }
+    };
+    const analysis = analyzeWorkflow(result as any, null, 'manual');
+    expect(analysis.bestArtifactKey).toBe('certified_pdf');
+    expect(analysis.hasCertified).toBe(true);
+    expect(analysis.hasFixedArtifact).toBe(true);
+  });
+
+  it('AUTOFIX_REVIEW_REQUIRED blocks artifacts when appliedFixesCount is 0', () => {
+    const result = {
+      ...baseResult,
+      type: "AUTOFIX" as const,
+      status: "AUTOFIX_REVIEW_REQUIRED",
+      appliedFixesCount: 0,
+      artifacts: {
+        review_pdf: "fixed.pdf",
+        fixed_pdf: "fixed.pdf",
+        final_fixed_pdf: "fixed.pdf"
+      }
+    };
+    const analysis = analyzeWorkflow(result as any, null, 'ai');
+    expect(analysis.bestArtifactKey).toBeNull();
+    expect(analysis.hasFixedArtifact).toBe(false);
   });
 });
 

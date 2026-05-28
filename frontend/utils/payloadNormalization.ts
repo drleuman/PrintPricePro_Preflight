@@ -114,12 +114,21 @@ export function analyzeWorkflow(
 
     // 2. Resolve artifacts
     const requiresReview = (result as any)?.requiresHumanReview === true || (result as any)?.productionCertified === false;
-    const bestArtifactKey = getBestArtifactKey(artifacts, requiresReview);
+    let bestArtifactKey = getBestArtifactKey(artifacts, requiresReview);
+    
+    // For ANALYZE, if certified_pdf exists, we want to allow it even if requiresReview is true
+    if (isAnalyzeOnly && artifacts?.certified_pdf) {
+        bestArtifactKey = 'certified_pdf';
+    }
+    
     const hasFinalArtifact = !!bestArtifactKey;
     const hasCertified = !!artifacts.certified_pdf;
     
-    const isReviewRequiredOnly = isAutofix && ((result as any)?.status === 'AUTOFIX_REVIEW_REQUIRED');
     const appliedFixesCount = (result as any)?.summary?.after?.applied_fix_count || (result as any)?.applied_fixes?.length || (result as any)?.fixes?.length || 0;
+    const isAutofixReviewRequired = 
+        (result as any)?.type === 'AUTOFIX' && 
+        (result as any)?.status === 'AUTOFIX_REVIEW_REQUIRED' && 
+        appliedFixesCount === 0;
 
     let hasFixedArtifact = !!(
         artifacts.review_pdf || 
@@ -131,8 +140,8 @@ export function analyzeWorkflow(
 
     let finalBestArtifactKey = bestArtifactKey;
     
-    // Phase 39.1.15 Gating
-    if (isReviewRequiredOnly && appliedFixesCount === 0) {
+    // Phase 39.1.15 Gating scoped to autofix review required
+    if (isAutofixReviewRequired) {
         hasFixedArtifact = false;
         if (finalBestArtifactKey && ['review_pdf', 'final_fixed_pdf', 'fixed_pdf', 'certified_pdf'].includes(finalBestArtifactKey)) {
             finalBestArtifactKey = null;
@@ -154,6 +163,7 @@ export function analyzeWorkflow(
     const rewritten = meta.rewritten === true || (!explicitNoOp && hasFixedArtifact);
     const certificationMode = meta.certificationMode || (explicitNoOp ? 'CERTIFIED_WITHOUT_MODIFICATION' : null);
 
+    const isReviewRequiredOnly = isAutofixReviewRequired;
     const isFailedFix = isAutofix && ((result as any)?.status === 'FAILED' || (result as any)?.status === 'AUTOFIX_FAILED' || (result as any)?.isFailedFix === true);
     const hasDiagnosticArtifact = !!artifacts.diagnostic_output_file;
 

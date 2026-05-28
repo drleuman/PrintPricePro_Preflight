@@ -426,8 +426,35 @@ function AppContent() {
       if (jobId && !jobId.includes('local')) {
         const artifacts = (autoFixAfter as any)?.artifacts || (result as any)?.artifacts || (autoFixBefore as any)?.artifacts || {};
         const sourceResult = autoFixAfter || result || autoFixBefore;
-        const requiresReview = (sourceResult as any)?.requiresHumanReview === true || (sourceResult as any)?.productionCertified === false;
-        const artifactKey = getBestArtifactKey(artifacts, requiresReview);
+        
+        const type = (sourceResult as any)?.type;
+        const status = (sourceResult as any)?.status;
+        const finalStatus = (sourceResult as any)?.final_status || status;
+        const appliedFixesCount = (sourceResult as any)?.summary?.after?.applied_fix_count || (sourceResult as any)?.applied_fixes?.length || (sourceResult as any)?.fixes?.length || 0;
+        
+        const isAutofixReviewRequired = type === 'AUTOFIX' && status === 'AUTOFIX_REVIEW_REQUIRED' && appliedFixesCount === 0;
+
+        let artifactKey = null;
+        
+        if (type === 'ANALYZE' && artifacts?.certified_pdf) {
+            artifactKey = 'certified_pdf';
+        } else {
+            const requiresReview = (sourceResult as any)?.requiresHumanReview === true || (sourceResult as any)?.productionCertified === false;
+            artifactKey = getBestArtifactKey(artifacts, requiresReview);
+            if (isAutofixReviewRequired && artifactKey && ['review_pdf', 'final_fixed_pdf', 'fixed_pdf', 'certified_pdf'].includes(artifactKey)) {
+                artifactKey = null;
+            }
+        }
+        
+        console.log('[APP-DOWNLOAD-ARTIFACT-CONTEXT]', {
+          jobId,
+          type,
+          status,
+          finalStatus,
+          isAutofixReviewRequired,
+          artifactsKeys: Object.keys(artifacts || {}),
+          bestArtifactKey: artifactKey
+        });
         
         if (!artifactKey) {
            throw new Error('No valid artifact available for download in this context.');
@@ -437,8 +464,6 @@ function AppContent() {
         
         console.log('[APP-DOWNLOAD-ARTIFACT]', {
           jobId,
-          requiresReview,
-          productionCertified: (sourceResult as any)?.productionCertified,
           artifactKey,
           artifactValue: artifacts?.[artifactKey],
           url: artifactUrl
