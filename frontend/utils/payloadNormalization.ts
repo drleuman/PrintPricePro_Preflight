@@ -164,7 +164,8 @@ export function analyzeWorkflow(
     const certificationMode = meta.certificationMode || (explicitNoOp ? 'CERTIFIED_WITHOUT_MODIFICATION' : null);
 
     const isReviewRequiredOnly = isAutofixReviewRequired;
-    const isFailedFix = isAutofix && ((result as any)?.status === 'FAILED' || (result as any)?.status === 'AUTOFIX_FAILED' || (result as any)?.isFailedFix === true);
+    const isUnsupportedFix = (result as any)?.status === 'UNSUPPORTED_FIX' || (result as any)?.status === 'FIX_UNSUPPORTED';
+    const isFailedFix = isAutofix && !isUnsupportedFix && ((result as any)?.status === 'FAILED' || (result as any)?.status === 'AUTOFIX_FAILED' || (result as any)?.isFailedFix === true);
     const hasDiagnosticArtifact = !!artifacts.diagnostic_output_file;
 
     const analysis: WorkflowAnalysis = {
@@ -191,7 +192,8 @@ export function analyzeWorkflow(
         hasEffectiveFix,
         rewritten,
         certificationMode,
-        isReviewRequiredOnly
+        isReviewRequiredOnly,
+        isUnsupportedFix
     };
 
     if (hasResult) {
@@ -202,6 +204,21 @@ export function analyzeWorkflow(
 }
 
 export function getAutofixDisplayState(analysis: WorkflowAnalysis, appliedFixesCount: number = 0, technicallyFixed: boolean = false) {
+    if (analysis.isUnsupportedFix) {
+        return {
+            tone: "warning",
+            phaseLabel: "UNSUPPORTED",
+            finalStateLabel: "UNSUPPORTED FIX",
+            title: "Not available yet",
+            success: false,
+            failed: false,
+            waitingForArtifact: false,
+            allowReviewPdf: false,
+            fixesAppliedSuccessfully: false,
+            message: "This feature is not yet available in the Engine."
+        };
+    }
+
     if (analysis.isReviewRequiredOnly && appliedFixesCount === 0) {
         return {
             tone: "warning",

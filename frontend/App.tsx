@@ -529,87 +529,46 @@ function AppContent() {
   }, [result, lastPdfName, fileMeta]);
   const handleConvertCMYK = useCallback(async () => {
     if (!file) return;
-    setLdmActive(true);
-    setLdmStatus('loader.cmyk');
-    try {
-      const jobId = await convertColorServer(file, selectedProfile);
-      if (jobId) {
-        activeJobIdRef.current = jobId;
-        await handleV2JobComplete(jobId);
-        // handleV2JobComplete already triggers the blob fetch via callback
+    triggerAutoFix({
+      options: {
+        requestedFixes: [{ repairStrategy: 'CONVERT_CMYK' }],
+        magicFixProfile: 'MAGIC_FIX_REVIEW',
+        targetProfile: selectedProfile || 'FOGRA51'
       }
-      setLdmActive(false);
-    } catch (err: any) {
-      setLdmActive(false);
-      setEngineError({
-        code: err.code || 'COLOR_CONVERSION_FAILURE',
-        message: err.message || 'Color policy enforcement failed.',
-        traceId: err.traceId || 'N/A'
-      });
-    }
-  }, [file, convertColorServer, selectedProfile, handleV2JobComplete]);
+    });
+  }, [file, triggerAutoFix, selectedProfile]);
 
   const handleConvertGrayscale = useCallback(async () => {
     if (!file) return;
-    setLdmActive(true);
-    setLdmStatus('loader.grayscale');
-    try {
-      const jobId = await convertToGrayscaleServer(file);
-      if (jobId) {
-        activeJobIdRef.current = jobId;
-        await handleV2JobComplete(jobId);
+    triggerAutoFix({
+      options: {
+        requestedFixes: [{ repairStrategy: 'CONVERT_GRAYSCALE' }],
+        magicFixProfile: 'MAGIC_FIX_REVIEW'
       }
-      setLdmActive(false);
-    } catch (err: any) {
-      setLdmActive(false);
-      setEngineError({
-        code: err.code || 'GRAYSCALE_CONVERSION_FAILURE',
-        message: err.message || 'Grayscale conversion failed.',
-        traceId: err.traceId || 'N/A'
-      });
-    }
-  }, [file, convertToGrayscaleServer, handleV2JobComplete]);
+    });
+  }, [file, triggerAutoFix]);
 
   const handleRebuildPdf = useCallback(async () => {
     if (!file) return;
-    setLdmActive(true);
-    setLdmStatus('loader.rebuild');
-    try {
-      const jobId = await rebuildPdfServer(file, 300);
-      if (jobId) {
-        activeJobIdRef.current = jobId;
-        await handleV2JobComplete(jobId);
+    triggerAutoFix({
+      options: {
+        requestedFixes: [{ repairStrategy: 'REBUILD_300DPI' }],
+        magicFixProfile: 'MAGIC_FIX_REVIEW'
       }
-      setLdmActive(false);
-    } catch (err: any) {
-      setLdmActive(false);
-      setEngineError({
-        code: err.code || 'REBUILD_FAILURE',
-        message: err.message || 'Forensic carrier rebuild failed.',
-        traceId: err.traceId || 'N/A'
-      });
-    }
-  }, [file, rebuildPdfServer, handleV2JobComplete]);
+    });
+  }, [file, triggerAutoFix]);
 
   const handleMakeBooklet = useCallback(async () => {
     if (!file) return;
-    setLdmActive(true);
-    setLdmStatus('loader.booklet');
-    try {
-      const blob = await createBookletClient(file);
-      const url = URL.createObjectURL(blob);
-      setLastPdfUrl(url);
-      lastPdfUrlRef.current = url;
-      setLdmActive(false);
-    } catch (err: any) {
-      setLdmActive(false);
-      setEngineError({
-        code: 'BOOKLET_GENERATION_FAILURE',
-        message: err.message || 'Booklet imposition failed.',
-        traceId: 'CLIENT_SIDE'
-      });
-    }
-  }, [file, createBookletClient]);
+    triggerAutoFix({
+      options: {
+        requestedFixes: [{ repairStrategy: 'BOOKLET_MODE' }],
+        magicFixProfile: 'MAGIC_FIX_OPERATOR'
+      }
+    });
+  }, [file, triggerAutoFix]);
+
+
   const handleSelectIssue = (issue: Issue | null) => setSelectedIssue(issue);
 
   const handleStartOver = () => {

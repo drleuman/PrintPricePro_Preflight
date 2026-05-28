@@ -211,22 +211,23 @@ export interface PreflightResult {
 }
 
 export interface WorkflowAnalysis {
-  isAutofix: boolean;
-  isAnalyzeOnly: boolean;
-  hasResult: boolean;
-  issueCount: number;
-  errorCount: number;
-  warningCount: number;
-  hasIssues: boolean;
-  hasErrors: boolean;
-  isCompliant: boolean;
-  isFixed: boolean;
-  isNoOpFix: boolean; // Computed or from meta.noopFix
-  isRealFix: boolean;
-  isDegraded: boolean;
-  analysisFailed: boolean;
-  isFailedFix: boolean;
-  hasCertified: boolean;
+    isAutofix: boolean;
+    isAnalyzeOnly: boolean;
+    hasResult: boolean;
+    issueCount: number;
+    errorCount: number;
+    warningCount: number;
+    hasIssues: boolean;
+    hasErrors: boolean;
+    isCompliant: boolean;
+    isFixed: boolean;
+    isNoOpFix: boolean; // Computed or from meta.noopFix
+    isRealFix: boolean;
+    isDegraded: boolean;
+    analysisFailed: boolean;
+    isFailedFix: boolean;
+    isUnsupportedFix: boolean;
+    hasCertified: boolean;
   hasFixedArtifact: boolean;
   hasDiagnosticArtifact: boolean;
   showComparison: boolean;
