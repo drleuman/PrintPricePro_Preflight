@@ -1070,6 +1070,14 @@ router.post('/:jobId/actions/fix', async (req, res) => {
         targetProfile
       });
 
+      console.log(`[BFF][MAGIC-FIX-FORWARD]`, {
+        jobId,
+        requestedFixes,
+        magicFixProfile: servicePayload.magicFixProfile,
+        targetProfile: servicePayload.targetProfile,
+        hardeningAction: true
+      });
+
       const response = await pposRequest(
         `/api/preflight/jobs/${jobId}/actions/fix`,
         {

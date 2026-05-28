@@ -532,7 +532,7 @@ function AppContent() {
     triggerAutoFix({
       options: {
         requestedFixes: [{ repairStrategy: 'CONVERT_CMYK' }],
-        magicFixProfile: 'MAGIC_FIX_REVIEW',
+        magicFixProfile: 'MAGIC_FIX_FORCE_CMYK',
         targetProfile: selectedProfile || 'FOGRA51'
       }
     });
@@ -543,7 +543,7 @@ function AppContent() {
     triggerAutoFix({
       options: {
         requestedFixes: [{ repairStrategy: 'CONVERT_GRAYSCALE' }],
-        magicFixProfile: 'MAGIC_FIX_REVIEW'
+        magicFixProfile: 'MAGIC_FIX_FORCE_CMYK'
       }
     });
   }, [file, triggerAutoFix]);
@@ -553,7 +553,7 @@ function AppContent() {
     triggerAutoFix({
       options: {
         requestedFixes: [{ repairStrategy: 'REBUILD_300DPI' }],
-        magicFixProfile: 'MAGIC_FIX_REVIEW'
+        magicFixProfile: 'MAGIC_FIX_FORCE_CMYK'
       }
     });
   }, [file, triggerAutoFix]);
@@ -857,9 +857,13 @@ function AppContent() {
             const rs = iss?.repairStrategy || iss?.fix_method;
             if (iss?.fixable) {
               if (rs) {
+                const isHardening = ['CONVERT_CMYK', 'CONVERT_GRAYSCALE', 'REBUILD_300DPI'].includes(rs);
                 triggerAutoFix({
                   fixIntent: appMode === 'manual' ? 'manual_with_cmyk' : 'incremental_magic',
-                  options: { requestedFixes: [{ id: iss.id, repairStrategy: rs }] },
+                  options: { 
+                    requestedFixes: [{ id: iss.id, repairStrategy: rs }],
+                    ...(isHardening ? { magicFixProfile: 'MAGIC_FIX_FORCE_CMYK' } : {})
+                  },
                 });
               } else if (isBleedDrawer) {
                 triggerAutoFix({
