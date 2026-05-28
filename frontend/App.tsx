@@ -529,13 +529,17 @@ function AppContent() {
   }, [result, lastPdfName, fileMeta]);
   const handleConvertCMYK = useCallback(async () => {
     if (!file) return;
-    triggerAutoFix({
-      options: {
-        requestedFixes: [{ repairStrategy: 'CONVERT_CMYK' }],
-        magicFixProfile: 'MAGIC_FIX_FORCE_CMYK',
-        targetProfile: selectedProfile || 'FOGRA51'
-      }
-    });
+
+    const payload = {
+      requestedFixes: ['CONVERT_CMYK', 'INJECT_OUTPUT_INTENT'],
+      magicFixProfile: 'MAGIC_FIX_FORCE_CMYK',
+      targetProfile: selectedProfile || 'FOGRA51',
+      hardeningAction: 'OPTIMIZE_CMYK'
+    };
+
+    console.log('[APP][HARDENING][OPTIMIZE-CMYK]', payload);
+
+    triggerAutoFix(payload);
   }, [file, triggerAutoFix, selectedProfile]);
 
   const handleConvertGrayscale = useCallback(async () => {

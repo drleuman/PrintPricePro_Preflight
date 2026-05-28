@@ -1008,10 +1008,15 @@ router.post('/:jobId/actions/fix', async (req, res) => {
       null;
 
     const hasCmyk = requestedFixes.includes("CONVERT_CMYK");
+    const hardeningAction = req.body?.hardeningAction || req.body?.options?.hardeningAction || null;
 
-    const magicFixProfile =
+    let magicFixProfile =
       incomingMagicFixProfile ||
       (hasCmyk ? "MAGIC_FIX_FORCE_CMYK" : "MAGIC_FIX_SAFE");
+
+    if (hasCmyk && hardeningAction === "OPTIMIZE_CMYK") {
+      magicFixProfile = "MAGIC_FIX_FORCE_CMYK";
+    }
 
     const targetProfile =
       body.targetProfile ||
@@ -1030,6 +1035,7 @@ router.post('/:jobId/actions/fix', async (req, res) => {
       jobId,
       fixes: canonicalFixesStr,
       magicFixProfile,
+      hardeningAction,
       targetProfile,
       forceBleed,
       policyId
@@ -1127,6 +1133,7 @@ router.post('/:jobId/actions/fix', async (req, res) => {
         requestedFixesCount: requestedFixes.length,
         magicFixProfile,
         targetProfile,
+        hardeningAction,
         bodyKeys: Object.keys(req.body || {})
       });
 

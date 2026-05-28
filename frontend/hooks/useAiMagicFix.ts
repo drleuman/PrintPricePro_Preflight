@@ -34,8 +34,16 @@ export function mergeStatefulFixOptions(
       ? { ...opts.options }
       : {};
 
-  const requestedFixes: RequestedFixRow[] = Array.isArray(base.requestedFixes)
-    ? base.requestedFixes.map((f: any) => ({
+  if (opts?.magicFixProfile) base.magicFixProfile = opts.magicFixProfile;
+  if (opts?.targetProfile) base.targetProfile = opts.targetProfile;
+  if (opts?.hardeningAction) base.hardeningAction = opts.hardeningAction;
+  
+  const rawRequestedFixes = Array.isArray(opts?.requestedFixes) 
+    ? opts.requestedFixes 
+    : base.requestedFixes;
+
+  const requestedFixes: RequestedFixRow[] = Array.isArray(rawRequestedFixes)
+    ? rawRequestedFixes.map((f: any) => ({
         id: f?.id,
         repairStrategy: f?.repairStrategy ?? f?.repair_strategy ?? null,
       }))
