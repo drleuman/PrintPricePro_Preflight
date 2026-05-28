@@ -4,7 +4,7 @@ import { createBooklet } from '../utils/imposition';
 import { PreflightResult } from '../types';
 
 import { normalizePreflightResult, pickCanonicalJobId } from '../utils/payloadNormalization';
-import { isTerminalDiagnosticStatus, isTerminalFailureStatus } from '../utils/statusHelpers';
+import { isTerminalDiagnosticStatus, isTerminalFailureStatus, isTerminalStatus } from '../utils/statusHelpers';
 import { sleep } from '../utils/sleep';
 
 export function normalizeArtifactIdForRoute(input: string) {
