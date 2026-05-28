@@ -99,11 +99,23 @@ export async function pposFetch<T>(path: string, options?: RequestInit): Promise
         const errorData = await res.json().catch(() => ({}));
         
         // PPOS V2.4 Error Contract Normalization
-        const errorMessage = errorData.message || errorData.error || `Request failed with status ${res.status}`;
+        let errorMessage = errorData.message || errorData.error || `Request failed with status ${res.status}`;
+        let errorCode = errorData.code || errorData.error || 'UNKNOWN_ERROR';
+
+        if (res.status === 413) {
+            if (path.includes('/actions/fix')) {
+                errorCode = 'MAGIC_FIX_PAYLOAD_TOO_LARGE';
+                errorMessage = "The AI Magic request was too large. Magic Fix should use the stored source job and must not resend the PDF.";
+            } else if (path.includes('/jobs') && options?.method === 'POST' && options?.body instanceof FormData) {
+                errorCode = 'FILE_TOO_LARGE';
+            } else {
+                errorCode = 'PAYLOAD_TOO_LARGE';
+            }
+        }
         
         const err: any = new Error(errorMessage);
         err.status = res.status;
-        err.code = errorData.code || errorData.error || 'UNKNOWN_ERROR';
+        err.code = errorCode;
         err.traceId = errorData.traceId || headers['X-Request-ID'] || 'LOCAL-TRACE';
         err.data = errorData;
         err.v2 = !!errorData.v2;

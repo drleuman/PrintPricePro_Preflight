@@ -21,6 +21,29 @@ router.use('/', async (req, res) => {
     
     console.log(`[PROXY][PPOS] ${req.method} ${req.url} -> ${targetUrl}`);
 
+    if (req.url.includes('/actions/fix')) {
+        const estimatedBodySizeBytes = req.headers["content-length"] ? parseInt(req.headers["content-length"], 10) : 0;
+        console.log(`[APP-BFF][MAGIC-FIX-REQUEST]`, {
+            route: req.originalUrl || req.url,
+            method: req.method,
+            jobId: req.url.match(/\/jobs\/([^\/]+)/)?.[1] || 'unknown',
+            contentLength: req.headers["content-length"],
+            contentType: req.headers["content-type"],
+            bodyKeys: Object.keys(req.body || {}),
+            hasFile: Boolean(req.file),
+            estimatedBodySizeBytes
+        });
+        if (estimatedBodySizeBytes > 1048576) {
+            console.log(`[APP-BFF][MAGIC-FIX-PAYLOAD-TOO-LARGE-RISK]`);
+        }
+        if (req.file || req.body?.file || req.body?.blob || req.body?.base64 || req.body?.pdf || req.body?.document || req.body?.binary || typeof req.body?.file === 'string') {
+            return res.status(400).json({
+                error: "INLINE_FILE_NOT_ALLOWED_FOR_MAGIC_FIX",
+                message: "Magic Fix must reference an existing source job. Do not resend the PDF."
+            });
+        }
+    }
+
     try {
         // CLONE HEADERS & FORCE INTERNAL IDENTITY
         const headers = { ...req.headers };
@@ -55,6 +78,19 @@ router.use('/', async (req, res) => {
             validateStatus: () => true, // Proxy all status codes
             timeout: pposConfig.longTimeoutMs
         });
+
+        if (req.url.includes('/actions/fix')) {
+            let bodyPreview = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+            if (bodyPreview) bodyPreview = bodyPreview.substring(0, 200);
+            
+            console.log(`[APP-BFF][MAGIC-FIX-UPSTREAM-RESPONSE]`, {
+                upstreamUrl: targetUrl,
+                status: response.status,
+                statusText: response.statusText,
+                contentType: response.headers['content-type'],
+                bodyPreview
+            });
+        }
 
         // Set response headers from upstream
         Object.entries(response.headers).forEach(([key, value]) => {

@@ -109,6 +109,8 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
         isRealFix,
         hasCertified,
         hasFixedArtifact: hasFixed,
+        hasDiagnosticArtifact,
+        isFailedFix,
         showComparison
     } = analysis;
 
@@ -159,7 +161,9 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     const isCompletedWithReview = result?.status === 'COMPLETED_WITH_REVIEW' || (result as any)?.requiresHumanReview === true;
     const isProductionCertified = (result as any)?.productionCertified === true;
 
-    const finalStateLabel = isCompletedWithReview
+    const finalStateLabel = isFailedFix
+        ? "Magic Fix failed"
+        : isCompletedWithReview
         ? "Fixed — review required"
         : (isProductionCertified
             ? "Production-ready"
@@ -174,6 +178,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             : t('shell.manualReview')));
 
     // Viewer Resolution
+    // If it's a failed fix, we only show 'after' if they explicitly clicked to view technical output
     const displayFile = showBeforeAfter === 'before' ? (originalFile || file) : (lastPdfUrl ? null : file);
     const displayPdfUrl = showBeforeAfter === 'after' ? lastPdfUrl : null;
     
@@ -272,10 +277,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 </button>
                                 <button 
                                     onClick={() => setShowBeforeAfter('after')}
-                                    disabled={!hasEffectiveFix}
+                                    disabled={!hasEffectiveFix && !hasDiagnosticArtifact}
                                     className={`px-6 py-1.5 ppp-phase-tag !text-[0.65rem] !tracking-widest transition-all ${showBeforeAfter === 'after' ? 'bg-[var(--accent-color)] text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'} disabled:opacity-30 disabled:cursor-not-allowed`}
                                 >
-                                    {t('step.review.after')}
+                                    {isFailedFix && hasDiagnosticArtifact ? 'View Technical Output' : t('step.review.after')}
                                 </button>
                             </div>
                         )}
@@ -318,10 +323,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         {(layoutMode === 'side-by-side' || showBeforeAfter === 'after') && (
                             <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] relative overflow-hidden min-h-[300px] h-[400px] md:min-h-[500px] md:h-[580px] flex flex-col items-center justify-center bg-[var(--bg-primary)] group">
                                 <div className="absolute top-4 left-4 z-20 px-3 py-1 bg-[var(--accent-color)]/20 backdrop-blur-md border border-[var(--accent-color)]/20 text-[0.6rem] font-black text-[var(--accent-color)] uppercase tracking-[0.2em]">
-                                    {isRealFix ? t('step.review.fixedPdf') : t('step.review.optimizedPrint')}
+                                    {isFailedFix ? "Technical Output" : (isRealFix ? t('step.review.fixedPdf') : t('step.review.optimizedPrint'))}
                                 </div>
                                 
-                                {hasFinalArtifact && (
+                                {hasFinalArtifact && !isFailedFix && (
                                     <div className="absolute top-4 right-4 z-20">
                                         <div className="px-2 py-1 bg-green-500/10 border border-green-500/20 text-[0.55rem] font-bold text-green-500 uppercase tracking-widest">
                                             {isRealFix ? t('step.review.fixedEffective') : t('common.verified')}
@@ -376,10 +381,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                         </div>
                                         <div className="space-y-2">
                                             <h4 className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">
-                                                {readableError ? readableError.title : (isAutofix ? t('error.magic.fail') : t('analysisFailed'))}
+                                                {isFailedFix ? "Magic Fix failed before producing a reviewable PDF." : (readableError ? readableError.title : (isAutofix ? t('error.magic.fail') : t('analysisFailed')))}
                                             </h4>
                                             <p className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-relaxed max-w-[200px]">
-                                                {readableError ? readableError.summary : (isAutofix ? t('forensics.dataUnavailable') : t('forensics.dataUnavailableDesc'))}
+                                                {isFailedFix && hasDiagnosticArtifact ? "Technical output is available for diagnostics, but it is not a production or review PDF." : (readableError ? readableError.summary : (isAutofix ? t('forensics.dataUnavailable') : t('forensics.dataUnavailableDesc')))}
                                             </p>
                                             {readableError?.detail && (
                                                 <p className="text-[0.55rem] font-mono text-red-500/50 lowercase tracking-tight max-w-[250px] break-words pt-2 border-t border-[var(--border-color)]/20">
@@ -387,7 +392,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                                 </p>
                                             )}
                                         </div>
-                                        {!isRunning && !isAutofix && (
+                                        {!isRunning && !isAutofix && !isFailedFix && (
                                             <button 
                                                 onClick={onBack}
                                                 className="px-6 py-3 border border-[var(--accent-color)]/30 bg-[var(--accent-color)]/5 text-[var(--accent-color)] text-[0.6rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-color)] hover:text-white transition-all"
@@ -490,7 +495,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 {t('clientReport.button' as any)}
                             </button>
 
-                            {hasFinalArtifact && hasEffectiveFix && (
+                            {hasFinalArtifact && (hasEffectiveFix || hasDiagnosticArtifact) && !isFailedFix && (
                                  <button 
                                     onClick={onDownload}
                                     className="w-full flex items-center justify-center gap-3 py-5 bg-[var(--bg-primary)] border-2 border-[var(--accent-color)] text-[var(--accent-color)] text-[0.8rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-color)] hover:text-white transition-all shadow-[0_10px_30px_rgba(220,0,0,0.1)] group"

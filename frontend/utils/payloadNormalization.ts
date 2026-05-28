@@ -141,6 +141,9 @@ export function analyzeWorkflow(
     const rewritten = meta.rewritten === true || (!explicitNoOp && hasFixedArtifact);
     const certificationMode = meta.certificationMode || (explicitNoOp ? 'CERTIFIED_WITHOUT_MODIFICATION' : null);
 
+    const isFailedFix = isAutofix && ((result as any)?.status === 'FAILED' || (result as any)?.status === 'AUTOFIX_FAILED');
+    const hasDiagnosticArtifact = !!artifacts.diagnostic_output_file;
+
     const analysis: WorkflowAnalysis = {
         isAutofix,
         isAnalyzeOnly,
@@ -156,8 +159,10 @@ export function analyzeWorkflow(
         isRealFix,
         isDegraded,
         analysisFailed: !!analysisFailed,
+        isFailedFix,
         hasCertified,
         hasFixedArtifact,
+        hasDiagnosticArtifact,
         showComparison,
         bestArtifactKey,
         hasEffectiveFix,

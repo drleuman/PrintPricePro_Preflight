@@ -137,12 +137,20 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
         // If we have an existing jobId from the analysis phase, we use the stateful action endpoint
         if (opts?.jobId) {
             console.log(`[FIX][STATEFUL-ACTION] Triggering fix for existing job: ${opts.jobId}`);
+            
+            const reqFixes = opts?.options?.requestedFixes || opts?.options?.fixes || opts?.requested_fixes || opts?.fixes || [];
+            const requestedFixes = Array.isArray(reqFixes) ? reqFixes.map(f => typeof f === 'string' ? f : (f?.repairStrategy || f?.repair_strategy || f?.fix_method || f?.id)).filter(Boolean) : [];
+
+            const payload = {
+                sourceJobId: opts.jobId,
+                requestedFixes,
+                magicFixProfile: opts?.options?.magicFixProfile || "MAGIC_FIX_SAFE",
+                targetProfile: opts?.options?.targetProfile || opts?.targetProfile || "FOGRA51"
+            };
+
             const res = await pposFetch<any>(`/api/v2/jobs/${opts.jobId}/actions/fix`, {
                 method: 'POST',
-                body: JSON.stringify({
-                    policy: opts.policy || 'OFFSET_MODERN_COATED',
-                    options: opts.options || {}
-                })
+                body: JSON.stringify(payload)
             });
             // Ensure stateful fix response ID preservation
             const finalId = pickCanonicalJobId(res.jobId, res.job_id, res.id) || opts.jobId;

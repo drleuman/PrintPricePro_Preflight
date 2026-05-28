@@ -225,8 +225,10 @@ export interface WorkflowAnalysis {
   isRealFix: boolean;
   isDegraded: boolean;
   analysisFailed: boolean;
+  isFailedFix: boolean;
   hasCertified: boolean;
   hasFixedArtifact: boolean;
+  hasDiagnosticArtifact: boolean;
   showComparison: boolean;
   bestArtifactKey: string | null;
   hasEffectiveFix: boolean;
