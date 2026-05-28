@@ -1075,15 +1075,16 @@ function normalizeAutofixFinalState(report) {
   const isFailed = status === 'FAILED' || status === 'AUTOFIX_FAILED' || isFailedFix;
   const allowSynthesis = status === 'AUTOFIX_PARTIAL' || status === 'COMPLETED_WITH_REVIEW' || (!productionCertified && requiresReview) || technicallyFixed;
 
-  if (status === 'AUTOFIX_REVIEW_REQUIRED') {
-      // Do not synthesize review_pdf/fixed_pdf if no fixes were applied
+  if (status === 'AUTOFIX_REVIEW_REQUIRED' && appliedFixes.length === 0) {
+      // Do not synthesize review_pdf/fixed_pdf/certified_pdf if no fixes were applied
       if (report.artifacts) {
           delete report.artifacts.review_pdf;
           delete report.artifacts.fixed_pdf;
           delete report.artifacts.final_fixed_pdf;
+          delete report.artifacts.certified_pdf;
       }
       if (Array.isArray(report.artifactList)) {
-          report.artifactList = report.artifactList.filter(a => !['review_pdf', 'fixed_pdf', 'final_fixed_pdf'].includes(a.type));
+          report.artifactList = report.artifactList.filter(a => !['review_pdf', 'fixed_pdf', 'final_fixed_pdf', 'certified_pdf'].includes(a.type));
       }
   } else if (isFailed) {
       if (report.artifacts) {
@@ -1137,6 +1138,12 @@ function normalizeAutofixFinalState(report) {
   if (status === 'AUTOFIX_REVIEW_REQUIRED') {
       report.technicallyFixed = false;
       report.productionCertified = false;
+      if (appliedFixes.length === 0) {
+          report.hasFinalFixedPdf = false;
+          report.hasFixedArtifact = false;
+          report.hasReviewArtifact = false;
+          report.bestArtifactKey = null;
+      }
   }
 
   // Fallback score setting

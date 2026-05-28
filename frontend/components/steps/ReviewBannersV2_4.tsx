@@ -8,6 +8,7 @@ interface ReviewBannersProps {
     onDownloadReport: () => void;
     t: (key: string) => string;
     result?: any;
+    displayState?: any;
 }
 
 export const ReviewBanners: React.FC<ReviewBannersProps> = ({
@@ -15,7 +16,8 @@ export const ReviewBanners: React.FC<ReviewBannersProps> = ({
     onDownload,
     onDownloadReport,
     t,
-    result
+    result,
+    displayState
 }) => {
     const { 
         isNoOpFix, 
@@ -38,11 +40,13 @@ export const ReviewBanners: React.FC<ReviewBannersProps> = ({
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-8 w-8 animate-pulse">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                         </svg>
-                        <h2 className="text-xl font-black uppercase tracking-tight">Fixed — review required</h2>
+                        <h2 className="text-xl font-black uppercase tracking-tight">{displayState?.tone === 'warning' && displayState?.phaseLabel === 'REVIEW REQUIRED' ? displayState.finalStateLabel : "Fixed — review required"}</h2>
                     </div>
                     <div className="space-y-2 text-[var(--text-secondary)] text-[0.85rem] leading-relaxed">
                         <p className="font-bold text-amber-500/90">
-                            Some fixes may affect print output and require operator review before production.
+                            {displayState?.tone === 'warning' && displayState?.phaseLabel === 'REVIEW REQUIRED' 
+                              ? displayState.message 
+                              : "Some fixes may affect print output and require operator review before production."}
                         </p>
                         {reviewReasons.length > 0 && (
                             <div className="pt-2 space-y-1.5">
@@ -62,7 +66,7 @@ export const ReviewBanners: React.FC<ReviewBannersProps> = ({
                             </p>
                         )}
                     </div>
-                    {hasEffectiveFix && (
+                    {hasEffectiveFix && displayState?.allowReviewPdf && (
                         <button 
                             onClick={onDownload}
                             className="flex items-center gap-2 px-6 py-3 bg-amber-500 text-white text-[0.7rem] font-black uppercase tracking-widest hover:bg-amber-600 transition-all"
@@ -73,7 +77,7 @@ export const ReviewBanners: React.FC<ReviewBannersProps> = ({
                 </div>
             )}
 
-            {!isCompletedWithReview && (isNoOpFix || analysis.certificationMode) && (
+            {!isCompletedWithReview && (isNoOpFix || analysis.certificationMode) && !analysis.isReviewRequiredOnly && (
                 <div className="border-2 border-emerald-500/20 bg-emerald-500/5 p-8 space-y-4 animate-in zoom-in-95 duration-500">
                     <div className="flex items-center gap-3 text-emerald-500">
                         <ShieldCheckIcon className="h-8 w-8" />
@@ -99,7 +103,7 @@ export const ReviewBanners: React.FC<ReviewBannersProps> = ({
                 </div>
             )}
 
-            {isRealFix && (
+            {isRealFix && !analysis.isReviewRequiredOnly && displayState?.fixesAppliedSuccessfully && (
                 <div className="border-2 border-[var(--accent-color)]/20 bg-[var(--accent-color)]/5 p-8 space-y-4 animate-in zoom-in-95 duration-500">
                     <div className="flex items-center gap-3 text-[var(--accent-color)]">
                         <PaintBrushIcon className="h-8 w-8" />

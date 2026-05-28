@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { PreflightResult, FileMeta, AppMode, WorkflowAnalysis } from '../../types';
+import { FileMeta, AppMode } from '../../types';
+import { WorkflowAnalysis, PreflightResult, getAutofixDisplayState } from '../../utils/payloadNormalization';
 import { getReadableFixFailure } from '../../utils/payloadNormalization';
 import { StatusBadge, CertificationPanel } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
@@ -162,11 +163,9 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     const isCompletedWithReview = result?.status === 'COMPLETED_WITH_REVIEW' || (result as any)?.requiresHumanReview === true;
     const isProductionCertified = (result as any)?.productionCertified === true;
 
-    const finalStateLabel = isReviewRequiredOnly
-        ? "Magic Fix needs human approval"
-        : isFailedFix
-        ? "Magic Fix failed"
-        : isCompletedWithReview
+    const displayState = getAutofixDisplayState(analysis, fixesApplied, result?.technicallyFixed === true);
+    
+    const finalStateLabel = displayState.finalStateLabel || (isCompletedWithReview
         ? "Fixed — review required"
         : (isProductionCertified
             ? "Production-ready"
@@ -178,7 +177,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         ? "Technically repaired"
                         : isReadyForPrint
                             ? t('shell.ready')
-                            : t('shell.manualReview')));
+                            : t('shell.manualReview'))));
 
     // Viewer Resolution
     // If it's a failed fix, we only show 'after' if they explicitly clicked to view technical output
@@ -204,7 +203,9 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                 </div>
                     <StatusBadge 
                         label={
-                            isCompletedWithReview
+                            displayState.tone === 'warning' && displayState.phaseLabel === 'REVIEW REQUIRED' 
+                                ? "Human review required"
+                                : isCompletedWithReview
                                 ? "Review Required"
                                 : analysis.certificationMode 
                                 ? t('step.review.certification.withoutModification') 
@@ -212,18 +213,18 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                     ? t('step.review.banners.compliantTitle') 
                                     : (isReadyForPrint 
                                         ? t('common.verified') 
-                                        : (isAutofix && !hasEffectiveFix 
+                                        : (isAutofix && !hasEffectiveFix && displayState.failed
                                             ? t('step.fix.failed').toUpperCase() 
                                             : t('issuesFoundMessage'))))
                         } 
                         variant={
-                            isReviewRequiredOnly
+                            displayState.tone === 'warning'
                                 ? "warning"
                                 : isCompletedWithReview
                                 ? "warning"
                                 : analysis.certificationMode || isNoOpFix || isReadyForPrint 
                                 ? "certified" 
-                                : (isAutofix && !hasEffectiveFix ? "warning" : "warning")
+                                : displayState.failed ? "failed" : "warning"
                         } 
                     />
                 </div>
@@ -254,6 +255,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         onDownloadReport={onDownloadReport}
                         t={t}
                         result={result}
+                        displayState={displayState}
                     />
                     <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-1 flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex bg-[var(--bg-primary)] p-1">
@@ -386,10 +388,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                         </div>
                                         <div className="space-y-2">
                                             <h4 className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">
-                                                {isReviewRequiredOnly ? "Magic Fix needs human approval" : (isFailedFix ? "Magic Fix failed before producing a reviewable PDF." : (readableError ? readableError.title : (isAutofix ? t('error.magic.fail') : t('analysisFailed'))))}
+                                                {displayState.title}
                                             </h4>
                                             <p className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-relaxed max-w-[200px]">
-                                                {isReviewRequiredOnly ? "The PDF was not modified automatically. The detected RGB color issue would require RGB-to-CMYK conversion, which can change the visual appearance of the document. A print operator or designer should review and approve this conversion before production." : (isFailedFix && hasDiagnosticArtifact ? "Technical output is available for diagnostics, but it is not a production or review PDF." : (readableError ? readableError.summary : (isAutofix ? t('forensics.dataUnavailable') : t('forensics.dataUnavailableDesc'))))}
+                                                {displayState.message || (isFailedFix && hasDiagnosticArtifact ? "Technical output is available for diagnostics, but it is not a production or review PDF." : (readableError ? readableError.summary : (isAutofix ? t('forensics.dataUnavailable') : t('forensics.dataUnavailableDesc'))))}
                                             </p>
                                             {readableError?.detail && (
                                                 <p className="text-[0.55rem] font-mono text-red-500/50 lowercase tracking-tight max-w-[250px] break-words pt-2 border-t border-[var(--border-color)]/20">
@@ -397,7 +399,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                                 </p>
                                             )}
                                         </div>
-                                        {!isRunning && !isAutofix && !isFailedFix && !isReviewRequiredOnly && (
+                                        {!isRunning && !isAutofix && !displayState.failed && !isReviewRequiredOnly && (
                                             <button 
                                                 onClick={onBack}
                                                 className="px-6 py-3 border border-[var(--accent-color)]/30 bg-[var(--accent-color)]/5 text-[var(--accent-color)] text-[0.6rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-color)] hover:text-white transition-all"
@@ -424,7 +426,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             disabled={isRunning || (!hasEffectiveFix && !isAnalyzeOnly)}
                             className={`p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all flex items-center justify-center gap-2 w-full ${ (isRunning || (!hasEffectiveFix && !isAnalyzeOnly)) ? 'bg-[var(--text-muted)] cursor-not-allowed opacity-50' : 'bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)]'}`}
                         >
-                            <RocketLaunchIcon className="h-4 w-4" /> { (hasEffectiveFix || isAnalyzeOnly) ? (isAnalyzeOnly ? t('step.analysis.finalizeTrace' as any).toUpperCase() : t('continueToReview').toUpperCase()) : t('waitingForArtifact' as any).toUpperCase()}
+                            <RocketLaunchIcon className="h-4 w-4" /> { (hasEffectiveFix || isAnalyzeOnly) ? (isAnalyzeOnly ? t('step.analysis.finalizeTrace' as any).toUpperCase() : t('continueToReview').toUpperCase()) : (displayState.waitingForArtifact ? t('waitingForArtifact' as any).toUpperCase() : "NO AUTOMATIC ARTIFACT PRODUCED")}
                         </button>
 
                         {/* Missing Artifact Warning (v2.4.120) */}
@@ -500,7 +502,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 {t('clientReport.button' as any)}
                             </button>
 
-                            {hasFinalArtifact && (hasEffectiveFix || hasDiagnosticArtifact) && !isFailedFix && !isReviewRequiredOnly && (
+                            {hasFinalArtifact && (hasEffectiveFix || hasDiagnosticArtifact) && !displayState.failed && !isReviewRequiredOnly && displayState.allowReviewPdf && (
                                  <button 
                                     onClick={onDownload}
                                     className="w-full flex items-center justify-center gap-3 py-5 bg-[var(--bg-primary)] border-2 border-[var(--accent-color)] text-[var(--accent-color)] text-[0.8rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-color)] hover:text-white transition-all shadow-[0_10px_30px_rgba(220,0,0,0.1)] group"
@@ -519,7 +521,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                               disabled={isRunning || (!hasEffectiveFix && !isAnalyzeOnly)}
                               className={`w-full bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.8rem] font-black uppercase tracking-[0.2em] py-5 transition-all flex items-center justify-center gap-2 ${ (isRunning || (!hasEffectiveFix && !isAnalyzeOnly)) ? 'opacity-50 cursor-not-allowed' : 'shadow-[0_10px_30px_rgba(220,0,0,0.2)]'}`}
                             >
-                              {(hasEffectiveFix || isAnalyzeOnly) ? (isAnalyzeOnly ? t('step.analysis.finalizeTrace' as any) : t('continueToReview_v2' as any)) : t('waitingForArtifact' as any)}
+                              {(hasEffectiveFix || isAnalyzeOnly) ? (isAnalyzeOnly ? t('step.analysis.finalizeTrace' as any) : t('continueToReview_v2' as any)) : (displayState.waitingForArtifact ? t('waitingForArtifact' as any) : "REVIEW REQUIRED — NO MODIFIED PDF")}
                               {(hasEffectiveFix || isAnalyzeOnly) && <span className="text-xl">→</span>}
                             </button>
                         </div>

@@ -118,13 +118,26 @@ export function analyzeWorkflow(
     const hasFinalArtifact = !!bestArtifactKey;
     const hasCertified = !!artifacts.certified_pdf;
     
-    const hasFixedArtifact = !!(
+    const isReviewRequiredOnly = isAutofix && ((result as any)?.status === 'AUTOFIX_REVIEW_REQUIRED');
+    const appliedFixesCount = (result as any)?.summary?.after?.applied_fix_count || (result as any)?.applied_fixes?.length || (result as any)?.fixes?.length || 0;
+
+    let hasFixedArtifact = !!(
         artifacts.review_pdf || 
         artifacts.final_fixed_pdf || 
         artifacts.fixed_pdf || 
         artifacts.normalized_pdf ||
         artifacts.certified_pdf
     );
+
+    let finalBestArtifactKey = bestArtifactKey;
+    
+    // Phase 39.1.15 Gating
+    if (isReviewRequiredOnly && appliedFixesCount === 0) {
+        hasFixedArtifact = false;
+        if (finalBestArtifactKey && ['review_pdf', 'final_fixed_pdf', 'fixed_pdf', 'certified_pdf'].includes(finalBestArtifactKey)) {
+            finalBestArtifactKey = null;
+        }
+    }
 
     // 3. Derived autofix states (strict ordering)
     const isRealFix = isAutofix && (hasRepairMetadata || hasFixedArtifact);
@@ -142,7 +155,6 @@ export function analyzeWorkflow(
     const certificationMode = meta.certificationMode || (explicitNoOp ? 'CERTIFIED_WITHOUT_MODIFICATION' : null);
 
     const isFailedFix = isAutofix && ((result as any)?.status === 'FAILED' || (result as any)?.status === 'AUTOFIX_FAILED' || (result as any)?.isFailedFix === true);
-    const isReviewRequiredOnly = isAutofix && ((result as any)?.status === 'AUTOFIX_REVIEW_REQUIRED');
     const hasDiagnosticArtifact = !!artifacts.diagnostic_output_file;
 
     const analysis: WorkflowAnalysis = {
@@ -165,7 +177,7 @@ export function analyzeWorkflow(
         hasFixedArtifact,
         hasDiagnosticArtifact,
         showComparison,
-        bestArtifactKey,
+        bestArtifactKey: finalBestArtifactKey,
         hasEffectiveFix,
         rewritten,
         certificationMode,
@@ -177,6 +189,40 @@ export function analyzeWorkflow(
     }
     
     return analysis;
+}
+
+export function getAutofixDisplayState(analysis: WorkflowAnalysis, appliedFixesCount: number = 0, technicallyFixed: boolean = false) {
+    if (analysis.isReviewRequiredOnly && appliedFixesCount === 0) {
+        return {
+            tone: "warning",
+            phaseLabel: "REVIEW REQUIRED",
+            finalStateLabel: "HUMAN REVIEW REQUIRED",
+            title: "Magic Fix needs human approval",
+            success: false,
+            failed: false,
+            waitingForArtifact: false,
+            allowReviewPdf: false,
+            fixesAppliedSuccessfully: false,
+            message: "The PDF was not modified automatically. The detected RGB color issue would require RGB-to-CMYK conversion, which can change the visual appearance of the document. A print operator or designer should review and approve this conversion before production."
+        };
+    }
+    
+    // generic fallback mappings
+    const isFailed = analysis.isFailedFix || analysis.analysisFailed;
+    const isSuccess = appliedFixesCount > 0 || technicallyFixed || (analysis.hasFixedArtifact && !analysis.isReviewRequiredOnly);
+    
+    return {
+        tone: isFailed ? "failed" : isSuccess ? "success" : "neutral",
+        phaseLabel: isFailed ? "FAILED" : "ANALYZED",
+        finalStateLabel: isFailed ? "MAGIC FIX FAILED" : "COMPLETED",
+        title: isFailed ? "Magic Fix failed" : "Fixes applied",
+        success: isSuccess,
+        failed: isFailed,
+        waitingForArtifact: !analysis.hasFixedArtifact && isSuccess && !isFailed,
+        allowReviewPdf: analysis.hasFixedArtifact,
+        fixesAppliedSuccessfully: isSuccess,
+        message: ""
+    };
 }
 
 /**
