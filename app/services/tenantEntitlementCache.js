@@ -62,11 +62,7 @@ async function getGovernance(tenantId, bearerToken) {
     try {
         const governance = await cpClient.getTenantGovernance(tenantId, bearerToken);
         cache.set(tenantId, { governance, fetchedAt: Date.now() });
-        console.log(`[ENTITLEMENT-CACHE] Refreshed governance for tenant: ${tenantId}`, {
-            planCode: governance?.planCode || governance?.plan_code || governance?.plan || '(none)',
-            maxFileSizeMb: governance?.limits?.maxFileSizeMb ?? governance?.limits?.max_file_size_mb ?? '(none)',
-            hasLimits: !!governance?.limits,
-        });
+        console.log(`[ENTITLEMENT-CACHE] Refreshed governance for tenant: ${tenantId}`);
         return governance;
     } catch (err) {
         console.warn(`[ENTITLEMENT-CACHE] Failed to fetch governance for tenant ${tenantId}:`, err.message);

@@ -22,15 +22,6 @@ async function resolveCanonicalTenantContext(req) {
     // limits. /api/auth/me uses the same approach (mockReq never carries printhouse_id).
     let candidateTenantId = jwtTenantId;
 
-    console.log('[TENANT-RESOLVER-CANDIDATE]', {
-        userId,
-        appRole,
-        jwtTenantId,
-        printhouseId,
-        candidateTenantId,
-        usingPrinthouseOverride: appRole === 'PRINT_HOUSE' && !!printhouseId,
-    });
-
     // 2. Fetch Governance
     let governance = null;
     let limitsObj = null;
@@ -72,7 +63,7 @@ async function resolveCanonicalTenantContext(req) {
         };
     } else {
         limits = {
-            max_file_size_mb: auth.max_file_size_mb || null,
+            max_file_size_mb: null, // JWT claim may be stale — licenseGuard will use FALLBACK_LIMITS by planCode
             daily_jobs_limit: auth.daily_jobs_limit || auth.local_daily_jobs_limit || null
         };
     }
