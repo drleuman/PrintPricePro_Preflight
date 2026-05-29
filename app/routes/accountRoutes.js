@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../services/db');
-const { requireAuth } = require('../middleware/requireAuth');
+const requireAuth = require('../middleware/requireAuth');
+
+if (typeof requireAuth !== 'function') {
+  throw new Error('[ACCOUNT-ROUTES] requireAuth middleware is not a function. Check import path/export shape.');
+}
 
 console.log('[API-V2][ACCOUNT-ROUTES][REGISTERED]');
 console.log('GET /api/v2/me');
