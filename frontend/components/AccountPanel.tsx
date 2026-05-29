@@ -528,7 +528,7 @@ const UsageBar: React.FC<{ label: string, current: number, total: number, Boolea
 const HelpTip = ({ text }: { text: string }) => (
     <span className="relative inline-flex group ml-1 align-middle">
         <span className="cursor-help text-[var(--text-muted)] border border-[var(--border-color)] px-1 text-[10px] leading-none">?</span>
-        <span className="pointer-events-none absolute z-50 hidden group-hover:block right-0 top-full mt-2 w-64 border border-[var(--border-color)] bg-[var(--bg-primary)] p-3 text-[11px] leading-relaxed text-[var(--text-primary)] shadow-[0_5px_15px_rgba(0,0,0,0.5)]">
+        <span className="pointer-events-none absolute z-50 hidden group-hover:block left-0 sm:left-auto sm:right-0 top-full mt-2 w-[calc(100vw-40px)] sm:w-64 max-w-[280px] border border-[var(--border-color)] bg-[var(--bg-primary)] p-3 text-[11px] leading-relaxed text-[var(--text-primary)] shadow-[0_5px_15px_rgba(0,0,0,0.5)] normal-case tracking-normal font-normal">
             {text}
         </span>
     </span>
@@ -573,7 +573,7 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
       <span
         className={[
           'pointer-events-none absolute z-50 hidden group-hover:block',
-          'left-1/2 top-full mt-2 w-72 -translate-x-1/2',
+          'left-0 ml-5 sm:ml-0 sm:left-1/2 top-full mt-2 w-[calc(100vw-40px)] max-w-[280px] sm:w-72 sm:-translate-x-1/2', // left-0 and ml-5 on mobile ensures 20px padding from left edge
           'border border-[var(--border-color)] bg-[var(--bg-primary)] px-3 py-2',
           'text-[11px] leading-relaxed text-[var(--text-primary)] shadow-[0_5px_15px_rgba(0,0,0,0.5)]',
           'normal-case tracking-normal font-normal text-left'
