@@ -90,7 +90,12 @@ router.get('/', requireAuth, async (req, res) => {
  * Returns the latest files processed by the tenant/user.
  */
 router.get('/file-history', requireAuth, async (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+  const requestedLimit = Number.parseInt(req.query.limit, 10);
+  const limit = Number.isFinite(requestedLimit)
+    ? Math.min(Math.max(requestedLimit, 1), 100)
+    : 20;
+
+  const fetchLimit = Math.min(limit * 2, 200);
   const tenantId = req.auth.tenantId;
   const userId = req.auth.userId;
 
@@ -169,7 +174,7 @@ router.get('/file-history', requireAuth, async (req, res) => {
         }
       } catch (e) { }
 
-      const sourceJobId = payload.sourceJobId || payload.source_job_id || payload.result?.sourceJobId;
+      const sourceJobId = row.source_job_id || payload.sourceJobId || payload.source_job_id || payload.result?.sourceJobId;
       
       let artifacts = payload.artifacts || {};
       let result = payload.result || {};
@@ -228,7 +233,16 @@ router.get('/file-history', requireAuth, async (req, res) => {
     });
 
   } catch (err) {
-    console.error('[BFF][ME] Failed to fetch file history:', err.message);
+    console.error('[BFF][ME][FILE-HISTORY][ERROR]', {
+      message: err.message,
+      code: err.code,
+      errno: err.errno,
+      sqlState: err.sqlState,
+      sqlMessage: err.sqlMessage,
+      tenantId,
+      limit,
+      fetchLimit
+    });
     res.status(500).json({ error: 'HISTORY_FETCH_FAILED', message: 'Failed to retrieve file history' });
   }
 });
