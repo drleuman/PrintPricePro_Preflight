@@ -54,6 +54,16 @@ async function resolveCanonicalTenantContext(req) {
         accessLevel = governance.accessLevel || governance.access_level || null;
     }
     
+    console.log('[TENANT-RESOLVER-LIMITS]', {
+        candidateTenantId,
+        governanceFound: !!governance,
+        limitsObjFound: !!limitsObj,
+        cpPlanCode: governance?.planCode || governance?.plan_code || governance?.plan || null,
+        cpMaxFileSizeMb: limitsObj?.max_file_size_mb ?? null,
+        authMaxFileSizeMb: auth.max_file_size_mb ?? null,
+        source,
+    });
+
     if (limitsObj) {
         limits = {
             max_file_size_mb: limitsObj.max_file_size_mb,
