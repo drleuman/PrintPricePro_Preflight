@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 
 export interface FileHistoryArtifacts {
   analysisReport: boolean;
+  fixAudit: boolean;
   reviewPdf: boolean;
   fixedPdf: boolean;
   certifiedPdf: boolean;
@@ -9,13 +10,21 @@ export interface FileHistoryArtifacts {
 
 export interface RelatedFixJob {
   jobId: string;
+  sourceJobId: string;
+  type: string;
+  filename: string;
   status: string;
+  requestedFixesCount: number;
   appliedFixesCount: number;
   skippedFixesCount: number;
   failedFixesCount: number;
   requiresHumanReview: boolean;
   productionCertified: boolean;
+  reviewReasons: any[];
+  fixSummary: any[];
+  artifacts: FileHistoryArtifacts;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface SourceAnalyzeJob {

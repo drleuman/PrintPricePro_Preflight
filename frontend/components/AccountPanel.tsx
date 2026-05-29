@@ -576,10 +576,11 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                         <span className="text-[0.55rem] uppercase tracking-widest bg-[var(--bg-tertiary)] text-[var(--text-primary)] px-2 py-0.5 border border-[var(--border-color)] shrink-0">
                                             {item.type}
                                         </span>
-                                        <span className={`text-[0.55rem] font-bold uppercase tracking-widest px-2 py-0.5 border shrink-0 ${
+                                                                                <span className={`text-[0.55rem] font-bold uppercase tracking-widest px-2 py-0.5 border shrink-0 ${
                                             item.status.includes('ERROR') || item.status.includes('FAILED') ? 'text-red-400 border-red-500/20 bg-red-500/10' :
-                                            item.status.includes('CERTIFIED') ? 'text-[#50fa7b] border-[#50fa7b]/20 bg-[#50fa7b]/10' :
-                                            item.status.includes('REVIEW') ? 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10' :
+                                            item.status.includes('REVIEW') || item.status.includes('DEGRADED') ? 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10' :
+                                            item.status.includes('CERTIFIED') || item.status.includes('COMPLETED') ? 'text-[#50fa7b] border-[#50fa7b]/20 bg-[#50fa7b]/10' :
+                                            item.status.includes('QUEUED') ? 'text-orange-300 border-orange-400/20 bg-orange-400/10' :
                                             'text-[var(--text-primary)] border-[var(--border-color)] bg-[var(--bg-tertiary)]'
                                         }`}>
                                             {item.status.replace(/_/g, ' ')}
@@ -587,6 +588,7 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                     </div>
                                     <h4 className="text-sm font-bold text-[var(--text-primary)] truncate break-all block" title={item.filename}>
                                         {item.filename}
+                                        {item.status === 'QUEUED' && <span className="ml-2 text-[0.65rem] font-mono text-orange-400 uppercase font-normal">(Processing / waiting for final sync)</span>}
                                     </h4>
                                     <div className="text-[0.65rem] font-mono text-[var(--text-muted)] mt-1 opacity-70">
                                         {new Date(item.createdAt).toLocaleString()} • {item.fileSizeMb.toFixed(2)} MB
@@ -630,14 +632,52 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                     </button>
                                 )}
                                 
-                                {item.type === 'ANALYZE' && item.relatedFixJobs && item.relatedFixJobs.length > 0 && (
-                                    <div className="w-full mt-2 pt-2 border-t border-[var(--border-color)]/30 text-[0.65rem] font-mono text-[var(--text-muted)] flex items-center">
-                                        <span className="opacity-70 mr-2 shrink-0">Related Fix Jobs:</span>
-                                        <div className="flex flex-wrap gap-2">
-                                            {item.relatedFixJobs.map(f => (
-                                                <span key={f.jobId} className="px-1.5 py-0.5 bg-[var(--bg-tertiary)] border border-[var(--border-color)]" title={f.status}>{f.jobId.substring(0, 15)}...</span>
-                                            ))}
-                                        </div>
+                                {item.type === 'ANALYZE' && (
+                                    <div className="w-full mt-2 pt-3 border-t border-[var(--border-color)]/30 flex flex-col gap-2">
+                                        <span className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest">Related Fix Jobs:</span>
+                                        {(!item.relatedFixJobs || item.relatedFixJobs.length === 0) ? (
+                                            <span className="text-[0.65rem] font-mono text-[var(--text-muted)] opacity-70">No related fixes yet.</span>
+                                        ) : (
+                                            <div className="flex flex-col gap-2">
+                                                {item.relatedFixJobs.map(f => (
+                                                    <div key={f.jobId} className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                        <div className="min-w-0">
+                                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                                <span className="text-[0.55rem] font-mono text-[var(--text-muted)] shrink-0">{f.jobId.substring(0, 15)}...</span>
+                                                                <span className={`text-[0.5rem] font-bold uppercase tracking-widest px-1.5 py-0.5 border shrink-0 ${
+                                                                    f.status.includes('ERROR') || f.status.includes('FAILED') ? 'text-red-400 border-red-500/20 bg-red-500/10' :
+                                                                    f.status.includes('REVIEW') || f.status.includes('DEGRADED') ? 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10' :
+                                                                    f.status.includes('CERTIFIED') || f.status.includes('COMPLETED') ? 'text-[#50fa7b] border-[#50fa7b]/20 bg-[#50fa7b]/10' :
+                                                                    f.status.includes('QUEUED') ? 'text-orange-300 border-orange-400/20 bg-orange-400/10' :
+                                                                    'text-[var(--text-primary)] border-[var(--border-color)] bg-[var(--bg-secondary)]'
+                                                                }`}>
+                                                                    {f.status.replace(/_/g, ' ')}
+                                                                </span>
+                                                                {f.requiresHumanReview && <span className="text-[0.5rem] font-bold uppercase text-yellow-400 border border-yellow-500/20 bg-yellow-500/10 px-1.5 py-0.5">Review Required</span>}
+                                                                {f.productionCertified && <span className="text-[0.5rem] font-bold uppercase text-[#50fa7b] border border-[#50fa7b]/20 bg-[#50fa7b]/10 px-1.5 py-0.5">Certified</span>}
+                                                            </div>
+                                                            <div className="text-[0.6rem] font-mono text-[var(--text-muted)]">
+                                                                A: {f.appliedFixesCount || 0} · S: {f.skippedFixesCount || 0} · F: {f.failedFixesCount || 0}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-1.5 shrink-0">
+                                                            {f.artifacts.fixAudit && (
+                                                                <button onClick={() => downloadArtifact(f.jobId, 'fix_audit')} className="text-[0.5rem] font-black uppercase tracking-widest text-[var(--text-primary)] hover:text-[var(--accent-hover)] transition-colors rounded-sm py-0.5 px-1.5 border border-[var(--border-color)] hover:border-[var(--accent-hover)] bg-[var(--bg-secondary)]">Fix Audit</button>
+                                                            )}
+                                                            {f.artifacts.reviewPdf && (
+                                                                <button onClick={() => downloadArtifact(f.jobId, 'review_pdf')} className="text-[0.5rem] font-black uppercase tracking-widest text-[var(--text-primary)] hover:text-[var(--accent-hover)] transition-colors rounded-sm py-0.5 px-1.5 border border-[var(--border-color)] hover:border-[var(--accent-hover)] bg-[var(--bg-secondary)]">Review PDF</button>
+                                                            )}
+                                                            {f.artifacts.fixedPdf && (
+                                                                <button onClick={() => downloadArtifact(f.jobId, 'fixed_pdf')} className="text-[0.5rem] font-black uppercase tracking-widest text-[var(--text-primary)] hover:text-[var(--accent-hover)] transition-colors rounded-sm py-0.5 px-1.5 border border-[var(--border-color)] hover:border-[var(--accent-hover)] bg-[var(--bg-secondary)]">Fixed PDF</button>
+                                                            )}
+                                                            {f.artifacts.certifiedPdf && (
+                                                                <button onClick={() => downloadArtifact(f.jobId, 'certified_pdf')} className="text-[0.5rem] font-black uppercase tracking-widest text-[#50fa7b] hover:text-[#50fa7b] transition-colors rounded-sm py-0.5 px-1.5 border border-[#50fa7b]/50 hover:border-[#50fa7b] bg-[#50fa7b]/10">Certified PDF</button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                                 {item.type === 'ANALYZE' && (!item.relatedFixJobs || item.relatedFixJobs.length === 0) && (
