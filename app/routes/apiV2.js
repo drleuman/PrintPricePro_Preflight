@@ -269,10 +269,18 @@ router.post(
         error: error.message
       });
 
-      const status = error.status || 500;
+      const upstreamStatus = error.status;
+      const isUpstreamTimeout = upstreamStatus === 408 || upstreamStatus === 504 || error.code === 'ECONNABORTED';
+      const status = (upstreamStatus === 403 || upstreamStatus === 400)
+        ? upstreamStatus
+        : upstreamStatus >= 400 && upstreamStatus < 600
+          ? 503
+          : 500;
       return res.status(status).json({
-        error: status === 403 ? 'FORBIDDEN' : 'V2_JOB_CREATE_FAILED',
-        message: status === 403 ? 'Action restricted by security policy' : (error.message || 'Failed to initialize engine job.'),
+        error: status === 403 ? 'FORBIDDEN' : isUpstreamTimeout ? 'ENGINE_TIMEOUT' : 'V2_JOB_CREATE_FAILED',
+        message: isUpstreamTimeout
+          ? 'The preflight engine did not respond in time. Please try again.'
+          : status === 403 ? 'Action restricted by security policy' : (error.message || 'Failed to initialize engine job.'),
         traceId,
         v2: true
       });
