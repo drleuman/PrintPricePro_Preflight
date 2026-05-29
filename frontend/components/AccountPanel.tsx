@@ -524,7 +524,27 @@ const UsageBar: React.FC<{ label: string, current: number, total: number, Boolea
     </div>
 );
 
+
+const HelpTip = ({ text }: { text: string }) => (
+    <span className="relative inline-flex group ml-1 align-middle">
+        <span className="cursor-help text-[var(--text-muted)] border border-[var(--border-color)] px-1 text-[10px] leading-none">?</span>
+        <span className="pointer-events-none absolute z-50 hidden group-hover:block right-0 top-full mt-2 w-64 border border-[var(--border-color)] bg-[var(--bg-primary)] p-3 text-[11px] leading-relaxed text-[var(--text-primary)] shadow-[0_5px_15px_rgba(0,0,0,0.5)]">
+            {text}
+        </span>
+    </span>
+);
+
 const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, isLoading: boolean, error: any, refresh: () => void }) => {
+
+    const getStatusTooltip = (status: string) => {
+        if (status === 'COMPLETED_WITH_FINDINGS') return "Analysis finished and issues or warnings were found in the PDF.";
+        if (status === 'QUEUED') return "This job is waiting or still processing. Refresh the history later to see the final result.";
+        if (status === 'DEGRADED') return "The analysis completed with limited diagnostic fidelity. Some information may be incomplete.";
+        if (status === 'FAILED') return "The job failed before producing a complete result.";
+        if (status === 'REVIEW_REQUIRED') return "The file needs human review before it can be considered production-ready.";
+        return "";
+    };
+
 
     const downloadArtifact = async (jobId: string, type: string) => {
         const token = localStorage.getItem('ppos_auth_token');
@@ -548,7 +568,7 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
             <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-2">
-                <SectionTitle title="FILE & JOB HISTORY" icon={<DocumentTextIcon className="w-5 h-5" />} />
+                <div className="flex items-center gap-1"><SectionTitle title="FILE & JOB HISTORY" icon={<DocumentTextIcon className="w-5 h-5" />} /><HelpTip text="Your previous preflight analyses and Magic Fix results. Use this area to review past uploads, download reports, inspect corrected files, and understand what was changed." /></div>
                 <button onClick={refresh} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] p-1 rounded-sm">
                    <ArrowPathIcon className="w-4 h-4" />
                 </button>
@@ -567,6 +587,7 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                 <div className="space-y-6">
                     <div className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest">
                         {history.scope === 'tenant' ? 'Showing tenant history.' : 'Showing your files.'}
+                        <HelpTip text="This list shows files processed under the current tenant/workspace, not only files uploaded by this browser session." />
                     </div>
                     {history.items.map((item: FileHistoryItem) => (
                         <div key={item.jobId} className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-4 flex flex-col gap-3 transition-colors hover:border-[var(--text-muted)] min-w-0">
@@ -575,6 +596,7 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                     <div className="flex items-center gap-2 mb-1">
                                         <span className="text-[0.55rem] uppercase tracking-widest bg-[var(--bg-tertiary)] text-[var(--text-primary)] px-2 py-0.5 border border-[var(--border-color)] shrink-0">
                                             {item.type}
+                                            {item.type === 'ANALYZE' && <HelpTip text="Analysis jobs inspect the PDF and detect print-production issues. They do not modify the file." />}
                                         </span>
                                                                                 <span className={`text-[0.55rem] font-bold uppercase tracking-widest px-2 py-0.5 border shrink-0 ${
                                             item.status.includes('ERROR') || item.status.includes('FAILED') ? 'text-red-400 border-red-500/20 bg-red-500/10' :
@@ -591,10 +613,10 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                         {item.status === 'QUEUED' && <span className="ml-2 text-[0.65rem] font-mono text-orange-400 uppercase font-normal">(Processing / waiting for final sync)</span>}
                                     </h4>
                                     <div className="text-[0.65rem] font-mono text-[var(--text-muted)] mt-1 opacity-70">
-                                        {new Date(item.createdAt).toLocaleString()} • {item.fileSizeMb.toFixed(2)} MB
+                                        {new Date(item.createdAt).toLocaleString()} • {item.fileSizeMb.toFixed(2)} MB <HelpTip text="Original uploaded file size as recorded by the preflight registry." />
                                         {item.type === 'ANALYZE' && (
                                             <span className="ml-2">
-                                                (Issues: {item.issuesCount || 0}, Findings: {item.findingsCount || 0})
+                                                (<span className="inline-flex items-center">Issues: {item.issuesCount || 0} <HelpTip text="Issues are detected technical or production risks in the original PDF." /></span>, <span className="inline-flex items-center">Findings: {item.findingsCount || 0} <HelpTip text="Findings are the normalized diagnostics reported by the preflight engine. They may include warnings, risks, and issues." /></span>)
                                             </span>
                                         )}
                                         {item.type === 'AUTOFIX' && (
@@ -634,7 +656,7 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                 
                                 {item.type === 'ANALYZE' && (
                                     <div className="w-full mt-4 pt-4 border-t border-[var(--border-color)] flex flex-col gap-3">
-                                        <h5 className="text-[0.7rem] font-bold text-[var(--text-primary)] uppercase tracking-widest">Related Magic Fixes</h5>
+                                        <h5 className="text-[0.7rem] font-bold text-[var(--text-primary)] uppercase tracking-widest flex items-center">Related Magic Fixes <HelpTip text="Magic Fix jobs are automated correction attempts created from a previous analysis. They may repair page boxes, bleed, color profiles, or other print-production problems." /></h5>
                                         {(!item.relatedFixJobs || item.relatedFixJobs.length === 0) ? (
                                             <span className="text-xs text-[var(--text-muted)] font-mono">No related fixes yet.</span>
                                         ) : (
@@ -661,7 +683,7 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                                                 </span>
                                                             </div>
                                                             <div className="text-xs font-mono text-[var(--text-muted)]">
-                                                                Fix ID: {f.jobId}
+                                                                Fix ID: {f.jobId} <HelpTip text="Internal identifier for this Magic Fix job. Support may ask for it when investigating a file." />
                                                             </div>
                                                         </div>
 
@@ -685,15 +707,15 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
 
                                                         <div className="flex gap-6 text-xs font-mono text-[var(--text-primary)] bg-[var(--bg-secondary)] p-3 border border-[var(--border-color)]">
                                                             <div className="flex flex-col">
-                                                                <span className="text-[var(--text-muted)] uppercase tracking-widest text-[0.6rem] mb-0.5">Applied</span>
+                                                                <span className="text-[var(--text-muted)] uppercase tracking-widest text-[0.6rem] mb-0.5 flex items-center">Applied <HelpTip text="Number of requested corrections that were applied automatically." /></span>
                                                                 <span className="font-bold text-lg leading-none">{f.appliedFixesCount || 0}</span>
                                                             </div>
                                                             <div className="flex flex-col">
-                                                                <span className="text-[var(--text-muted)] uppercase tracking-widest text-[0.6rem] mb-0.5">Skipped</span>
+                                                                <span className="text-[var(--text-muted)] uppercase tracking-widest text-[0.6rem] mb-0.5 flex items-center">Skipped <HelpTip text="Number of requested corrections that were intentionally skipped, usually because they require manual or visual review." /></span>
                                                                 <span className="font-bold text-lg leading-none">{f.skippedFixesCount || 0}</span>
                                                             </div>
                                                             <div className="flex flex-col">
-                                                                <span className="text-[var(--text-muted)] uppercase tracking-widest text-[0.6rem] mb-0.5">Failed</span>
+                                                                <span className="text-[var(--text-muted)] uppercase tracking-widest text-[0.6rem] mb-0.5 flex items-center">Failed <HelpTip text="Number of requested corrections that failed during automated processing." /></span>
                                                                 <span className="font-bold text-lg leading-none">{f.failedFixesCount || 0}</span>
                                                             </div>
                                                         </div>
@@ -728,22 +750,27 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                                                 </summary>
                                                                 <div className="mt-4 space-y-4 font-mono text-xs bg-[var(--bg-secondary)] p-4 border border-[var(--border-color)]">
                                                                     <div className="border-b border-[var(--border-color)] pb-3">
-                                                                        <h6 className="font-bold text-sm text-[var(--text-primary)] mb-2">Client Change Summary</h6>
+                                                                        <h6 className="font-bold text-sm text-[var(--text-primary)] mb-2 flex items-center">Client Change Summary <HelpTip text="Human-readable summary of the Magic Fix result." /></h6>
                                                                         <p className="text-[var(--text-muted)] leading-relaxed">
                                                                             This file was processed by Magic Fix, but it still requires review before production.
                                                                         </p>
                                                                     </div>
 
                                                                     <div>
-                                                                        <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1">Recommendation</span>
+                                                                        <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1 flex items-center">Recommendation <HelpTip text="What you should do next with this corrected file." /></span>
                                                                         <span className={f.clientChangeSummary.productionCertified ? 'text-[#50fa7b] font-bold' : f.clientChangeSummary.requiresHumanReview ? 'text-yellow-400 font-bold' : 'text-[var(--text-primary)]'}>
                                                                             {f.clientChangeSummary.productionRecommendation}
                                                                         </span>
                                                                     </div>
                                                                     
+                                                                    {(!f.clientChangeSummary.appliedChanges?.length && !f.clientChangeSummary.skippedChanges?.length && !f.clientChangeSummary.failedChanges?.length) && (
+                                                                        <div className="text-xs text-[var(--text-muted)] italic font-mono mb-4">
+                                                                            No detailed correction list is available for this fix, but the final recommendation is shown below.
+                                                                        </div>
+                                                                    )}
                                                                     {f.clientChangeSummary.appliedChanges && f.clientChangeSummary.appliedChanges.length > 0 && (
                                                                         <div>
-                                                                            <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1.5">What changed</span>
+                                                                            <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1.5 flex items-center">What changed <HelpTip text="Corrections that were successfully applied by Magic Fix." /></span>
                                                                             <ul className="list-none space-y-1.5 pl-0">
                                                                                 {f.clientChangeSummary.appliedChanges.map((ac: any, i: number) => (
                                                                                     <li key={i} className="flex gap-2">
@@ -757,7 +784,7 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
 
                                                                     {f.clientChangeSummary.reviewWarnings && f.clientChangeSummary.reviewWarnings.length > 0 && (
                                                                         <div>
-                                                                            <span className="font-bold block text-yellow-500 uppercase tracking-widest text-[0.65rem] mb-1.5">Needs review</span>
+                                                                            <span className="font-bold block text-yellow-500 uppercase tracking-widest text-[0.65rem] mb-1.5 flex items-center">Needs review <HelpTip text="Items that should be visually checked before production." /></span>
                                                                             <ul className="list-none space-y-1.5 pl-0 text-yellow-400">
                                                                                 {f.clientChangeSummary.reviewWarnings.map((rw: any, i: number) => (
                                                                                     <li key={i} className="flex gap-2">
@@ -771,7 +798,7 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
 
                                                                     {f.clientChangeSummary.skippedChanges && f.clientChangeSummary.skippedChanges.length > 0 && (
                                                                         <div>
-                                                                            <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1.5">Not applied</span>
+                                                                            <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1.5 flex items-center">Not applied <HelpTip text="Requested corrections that were skipped automatically." /></span>
                                                                             <ul className="list-none space-y-1.5 pl-0 text-[var(--text-muted)]">
                                                                                 {f.clientChangeSummary.skippedChanges.map((sc: any, i: number) => (
                                                                                     <li key={i} className="flex gap-2">
@@ -785,7 +812,7 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
 
                                                                     {f.clientChangeSummary.failedChanges && f.clientChangeSummary.failedChanges.length > 0 && (
                                                                         <div>
-                                                                            <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1.5">Failed</span>
+                                                                            <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1.5 flex items-center">Failed <HelpTip text="Corrections that could not be completed automatically." /></span>
                                                                             <ul className="list-none space-y-1.5 pl-0 text-red-400">
                                                                                 {f.clientChangeSummary.failedChanges.map((fc: any, i: number) => (
                                                                                     <li key={i} className="flex gap-2">
