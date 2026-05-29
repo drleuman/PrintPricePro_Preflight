@@ -534,6 +534,57 @@ const HelpTip = ({ text }: { text: string }) => (
     </span>
 );
 
+
+type TooltipButtonProps = {
+  children: React.ReactNode;
+  tooltip: string;
+  onClick: () => void;
+  className?: string;
+  disabled?: boolean;
+};
+
+const TooltipButton: React.FC<TooltipButtonProps> = ({
+  children,
+  tooltip,
+  onClick,
+  className = '',
+  disabled = false
+}) => {
+  return (
+    <span className="relative inline-flex group">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onClick}
+        title={tooltip}
+        className={[
+          'inline-flex items-center justify-center',
+          'border border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-primary)]',
+          'px-3 py-2 text-[11px] font-bold uppercase tracking-[0.12em]',
+          'hover:border-[var(--accent-color)] hover:text-[var(--accent-color)]',
+          'disabled:opacity-40 disabled:cursor-not-allowed',
+          'transition-colors min-h-[34px] rounded-sm',
+          className
+        ].join(' ')}
+      >
+        {children}
+      </button>
+
+      <span
+        className={[
+          'pointer-events-none absolute z-50 hidden group-hover:block',
+          'left-1/2 top-full mt-2 w-72 -translate-x-1/2',
+          'border border-[var(--border-color)] bg-[var(--bg-primary)] px-3 py-2',
+          'text-[11px] leading-relaxed text-[var(--text-primary)] shadow-[0_5px_15px_rgba(0,0,0,0.5)]',
+          'normal-case tracking-normal font-normal text-left'
+        ].join(' ')}
+      >
+        {tooltip}
+      </span>
+    </span>
+  );
+};
+
 const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, isLoading: boolean, error: any, refresh: () => void }) => {
 
     const getStatusTooltip = (status: string) => {
