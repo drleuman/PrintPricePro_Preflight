@@ -83,9 +83,12 @@ export function useUserFileHistory(limit: number = 20) {
       }
 
       const response = await fetch(`/api/v2/me/file-history?limit=${limit}`, {
+        method: 'GET',
         headers: {
+          'Accept': 'application/json',
           'Authorization': `Bearer ${token}`
-        }
+        },
+        credentials: 'include'
       });
 
       console.info('[ACCOUNT-PANEL][FILE-HISTORY-RESPONSE]', {
@@ -93,8 +96,21 @@ export function useUserFileHistory(limit: number = 20) {
         ok: response.ok
       });
 
-      
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(data?.error || data?.message || `File history fetch failed with status ${response.status}`);
+      }
+
+      if (!data?.ok) {
+        throw new Error(data?.error || data?.message || 'File history response not ok');
+      }
+
+      setHistory(data);
     } catch (err: any) {
+      console.warn('[ACCOUNT-PANEL][FILE-HISTORY-ERROR]', {
+        message: err?.message || String(err)
+      });
       setError(err);
     } finally {
       setIsLoading(false);
