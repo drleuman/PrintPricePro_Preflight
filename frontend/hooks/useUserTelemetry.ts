@@ -45,7 +45,7 @@ export function useUserTelemetry() {
       setIsLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('printprice_token');
+      const token = localStorage.getItem('ppos_auth_token');
       if (!token) {
         throw new Error('No authentication token found');
       }
