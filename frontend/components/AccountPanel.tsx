@@ -258,6 +258,12 @@ const ProfilePanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
 
 const LicensePanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
     const { t } = useTranslation();
+    
+    // Safely extract values from telemetry if available
+    const identity = telemetry?.identity || user;
+    const license = telemetry?.license || { plan: user.plan, daily_jobs_limit: user.daily_jobs_limit || 50, max_file_size_mb: 500 };
+    const adminAccess = telemetry?.adminAccess || { enabled: false };
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
             <SectionTitle title={t('account.quotas')} icon={<CreditCardIcon className="w-5 h-5" />} />
@@ -265,18 +271,39 @@ const LicensePanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
             <div className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-6 space-y-6 relative overflow-hidden">
                 <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
                     <div>
-                        <span className="block text-[0.65rem] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] mb-1">{t('account.service.tier')}</span>
-                        <span className="text-xl font-black text-[var(--text-primary)] uppercase tracking-tight truncate max-w-full block">{user.plan}</span>
+                        <span className="block text-[0.65rem] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] mb-1">Commercial Plan</span>
+                        <span className="text-xl font-black text-[var(--text-primary)] uppercase tracking-tight truncate max-w-full block">{license.plan}</span>
                     </div>
-                    <div className={`h-2 w-2 rounded-full shrink-0 ${user.plan === 'FREE' ? 'bg-[var(--text-muted)]' : 'bg-[#50fa7b] shadow-[0_0_15px_#50fa7b]'}`} />
+                    <div className={`h-2 w-2 rounded-full shrink-0 ${license.plan === 'FREE' ? 'bg-[var(--text-muted)]' : 'bg-[#50fa7b] shadow-[0_0_15px_#50fa7b]'}`} />
                 </div>
                 
-                <div className="space-y-4">
-                    <UsageBar label={t('account.dailyParsingJobs')} current={telemetry?.usage?.jobsToday || 0} total={telemetry?.license?.daily_jobs_limit || user.daily_jobs_limit || 50} />
-                    <UsageBar label={t('account.autoMagicFix')} current={telemetry?.license?.ai_magic_fix_enabled || user.ai_magic_fix_enabled ? 1 : 0} total={1} BooleanCap={t('common.active')} />
+                <div className="grid grid-cols-2 gap-4 pb-4 border-b border-[var(--border-color)] text-xs font-mono">
+                    <div>
+                        <span className="text-[var(--text-muted)] uppercase block text-[0.6rem] mb-1">Access Role</span>
+                        <span className="text-[var(--text-primary)]">{identity.role}</span>
+                    </div>
+                    <div>
+                        <span className="text-[var(--text-muted)] uppercase block text-[0.6rem] mb-1">App Role</span>
+                        <span className="text-[var(--text-primary)]">{identity.appRole || 'USER'}</span>
+                    </div>
+                    <div className="col-span-2">
+                        <span className="text-[var(--text-muted)] uppercase block text-[0.6rem] mb-1">Admin Access</span>
+                        <span className={`${adminAccess.enabled ? 'text-[#50fa7b]' : 'text-[var(--text-muted)]'} font-bold`}>
+                            {adminAccess.enabled ? 'ACTIVE' : 'INACTIVE'}
+                        </span>
+                    </div>
                 </div>
 
-                {user.plan === 'FREE' && (
+                <div className="space-y-4">
+                    <UsageBar label={t('account.dailyParsingJobs')} current={telemetry?.usage?.jobsToday || 0} total={license.daily_jobs_limit} />
+                    <UsageBar label="Max Upload Size" current={license.max_file_size_mb} total={license.max_file_size_mb} BooleanCap={license.max_file_size_mb + ' MB'} />
+                </div>
+                
+                <div className="mt-4 pt-4 border-t border-[var(--border-color)] text-[0.65rem] font-mono text-[var(--text-muted)] italic">
+                    Plan controls commercial limits. Role controls operational/admin permissions.
+                </div>
+
+                {license.plan === 'FREE' && !adminAccess.enabled && (
                     <div className="mt-8 pt-6 border-t border-[var(--border-color)] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div className="flex-1">
                             <h4 className="text-[0.75rem] font-black text-[var(--text-primary)] uppercase tracking-widest mb-1">{t('account.upgradeTitle')}</h4>
