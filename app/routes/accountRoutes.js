@@ -293,8 +293,14 @@ router.get('/file-history', requireAuth, async (req, res) => {
 
       
       const safeParseArr = (str, fallback) => {
-        if (!str) return fallback || [];
-        try { const p = JSON.parse(str); return Array.isArray(p) ? p : (fallback || []); } catch(e) { return fallback || []; }
+        const validFallback = Array.isArray(fallback) ? fallback : [];
+        if (!str) return validFallback;
+        try { 
+          const p = JSON.parse(str); 
+          return Array.isArray(p) ? p : validFallback; 
+        } catch(e) { 
+          return validFallback; 
+        }
       };
       
       const appliedFixesArr = safeParseArr(row.applied_fixes_json, payload.appliedFixes || payload.applied_fixes || []);
