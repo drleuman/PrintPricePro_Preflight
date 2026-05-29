@@ -48,21 +48,64 @@ router.get('/', requireAuth, async (req, res) => {
     console.warn('[BFF][ME] Failed to query usage stats:', err.message);
   }
 
+  const identityRole = req.auth?.role || req.user?.role || auth?.role || null;
+  const identityAppRole = req.auth?.appRole || req.user?.appRole || auth?.appRole || null;
+
+  const normalizedRole = String(identityRole || '').toLowerCase();
+  const normalizedAppRole = String(identityAppRole || '').toUpperCase();
+
+  const isAdmin =
+    normalizedRole === 'tenant_admin' ||
+    normalizedRole === 'admin' ||
+    normalizedRole === 'super_admin' ||
+    normalizedRole === 'superadmin';
+
+  const isDeveloper = normalizedAppRole === 'DEVELOPER';
+
+  const operationalRole = isAdmin ? 'tenant_admin' : 'member';
+
+  const adminAccess = isAdmin
+    ? {
+        enabled: true,
+        reason: 'ROLE_TENANT_ADMIN',
+        label: 'Admin / Developer Access'
+      }
+    : isDeveloper
+      ? {
+          enabled: true,
+          reason: 'APP_ROLE_DEVELOPER',
+          label: 'Admin / Developer Access'
+        }
+      : {
+          enabled: false,
+          reason: null,
+          label: null
+        };
+
   res.json({
     ok: true,
     identity: {
       userId: auth.userId,
       email: auth.email,
-      role: auth.role,
-      appRole: auth.appRole,
+      role: identityRole,
+      appRole: identityAppRole,
+      operationalRole,
+      isAdmin,
+      isDeveloper,
       printhouseId: auth.printhouseId,
       organizationName: null // Expand later if needed
     },
+    adminAccess,
     license: {
       plan: auth.plan,
+      commercialStatus: auth.plan === 'FREE' ? 'FREE' : 'ACTIVE',
+      accessLevel: auth.plan,
       daily_jobs_limit: auth.plan === 'ENTERPRISE' ? 10000 : (auth.plan === 'PRO' ? 1000 : 50),
-      ai_magic_fix_enabled: auth.plan !== 'FREE',
-      max_file_size_mb: auth.plan === 'ENTERPRISE' ? 2048 : 500
+      monthly_jobs_limit: auth.plan === 'ENTERPRISE' ? 300000 : (auth.plan === 'PRO' ? 30000 : 1500),
+      max_file_size_mb: auth.plan === 'ENTERPRISE' ? 2048 : 500,
+      max_job_size_mb: auth.plan === 'ENTERPRISE' ? 2048 : 500,
+      source: 'auth_token',
+      ai_magic_fix_enabled: auth.plan !== 'FREE'
     },
     apiAccess: {
       enabled: false,
