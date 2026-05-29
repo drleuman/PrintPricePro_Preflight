@@ -20,12 +20,15 @@ export type AccountView = 'profile' | 'license' | 'api' | 'security' | 'history'
 interface AccountPanelProps {
     activeView: AccountView;
     onClose: () => void;
+    onChangeView?: (view: AccountView) => void;
 }
 
-export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose }) => {
+export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose, onChangeView }) => {
     const { t } = useTranslation();
     const { user } = useAuth();
     const { telemetry } = useUserTelemetry();
+    // Fetch globally so we can show the badge on any tab
+    const { history, isLoading: isHistoryLoading, error: historyError, refresh: refreshHistory } = useUserFileHistory(20);
     const trapRef = useRef<HTMLDivElement>(null);
     const initialFocusRef = useRef<HTMLButtonElement>(null);
 
@@ -100,7 +103,7 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose 
             case 'security':
                 return <SecurityPanel user={user} telemetry={telemetry} />;
             case 'history':
-                return <HistoryPanel />;
+                return <HistoryPanel history={history} isLoading={isHistoryLoading} error={historyError} refresh={refreshHistory} />;
             default:
                 return null;
         }
@@ -149,6 +152,36 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose 
                         {t('common.close')}
                     </button>
                 </div>
+
+                {/* Tabs */}
+                {onChangeView && (
+                    <div className="flex px-4 md:px-8 border-b border-[var(--border-color)] bg-[var(--bg-primary)] overflow-x-auto shrink-0 scrollbar-hide">
+                        {[
+                            { id: 'profile', label: t('account.profile.title') },
+                            { id: 'license', label: t('account.license.title') },
+                            { id: 'history', label: 'File & Job History', badge: history?.items?.length },
+                            { id: 'api', label: t('account.api.title') },
+                            { id: 'security', label: t('account.security.title') }
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => onChangeView(tab.id as AccountView)}
+                                className={`px-4 py-3 text-[0.65rem] md:text-xs font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors focus:outline-none ${
+                                    activeView === tab.id
+                                        ? 'border-[var(--accent-color)] text-[var(--text-primary)]'
+                                        : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:border-[var(--border-color)]'
+                                }`}
+                            >
+                                {tab.label}
+                                {tab.badge ? (
+                                    <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-[0.6rem] font-black text-[#50fa7b] bg-[#50fa7b]/10 border border-[#50fa7b]/20 rounded-full">
+                                        {tab.badge}
+                                    </span>
+                                ) : null}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* scroll container */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-12">
@@ -406,8 +439,7 @@ const UsageBar: React.FC<{ label: string, current: number, total: number, Boolea
     </div>
 );
 
-const HistoryPanel = () => {
-    const { history, isLoading, error, refresh } = useUserFileHistory(20);
+const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, isLoading: boolean, error: any, refresh: () => void }) => {
 
     const downloadArtifact = async (jobId: string, type: string) => {
         const token = localStorage.getItem('printprice_token');

@@ -7,7 +7,8 @@ import {
     ArrowLeftOnRectangleIcon, 
     ShieldCheckIcon, 
     KeyIcon, 
-    CreditCardIcon 
+    CreditCardIcon,
+    ClockIcon
 } from '@heroicons/react/24/outline';
 
 import { AccountPanel, AccountView } from './AccountPanel';
@@ -174,6 +175,11 @@ export const UserMenu: React.FC = () => {
                                 badge={user.plan === 'FREE' ? t('auth.upgradeLabel') : undefined} 
                             />
                             <MenuButton 
+                                onClick={() => handleSelectView('history')}
+                                icon={<ClockIcon className="w-4 h-4" />} 
+                                label="File & Job History" 
+                            />
+                            <MenuButton 
                                 onClick={() => handleSelectView('api')}
                                 icon={<KeyIcon className="w-4 h-4" />} 
                                 label={t('account.api.title')} 
@@ -202,7 +208,7 @@ export const UserMenu: React.FC = () => {
 
             {/* Sub View Drawers Triggered by State */}
             {activeView && (
-                <AccountPanel activeView={activeView} onClose={handleClosePanel} />
+                <AccountPanel activeView={activeView} onClose={handleClosePanel} onChangeView={setActiveView} />
             )}
         </>
     );
