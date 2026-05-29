@@ -26,7 +26,7 @@ interface AccountPanelProps {
 export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose, onChangeView }) => {
     const { t } = useTranslation();
     const { user } = useAuth();
-    const { telemetry } = useUserTelemetry();
+    const { telemetry, isLoading: isTelemetryLoading, error: telemetryError } = useUserTelemetry();
     // Fetch globally so we can show the badge on any tab
     const { history, isLoading: isHistoryLoading, error: historyError, refresh: refreshHistory } = useUserFileHistory(20);
     const trapRef = useRef<HTMLDivElement>(null);
@@ -97,7 +97,7 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose,
             case 'profile':
                 return <ProfilePanel user={user} telemetry={telemetry} />;
             case 'license':
-                return <LicensePanel user={user} telemetry={telemetry} />;
+                return <LicensePanel user={user} telemetry={telemetry} isTelemetryLoading={isTelemetryLoading} telemetryError={telemetryError} />;
             case 'api':
                 return <ApiAccessPanel user={user} telemetry={telemetry} />;
             case 'security':
@@ -256,13 +256,37 @@ const ProfilePanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
     );
 };
 
-const LicensePanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
+const LicensePanel = ({ user, telemetry, isTelemetryLoading, telemetryError }: { user: any, telemetry: any, isTelemetryLoading?: boolean, telemetryError?: any }) => {
     const { t } = useTranslation();
     
-    const license = telemetry?.license || {};
-    const identity = telemetry?.identity || {};
-    const adminAccess = telemetry?.adminAccess || {};
-    const usage = telemetry?.usage || {};
+    if (isTelemetryLoading) {
+        return (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
+                <SectionTitle title={t('account.quotas')} icon={<CreditCardIcon className="w-5 h-5" />} />
+                <div className="p-8 border-2 border-dashed border-[var(--border-color)] text-center text-[var(--text-muted)] text-[0.75rem] font-mono">
+                    Loading account telemetry...
+                </div>
+            </div>
+        );
+    }
+
+    if (telemetryError || !telemetry) {
+        return (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
+                <SectionTitle title={t('account.quotas')} icon={<CreditCardIcon className="w-5 h-5" />} />
+                <div className="p-8 border-2 border-dashed border-red-500/50 text-center text-red-400 text-[0.75rem] font-mono">
+                    Telemetry unavailable
+                </div>
+            </div>
+        );
+    }
+
+    const resolvedTelemetry = telemetry?.ok ? telemetry : telemetry;
+
+    const license = resolvedTelemetry?.license ?? {};
+    const identity = resolvedTelemetry?.identity ?? {};
+    const adminAccess = resolvedTelemetry?.adminAccess ?? {};
+    const usage = resolvedTelemetry?.usage ?? {};
 
     const commercialPlan = license.plan || 'UNKNOWN';
     const accessRole = identity.operationalRole || identity.role || 'UNKNOWN';
