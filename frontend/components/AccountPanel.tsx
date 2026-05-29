@@ -264,6 +264,13 @@ const LicensePanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
     const license = telemetry?.license || { plan: user.plan, daily_jobs_limit: user.daily_jobs_limit || 50, max_file_size_mb: 500 };
     const adminAccess = telemetry?.adminAccess || { enabled: false };
 
+    // Derived flags
+    const isUnlimitedJobs = license.daily_jobs_limit === null || license.daily_jobs_limit === undefined;
+    const hideUpgrade = adminAccess.enabled || 
+                        license.plan === 'SYSTEM' || 
+                        license.plan === 'ENTERPRISE' || 
+                        license.plan === 'FOUNDING_PRINTHOUSE';
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
             <SectionTitle title={t('account.quotas')} icon={<CreditCardIcon className="w-5 h-5" />} />
@@ -280,7 +287,7 @@ const LicensePanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
                 <div className="grid grid-cols-2 gap-4 pb-4 border-b border-[var(--border-color)] text-xs font-mono">
                     <div>
                         <span className="text-[var(--text-muted)] uppercase block text-[0.6rem] mb-1">Access Role</span>
-                        <span className="text-[var(--text-primary)]">{identity.role}</span>
+                        <span className="text-[var(--text-primary)]">{identity.operationalRole || identity.role}</span>
                     </div>
                     <div>
                         <span className="text-[var(--text-muted)] uppercase block text-[0.6rem] mb-1">App Role</span>
@@ -295,15 +302,25 @@ const LicensePanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
                 </div>
 
                 <div className="space-y-4">
-                    <UsageBar label={t('account.dailyParsingJobs')} current={telemetry?.usage?.jobsToday || 0} total={license.daily_jobs_limit} />
-                    <UsageBar label="Max Upload Size" current={license.max_file_size_mb} total={license.max_file_size_mb} BooleanCap={license.max_file_size_mb + ' MB'} />
+                    <UsageBar 
+                        label={t('account.dailyParsingJobs')} 
+                        current={telemetry?.usage?.jobsToday || 0} 
+                        total={isUnlimitedJobs ? 9999999 : license.daily_jobs_limit} 
+                        BooleanCap={isUnlimitedJobs ? 'Unlimited' : undefined}
+                    />
+                    <UsageBar 
+                        label="Max Upload Size" 
+                        current={license.max_file_size_mb} 
+                        total={license.max_file_size_mb} 
+                        BooleanCap={license.max_file_size_mb + ' MB'} 
+                    />
                 </div>
                 
                 <div className="mt-4 pt-4 border-t border-[var(--border-color)] text-[0.65rem] font-mono text-[var(--text-muted)] italic">
                     Plan controls commercial limits. Role controls operational/admin permissions.
                 </div>
 
-                {license.plan === 'FREE' && !adminAccess.enabled && (
+                {!hideUpgrade && (
                     <div className="mt-8 pt-6 border-t border-[var(--border-color)] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div className="flex-1">
                             <h4 className="text-[0.75rem] font-black text-[var(--text-primary)] uppercase tracking-widest mb-1">{t('account.upgradeTitle')}</h4>

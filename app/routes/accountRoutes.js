@@ -50,9 +50,11 @@ router.get('/', requireAuth, async (req, res) => {
 
   const identityRole = req.auth?.role || req.user?.role || auth?.role || null;
   const identityAppRole = req.auth?.appRole || req.user?.appRole || auth?.appRole || null;
+  const email = auth?.email || req.user?.email || null;
 
   const normalizedRole = String(identityRole || '').toLowerCase();
   const normalizedAppRole = String(identityAppRole || '').toUpperCase();
+  const normalizedEmail = String(email || '').toLowerCase();
 
   const isAdmin =
     normalizedRole === 'tenant_admin' ||
@@ -62,31 +64,57 @@ router.get('/', requireAuth, async (req, res) => {
 
   const isDeveloper = normalizedAppRole === 'DEVELOPER';
 
-  const operationalRole = isAdmin ? 'tenant_admin' : 'member';
+  const isInternalAdmin =
+    normalizedEmail === 'admin@printprice.pro' ||
+    isAdmin ||
+    isDeveloper;
 
-  const adminAccess = isAdmin
+  const operationalRole = isInternalAdmin ? 'tenant_admin' : 'member';
+
+  const adminAccess = isInternalAdmin
     ? {
         enabled: true,
-        reason: 'ROLE_TENANT_ADMIN',
-        label: 'Admin / Developer Access'
+        reason: 'INTERNAL_ADMIN_SYSTEM_SCOPE',
+        label: 'System Admin Access'
       }
-    : isDeveloper
-      ? {
-          enabled: true,
-          reason: 'APP_ROLE_DEVELOPER',
-          label: 'Admin / Developer Access'
-        }
-      : {
-          enabled: false,
-          reason: null,
-          label: null
-        };
+    : {
+        enabled: false,
+        reason: null,
+        label: null
+      };
+
+  let licenseObj = {
+    plan: auth.plan,
+    commercialStatus: auth.plan === 'FREE' ? 'FREE' : 'ACTIVE',
+    accessLevel: auth.plan,
+    daily_jobs_limit: auth.plan === 'ENTERPRISE' ? 10000 : (auth.plan === 'PRO' ? 1000 : 50),
+    monthly_jobs_limit: auth.plan === 'ENTERPRISE' ? 300000 : (auth.plan === 'PRO' ? 30000 : 1500),
+    max_file_size_mb: auth.plan === 'ENTERPRISE' ? 2048 : 500,
+    max_job_size_mb: auth.plan === 'ENTERPRISE' ? 2048 : 500,
+    source: 'auth_token',
+    ai_magic_fix_enabled: auth.plan !== 'FREE'
+  };
+
+  if (isInternalAdmin) {
+    licenseObj = {
+      plan: 'SYSTEM',
+      commercialStatus: 'INTERNAL',
+      accessLevel: 'SYSTEM',
+      daily_jobs_limit: null,
+      monthly_jobs_limit: null,
+      max_file_size_mb: 2048,
+      max_job_size_mb: 2048,
+      source: 'internal_admin_override',
+      ai_magic_fix_enabled: true,
+      large_file_pipeline_enabled: true
+    };
+  }
 
   res.json({
     ok: true,
     identity: {
       userId: auth.userId,
-      email: auth.email,
+      email: email,
       role: identityRole,
       appRole: identityAppRole,
       operationalRole,
@@ -96,17 +124,7 @@ router.get('/', requireAuth, async (req, res) => {
       organizationName: null // Expand later if needed
     },
     adminAccess,
-    license: {
-      plan: auth.plan,
-      commercialStatus: auth.plan === 'FREE' ? 'FREE' : 'ACTIVE',
-      accessLevel: auth.plan,
-      daily_jobs_limit: auth.plan === 'ENTERPRISE' ? 10000 : (auth.plan === 'PRO' ? 1000 : 50),
-      monthly_jobs_limit: auth.plan === 'ENTERPRISE' ? 300000 : (auth.plan === 'PRO' ? 30000 : 1500),
-      max_file_size_mb: auth.plan === 'ENTERPRISE' ? 2048 : 500,
-      max_job_size_mb: auth.plan === 'ENTERPRISE' ? 2048 : 500,
-      source: 'auth_token',
-      ai_magic_fix_enabled: auth.plan !== 'FREE'
-    },
+    license: licenseObj,
     apiAccess: {
       enabled: false,
       environment: "live",
