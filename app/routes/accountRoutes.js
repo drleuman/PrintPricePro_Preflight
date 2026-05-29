@@ -175,7 +175,7 @@ router.get('/file-history', requireAuth, async (req, res) => {
     const items = [];
     const analyzeMap = new Map();
 
-    // 1. Process ANALYZE jobs first
+        // 1. Process ANALYZE jobs first
     for (const row of dbRows) {
       if (row.type !== 'ANALYZE') continue;
       
@@ -186,9 +186,7 @@ router.get('/file-history', requireAuth, async (req, res) => {
         } else if (typeof row.canonical_payload_json === 'object' && row.canonical_payload_json !== null) {
           payload = row.canonical_payload_json;
         }
-      } catch (e) {
-        // Ignore JSON parse errors
-      }
+      } catch (e) {}
 
       let artifacts = payload.artifacts || {};
       let result = payload.result || {};
@@ -196,19 +194,28 @@ router.get('/file-history', requireAuth, async (req, res) => {
 
       const hasAnalysisReport = !!(artifacts.analysis_report || artifacts.report || resArtifacts.analysis_report);
 
+      const extractFilename = (r, p) => r.original_filename || r.filename || p.original_filename || p.originalFilename || p.filename || p.fileName || p.input?.filename || p.metadata?.filename || p.document?.filename || p.jobMeta?.filename || p.jobMeta?.fileName || null;
+      const resolvedFilename = extractFilename(row, payload) || 'document.pdf';
+
+      const extractFileSize = (r, p) => r.file_size_bytes || r.fileSizeBytes || p.fileSizeBytes || p.file_size_bytes || p.fileSize || p.metadata?.fileSizeBytes || 0;
+      const resolvedFileSizeBytes = extractFileSize(row, payload);
+
+      const resolvedIssuesCount = row.issue_count ?? payload.issuesCount ?? payload.issueCount ?? payload.issues?.length ?? payload.findings?.length ?? 0;
+      const resolvedFindingsCount = payload.findingsCount ?? payload.findings?.length ?? payload.issuesCount ?? payload.issues?.length ?? row.issue_count ?? 0;
+
       const item = {
         groupKey: row.job_id,
         jobId: row.job_id,
         type: 'ANALYZE',
-        filename: row.original_filename || payload.fileName || payload.jobMeta?.fileName || 'document.pdf',
+        filename: resolvedFilename,
         status: row.status,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
-        fileSizeBytes: row.file_size_bytes || 0,
-        fileSizeMb: (row.file_size_bytes || 0) / (1024 * 1024),
+        fileSizeBytes: resolvedFileSizeBytes,
+        fileSizeMb: resolvedFileSizeBytes / (1024 * 1024),
         policyProfile: row.policy || payload.policy,
-        issuesCount: Array.isArray(payload.issues) ? payload.issues.length : (Array.isArray(result.issues) ? result.issues.length : 0),
-        findingsCount: Array.isArray(payload.findings) ? payload.findings.length : (Array.isArray(result.findings) ? result.findings.length : 0),
+        issuesCount: resolvedIssuesCount,
+        findingsCount: resolvedFindingsCount,
         artifacts: {
           analysisReport: hasAnalysisReport,
           reviewPdf: !!(artifacts.review_pdf || resArtifacts.review_pdf),
@@ -240,24 +247,49 @@ router.get('/file-history', requireAuth, async (req, res) => {
       let result = payload.result || {};
       let resArtifacts = result.artifacts || {};
       
-      let appliedFixesCount = Array.isArray(payload.applied_fixes) ? payload.applied_fixes.length : (Array.isArray(result.applied_fixes) ? result.applied_fixes.length : 0);
-      let skippedFixesCount = Array.isArray(payload.skipped_fixes) ? payload.skipped_fixes.length : (Array.isArray(result.skipped_fixes) ? result.skipped_fixes.length : 0);
-      let failedFixesCount = Array.isArray(payload.failed_fixes) ? payload.failed_fixes.length : (Array.isArray(result.failed_fixes) ? result.failed_fixes.length : 0);
+      const extractFilename = (r, p) => r.original_filename || r.filename || p.original_filename || p.originalFilename || p.filename || p.fileName || p.input?.filename || p.metadata?.filename || p.document?.filename || p.jobMeta?.filename || p.jobMeta?.fileName || null;
+      let resolvedFilename = extractFilename(row, payload);
+
+      const extractFileSize = (r, p) => r.file_size_bytes || r.fileSizeBytes || p.fileSizeBytes || p.file_size_bytes || p.fileSize || p.metadata?.fileSizeBytes || 0;
+      let resolvedFileSizeBytes = extractFileSize(row, payload);
+
+      let requestedFixesCount = (row.requested_fixes_json ? JSON.parse(row.requested_fixes_json).length : null) ?? payload.requestedFixesCount ?? payload.requestedFixes?.length ?? 0;
+      let appliedFixesCount = (row.applied_fixes_json ? JSON.parse(row.applied_fixes_json).length : null) ?? payload.appliedFixesCount ?? payload.appliedFixes?.length ?? payload.applied_fixes?.length ?? 0;
+      let skippedFixesCount = (row.skipped_fixes_json ? JSON.parse(row.skipped_fixes_json).length : null) ?? payload.skippedFixesCount ?? payload.skippedFixes?.length ?? payload.skipped_fixes?.length ?? 0;
+      let failedFixesCount = (row.failed_fixes_json ? JSON.parse(row.failed_fixes_json).length : null) ?? payload.failedFixesCount ?? payload.failedFixes?.length ?? payload.failed_fixes?.length ?? 0;
       
       let requiresHumanReview = payload.requiresHumanReview || result.requiresHumanReview || row.status === 'REVIEW_REQUIRED';
       let productionCertified = payload.productionCertified || result.productionCertified || row.status === 'CERTIFIED';
+
+      // Link up early to inherit filename and size if needed
+      let parentAnalyze = null;
+      if (sourceJobId && analyzeMap.has(sourceJobId)) {
+        parentAnalyze = analyzeMap.get(sourceJobId);
+      }
+
+      if (!resolvedFilename || resolvedFilename === 'document.pdf') {
+        if (parentAnalyze?.filename) {
+          resolvedFilename = parentAnalyze.filename;
+        }
+      }
+      resolvedFilename = resolvedFilename || 'document.pdf';
+
+      if (!resolvedFileSizeBytes && parentAnalyze?.fileSizeBytes) {
+        resolvedFileSizeBytes = parentAnalyze.fileSizeBytes;
+      }
 
       const fixItem = {
         groupKey: row.job_id,
         jobId: row.job_id,
         sourceJobId: sourceJobId,
         type: 'AUTOFIX',
-        filename: row.original_filename || payload.fileName || payload.jobMeta?.fileName || 'document.pdf',
+        filename: resolvedFilename,
         status: row.status,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
-        fileSizeBytes: row.file_size_bytes || 0,
-        fileSizeMb: (row.file_size_bytes || 0) / (1024 * 1024),
+        fileSizeBytes: resolvedFileSizeBytes,
+        fileSizeMb: resolvedFileSizeBytes / (1024 * 1024),
+        requestedFixesCount,
         appliedFixesCount,
         skippedFixesCount,
         failedFixesCount,
@@ -271,13 +303,10 @@ router.get('/file-history', requireAuth, async (req, res) => {
         }
       };
 
-      if (sourceJobId && analyzeMap.has(sourceJobId)) {
-        // Link up
-        const parentAnalyze = analyzeMap.get(sourceJobId);
+      if (parentAnalyze) {
         parentAnalyze.relatedFixJobs.push(fixItem);
       } else {
-        // Add as standalone fix if parent is missing from limit set
-        fixItem.sourceAnalyzeJob = null; // Can't resolve in this query cleanly
+        fixItem.sourceAnalyzeJob = null;
         items.push(fixItem);
       }
     }
