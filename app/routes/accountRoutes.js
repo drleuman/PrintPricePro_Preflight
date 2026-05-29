@@ -271,6 +271,9 @@ router.get('/file-history', requireAuth, async (req, res) => {
       let requiresHumanReview = payload.requiresHumanReview || result.requiresHumanReview || row.status === 'REVIEW_REQUIRED';
       let productionCertified = payload.productionCertified || result.productionCertified || row.status === 'CERTIFIED';
 
+      let reviewReasons = payload.reviewReasons || payload.review_reasons || result.reviewReasons || result.review_reasons || [];
+      let fixSummary = payload.fixSummary || payload.fix_summary || result.fixSummary || result.fix_summary || [];
+
       // Link up early to inherit filename and size if needed
       let parentAnalyze = null;
       if (sourceJobId && analyzeMap.has(sourceJobId)) {
@@ -288,6 +291,27 @@ router.get('/file-history', requireAuth, async (req, res) => {
         resolvedFileSizeBytes = parentAnalyze.fileSizeBytes;
       }
 
+      
+      const safeParseArr = (str, fallback) => {
+        if (!str) return fallback || [];
+        try { const p = JSON.parse(str); return Array.isArray(p) ? p : (fallback || []); } catch(e) { return fallback || []; }
+      };
+      
+      const appliedFixesArr = safeParseArr(row.applied_fixes_json, payload.appliedFixes || payload.applied_fixes || []);
+      const skippedFixesArr = safeParseArr(row.skipped_fixes_json, payload.skippedFixes || payload.skipped_fixes || []);
+      const failedFixesArr = safeParseArr(row.failed_fixes_json, payload.failedFixes || payload.failed_fixes || []);
+
+      const clientChangeSummary = buildClientChangeSummary({
+        jobId: row.job_id,
+        status: row.status,
+        productionCertified,
+        requiresHumanReview,
+        appliedFixes: appliedFixesArr,
+        skippedFixes: skippedFixesArr,
+        failedFixes: failedFixesArr,
+        strategy: payload.strategy || null
+      });
+  
       const fixItem = {
         groupKey: row.job_id,
         jobId: row.job_id,
@@ -305,8 +329,12 @@ router.get('/file-history', requireAuth, async (req, res) => {
         failedFixesCount,
         requiresHumanReview,
         productionCertified,
+        reviewReasons,
+        fixSummary,
+        clientChangeSummary,
         artifacts: {
           analysisReport: false,
+          fixAudit: !!(artifacts.fix_audit || resArtifacts.fix_audit),
           reviewPdf: !!(artifacts.review_pdf || resArtifacts.review_pdf),
           fixedPdf: !!(artifacts.fixed_pdf || resArtifacts.fixed_pdf || artifacts.final_fixed_pdf || resArtifacts.final_fixed_pdf),
           certifiedPdf: !!(artifacts.certified_pdf || resArtifacts.certified_pdf)

@@ -22,6 +22,7 @@ export interface RelatedFixJob {
   productionCertified: boolean;
   reviewReasons: any[];
   fixSummary: any[];
+  clientChangeSummary?: any;
   artifacts: FileHistoryArtifacts;
   createdAt: string;
   updatedAt: string;
