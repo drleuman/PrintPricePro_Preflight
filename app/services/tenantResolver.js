@@ -17,12 +17,20 @@ async function resolveCanonicalTenantContext(req) {
     const printhouseId = auth.printhouseId || auth.printhouse_id || null;
     
     // 1. Determine candidate tenant ID for CP
-    // If PRINT_HOUSE, we prefer printhouseId if available. Otherwise try jwtTenantId.
+    // Always use jwtTenantId for governance lookup. printhouseId is intentionally excluded
+    // because it may point to a different (incorrectly scoped) CP tenant, producing wrong
+    // limits. /api/auth/me uses the same approach (mockReq never carries printhouse_id).
     let candidateTenantId = jwtTenantId;
-    if (appRole === 'PRINT_HOUSE' && printhouseId) {
-        candidateTenantId = printhouseId;
-    }
-    
+
+    console.log('[TENANT-RESOLVER-CANDIDATE]', {
+        userId,
+        appRole,
+        jwtTenantId,
+        printhouseId,
+        candidateTenantId,
+        usingPrinthouseOverride: appRole === 'PRINT_HOUSE' && !!printhouseId,
+    });
+
     // 2. Fetch Governance
     let governance = null;
     let limitsObj = null;
@@ -53,9 +61,6 @@ async function resolveCanonicalTenantContext(req) {
         planCode = governance.planCode || governance.plan_code || governance.plan || planCode;
         commercialStatus = governance.commercialStatus || governance.commercial_status || commercialStatus;
         accessLevel = governance.accessLevel || governance.access_level || null;
-    } else if (appRole === 'PRINT_HOUSE' && printhouseId) {
-        // Fallback for commercial identity if CP fails but local data implies it
-        canonicalTenantId = printhouseId;
     }
     
     if (limitsObj) {
