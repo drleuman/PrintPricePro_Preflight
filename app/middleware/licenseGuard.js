@@ -135,7 +135,12 @@ module.exports = (options = {}) => {
             const planCode = user.plan || tenantContext.planCode || 'FREE';
             const fallback = getFallbackLimits(planCode.toUpperCase());
 
-            const maxFileSizeMb = tenantContext.limits.max_file_size_mb ?? fallback.max_file_size_mb;
+            // Use CP limit only if it is HIGHER than the plan's known floor.
+            // Guards against CP misconfiguration returning a lower-than-expected value for high-tier plans.
+            const cpFileSizeLimit = tenantContext.limits.max_file_size_mb ?? null;
+            const maxFileSizeMb = (cpFileSizeLimit !== null && cpFileSizeLimit > fallback.max_file_size_mb)
+                ? cpFileSizeLimit
+                : fallback.max_file_size_mb;
             const maxJobSizeMb = tenantContext.limits.max_job_size_mb ?? null;
             const monthlyJobsLimit = tenantContext.limits.monthly_jobs_limit ?? null;
 
