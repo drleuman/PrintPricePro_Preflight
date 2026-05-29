@@ -132,7 +132,7 @@ module.exports = (options = {}) => {
             }
 
             const tenantId = tenantContext.canonicalTenantId;
-            const planCode = tenantContext.planCode || user.plan || 'FREE';
+            const planCode = user.plan || tenantContext.planCode || 'FREE';
             const fallback = getFallbackLimits(planCode.toUpperCase());
 
             const maxFileSizeMb = tenantContext.limits.max_file_size_mb ?? fallback.max_file_size_mb;
