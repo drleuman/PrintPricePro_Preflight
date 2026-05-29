@@ -633,135 +633,178 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                 )}
                                 
                                 {item.type === 'ANALYZE' && (
-                                    <div className="w-full mt-2 pt-3 border-t border-[var(--border-color)]/30 flex flex-col gap-2">
-                                        <span className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest">Related Fix Jobs:</span>
+                                    <div className="w-full mt-4 pt-4 border-t border-[var(--border-color)] flex flex-col gap-3">
+                                        <h5 className="text-[0.7rem] font-bold text-[var(--text-primary)] uppercase tracking-widest">Related Magic Fixes</h5>
                                         {(!item.relatedFixJobs || item.relatedFixJobs.length === 0) ? (
-                                            <span className="text-[0.65rem] font-mono text-[var(--text-muted)] opacity-70">No related fixes yet.</span>
+                                            <span className="text-xs text-[var(--text-muted)] font-mono">No related fixes yet.</span>
                                         ) : (
-                                            <div className="flex flex-col gap-2">
-                                                {item.relatedFixJobs.map(f => (
-                                                    <div key={f.jobId} className="border border-[var(--border-color)] bg-[var(--bg-tertiary)] p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                                        <div className="min-w-0">
-                                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                                <span className="text-[0.55rem] font-mono text-[var(--text-muted)] shrink-0">{f.jobId.substring(0, 15)}...</span>
-                                                                <span className={`text-[0.5rem] font-bold uppercase tracking-widest px-1.5 py-0.5 border shrink-0 ${
-                                                                    f.status.includes('ERROR') || f.status.includes('FAILED') ? 'text-red-400 border-red-500/20 bg-red-500/10' :
-                                                                    f.status.includes('REVIEW') || f.status.includes('DEGRADED') ? 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10' :
-                                                                    f.status.includes('CERTIFIED') || f.status.includes('COMPLETED') ? 'text-[#50fa7b] border-[#50fa7b]/20 bg-[#50fa7b]/10' :
-                                                                    f.status.includes('QUEUED') ? 'text-orange-300 border-orange-400/20 bg-orange-400/10' :
-                                                                    'text-[var(--text-primary)] border-[var(--border-color)] bg-[var(--bg-secondary)]'
-                                                                }`}>
-                                                                    {f.status.replace(/_/g, ' ')}
+                                            <div className="flex flex-col gap-4">
+                                                {item.relatedFixJobs.map(f => {
+                                                    const hasArtifacts = f.artifacts.fixAudit || f.artifacts.reviewPdf || f.artifacts.fixedPdf || f.artifacts.certifiedPdf;
+                                                    
+                                                    const getStatusLabel = (status: string) => {
+                                                        if (status.includes('ERROR') || status.includes('FAILED')) return { label: 'Failed', color: 'text-red-400' };
+                                                        if (status.includes('REVIEW') || status.includes('DEGRADED')) return { label: 'Review required', color: 'text-yellow-400' };
+                                                        if (status.includes('CERTIFIED') || status.includes('COMPLETED')) return { label: 'Completed with findings', color: 'text-[#50fa7b]' };
+                                                        if (status.includes('QUEUED')) return { label: 'Processing', color: 'text-orange-300' };
+                                                        return { label: status.replace(/_/g, ' '), color: 'text-[var(--text-primary)]' };
+                                                    };
+                                                    const statusInfo = getStatusLabel(f.status);
+
+                                                    return (
+                                                    <div key={f.jobId} className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-4 flex flex-col gap-4">
+                                                        <div>
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <h6 className="font-bold text-[var(--text-primary)] text-sm">Magic Fix Result</h6>
+                                                                <span className={`text-xs font-bold uppercase tracking-widest ${statusInfo.color}`}>
+                                                                    {statusInfo.label}
                                                                 </span>
-                                                                {f.requiresHumanReview && <span className="text-[0.5rem] font-bold uppercase text-yellow-400 border border-yellow-500/20 bg-yellow-500/10 px-1.5 py-0.5">Review Required</span>}
-                                                                {f.productionCertified && <span className="text-[0.5rem] font-bold uppercase text-[#50fa7b] border border-[#50fa7b]/20 bg-[#50fa7b]/10 px-1.5 py-0.5">Certified</span>}
                                                             </div>
-                                                            <div className="text-[0.6rem] font-mono text-[var(--text-muted)]">
-                                                                A: {f.appliedFixesCount || 0} · S: {f.skippedFixesCount || 0} · F: {f.failedFixesCount || 0}
+                                                            <div className="text-xs font-mono text-[var(--text-muted)]">
+                                                                Fix ID: {f.jobId}
                                                             </div>
-                                                            {f.clientChangeSummary && (
-                                                                <details className="mt-3 text-xs w-full bg-[var(--bg-primary)] p-3 border border-[var(--border-color)]">
-                                                                    <summary className="cursor-pointer font-bold text-[var(--text-primary)] hover:text-[var(--accent-color)] transition-colors select-none">
-                                                                        View Client Change Summary
-                                                                    </summary>
-                                                                    <div className="mt-3 space-y-3 font-mono">
-                                                                        <div>
-                                                                            <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.6rem]">Status</span>
-                                                                            <span className="text-[var(--text-primary)]">{f.clientChangeSummary.status}</span>
-                                                                        </div>
-                                                                        
-                                                                        {f.clientChangeSummary.appliedChanges && f.clientChangeSummary.appliedChanges.length > 0 && (
-                                                                            <div>
-                                                                                <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.6rem] mb-1">What changed:</span>
-                                                                                <ul className="list-none space-y-1">
-                                                                                    {f.clientChangeSummary.appliedChanges.map((ac: any, i: number) => (
-                                                                                        <li key={i} className="flex gap-2">
-                                                                                            <span className="text-[#50fa7b]">✓</span>
-                                                                                            <span className="text-[var(--text-primary)]">{ac.label}</span>
-                                                                                        </li>
-                                                                                    ))}
-                                                                                </ul>
-                                                                            </div>
-                                                                        )}
+                                                        </div>
 
-                                                                        {f.clientChangeSummary.skippedChanges && f.clientChangeSummary.skippedChanges.length > 0 && (
-                                                                            <div>
-                                                                                <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.6rem] mb-1">Skipped changes:</span>
-                                                                                <ul className="list-none space-y-1 text-[var(--text-muted)]">
-                                                                                    {f.clientChangeSummary.skippedChanges.map((sc: any, i: number) => (
-                                                                                        <li key={i} className="flex gap-2">
-                                                                                            <span>-</span>
-                                                                                            <span>{sc.label}</span>
-                                                                                        </li>
-                                                                                    ))}
-                                                                                </ul>
-                                                                            </div>
-                                                                        )}
+                                                        {f.status.includes('QUEUED') && (
+                                                            <div className="bg-[var(--bg-tertiary)] p-3 border-l-2 border-orange-400 text-xs text-[var(--text-primary)] font-mono">
+                                                                This job is still processing. Refresh history in a moment.
+                                                            </div>
+                                                        )}
 
-                                                                        {f.clientChangeSummary.failedChanges && f.clientChangeSummary.failedChanges.length > 0 && (
-                                                                            <div>
-                                                                                <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.6rem] mb-1">Failed changes:</span>
-                                                                                <ul className="list-none space-y-1 text-red-400">
-                                                                                    {f.clientChangeSummary.failedChanges.map((fc: any, i: number) => (
-                                                                                        <li key={i} className="flex gap-2">
-                                                                                            <span>✗</span>
-                                                                                            <span>{fc.label}</span>
-                                                                                        </li>
-                                                                                    ))}
-                                                                                </ul>
-                                                                            </div>
-                                                                        )}
+                                                        {f.requiresHumanReview && !f.status.includes('QUEUED') && (
+                                                            <div className="bg-[var(--bg-tertiary)] p-3 border-l-2 border-yellow-400 text-xs text-[var(--text-primary)] font-mono">
+                                                                Review required before production. Please inspect the Review PDF or Fixed PDF before sending to print.
+                                                            </div>
+                                                        )}
 
-                                                                        {f.clientChangeSummary.reviewWarnings && f.clientChangeSummary.reviewWarnings.length > 0 && (
-                                                                            <div>
-                                                                                <span className="font-bold block text-yellow-500 uppercase tracking-widest text-[0.6rem] mb-1">Needs review:</span>
-                                                                                <ul className="list-none space-y-1 text-yellow-400">
-                                                                                    {f.clientChangeSummary.reviewWarnings.map((rw: any, i: number) => (
-                                                                                        <li key={i} className="flex gap-2">
-                                                                                            <span>⚠</span>
-                                                                                            <span>{rw}</span>
-                                                                                        </li>
-                                                                                    ))}
-                                                                                </ul>
-                                                                            </div>
-                                                                        )}
+                                                        {f.productionCertified && !f.status.includes('QUEUED') && (
+                                                            <div className="bg-[var(--bg-tertiary)] p-3 border-l-2 border-[#50fa7b] text-xs text-[var(--text-primary)] font-mono">
+                                                                Production certified. This file can be used for print production.
+                                                            </div>
+                                                        )}
 
-                                                                        <div className="pt-2 border-t border-[var(--border-color)]">
-                                                                            <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.6rem] mb-1">Recommendation:</span>
-                                                                            <span className={f.clientChangeSummary.productionCertified ? 'text-[#50fa7b]' : f.clientChangeSummary.requiresHumanReview ? 'text-yellow-400' : 'text-[var(--text-primary)]'}>
-                                                                                {f.clientChangeSummary.productionRecommendation}
-                                                                            </span>
-                                                                        </div>
+                                                        <div className="flex gap-6 text-xs font-mono text-[var(--text-primary)] bg-[var(--bg-secondary)] p-3 border border-[var(--border-color)]">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[var(--text-muted)] uppercase tracking-widest text-[0.6rem] mb-0.5">Applied</span>
+                                                                <span className="font-bold text-lg leading-none">{f.appliedFixesCount || 0}</span>
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[var(--text-muted)] uppercase tracking-widest text-[0.6rem] mb-0.5">Skipped</span>
+                                                                <span className="font-bold text-lg leading-none">{f.skippedFixesCount || 0}</span>
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[var(--text-muted)] uppercase tracking-widest text-[0.6rem] mb-0.5">Failed</span>
+                                                                <span className="font-bold text-lg leading-none">{f.failedFixesCount || 0}</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div>
+                                                            <h6 className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-2">Available Downloads</h6>
+                                                            {!hasArtifacts ? (
+                                                                <span className="text-xs font-mono text-[var(--text-muted)] italic">No downloadable artifacts available yet.</span>
+                                                            ) : (
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {f.artifacts.fixAudit && (
+                                                                        <button onClick={() => downloadArtifact(f.jobId, 'fix_audit')} className="text-[0.6rem] font-bold uppercase tracking-widest text-[var(--text-primary)] hover:text-[var(--accent-color)] transition-colors rounded-sm py-1.5 px-3 border border-[var(--border-color)] hover:border-[var(--accent-color)] bg-[var(--bg-tertiary)]">Fix Audit JSON</button>
+                                                                    )}
+                                                                    {f.artifacts.reviewPdf && (
+                                                                        <button onClick={() => downloadArtifact(f.jobId, 'review_pdf')} className="text-[0.6rem] font-bold uppercase tracking-widest text-[var(--text-primary)] hover:text-[var(--accent-color)] transition-colors rounded-sm py-1.5 px-3 border border-[var(--border-color)] hover:border-[var(--accent-color)] bg-[var(--bg-tertiary)]">Review PDF</button>
+                                                                    )}
+                                                                    {f.artifacts.fixedPdf && (
+                                                                        <button onClick={() => downloadArtifact(f.jobId, 'fixed_pdf')} className="text-[0.6rem] font-bold uppercase tracking-widest text-[var(--text-primary)] hover:text-[var(--accent-color)] transition-colors rounded-sm py-1.5 px-3 border border-[var(--border-color)] hover:border-[var(--accent-color)] bg-[var(--bg-tertiary)]">Fixed PDF</button>
+                                                                    )}
+                                                                    {f.artifacts.certifiedPdf && (
+                                                                        <button onClick={() => downloadArtifact(f.jobId, 'certified_pdf')} className="text-[0.6rem] font-bold uppercase tracking-widest text-[#50fa7b] hover:text-[#50fa7b] transition-colors rounded-sm py-1.5 px-3 border border-[#50fa7b]/50 hover:border-[#50fa7b] bg-[#50fa7b]/10">Certified PDF</button>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {f.clientChangeSummary ? (
+                                                            <details className="mt-1 group">
+                                                                <summary className="cursor-pointer font-bold text-xs text-[var(--accent-color)] hover:text-[var(--accent-hover)] transition-colors select-none">
+                                                                    <span className="group-open:hidden">[+] View Client Change Summary</span>
+                                                                    <span className="hidden group-open:inline">[-] Hide Client Change Summary</span>
+                                                                </summary>
+                                                                <div className="mt-4 space-y-4 font-mono text-xs bg-[var(--bg-secondary)] p-4 border border-[var(--border-color)]">
+                                                                    <div className="border-b border-[var(--border-color)] pb-3">
+                                                                        <h6 className="font-bold text-sm text-[var(--text-primary)] mb-2">Client Change Summary</h6>
+                                                                        <p className="text-[var(--text-muted)] leading-relaxed">
+                                                                            This file was processed by Magic Fix, but it still requires review before production.
+                                                                        </p>
                                                                     </div>
-                                                                </details>
-                                                            )}
-                                                            {!f.clientChangeSummary && (
-                                                                <div className="mt-3 text-xs text-[var(--text-muted)] italic font-mono">No detailed change summary is available for this fix job.</div>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex flex-wrap gap-1.5 shrink-0">
-                                                            {f.artifacts.fixAudit && (
-                                                                <button onClick={() => downloadArtifact(f.jobId, 'fix_audit')} className="text-[0.5rem] font-black uppercase tracking-widest text-[var(--text-primary)] hover:text-[var(--accent-hover)] transition-colors rounded-sm py-0.5 px-1.5 border border-[var(--border-color)] hover:border-[var(--accent-hover)] bg-[var(--bg-secondary)]">Fix Audit</button>
-                                                            )}
-                                                            {f.artifacts.reviewPdf && (
-                                                                <button onClick={() => downloadArtifact(f.jobId, 'review_pdf')} className="text-[0.5rem] font-black uppercase tracking-widest text-[var(--text-primary)] hover:text-[var(--accent-hover)] transition-colors rounded-sm py-0.5 px-1.5 border border-[var(--border-color)] hover:border-[var(--accent-hover)] bg-[var(--bg-secondary)]">Review PDF</button>
-                                                            )}
-                                                            {f.artifacts.fixedPdf && (
-                                                                <button onClick={() => downloadArtifact(f.jobId, 'fixed_pdf')} className="text-[0.5rem] font-black uppercase tracking-widest text-[var(--text-primary)] hover:text-[var(--accent-hover)] transition-colors rounded-sm py-0.5 px-1.5 border border-[var(--border-color)] hover:border-[var(--accent-hover)] bg-[var(--bg-secondary)]">Fixed PDF</button>
-                                                            )}
-                                                            {f.artifacts.certifiedPdf && (
-                                                                <button onClick={() => downloadArtifact(f.jobId, 'certified_pdf')} className="text-[0.5rem] font-black uppercase tracking-widest text-[#50fa7b] hover:text-[#50fa7b] transition-colors rounded-sm py-0.5 px-1.5 border border-[#50fa7b]/50 hover:border-[#50fa7b] bg-[#50fa7b]/10">Certified PDF</button>
-                                                            )}
-                                                        </div>
+
+                                                                    <div>
+                                                                        <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1">Recommendation</span>
+                                                                        <span className={f.clientChangeSummary.productionCertified ? 'text-[#50fa7b] font-bold' : f.clientChangeSummary.requiresHumanReview ? 'text-yellow-400 font-bold' : 'text-[var(--text-primary)]'}>
+                                                                            {f.clientChangeSummary.productionRecommendation}
+                                                                        </span>
+                                                                    </div>
+                                                                    
+                                                                    {f.clientChangeSummary.appliedChanges && f.clientChangeSummary.appliedChanges.length > 0 && (
+                                                                        <div>
+                                                                            <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1.5">What changed</span>
+                                                                            <ul className="list-none space-y-1.5 pl-0">
+                                                                                {f.clientChangeSummary.appliedChanges.map((ac: any, i: number) => (
+                                                                                    <li key={i} className="flex gap-2">
+                                                                                        <span className="text-[#50fa7b] shrink-0">✓</span>
+                                                                                        <span className="text-[var(--text-primary)] leading-snug">{ac.label}</span>
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {f.clientChangeSummary.reviewWarnings && f.clientChangeSummary.reviewWarnings.length > 0 && (
+                                                                        <div>
+                                                                            <span className="font-bold block text-yellow-500 uppercase tracking-widest text-[0.65rem] mb-1.5">Needs review</span>
+                                                                            <ul className="list-none space-y-1.5 pl-0 text-yellow-400">
+                                                                                {f.clientChangeSummary.reviewWarnings.map((rw: any, i: number) => (
+                                                                                    <li key={i} className="flex gap-2">
+                                                                                        <span className="shrink-0">⚠</span>
+                                                                                        <span className="leading-snug">{rw}</span>
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {f.clientChangeSummary.skippedChanges && f.clientChangeSummary.skippedChanges.length > 0 && (
+                                                                        <div>
+                                                                            <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1.5">Not applied</span>
+                                                                            <ul className="list-none space-y-1.5 pl-0 text-[var(--text-muted)]">
+                                                                                {f.clientChangeSummary.skippedChanges.map((sc: any, i: number) => (
+                                                                                    <li key={i} className="flex gap-2">
+                                                                                        <span className="shrink-0">-</span>
+                                                                                        <span className="leading-snug">{sc.label}</span>
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {f.clientChangeSummary.failedChanges && f.clientChangeSummary.failedChanges.length > 0 && (
+                                                                        <div>
+                                                                            <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1.5">Failed</span>
+                                                                            <ul className="list-none space-y-1.5 pl-0 text-red-400">
+                                                                                {f.clientChangeSummary.failedChanges.map((fc: any, i: number) => (
+                                                                                    <li key={i} className="flex gap-2">
+                                                                                        <span className="shrink-0">✗</span>
+                                                                                        <span className="leading-snug">{fc.label}</span>
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </details>
+                                                        ) : (
+                                                            <div className="mt-1 text-xs text-[var(--text-muted)] italic font-mono">No detailed change summary is available for this fix job.</div>
+                                                        )}
                                                     </div>
-                                                ))}
+                                                )})}
                                             </div>
                                         )}
-                                    </div>
-                                )}
-                                {item.type === 'ANALYZE' && (!item.relatedFixJobs || item.relatedFixJobs.length === 0) && (
-                                    <div className="w-full mt-2 pt-2 border-t border-[var(--border-color)]/30 text-[0.6rem] font-mono text-[var(--text-muted)] opacity-50">
-                                        No related fix jobs
                                     </div>
                                 )}
                                 {item.type === 'AUTOFIX' && item.sourceAnalyzeJob && (
