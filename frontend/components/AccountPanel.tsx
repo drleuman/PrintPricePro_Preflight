@@ -259,17 +259,34 @@ const ProfilePanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
 const LicensePanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
     const { t } = useTranslation();
     
-    // Safely extract values from telemetry if available
-    const identity = telemetry?.identity || user;
-    const license = telemetry?.license || { plan: user.plan, daily_jobs_limit: user.daily_jobs_limit || 50, max_file_size_mb: 500 };
-    const adminAccess = telemetry?.adminAccess || { enabled: false };
+    const license = telemetry?.license || {};
+    const identity = telemetry?.identity || {};
+    const adminAccess = telemetry?.adminAccess || {};
+    const usage = telemetry?.usage || {};
 
-    // Derived flags
-    const isUnlimitedJobs = license.daily_jobs_limit === null || license.daily_jobs_limit === undefined;
-    const hideUpgrade = adminAccess.enabled || 
-                        license.plan === 'SYSTEM' || 
-                        license.plan === 'ENTERPRISE' || 
-                        license.plan === 'FOUNDING_PRINTHOUSE';
+    const commercialPlan = license.plan || 'UNKNOWN';
+    const accessRole = identity.operationalRole || identity.role || 'UNKNOWN';
+    const appRole = identity.appRole || 'UNKNOWN';
+    const adminActive = adminAccess.enabled === true;
+
+    const dailyLimit = license.daily_jobs_limit;
+    const jobsToday = usage.jobsToday ?? 0;
+    const jobsDisplay = dailyLimit == null ? `${jobsToday} / Unlimited` : `${jobsToday} / ${dailyLimit}`;
+
+    const maxUploadMb = license.max_file_size_mb ?? 0;
+
+    const shouldShowUpgrade =
+        !adminActive &&
+        !['SYSTEM', 'ENTERPRISE', 'FOUNDING_PRINTHOUSE'].includes(commercialPlan);
+
+    console.info('[ACCOUNT-PANEL][LICENSE-TELEMETRY]', {
+        commercialPlan,
+        accessRole,
+        appRole,
+        adminActive,
+        jobsDisplay,
+        maxUploadMb
+    });
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
@@ -279,24 +296,24 @@ const LicensePanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
                 <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
                     <div>
                         <span className="block text-[0.65rem] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] mb-1">Commercial Plan</span>
-                        <span className="text-xl font-black text-[var(--text-primary)] uppercase tracking-tight truncate max-w-full block">{license.plan}</span>
+                        <span className="text-xl font-black text-[var(--text-primary)] uppercase tracking-tight truncate max-w-full block">{commercialPlan}</span>
                     </div>
-                    <div className={`h-2 w-2 rounded-full shrink-0 ${license.plan === 'FREE' ? 'bg-[var(--text-muted)]' : 'bg-[#50fa7b] shadow-[0_0_15px_#50fa7b]'}`} />
+                    <div className={`h-2 w-2 rounded-full shrink-0 ${commercialPlan === 'FREE' ? 'bg-[var(--text-muted)]' : 'bg-[#50fa7b] shadow-[0_0_15px_#50fa7b]'}`} />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 pb-4 border-b border-[var(--border-color)] text-xs font-mono">
                     <div>
                         <span className="text-[var(--text-muted)] uppercase block text-[0.6rem] mb-1">Access Role</span>
-                        <span className="text-[var(--text-primary)]">{identity.operationalRole || identity.role}</span>
+                        <span className="text-[var(--text-primary)]">{accessRole}</span>
                     </div>
                     <div>
                         <span className="text-[var(--text-muted)] uppercase block text-[0.6rem] mb-1">App Role</span>
-                        <span className="text-[var(--text-primary)]">{identity.appRole || 'USER'}</span>
+                        <span className="text-[var(--text-primary)]">{appRole}</span>
                     </div>
                     <div className="col-span-2">
                         <span className="text-[var(--text-muted)] uppercase block text-[0.6rem] mb-1">Admin Access</span>
-                        <span className={`${adminAccess.enabled ? 'text-[#50fa7b]' : 'text-[var(--text-muted)]'} font-bold`}>
-                            {adminAccess.enabled ? 'ACTIVE' : 'INACTIVE'}
+                        <span className={`${adminActive ? 'text-[#50fa7b]' : 'text-[var(--text-muted)]'} font-bold`}>
+                            {adminActive ? 'ACTIVE' : 'INACTIVE'}
                         </span>
                     </div>
                 </div>
@@ -304,15 +321,15 @@ const LicensePanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
                 <div className="space-y-4">
                     <UsageBar 
                         label={t('account.dailyParsingJobs')} 
-                        current={telemetry?.usage?.jobsToday || 0} 
-                        total={isUnlimitedJobs ? 9999999 : license.daily_jobs_limit} 
-                        BooleanCap={isUnlimitedJobs ? 'Unlimited' : undefined}
+                        current={jobsToday} 
+                        total={dailyLimit == null ? jobsToday : dailyLimit} 
+                        BooleanCap={dailyLimit == null ? 'Unlimited' : undefined}
                     />
                     <UsageBar 
                         label="Max Upload Size" 
-                        current={license.max_file_size_mb} 
-                        total={license.max_file_size_mb} 
-                        BooleanCap={license.max_file_size_mb + ' MB'} 
+                        current={maxUploadMb} 
+                        total={maxUploadMb} 
+                        BooleanCap={`${maxUploadMb} MB`} 
                     />
                 </div>
                 
@@ -320,7 +337,7 @@ const LicensePanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
                     Plan controls commercial limits. Role controls operational/admin permissions.
                 </div>
 
-                {!hideUpgrade && (
+                {shouldShowUpgrade && (
                     <div className="mt-8 pt-6 border-t border-[var(--border-color)] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div className="flex-1">
                             <h4 className="text-[0.75rem] font-black text-[var(--text-primary)] uppercase tracking-widest mb-1">{t('account.upgradeTitle')}</h4>
