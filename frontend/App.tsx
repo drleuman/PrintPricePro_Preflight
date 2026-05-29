@@ -85,6 +85,8 @@ function AppContent() {
   const [ldmActive, setLdmActive] = useState(false);
   const [ldmProgress, setLdmProgress] = useState(0);
   const [ldmStatus, setLdmStatus] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | undefined>(undefined);
+  const [uploadBytes, setUploadBytes] = useState<{ loaded: number; total: number } | undefined>(undefined);
 
   // Preview State (Server-side GS PNGs)
   const [previewPages, setPreviewPages] = useState<string[] | null>(null);
@@ -235,6 +237,8 @@ function AppContent() {
       }
 
       setLdmActive(false);
+      setUploadProgress(undefined);
+      setUploadBytes(undefined);
     }
   });
 
@@ -324,9 +328,14 @@ function AppContent() {
     resetResidues();
     setLdmActive(true);
     setLdmStatus('loader.engine');
+    setUploadProgress(0);
+    setUploadBytes(undefined);
 
     try {
-      const res = await startV2Preflight(file, selectedPolicy, { mode: effectiveMode });
+      const res = await startV2Preflight(file, selectedPolicy, { mode: effectiveMode }, (pct, loaded, total) => {
+        setUploadProgress(pct);
+        setUploadBytes({ loaded, total });
+      });
 
       if (res.inlineResult) {
         console.log('[APP][V2-START] Sync mode detected, using inlineResult');
@@ -390,6 +399,8 @@ function AppContent() {
       console.error('[APP][V2-ERROR]', err);
       setLdmActive(false);
       setLdmStatus('');
+      setUploadProgress(undefined);
+      setUploadBytes(undefined);
       setEngineError({
         code: err.code || 'ENGINE_V2_START_FAILURE',
         message: err.message || 'The PPOS engine failed to initialize the analysis.',
@@ -902,6 +913,9 @@ function AppContent() {
           isOpen={ldmActive}
           message={t((ldmStatus || 'common.processing') as any)}
           stageKey={stageKeyFromStatus(ldmStatus)}
+          uploadProgress={uploadProgress}
+          uploadedBytes={uploadBytes?.loaded}
+          totalBytes={uploadBytes?.total}
         />
 
         <EfficiencyAuditModalV2_4

@@ -15,7 +15,16 @@ type Props = {
   stageKey?: string;
   steps?: LoaderStep[];
   lockUI?: boolean;
+  uploadProgress?: number;
+  uploadedBytes?: number;
+  totalBytes?: number;
 };
+
+function formatBytes(n: number): string {
+  if (n >= 1_048_576) return `${(n / 1_048_576).toFixed(1)} MB`;
+  if (n >= 1_024) return `${Math.round(n / 1_024)} KB`;
+  return `${n} B`;
+}
 
 const DEFAULT_STEPS: LoaderStep[] = [
   { key: 'upload', title: 'PDF_INGRESS', description: 'Carrier validation and metadata stream.' },
@@ -49,6 +58,9 @@ export const LoaderOverlay: React.FC<Props> = ({
   stageKey,
   steps,
   lockUI = true,
+  uploadProgress,
+  uploadedBytes,
+  totalBytes,
 }) => {
   const [tipIndex, setTipIndex] = useState(0);
   const [visualProgress, setVisualProgress] = useState(0);
@@ -61,6 +73,13 @@ export const LoaderOverlay: React.FC<Props> = ({
 
   useEffect(() => {
     if (!isOpen) { setVisualProgress(0); return; }
+
+    // During the upload stage, drive the ring with real byte progress when available
+    if (stageKey === 'upload' && uploadProgress !== undefined) {
+      setVisualProgress(uploadProgress);
+      return;
+    }
+
     const total = pipeline.length;
     const activeIdx = Math.max(0, pipeline.findIndex((s) => statuses[s.key] === 'active'));
     const stageFloor = (activeIdx / total) * 100;
@@ -76,7 +95,7 @@ export const LoaderOverlay: React.FC<Props> = ({
       });
     }, 100);
     return () => clearInterval(interval);
-  }, [isOpen, stageKey, pipeline]);
+  }, [isOpen, stageKey, pipeline, uploadProgress]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -152,6 +171,26 @@ export const LoaderOverlay: React.FC<Props> = ({
                    <h2 className="text-2xl font-black tracking-tighter text-[var(--text-primary)] mb-2 uppercase italic">{currentStep.title}</h2>
                    <p className="text-[0.65rem] text-[var(--text-secondary)] uppercase tracking-[0.2em] font-normal">{currentStep.description}</p>
                 </div>
+
+                {/* Upload byte progress — shown only during upload stage with real data */}
+                {stageKey === 'upload' && uploadProgress !== undefined && (
+                  <div className="space-y-1.5">
+                    <div className="w-full h-px bg-[var(--bg-tertiary)] relative overflow-hidden">
+                      <div
+                        className="absolute inset-y-0 left-0 bg-[#dc0000] shadow-[0_0_6px_rgba(220,0,0,0.5)] transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[0.6rem] font-bold uppercase tracking-widest opacity-60">
+                      <span>UPLOAD_STREAM</span>
+                      <span>
+                        {uploadedBytes !== undefined && totalBytes !== undefined
+                          ? `${formatBytes(uploadedBytes)} / ${formatBytes(totalBytes)}`
+                          : `${uploadProgress}%`}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Technical Log Terminal */}
                 <div className="bg-[var(--bg-secondary)] border border-[var(--border-color)] p-4 space-y-3 relative">

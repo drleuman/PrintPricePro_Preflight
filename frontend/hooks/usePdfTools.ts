@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { pposFetch } from '../lib/apiClient';
+import { pposFetch, pposFetchWithProgress } from '../lib/apiClient';
 import { createBooklet } from '../utils/imposition';
 import { PreflightResult } from '../types';
 
@@ -27,7 +27,7 @@ type PdfToolsCallbacks = {
 export function usePdfTools(callbacks?: PdfToolsCallbacks) {
     const [isServerRunning, setIsServerRunning] = useState(false);
 
-    const startV2Preflight = useCallback(async (file: File, policy: string, options?: any) => {
+    const startV2Preflight = useCallback(async (file: File, policy: string, options?: any, onUploadProgress?: (pct: number, loaded: number, total: number) => void) => {
         setIsServerRunning(true);
         try {
             // Runtime Blob/File identity check — must run before any FormData access
@@ -80,11 +80,10 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
                 formData.append('jobMode', options.jobMode);
             }
 
-            // Requirement 3: No forzar Content-Type. pposFetch lo maneja.
-            const res = await pposFetch<any>('/api/v2/jobs', {
-                method: 'POST',
-                body: formData,
-            });
+            // Requirement 3: No forzar Content-Type. El cliente lo maneja.
+            const res = onUploadProgress
+                ? await pposFetchWithProgress<any>('/api/v2/jobs', { method: 'POST', body: formData, onUploadProgress })
+                : await pposFetch<any>('/api/v2/jobs', { method: 'POST', body: formData });
 
             // v2.4.135: Strict Canonical ID Preference (jobId || job_id || id)
             // Blindaje V3: Strict validation against 'job_' prefix

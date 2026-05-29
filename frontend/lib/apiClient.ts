@@ -135,3 +135,73 @@ export async function pposFetch<T>(path: string, options?: RequestInit): Promise
     if (contentType && contentType.includes('application/json')) return res.json() as Promise<T>;
     return res.text() as any;
 }
+
+type FetchWithProgressOptions = Omit<RequestInit, 'body'> & {
+    body?: FormData;
+    onUploadProgress?: (pct: number, loaded: number, total: number) => void;
+};
+
+export function pposFetchWithProgress<T>(path: string, options: FetchWithProgressOptions = {}): Promise<T> {
+    return new Promise((resolve, reject) => {
+        const { onUploadProgress, body, ...restOptions } = options;
+        const token = getAuthToken();
+        const requestId = crypto.randomUUID?.() || Math.random().toString(36).substring(2);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open(restOptions.method || 'GET', path);
+
+        xhr.setRequestHeader('X-Request-ID', requestId);
+        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.setRequestHeader('Idempotency-Key', crypto.randomUUID?.() || Math.random().toString(36).substring(2));
+
+        if (onUploadProgress && xhr.upload) {
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    onUploadProgress(Math.round((e.loaded / e.total) * 100), e.loaded, e.total);
+                }
+            };
+        }
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                const ct = xhr.getResponseHeader('content-type') || '';
+                try {
+                    if (ct.includes('application/json')) {
+                        resolve(JSON.parse(xhr.responseText) as T);
+                    } else {
+                        resolve(xhr.responseText as any);
+                    }
+                } catch {
+                    resolve(xhr.responseText as any);
+                }
+            } else {
+                let errorData: any = {};
+                try { errorData = JSON.parse(xhr.responseText); } catch { /* empty */ }
+
+                let errorMessage = errorData.message || errorData.error || `Request failed with status ${xhr.status}`;
+                let errorCode = errorData.code || errorData.error || 'UNKNOWN_ERROR';
+
+                if (xhr.status === 413) {
+                    errorCode = 'FILE_TOO_LARGE';
+                }
+
+                const err: any = new Error(errorMessage);
+                err.status = xhr.status;
+                err.code = errorCode;
+                err.traceId = errorData.traceId || requestId;
+                err.data = errorData;
+                err.v2 = !!errorData.v2;
+                reject(err);
+            }
+        };
+
+        xhr.onerror = () => {
+            const err: any = new Error('Network error during upload');
+            err.code = 'NETWORK_ERROR';
+            err.traceId = requestId;
+            reject(err);
+        };
+
+        xhr.send(body);
+    });
+}
