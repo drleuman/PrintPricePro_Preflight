@@ -3,6 +3,96 @@ const router = express.Router();
 const db = require('../services/db');
 const requireAuth = require('../middleware/requireAuth');
 
+function humanizeFixCode(code) {
+  const map = {
+    'REBUILD_TRIMBOX': 'The final trim area was rebuilt from the page geometry.',
+    'APPLY_BLEED': 'Bleed area was added or adjusted for print production.',
+    'CONVERT_CMYK': 'Colors were converted to CMYK for print compatibility.',
+    'INJECT_OUTPUT_INTENT': 'A print color profile was attached to the PDF.',
+    'FLATTEN_FORMS': 'Interactive form fields were flattened into static print content.',
+    'NORMALIZE_PAGE_BOXES': 'Page boxes were normalized for production consistency.',
+    'CONVERT_GRAYSCALE': 'The file was converted to grayscale.',
+    'REBUILD_300DPI': 'The file was rebuilt for 300 DPI output.',
+    'BOOKLET_MODE': 'The file was prepared for booklet-style production.',
+    'IMPOSE_BOOKLET': 'The file was prepared for booklet-style production.'
+  };
+  return map[code] || `Correction ${code} was processed.`;
+}
+
+function buildClientChangeSummary(fixJobData) {
+  const {
+    jobId, status, productionCertified, requiresHumanReview,
+    appliedFixes = [], skippedFixes = [], failedFixes = []
+  } = fixJobData;
+
+  const appliedChanges = (Array.isArray(appliedFixes) ? appliedFixes : []).map(f => {
+    if (!f) return null;
+    return {
+      code: f.code || f,
+      label: humanizeFixCode(f.code || f),
+      description: f.description || null,
+      requiresHumanReview: !!f.requiresHumanReview,
+      destructiveFixRisk: f.destructiveFixRisk || null
+    };
+  }).filter(Boolean);
+
+  const skippedChanges = (Array.isArray(skippedFixes) ? skippedFixes : []).map(f => {
+    if (!f) return null;
+    return {
+      code: f.code || f,
+      label: humanizeFixCode(f.code || f),
+      reason: f.reason || null,
+      requiresHumanReview: !!f.requiresHumanReview
+    };
+  }).filter(Boolean);
+
+  const failedChanges = (Array.isArray(failedFixes) ? failedFixes : []).map(f => {
+    if (!f) return null;
+    return {
+      code: f.code || f,
+      label: humanizeFixCode(f.code || f),
+      reason: f.reason || null
+    };
+  }).filter(Boolean);
+
+  const reviewWarnings = [];
+
+  for (const f of appliedChanges) {
+    if (f.requiresHumanReview) reviewWarnings.push("This change requires visual review before production.");
+    if (f.destructiveFixRisk === "HIGH") reviewWarnings.push("This change may alter the visual appearance of the file.");
+    if (f.code === "CONVERT_CMYK") reviewWarnings.push("CMYK conversion can slightly change colors. Please review the output PDF.");
+    if (f.code === "APPLY_BLEED" && fixJobData.strategy === "BOX_EXPANSION_ONLY") reviewWarnings.push("Bleed was applied by adjusting PDF page boxes; no new artwork was created beyond the page edge.");
+  }
+
+  if (skippedChanges.length > 0) reviewWarnings.push("Some requested corrections were not applied automatically.");
+  if (failedChanges.length > 0) reviewWarnings.push("Some corrections failed and may require manual prepress intervention.");
+
+  // Remove duplicate warnings
+  const uniqueWarnings = [...new Set(reviewWarnings)];
+
+  let productionRecommendation = "Correction completed. Please verify the output before production.";
+  if (productionCertified) {
+    productionRecommendation = "Production certified. The corrected PDF can be used for print production.";
+  } else if (requiresHumanReview) {
+    productionRecommendation = "Review required before production use.";
+  }
+
+  return {
+    title: "Client Change Summary",
+    jobId,
+    status,
+    productionCertified,
+    requiresHumanReview,
+    plainLanguageSummary: "A summary of automatic corrections and findings.",
+    appliedChanges,
+    skippedChanges,
+    failedChanges,
+    reviewWarnings: uniqueWarnings,
+    productionRecommendation
+  };
+}
+
+
 if (typeof requireAuth !== 'function') {
   throw new Error('[ACCOUNT-ROUTES] requireAuth middleware is not a function. Check import path/export shape.');
 }
