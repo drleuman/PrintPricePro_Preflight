@@ -405,7 +405,7 @@ const ApiAccessPanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
                             <button 
                                 onClick={async () => {
                                     try {
-                                        const token = localStorage.getItem('printprice_token');
+                                        const token = localStorage.getItem('ppos_auth_token');
                                         await fetch('/api/v2/me/api-key/rotation-request', {
                                             method: 'POST',
                                             headers: { 'Authorization': `Bearer ${token}` }
@@ -527,7 +527,7 @@ const UsageBar: React.FC<{ label: string, current: number, total: number, Boolea
 const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, isLoading: boolean, error: any, refresh: () => void }) => {
 
     const downloadArtifact = async (jobId: string, type: string) => {
-        const token = localStorage.getItem('printprice_token');
+        const token = localStorage.getItem('ppos_auth_token');
         if (!token) return;
         const res = await fetch(`/api/v2/jobs/${jobId}/artifacts/${type}`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -555,7 +555,7 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
             </div>
             
             {isLoading && <div className="text-sm font-mono opacity-50 p-4">Loading history...</div>}
-            {error && <div className="text-sm text-red-500 font-mono p-4">Failed to load history.</div>}
+            {error && <div className="text-sm text-red-500 font-mono p-4">Failed to load history: {String(error.message || error)}</div>}
             
             {!isLoading && !error && (!history?.items || history.items.length === 0) && (
                 <div className="p-8 border-2 border-dashed border-[var(--border-color)] text-center text-[var(--text-muted)] text-[0.75rem] font-mono">

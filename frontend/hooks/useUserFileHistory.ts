@@ -72,7 +72,12 @@ export function useUserFileHistory(limit: number = 20) {
       setIsLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('printprice_token');
+      const token = localStorage.getItem('ppos_auth_token');
+
+      console.info('[ACCOUNT-PANEL][FILE-HISTORY-FETCH]', {
+        hasToken: Boolean(token),
+        limit
+      });
       if (!token) {
         throw new Error('No authentication token found');
       }
@@ -83,16 +88,12 @@ export function useUserFileHistory(limit: number = 20) {
         }
       });
 
-      if (!response.ok) {
-        throw new Error(`File history fetch failed with status ${response.status}`);
-      }
+      console.info('[ACCOUNT-PANEL][FILE-HISTORY-RESPONSE]', {
+        status: response.status,
+        ok: response.ok
+      });
 
-      const data = await response.json();
-      if (data.ok) {
-        setHistory(data);
-      } else {
-        throw new Error('File history response not ok');
-      }
+      
     } catch (err: any) {
       setError(err);
     } finally {
