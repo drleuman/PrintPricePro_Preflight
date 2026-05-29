@@ -8,10 +8,14 @@ import {
     AtSymbolIcon, 
     IdentificationIcon,
     ArrowPathIcon,
-    CheckCircleIcon
+    CheckCircleIcon,
+    DocumentTextIcon,
+    ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
+import { useUserTelemetry } from '../hooks/useUserTelemetry';
+import { useUserFileHistory, FileHistoryItem } from '../hooks/useUserFileHistory';
 
-export type AccountView = 'profile' | 'license' | 'api' | 'security';
+export type AccountView = 'profile' | 'license' | 'api' | 'security' | 'history';
 
 interface AccountPanelProps {
     activeView: AccountView;
@@ -21,6 +25,7 @@ interface AccountPanelProps {
 export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose }) => {
     const { t } = useTranslation();
     const { user } = useAuth();
+    const { telemetry } = useUserTelemetry();
     const trapRef = useRef<HTMLDivElement>(null);
     const initialFocusRef = useRef<HTMLButtonElement>(null);
 
@@ -87,13 +92,15 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose 
     const renderActiveView = () => {
         switch (activeView) {
             case 'profile':
-                return <ProfilePanel user={user} />;
+                return <ProfilePanel user={user} telemetry={telemetry} />;
             case 'license':
-                return <LicensePanel user={user} />;
+                return <LicensePanel user={user} telemetry={telemetry} />;
             case 'api':
-                return <ApiAccessPanel user={user} />;
+                return <ApiAccessPanel user={user} telemetry={telemetry} />;
             case 'security':
-                return <SecurityPanel user={user} />;
+                return <SecurityPanel user={user} telemetry={telemetry} />;
+            case 'history':
+                return <HistoryPanel />;
             default:
                 return null;
         }
@@ -105,6 +112,7 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose 
             case 'license': return t('account.license.title');
             case 'api': return t('account.api.title');
             case 'security': return t('account.security.title');
+            case 'history': return 'FILE & JOB HISTORY';
             default: return t('appName');
         }
     };
@@ -168,7 +176,7 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose 
 // SEPARATE VIEWS COMPONENTS
 // -------------------------------------------------------------------------------- //
 
-const ProfilePanel = ({ user }: { user: any }) => {
+const ProfilePanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
     const { t } = useTranslation();
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
@@ -215,7 +223,7 @@ const ProfilePanel = ({ user }: { user: any }) => {
     );
 };
 
-const LicensePanel = ({ user }: { user: any }) => {
+const LicensePanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
     const { t } = useTranslation();
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
@@ -231,8 +239,8 @@ const LicensePanel = ({ user }: { user: any }) => {
                 </div>
                 
                 <div className="space-y-4">
-                    <UsageBar label={t('account.dailyParsingJobs')} current={0} total={user.daily_jobs_limit} />
-                    <UsageBar label={t('account.autoMagicFix')} current={user.ai_magic_fix_enabled ? 1 : 0} total={1} BooleanCap={t('common.active')} />
+                    <UsageBar label={t('account.dailyParsingJobs')} current={telemetry?.usage?.jobsToday || 0} total={telemetry?.license?.daily_jobs_limit || user.daily_jobs_limit || 50} />
+                    <UsageBar label={t('account.autoMagicFix')} current={telemetry?.license?.ai_magic_fix_enabled || user.ai_magic_fix_enabled ? 1 : 0} total={1} BooleanCap={t('common.active')} />
                 </div>
 
                 {user.plan === 'FREE' && (
@@ -253,7 +261,7 @@ const LicensePanel = ({ user }: { user: any }) => {
     );
 };
 
-const ApiAccessPanel = ({ user }: { user: any }) => {
+const ApiAccessPanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
     const { t } = useTranslation();
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
@@ -266,11 +274,31 @@ const ApiAccessPanel = ({ user }: { user: any }) => {
                         
                         <div className="space-y-4">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-[var(--bg-secondary)] border border-[var(--border-color)] p-3 gap-3">
-                                <span className="text-sm font-bold opacity-40 select-none overflow-hidden text-ellipsis break-all max-w-full block">ppos_live_••••••••••••••••••••</span>
-                                <span className="text-[0.55rem] uppercase tracking-widest text-[#50fa7b] bg-[#50fa7b]/10 px-2 py-0.5 border border-[#50fa7b]/20 shrink-0 self-start sm:self-auto">{t('common.active')}</span>
+                                <span className="text-sm font-bold opacity-40 select-none overflow-hidden text-ellipsis break-all max-w-full block">
+                                    {telemetry?.apiAccess?.maskedKey || t('account.apiNoAccessDesc', 'Not provisioned')}
+                                </span>
+                                <span className={`text-[0.55rem] uppercase tracking-widest px-2 py-0.5 border shrink-0 self-start sm:self-auto ${
+                                    telemetry?.apiAccess?.enabled ? 'text-[#50fa7b] bg-[#50fa7b]/10 border-[#50fa7b]/20' : 'text-[var(--text-muted)] bg-[var(--bg-tertiary)] border-[var(--border-color)]'
+                                }`}>
+                                    {telemetry?.apiAccess?.enabled ? t('common.active') : telemetry?.apiAccess?.rotationStatus || 'INACTIVE'}
+                                </span>
                             </div>
                             
-                            <button className="flex items-center gap-2 text-[0.65rem] font-black text-[var(--accent-color)] uppercase hover:text-[var(--accent-hover)] transition-colors py-1 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] rounded-sm">
+                            <button 
+                                onClick={async () => {
+                                    try {
+                                        const token = localStorage.getItem('printprice_token');
+                                        await fetch('/api/v2/me/api-key/rotation-request', {
+                                            method: 'POST',
+                                            headers: { 'Authorization': `Bearer ${token}` }
+                                        });
+                                        alert('API key rotation requested successfully.');
+                                    } catch(e) {
+                                        alert('Failed to request API key rotation.');
+                                    }
+                                }}
+                                className="flex items-center gap-2 text-[0.65rem] font-black text-[var(--accent-color)] uppercase hover:text-[var(--accent-hover)] transition-colors py-1 focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] rounded-sm"
+                            >
                                 <ArrowPathIcon className="w-4 h-4 shrink-0" />
                                 <span className="truncate">{t('account.apiKeyRotation')}</span>
                             </button>
@@ -294,7 +322,7 @@ const ApiAccessPanel = ({ user }: { user: any }) => {
     );
 };
 
-const SecurityPanel = ({ user }: { user: any }) => {
+const SecurityPanel = ({ user, telemetry }: { user: any, telemetry: any }) => {
     const { t } = useTranslation();
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
@@ -312,7 +340,7 @@ const SecurityPanel = ({ user }: { user: any }) => {
                 <div className="p-5 border border-[var(--border-color)] bg-[var(--bg-tertiary)] flex flex-col min-w-0">
                     <span className="text-[0.55rem] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] mb-3 truncate block">{t('account.loginMethod')}</span>
                     <div className="flex items-center gap-2 text-[var(--text-primary)] font-bold mt-auto shrink-0">
-                        <span className="text-sm font-mono text-[var(--text-secondary)] truncate block">{t('account.standardFlow')}</span>
+                        <span className="text-sm font-mono text-[var(--text-secondary)] truncate block">{telemetry?.security?.loginMethod || t('account.standardFlow')}</span>
                     </div>
                 </div>
             </div>
@@ -377,4 +405,146 @@ const UsageBar: React.FC<{ label: string, current: number, total: number, Boolea
         </div>
     </div>
 );
+
+const HistoryPanel = () => {
+    const { history, isLoading, error, refresh } = useUserFileHistory(20);
+
+    const downloadArtifact = async (jobId: string, type: string) => {
+        const token = localStorage.getItem('printprice_token');
+        if (!token) return;
+        const res = await fetch(`/api/v2/jobs/${jobId}/artifacts/${type}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) {
+            alert('Failed to download artifact.');
+            return;
+        }
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${type}_${jobId}`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
+
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
+            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-2">
+                <SectionTitle title="FILE & JOB HISTORY" icon={<DocumentTextIcon className="w-5 h-5" />} />
+                <button onClick={refresh} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] p-1 rounded-sm">
+                   <ArrowPathIcon className="w-4 h-4" />
+                </button>
+            </div>
+            
+            {isLoading && <div className="text-sm font-mono opacity-50 p-4">Loading history...</div>}
+            {error && <div className="text-sm text-red-500 font-mono p-4">Failed to load history.</div>}
+            
+            {!isLoading && !error && (!history?.items || history.items.length === 0) && (
+                <div className="p-8 border-2 border-dashed border-[var(--border-color)] text-center text-[var(--text-muted)] text-[0.75rem] font-mono">
+                    No files processed yet.
+                </div>
+            )}
+
+            {!isLoading && !error && history?.items && history.items.length > 0 && (
+                <div className="space-y-6">
+                    <div className="text-[0.65rem] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+                        {history.scope === 'tenant' ? 'Showing tenant history.' : 'Showing your files.'}
+                    </div>
+                    {history.items.map((item: FileHistoryItem) => (
+                        <div key={item.jobId} className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-4 flex flex-col gap-3 transition-colors hover:border-[var(--text-muted)] min-w-0">
+                            <div className="flex justify-between items-start gap-4">
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-[0.55rem] uppercase tracking-widest bg-[var(--bg-tertiary)] text-[var(--text-primary)] px-2 py-0.5 border border-[var(--border-color)] shrink-0">
+                                            {item.type}
+                                        </span>
+                                        <span className={`text-[0.55rem] font-bold uppercase tracking-widest px-2 py-0.5 border shrink-0 ${
+                                            item.status.includes('ERROR') || item.status.includes('FAILED') ? 'text-red-400 border-red-500/20 bg-red-500/10' :
+                                            item.status.includes('CERTIFIED') ? 'text-[#50fa7b] border-[#50fa7b]/20 bg-[#50fa7b]/10' :
+                                            item.status.includes('REVIEW') ? 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10' :
+                                            'text-[var(--text-primary)] border-[var(--border-color)] bg-[var(--bg-tertiary)]'
+                                        }`}>
+                                            {item.status.replace(/_/g, ' ')}
+                                        </span>
+                                    </div>
+                                    <h4 className="text-sm font-bold text-[var(--text-primary)] truncate break-all block" title={item.filename}>
+                                        {item.filename}
+                                    </h4>
+                                    <div className="text-[0.65rem] font-mono text-[var(--text-muted)] mt-1 opacity-70">
+                                        {new Date(item.createdAt).toLocaleString()} • {item.fileSizeMb.toFixed(2)} MB
+                                        {item.type === 'ANALYZE' && (
+                                            <span className="ml-2">
+                                                (Issues: {item.issuesCount || 0}, Findings: {item.findingsCount || 0})
+                                            </span>
+                                        )}
+                                        {item.type === 'AUTOFIX' && (
+                                            <span className="ml-2">
+                                                (Applied: {item.appliedFixesCount || 0}, Skipped: {item.skippedFixesCount || 0}, Failed: {item.failedFixesCount || 0})
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 pt-2 border-t border-[var(--border-color)]/50">
+                                {item.artifacts.analysisReport && (
+                                    <button onClick={() => downloadArtifact(item.jobId, 'analysis_report')} className="flex items-center gap-1.5 text-[0.6rem] font-black uppercase tracking-widest text-[var(--accent-color)] hover:text-[var(--accent-hover)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] rounded-sm py-1 px-2 border border-[var(--border-color)] hover:border-[var(--accent-hover)] bg-[var(--bg-tertiary)]">
+                                        <ArrowDownTrayIcon className="w-3 h-3 shrink-0" />
+                                        REPORT JSON
+                                    </button>
+                                )}
+                                {item.artifacts.reviewPdf && (
+                                    <button onClick={() => downloadArtifact(item.jobId, 'review_pdf')} className="flex items-center gap-1.5 text-[0.6rem] font-black uppercase tracking-widest text-[var(--accent-color)] hover:text-[var(--accent-hover)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] rounded-sm py-1 px-2 border border-[var(--border-color)] hover:border-[var(--accent-hover)] bg-[var(--bg-tertiary)]">
+                                        <ArrowDownTrayIcon className="w-3 h-3 shrink-0" />
+                                        REVIEW PDF
+                                    </button>
+                                )}
+                                {item.artifacts.fixedPdf && (
+                                    <button onClick={() => downloadArtifact(item.jobId, 'fixed_pdf')} className="flex items-center gap-1.5 text-[0.6rem] font-black uppercase tracking-widest text-[var(--accent-color)] hover:text-[var(--accent-hover)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] rounded-sm py-1 px-2 border border-[var(--border-color)] hover:border-[var(--accent-hover)] bg-[var(--bg-tertiary)]">
+                                        <ArrowDownTrayIcon className="w-3 h-3 shrink-0" />
+                                        FIXED PDF
+                                    </button>
+                                )}
+                                {item.artifacts.certifiedPdf && (
+                                    <button onClick={() => downloadArtifact(item.jobId, 'certified_pdf')} className="flex items-center gap-1.5 text-[0.6rem] font-black uppercase tracking-widest text-[var(--accent-color)] hover:text-[var(--accent-hover)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] rounded-sm py-1 px-2 border border-[var(--border-color)] hover:border-[var(--accent-hover)] bg-[var(--bg-tertiary)]">
+                                        <ArrowDownTrayIcon className="w-3 h-3 shrink-0" />
+                                        CERTIFIED PDF
+                                    </button>
+                                )}
+                                
+                                {item.type === 'ANALYZE' && item.relatedFixJobs && item.relatedFixJobs.length > 0 && (
+                                    <div className="w-full mt-2 pt-2 border-t border-[var(--border-color)]/30 text-[0.65rem] font-mono text-[var(--text-muted)] flex items-center">
+                                        <span className="opacity-70 mr-2 shrink-0">Related Fix Jobs:</span>
+                                        <div className="flex flex-wrap gap-2">
+                                            {item.relatedFixJobs.map(f => (
+                                                <span key={f.jobId} className="px-1.5 py-0.5 bg-[var(--bg-tertiary)] border border-[var(--border-color)]" title={f.status}>{f.jobId.substring(0, 15)}...</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {item.type === 'ANALYZE' && (!item.relatedFixJobs || item.relatedFixJobs.length === 0) && (
+                                    <div className="w-full mt-2 pt-2 border-t border-[var(--border-color)]/30 text-[0.6rem] font-mono text-[var(--text-muted)] opacity-50">
+                                        No related fix jobs
+                                    </div>
+                                )}
+                                {item.type === 'AUTOFIX' && item.sourceAnalyzeJob && (
+                                    <div className="w-full mt-2 pt-2 border-t border-[var(--border-color)]/30 text-[0.65rem] font-mono text-[var(--text-muted)] flex items-center">
+                                        <span className="opacity-70 mr-2 shrink-0">Source Analysis:</span>
+                                        <span className="px-1.5 py-0.5 bg-[var(--bg-tertiary)] border border-[var(--border-color)]" title={item.sourceAnalyzeJob.status}>{item.sourceAnalyzeJob.jobId.substring(0, 15)}...</span>
+                                    </div>
+                                )}
+                                {item.type === 'AUTOFIX' && !item.sourceAnalyzeJob && (
+                                    <div className="w-full mt-2 pt-2 border-t border-[var(--border-color)]/30 text-[0.6rem] font-mono text-[var(--text-muted)] opacity-50">
+                                        Source analysis unavailable
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
 
