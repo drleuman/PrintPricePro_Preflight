@@ -102,14 +102,13 @@ router.get('/file-history', requireAuth, async (req, res) => {
   try {
     // Phase 39.1.18: Tenant scope. We reconstruct relationships dynamically.
     const queryStr = `
-      SELECT job_id, type, status, created_at, updated_at, 
-             file_size_bytes, original_filename, progress, canonical_payload_json 
+      SELECT * 
       FROM preflight_job_registry 
       WHERE tenant_id = ? 
       ORDER BY created_at DESC 
-      LIMIT ?
+      LIMIT ${fetchLimit}
     `;
-    const rowsRaw = await db.query(queryStr, [tenantId, limit * 2]); // Fetch extra for grouping
+    const rowsRaw = await db.query(queryStr, [tenantId]); // Fetch extra for grouping
     const dbRows = rowsRaw.rows || rowsRaw || [];
 
     const items = [];
