@@ -253,10 +253,20 @@ router.get('/file-history', requireAuth, async (req, res) => {
       const extractFileSize = (r, p) => r.file_size_bytes || r.fileSizeBytes || p.fileSizeBytes || p.file_size_bytes || p.fileSize || p.metadata?.fileSizeBytes || 0;
       let resolvedFileSizeBytes = extractFileSize(row, payload);
 
-      let requestedFixesCount = (row.requested_fixes_json ? JSON.parse(row.requested_fixes_json).length : null) ?? payload.requestedFixesCount ?? payload.requestedFixes?.length ?? 0;
-      let appliedFixesCount = (row.applied_fixes_json ? JSON.parse(row.applied_fixes_json).length : null) ?? payload.appliedFixesCount ?? payload.appliedFixes?.length ?? payload.applied_fixes?.length ?? 0;
-      let skippedFixesCount = (row.skipped_fixes_json ? JSON.parse(row.skipped_fixes_json).length : null) ?? payload.skippedFixesCount ?? payload.skippedFixes?.length ?? payload.skipped_fixes?.length ?? 0;
-      let failedFixesCount = (row.failed_fixes_json ? JSON.parse(row.failed_fixes_json).length : null) ?? payload.failedFixesCount ?? payload.failedFixes?.length ?? payload.failed_fixes?.length ?? 0;
+            const safeParseLen = (str) => {
+        if (!str) return null;
+        try {
+          const parsed = JSON.parse(str);
+          return Array.isArray(parsed) ? parsed.length : null;
+        } catch(e) {
+          return null;
+        }
+      };
+
+      let requestedFixesCount = safeParseLen(row.requested_fixes_json) ?? payload.requestedFixesCount ?? payload.requestedFixes?.length ?? 0;
+      let appliedFixesCount = safeParseLen(row.applied_fixes_json) ?? payload.appliedFixesCount ?? payload.appliedFixes?.length ?? payload.applied_fixes?.length ?? 0;
+      let skippedFixesCount = safeParseLen(row.skipped_fixes_json) ?? payload.skippedFixesCount ?? payload.skippedFixes?.length ?? payload.skipped_fixes?.length ?? 0;
+      let failedFixesCount = safeParseLen(row.failed_fixes_json) ?? payload.failedFixesCount ?? payload.failedFixes?.length ?? payload.failed_fixes?.length ?? 0;
       
       let requiresHumanReview = payload.requiresHumanReview || result.requiresHumanReview || row.status === 'REVIEW_REQUIRED';
       let productionCertified = payload.productionCertified || result.productionCertified || row.status === 'CERTIFIED';
