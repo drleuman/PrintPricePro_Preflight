@@ -244,7 +244,7 @@ app.use((req, res, next) => {
 
 // 2) Response timeout — kill hung connections (Ghostscript safety net)
 app.use((req, res, next) => {
-  res.setTimeout(610_000, () => {
+  res.setTimeout(1_740_000, () => {
     if (!res.headersSent) res.status(504).json({ error: 'Request timeout' });
   });
   next();

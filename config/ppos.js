@@ -36,6 +36,7 @@ const jwtAudience =
 module.exports = {
   preflightServiceUrl,
   storageBase,
+  longTimeoutMs: parseInt(process.env.PPOS_LONG_TIMEOUT_MS || '1740000', 10),
   tempUploadDir: process.env.V2_TEMP_UPLOAD_DIR || path.join(process.cwd(), 'uploads-v2-temp'),
   jwt: {
     secret: jwtSecret,

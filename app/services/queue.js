@@ -141,7 +141,8 @@ async function enqueueJob(type, payload = {}) {
     if (localFilePath && fs.existsSync(localFilePath)) {
       console.log(`[QUEUE][MULTIPART] Reconstructing job creation request${jobId ? ' for ' + jobId : ''}`);
 
-      const fileBuffer = await fs.promises.readFile(localFilePath);
+      const fileStat = await fs.promises.stat(localFilePath);
+      const fileStream = fs.createReadStream(localFilePath);
       const fileMimeType = payload.mimeType || 'application/pdf';
       const fileName = payload.filename || input.filename || 'document.pdf';
       // Removed shadowing of deploymentId and tenantId to use outer scope variables
@@ -165,15 +166,15 @@ async function enqueueJob(type, payload = {}) {
         ...payload.metadata
       }));
 
-      form.append('file', fileBuffer, {
+      form.append('file', fileStream, {
         filename: fileName,
         contentType: fileMimeType || 'application/pdf',
-        knownLength: fileBuffer.length
+        knownLength: fileStat.size
       });
 
       console.log('[QUEUE][FILE-OBJECT-CHECK]', {
-        mode: 'form-data-buffer',
-        size: fileBuffer.length,
+        mode: 'form-data-stream',
+        size: fileStat.size,
         type: fileMimeType || 'application/pdf',
         name: fileName
       });

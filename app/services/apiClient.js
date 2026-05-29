@@ -93,7 +93,8 @@ async function pposRequest(path, options = {}) {
                 data: body,
                 maxBodyLength: Infinity,
                 maxContentLength: Infinity,
-                validateStatus: () => true
+                validateStatus: () => true,
+                timeout: parseInt(process.env.PPOS_JOB_TIMEOUT_MS || '1740000', 10)
             });
 
             const responseLike = {
