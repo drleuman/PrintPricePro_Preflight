@@ -274,7 +274,12 @@ router.post('/refresh', async (req, res) => {
         const userId = decoded.userId || decoded.sub;
 
         // Phase 2 Hardening: Verify identity still exists in high-trust node registry
-        const users = await db.execute('SELECT id, email, role, printhouse_id, tenant_id FROM users WHERE id = ?', [userId]);
+        const users = await db.execute(`
+            SELECT u.id, u.email, u.role, u.printhouse_id, u.tenant_id, l.plan
+            FROM users u
+            LEFT JOIN licenses l ON u.id = l.user_id
+            WHERE u.id = ?
+        `, [userId]);
         if (users.length === 0) {
             console.error(`[AUTH-REFRESH-DENIED] Refresh attempted for non-existent user: ${userId}`);
             return res.status(401).json({ error: 'INVALID_SESSION', message: 'Identity context lost.' });
@@ -288,7 +293,7 @@ router.post('/refresh', async (req, res) => {
             appRole: user.role,
             tenantId: user.tenant_id || user.id,
             printhouseId: user.printhouse_id || null,
-            plan: decoded.plan
+            plan: user.plan || 'FREE'
         }, '24h');
 
         /**
