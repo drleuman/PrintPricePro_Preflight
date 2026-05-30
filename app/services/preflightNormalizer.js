@@ -856,6 +856,8 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
     artifact_delta: rawFixJob?.artifact_delta || rawFixJob?.result?.artifact_delta || null,
     certification_blockers: rawFixJob?.certification_blockers || rawFixJob?.result?.certification_blockers || [],
 
+    error: rawFixJob?.error || rawFixJob?.result?.error || null,
+
     _isDegraded: degradedReasons.length > 0 || Boolean(rawFixJob?._isDegraded),
     degraded_reasons: degradedReasons.length > 0 ? degradedReasons : (rawFixJob?.degraded_reasons || []),
     _forensicDataMissing: !hasForensics(rawFixJob, sourceAnalyzeJob)
@@ -949,7 +951,9 @@ function normalizeAutofixFinalState(report) {
   // Determine final status
   let status = report.status || report.final_status || 'AUTOFIX_COMPLETED';
 
-  const isFailedFix = failedFixes.length > 0 || !hasOutputArtifact;
+  const isInProgress = ['PROCESSING', 'QUEUED', 'PENDING', 'IN_PROGRESS', 'RUNNING'].includes(status);
+  const isExplicitNonFailedTerminal = ['AUTOFIX_REVIEW_REQUIRED', 'AUTOFIX_PARTIAL', 'AUTOFIX_PARTIAL_REVIEW_REQUIRED', 'AUTOFIX_DEGRADED', 'AUTOFIX_COMPLETED', 'COMPLETED', 'COMPLETED_WITH_REVIEW'].includes(status);
+  const isFailedFix = !isExplicitNonFailedTerminal && (failedFixes.length > 0 || (!hasOutputArtifact && !isInProgress));
 
   if (report._isDegraded === true || (report.degraded_reasons && report.degraded_reasons.length > 0)) {
     status = 'AUTOFIX_DEGRADED';
