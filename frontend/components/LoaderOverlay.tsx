@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 type StepStatus = 'done' | 'active' | 'pending';
@@ -18,6 +18,7 @@ type Props = {
   uploadProgress?: number;
   uploadedBytes?: number;
   totalBytes?: number;
+  fixProgress?: number;
 };
 
 function formatBytes(n: number): string {
@@ -52,6 +53,12 @@ function computeStatuses(steps: LoaderStep[], stageKey?: string): Record<string,
   return out;
 }
 
+function formatElapsed(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
 export const LoaderOverlay: React.FC<Props> = ({
   isOpen,
   message = 'SYSTEM_READY',
@@ -61,15 +68,44 @@ export const LoaderOverlay: React.FC<Props> = ({
   uploadProgress,
   uploadedBytes,
   totalBytes,
+  fixProgress,
 }) => {
   const [tipIndex, setTipIndex] = useState(0);
   const [visualProgress, setVisualProgress] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [syntheticProgress, setSyntheticProgress] = useState(0);
+  const fixStartRef = useRef<number | null>(null);
 
   const pipeline = useMemo(() => steps ?? DEFAULT_STEPS, [steps]);
   const statuses = useMemo(
     () => computeStatuses(pipeline, isOpen ? stageKey : undefined),
     [pipeline, stageKey, isOpen]
   );
+
+  // Elapsed timer + synthetic fallback for fix stage
+  useEffect(() => {
+    if (!isOpen || (stageKey !== 'fix' && stageKey !== 'preflight')) {
+      fixStartRef.current = null;
+      setElapsedSeconds(0);
+      setSyntheticProgress(0);
+      return;
+    }
+    fixStartRef.current = Date.now();
+    setElapsedSeconds(0);
+    setSyntheticProgress(0);
+
+    // Empirical estimate: ~60s for a 1 MB file; cap synthetic advance at 85%
+    const estimatedDurationMs = totalBytes ? Math.max(15000, (totalBytes / 1_048_576) * 60_000) : 90_000;
+
+    const tick = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - (fixStartRef.current ?? Date.now())) / 1000);
+      setElapsedSeconds(elapsed);
+      const synthetic = Math.min(85, (elapsed * 1000 / estimatedDurationMs) * 85);
+      setSyntheticProgress(Math.round(synthetic));
+    }, 1000);
+
+    return () => clearInterval(tick);
+  }, [isOpen, stageKey, totalBytes]);
 
   useEffect(() => {
     if (!isOpen) { setVisualProgress(0); return; }
@@ -190,6 +226,32 @@ export const LoaderOverlay: React.FC<Props> = ({
                       </span>
                     </div>
                   </div>
+                )}
+
+                {/* ENGINE_CERTIFICATION / FORENSIC_SCAN progress — floor of real job.progress vs synthetic time estimate.
+                    Real takes over when it's ahead; synthetic keeps advancing when PPOS sends sparse updates. */}
+                {(stageKey === 'fix' || stageKey === 'preflight') && (
+                  (() => {
+                    const realLeading = fixProgress > syntheticProgress;
+                    const displayPct = realLeading ? fixProgress : syntheticProgress;
+                    const label = stageKey === 'fix' ? 'ENGINE_CERTIFICATION' : 'FORENSIC_SCAN';
+                    return (
+                      <div className="space-y-1.5">
+                        <div className="w-full h-px bg-[var(--bg-tertiary)] relative overflow-hidden">
+                          <div
+                            className={`absolute inset-y-0 left-0 shadow-[0_0_6px_rgba(220,0,0,0.5)] transition-all duration-700 ${realLeading ? 'bg-[#dc0000]' : 'bg-[#dc0000]/60'}`}
+                            style={{ width: `${displayPct}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-[0.6rem] font-bold uppercase tracking-widest opacity-60">
+                          <span>{label}</span>
+                          <span>
+                            {realLeading ? `${displayPct}%` : `${formatElapsed(elapsedSeconds)} elapsed`}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()
                 )}
 
                 {/* Technical Log Terminal */}

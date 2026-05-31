@@ -109,7 +109,7 @@ interface UseAiMagicFixParams {
   activeJobIdRef: React.MutableRefObject<string | null>;
   preflightJobIdRef: React.MutableRefObject<string | null>;
   autoFixServer: (file: File, opts: { policy: string; jobId: string | null; options?: any }) => Promise<any>;
-  handleV2JobComplete: (jobId: string) => Promise<any>;
+  handleV2JobComplete: (jobId: string, onProgress?: (p: number) => void) => Promise<any>;
   getAuthenticatedBlobUrl: (jobId: string, key: string) => Promise<string | null>;
   selectedPolicy: string;
   ldmActive: boolean;
@@ -261,9 +261,9 @@ export function useAiMagicFix({
 
         if (jobId && !jobResult) {
           activeJobIdRef.current = jobId;
-          setLdmProgress(10);
+          setLdmProgress(0);
           console.log('[AI-FIX][STEP3][STATE]', { status: 'FIX_POLLING', targetJobId: jobId });
-          jobResult = await handleV2JobComplete(jobId);
+          jobResult = await handleV2JobComplete(jobId, (pct) => setLdmProgress(pct));
         } else if (jobResult && !jobId) {
           jobId = pickCanonicalJobId(jobResult.meta?.jobId, jobResult.job_id, jobResult.id) ?? jobId;
           if (jobId) {

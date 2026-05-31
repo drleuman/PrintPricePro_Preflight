@@ -296,8 +296,8 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
         return new Blob([pdfBytes as any], { type: 'application/pdf' });
     }, []);
 
-    const handleV2JobComplete = useCallback(async (jobId: string) => {
-        const res = await pollJob(jobId);
+    const handleV2JobComplete = useCallback(async (jobId: string, onProgress?: (p: number) => void) => {
+        const res = await pollJob(jobId, onProgress);
 
         const normalizedResult = normalizePreflightResult(res);
         if (normalizedResult && callbacks?.onComplete) {

@@ -239,6 +239,7 @@ function AppContent() {
       setLdmActive(false);
       setUploadProgress(undefined);
       setUploadBytes(undefined);
+      setLdmProgress(0);
     }
   });
 
@@ -392,7 +393,8 @@ function AppContent() {
         setSourceJobId(res.jobId); // Set sourceJobId on initial analyze
         console.log('[APP][V2-START] Async mode, Job ID set to', res.jobId);
         setLdmStatus('common.processing');
-        await handleV2JobComplete(res.jobId);
+        setLdmProgress(0);
+        await handleV2JobComplete(res.jobId, (pct) => setLdmProgress(pct));
         // onComplete is responsible for closing the loader via setLdmActive(false)
       }
     } catch (err: any) {
@@ -916,6 +918,7 @@ function AppContent() {
           uploadProgress={uploadProgress}
           uploadedBytes={uploadBytes?.loaded}
           totalBytes={uploadBytes?.total}
+          fixProgress={ldmProgress}
         />
 
         <EfficiencyAuditModalV2_4
