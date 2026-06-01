@@ -392,6 +392,7 @@ export const en = {
   'account.license.title': 'License & Usage',
   'account.api.title': 'API Access Configuration',
   'account.security.title': 'Security & Audit State',
+  'account.history.title': 'File & Job History',
   'account.identity': 'Account Identity',
   'account.email.label': 'Primary Email Address',
   'account.role.label': 'Assigned System Role',

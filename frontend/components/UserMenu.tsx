@@ -177,7 +177,7 @@ export const UserMenu: React.FC = () => {
                             <MenuButton 
                                 onClick={() => handleSelectView('history')}
                                 icon={<ClockIcon className="w-4 h-4" />} 
-                                label="File & Job History" 
+                                label={t('account.history.title')}
                             />
                             <MenuButton 
                                 onClick={() => handleSelectView('api')}

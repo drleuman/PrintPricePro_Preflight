@@ -115,7 +115,7 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose,
             case 'license': return t('account.license.title');
             case 'api': return t('account.api.title');
             case 'security': return t('account.security.title');
-            case 'history': return 'FILE & JOB HISTORY';
+            case 'history': return t('account.history.title').toUpperCase();
             default: return t('appName');
         }
     };
@@ -159,7 +159,7 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({ activeView, onClose,
                         {[
                             { id: 'profile', label: t('account.profile.title') },
                             { id: 'license', label: t('account.license.title') },
-                            { id: 'history', label: 'File & Job History', badge: history?.items?.length },
+                            { id: 'history', label: t('account.history.title'), badge: history?.items?.length },
                             { id: 'api', label: t('account.api.title') },
                             { id: 'security', label: t('account.security.title') }
                         ].map(tab => (
@@ -586,6 +586,7 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
 };
 
 const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, isLoading: boolean, error: any, refresh: () => void }) => {
+    const { t } = useTranslation();
 
     const getStatusTooltip = (status: string) => {
         if (status === 'COMPLETED_WITH_FINDINGS') return "Analysis finished and issues or warnings were found in the PDF.";
@@ -619,7 +620,7 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-full">
             <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-2">
-                <div className="flex items-center gap-1"><SectionTitle title="FILE & JOB HISTORY" icon={<DocumentTextIcon className="w-5 h-5" />} /><HelpTip text="Your previous preflight analyses and Magic Fix results. Use this area to review past uploads, download reports, inspect corrected files, and understand what was changed." /></div>
+                <div className="flex items-center gap-1"><SectionTitle title={t('account.history.title').toUpperCase()} icon={<DocumentTextIcon className="w-5 h-5" />} /><HelpTip text="Your previous preflight analyses and Magic Fix results. Use this area to review past uploads, download reports, inspect corrected files, and understand what was changed." /></div>
                 <button onClick={refresh} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] p-1 rounded-sm">
                    <ArrowPathIcon className="w-4 h-4" />
                 </button>
