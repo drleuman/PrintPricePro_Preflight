@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from '../i18n';
 import { 
@@ -525,14 +526,51 @@ const UsageBar: React.FC<{ label: string, current: number, total: number, Boolea
 );
 
 
-const HelpTip = ({ text }: { text: string }) => (
-    <span className="relative inline-flex group ml-1 align-middle">
-        <span className="cursor-help text-[var(--text-muted)] border border-[var(--border-color)] px-1 text-[10px] leading-none">?</span>
-        <span className="pointer-events-none absolute z-50 hidden group-hover:block left-0 sm:left-auto sm:right-0 top-full mt-2 w-[calc(100vw-40px)] sm:w-64 max-w-[280px] border border-[var(--border-color)] bg-[var(--bg-primary)] p-3 text-[11px] leading-relaxed text-[var(--text-primary)] shadow-[0_5px_15px_rgba(0,0,0,0.5)] normal-case tracking-normal font-normal">
-            {text}
+const HELPTIP_WIDTH = 256;
+
+const HelpTip = ({ text }: { text: string }) => {
+    const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+    const triggerRef = useRef<HTMLSpanElement>(null);
+
+    const show = () => {
+        if (!triggerRef.current) return;
+        const rect = triggerRef.current.getBoundingClientRect();
+        const vw = window.innerWidth;
+        let left = rect.left;
+        if (left + HELPTIP_WIDTH > vw - 8) {
+            left = rect.right - HELPTIP_WIDTH;
+        }
+        setPos({ top: rect.bottom + 6, left: Math.max(8, left) });
+    };
+
+    const hide = () => setPos(null);
+
+    useEffect(() => {
+        if (!pos) return;
+        window.addEventListener('scroll', hide, { capture: true, passive: true });
+        return () => window.removeEventListener('scroll', hide, { capture: true });
+    }, [pos]);
+
+    return (
+        <span className="inline-flex ml-1 align-middle">
+            <span
+                ref={triggerRef}
+                onPointerEnter={show}
+                onPointerLeave={hide}
+                className="cursor-help text-[var(--text-muted)] border border-[var(--border-color)] px-1 text-[10px] leading-none rounded-sm hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] transition-colors select-none"
+            >?</span>
+            {pos && createPortal(
+                <span
+                    style={{ position: 'fixed', top: pos.top, left: pos.left, width: HELPTIP_WIDTH, zIndex: 9999 }}
+                    className="pointer-events-none border border-[var(--border-color)] bg-[var(--bg-primary)] p-3 text-[11px] leading-relaxed text-[var(--text-primary)] shadow-[0_5px_15px_rgba(0,0,0,0.5)] normal-case tracking-normal font-normal animate-in fade-in duration-150"
+                >
+                    {text}
+                </span>,
+                document.body
+            )}
         </span>
-    </span>
-);
+    );
+};
 
 
 type TooltipButtonProps = {
@@ -664,7 +702,7 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                         {item.filename}
                                         {item.status === 'QUEUED' && <span className="ml-2 text-[0.65rem] font-mono text-orange-400 uppercase font-normal">(Processing / waiting for final sync)</span>}
                                     </h4>
-                                    <div className="text-[0.65rem] font-mono text-[var(--text-muted)] mt-1 opacity-70">
+                                    <div className="text-[0.65rem] font-mono text-[var(--text-muted)] mt-1">
                                         {new Date(item.createdAt).toLocaleString()} • {item.fileSizeMb.toFixed(2)} MB <HelpTip text="Original uploaded file size as recorded by the preflight registry." />
                                         {item.type === 'ANALYZE' && (
                                             <span className="ml-2">
