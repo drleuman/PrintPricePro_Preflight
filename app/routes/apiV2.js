@@ -13,7 +13,7 @@ const { pposRequest } = require('../services/apiClient');
 const licenseGuard = require('../middleware/licenseGuard');
 const preflightNormalizer = require('../services/preflightNormalizer');
 const statusHelpers = require('../services/statusHelpers');
-const { enrollJobInRegistry } = require('../services/jobRegistryEnrichment');
+const { enrollJobInRegistry, updateRegistryWithFixResult } = require('../services/jobRegistryEnrichment');
 const requireAuth = require('../middleware/requireAuth');
 const db = require('../services/db');
 const router = express.Router();
@@ -715,6 +715,19 @@ router.get('/:jobId', async (req, res) => {
       res.setHeader('X-PPOS-Autofix-Result-Normalized', 'true');
       res.setHeader('X-PPOS-Autofix-Status', normalizedReport.status || 'COMPLETED_WITH_REVIEW');
       console.log(`[AUTOFIX_RESULT_NORMALIZED_FOR_FRONTEND]\nroute=apiV2_status\njobId=${jobId}\nstatus=${normalizedReport.status}`);
+    }
+
+    // Fire-and-forget: persist fix result counts to registry once terminal
+    if (
+      finalResponsePayload?.type === 'AUTOFIX' &&
+      statusHelpers.isTerminalStatus(String(finalResponsePayload.status || ''))
+    ) {
+      setImmediate(() => {
+        updateRegistryWithFixResult(
+          finalResponsePayload.jobId || finalResponsePayload.job_id || jobId,
+          finalResponsePayload
+        ).catch(() => {});
+      });
     }
 
     return res.status(response.status).json(finalResponsePayload);

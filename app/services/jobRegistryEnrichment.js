@@ -61,4 +61,50 @@ async function enrollJobInRegistry(jobId, origin, jobMeta = {}) {
   }
 }
 
-module.exports = { enrollJobInRegistry };
+/**
+ * Persists fix result arrays to the registry row once an AUTOFIX job reaches terminal state.
+ * Called fire-and-forget from the polling endpoint — never throws.
+ */
+async function updateRegistryWithFixResult(jobId, fixPayload) {
+  const applied   = Array.isArray(fixPayload.applied_fixes)   ? fixPayload.applied_fixes   : [];
+  const skipped   = Array.isArray(fixPayload.skipped_fixes)   ? fixPayload.skipped_fixes   : [];
+  const failed    = Array.isArray(fixPayload.failed_fixes)    ? fixPayload.failed_fixes    : [];
+  const requested = Array.isArray(fixPayload.requested_fixes) ? fixPayload.requested_fixes : [];
+
+  try {
+    await db.execute(
+      `UPDATE preflight_job_registry
+          SET applied_fixes_json   = ?,
+              skipped_fixes_json   = ?,
+              failed_fixes_json    = ?,
+              requested_fixes_json = ?,
+              status               = COALESCE(?, status),
+              canonical_payload_json = JSON_MERGE_PATCH(
+                COALESCE(canonical_payload_json, JSON_OBJECT()),
+                ?
+              )
+        WHERE job_id = ?`,
+      [
+        JSON.stringify(applied),
+        JSON.stringify(skipped),
+        JSON.stringify(failed),
+        JSON.stringify(requested),
+        fixPayload.status || null,
+        JSON.stringify({
+          applied_fixes:   applied,
+          skipped_fixes:   skipped,
+          failed_fixes:    failed,
+          requested_fixes: requested,
+          status:          fixPayload.status || null
+        }),
+        jobId
+      ]
+    );
+    console.log(`[REGISTRY-FIX-UPDATE][OK] job_id=${jobId} applied=${applied.length} skipped=${skipped.length} failed=${failed.length}`);
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') return;
+    console.error(`[REGISTRY-FIX-UPDATE][ERROR] job_id=${jobId}: ${err.message}`);
+  }
+}
+
+module.exports = { enrollJobInRegistry, updateRegistryWithFixResult };
