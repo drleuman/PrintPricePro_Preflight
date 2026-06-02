@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { FixCoverage } from '../types';
 
 export interface FileHistoryArtifacts {
   analysisReport: boolean;
@@ -23,6 +24,7 @@ export interface RelatedFixJob {
   reviewReasons: any[];
   fixSummary: any[];
   clientChangeSummary?: any;
+  fix_coverage?: FixCoverage | null;
   artifacts: FileHistoryArtifacts;
   createdAt: string;
   updatedAt: string;

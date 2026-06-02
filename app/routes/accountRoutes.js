@@ -396,6 +396,7 @@ router.get('/file-history', requireAuth, async (req, res) => {
       const appliedFixesArr = safeParseArr(row.applied_fixes_json, payload.appliedFixes || payload.applied_fixes || []);
       const skippedFixesArr = safeParseArr(row.skipped_fixes_json, payload.skippedFixes || payload.skipped_fixes || []);
       const failedFixesArr = safeParseArr(row.failed_fixes_json, payload.failedFixes || payload.failed_fixes || []);
+      const fixCoverage = payload?.fix_coverage ?? payload?.result?.fix_coverage ?? null;
 
       const clientChangeSummary = buildClientChangeSummary({
         jobId: row.job_id,
@@ -428,6 +429,7 @@ router.get('/file-history', requireAuth, async (req, res) => {
         reviewReasons,
         fixSummary,
         clientChangeSummary,
+        fix_coverage: fixCoverage,
         artifacts: {
           analysisReport: false,
           fixAudit: !!(artifacts.fix_audit || resArtifacts.fix_audit),

@@ -18,6 +18,128 @@ import { useUserFileHistory, FileHistoryItem } from '../hooks/useUserFileHistory
 
 export type AccountView = 'profile' | 'license' | 'api' | 'security' | 'history';
 
+const FIX_LABELS: Record<string, string> = {
+    REBUILD_TRIMBOX: 'Trim box rebuilt',
+    APPLY_BLEED: 'Bleed area adjusted',
+    CONVERT_CMYK: 'Colors converted to CMYK',
+    INJECT_OUTPUT_INTENT: 'Color profile attached',
+    FLATTEN_FORMS: 'Form fields flattened',
+    NORMALIZE_PAGE_BOXES: 'Page boxes normalized',
+    CONVERT_GRAYSCALE: 'Converted to grayscale',
+    REBUILD_300DPI: 'Rebuilt for 300 DPI output',
+    BOOKLET_MODE: 'Prepared for booklet production',
+    IMPOSE_BOOKLET: 'Prepared for booklet production',
+};
+
+function humanizeFixCodeLocal(code?: string | null): string {
+    if (!code) return '—';
+    return FIX_LABELS[code] ?? code;
+}
+
+function FixCoverageItemRow({ item }: { item: any }) {
+    const code = item.repair_code || item.fix_method;
+    return (
+        <div className="pl-2 border-l border-[var(--border-color)]">
+            <div className="flex items-center gap-2 flex-wrap">
+                {item.severity && (
+                    <span className={`text-[0.5rem] font-bold uppercase px-1.5 py-0.5 border ${
+                        item.severity === 'error'
+                            ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                            : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                    }`}>
+                        {item.severity}
+                    </span>
+                )}
+                {code && (
+                    <span className="text-[var(--text-primary)] font-bold text-[0.65rem]">
+                        {humanizeFixCodeLocal(code)}
+                    </span>
+                )}
+            </div>
+            {item.message && (
+                <p className="text-[var(--text-muted)] text-[0.6rem] leading-snug mt-0.5">{item.message}</p>
+            )}
+            {item.repair_reason && (
+                <p className="text-[var(--text-muted)] italic text-[0.6rem] leading-snug mt-0.5">"{item.repair_reason}"</p>
+            )}
+        </div>
+    );
+}
+
+function FixCoveragePanel({ coverage }: { coverage: any }) {
+    const pct = coverage.total_issues > 0
+        ? Math.round((coverage.fixed_count / coverage.total_issues) * 100)
+        : 0;
+
+    return (
+        <div className="mt-1 font-mono text-xs bg-[var(--bg-secondary)] p-3 border border-[var(--border-color)]">
+            <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[0.6rem] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+                    Fix Coverage
+                </span>
+                <span className="text-[0.6rem] text-[var(--text-muted)]">
+                    {coverage.fixed_count} / {coverage.total_issues} issues resolved
+                </span>
+            </div>
+            <div className="w-full h-0.5 bg-[var(--bg-tertiary)] mb-3 overflow-hidden">
+                <div className="h-full bg-[#50fa7b] transition-all" style={{ width: `${pct}%` }} />
+            </div>
+
+            {coverage.fixed?.length > 0 && (
+                <div className="mb-3">
+                    <span className="text-[0.6rem] font-bold text-[#50fa7b] uppercase tracking-widest block mb-1.5">
+                        ✓ Applied ({coverage.fixed_count})
+                    </span>
+                    <div className="space-y-2">
+                        {coverage.fixed.map((item: any, i: number) => (
+                            <FixCoverageItemRow key={i} item={item} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {coverage.skipped?.length > 0 && (
+                <div className="mb-3">
+                    <span className="text-[0.6rem] font-bold text-yellow-400 uppercase tracking-widest block mb-1.5">
+                        ↷ Skipped ({coverage.skipped_count})
+                    </span>
+                    <div className="space-y-2">
+                        {coverage.skipped.map((item: any, i: number) => (
+                            <FixCoverageItemRow key={i} item={item} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {coverage.failed?.length > 0 && (
+                <div className="mb-3">
+                    <span className="text-[0.6rem] font-bold text-red-400 uppercase tracking-widest block mb-1.5">
+                        ✗ Failed ({coverage.failed_count})
+                    </span>
+                    <div className="space-y-2">
+                        {coverage.failed.map((item: any, i: number) => (
+                            <FixCoverageItemRow key={i} item={item} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {coverage.not_attempted?.length > 0 && (
+                <div className="mb-1">
+                    <span className="text-[0.6rem] font-bold text-[var(--text-muted)] uppercase tracking-widest block mb-1.5">
+                        — Not Attempted ({coverage.not_attempted_count})
+                    </span>
+                    <div className="space-y-2">
+                        {coverage.not_attempted.map((item: any, i: number) => (
+                            <FixCoverageItemRow key={i} item={item} />
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 interface AccountPanelProps {
     activeView: AccountView;
     onClose: () => void;
@@ -832,7 +954,9 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                                             )}
                                                         </div>
 
-                                                        {f.clientChangeSummary ? (
+                                                        {f.fix_coverage ? (
+                                                            <FixCoveragePanel coverage={f.fix_coverage} />
+                                                        ) : f.clientChangeSummary ? (
                                                             <details className="mt-1 group">
                                                                 <summary className="cursor-pointer font-bold text-xs text-[var(--accent-color)] hover:text-[var(--accent-hover)] transition-colors select-none">
                                                                     <span className="group-open:hidden">[+] View Client Change Summary</span>
@@ -852,7 +976,7 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                                                             {f.clientChangeSummary.productionRecommendation}
                                                                         </span>
                                                                     </div>
-                                                                    
+
                                                                     {(!f.clientChangeSummary.appliedChanges?.length && !f.clientChangeSummary.skippedChanges?.length && !f.clientChangeSummary.failedChanges?.length) && (
                                                                         <div className="text-xs text-[var(--text-muted)] italic font-mono mb-4">
                                                                             No detailed correction list is available for this fix, but the final recommendation is shown below.
