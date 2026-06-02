@@ -35,6 +35,8 @@ async function enrollJobInRegistry(jobId, origin, jobMeta = {}) {
        VALUES (?, ?, ?, 'QUEUED', ?, 'ANALYZE', 0, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          printhouse_id          = COALESCE(printhouse_id, VALUES(printhouse_id)),
+         original_filename      = COALESCE(original_filename, VALUES(original_filename)),
+         file_size_bytes        = COALESCE(file_size_bytes, VALUES(file_size_bytes)),
          canonical_payload_json = JSON_SET(
            COALESCE(canonical_payload_json, JSON_OBJECT()),
            '$.origin', CAST(? AS JSON)
