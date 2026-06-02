@@ -142,6 +142,28 @@ export interface CategorySummary {
 
 export type AppMode = 'manual' | 'ai' | 'audit' | null;
 
+export interface FixCoverageItem {
+  issue_code: string;
+  severity: string;
+  message: string;
+  fix_method: string | null;
+  repair_code?: string;
+  repair_status?: string;
+  repair_reason?: string;
+}
+
+export interface FixCoverage {
+  total_issues: number;
+  fixed_count: number;
+  skipped_count: number;
+  failed_count: number;
+  not_attempted_count: number;
+  fixed: FixCoverageItem[];
+  skipped: FixCoverageItem[];
+  failed: FixCoverageItem[];
+  not_attempted: FixCoverageItem[];
+}
+
 /**
  * The overall result of a PDF preflight analysis.
  */
@@ -158,6 +180,7 @@ export interface PreflightResult {
   applied_fixes?: any[];
   skipped_fixes?: any[];
   failed_fixes?: any[];
+  fix_coverage?: FixCoverage | null;
   pages: Array<{ pageNumber: number; issuesCount: number }>;
   categorySummaries: CategorySummary[];
   meta: {

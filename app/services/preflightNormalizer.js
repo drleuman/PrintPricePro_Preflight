@@ -833,6 +833,7 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
     applied_fixes,
     skipped_fixes,
     failed_fixes,
+    fix_coverage: rawFixJob?.fix_coverage ?? rawFixJob?.result?.fix_coverage ?? null,
     unresolved_findings: unresolvedFindings,
 
     artifacts,
