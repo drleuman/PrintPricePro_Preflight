@@ -957,7 +957,7 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                                         {f.fix_coverage ? (
                                                             <FixCoveragePanel coverage={f.fix_coverage} />
                                                         ) : f.clientChangeSummary ? (
-                                                            <details className="mt-1 group">
+                                                            <details open className="mt-1 group">
                                                                 <summary className="cursor-pointer font-bold text-xs text-[var(--accent-color)] hover:text-[var(--accent-hover)] transition-colors select-none">
                                                                     <span className="group-open:hidden">[+] View Client Change Summary</span>
                                                                     <span className="hidden group-open:inline">[-] Hide Client Change Summary</span>
@@ -987,9 +987,12 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                                                             <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1.5 flex items-center">What changed <HelpTip text="Corrections that were successfully applied by Magic Fix." /></span>
                                                                             <ul className="list-none space-y-1.5 pl-0">
                                                                                 {f.clientChangeSummary.appliedChanges.map((ac: any, i: number) => (
-                                                                                    <li key={i} className="flex gap-2">
+                                                                                    <li key={i} className="flex gap-2 items-start">
                                                                                         <span className="text-[#50fa7b] shrink-0">✓</span>
-                                                                                        <span className="text-[var(--text-primary)] leading-snug">{ac.label}</span>
+                                                                                        <span className="text-[var(--text-primary)] leading-snug flex items-center gap-1">
+                                                                                            {ac.label}
+                                                                                            {ac.description && <HelpTip text={ac.description} />}
+                                                                                        </span>
                                                                                     </li>
                                                                                 ))}
                                                                             </ul>
@@ -1015,9 +1018,12 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                                                             <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1.5 flex items-center">Not applied <HelpTip text="Requested corrections that were skipped automatically." /></span>
                                                                             <ul className="list-none space-y-1.5 pl-0 text-[var(--text-muted)]">
                                                                                 {f.clientChangeSummary.skippedChanges.map((sc: any, i: number) => (
-                                                                                    <li key={i} className="flex gap-2">
+                                                                                    <li key={i} className="flex gap-2 items-start">
                                                                                         <span className="shrink-0">-</span>
-                                                                                        <span className="leading-snug">{sc.label}</span>
+                                                                                        <span className="leading-snug flex items-center gap-1">
+                                                                                            {sc.label}
+                                                                                            {sc.reason && <HelpTip text={sc.reason} />}
+                                                                                        </span>
                                                                                     </li>
                                                                                 ))}
                                                                             </ul>
