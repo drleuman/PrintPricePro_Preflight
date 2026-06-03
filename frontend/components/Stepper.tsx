@@ -30,14 +30,14 @@ const getStepIcon = (stepNumber: number) => {
 export const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
     return (
         <div className="w-full">
-            <div className="flex flex-row items-center justify-between gap-6 relative no-scrollbar">
+            <div className="flex flex-row items-center justify-between gap-3 relative no-scrollbar">
                 {steps.map((step, idx) => {
                     const StepIcon = getStepIcon(step.number);
                     const isCompleted = currentStep > step.number;
                     const isActive = currentStep === step.number;
 
                     return (
-                        <div key={step.number} className="flex-1 flex items-center gap-4 group min-w-max">
+                        <div key={step.number} className="flex-1 flex items-center gap-4 group min-w-0">
                             {/* Step Indicator - Compacted for Header */}
                             <div className={`
                                 relative flex h-8 w-8 shrink-0 items-center justify-center border transition-all duration-500
@@ -54,7 +54,7 @@ export const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
                             </div>
 
                             {/* Text Guidance - Ultra-compact */}
-                            <div className="hidden lg:block">
+                            <div className="hidden 2xl:block">
                                 <div className={`
                                     ppp-phase-tag !text-[0.8rem] transition-colors duration-500 whitespace-nowrap
                                     ${isActive ? 'text-[var(--text-primary)]' : isCompleted ? 'text-[var(--text-primary)]/80' : 'text-[var(--text-dim)]'}

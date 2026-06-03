@@ -75,7 +75,7 @@ export const PreflightShell = ({ children, headerContent, rightContent }: { chil
         </div>
       </div>
 
-      <div className="flex flex-1 items-center gap-12 ml-10">
+      <div className="flex flex-1 items-center gap-6 ml-6 min-w-0">
         {headerContent && (
           <div className="hidden lg:block">
             {headerContent}

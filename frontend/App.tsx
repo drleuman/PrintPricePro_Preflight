@@ -657,7 +657,7 @@ function AppContent() {
                   title="Open AI Inspector"
                 >
                   <CommandLineIcon className="h-3.5 w-3.5 text-[var(--accent-color)]" />
-                  <span className="hidden md:inline">{t('app.analyzeCarrier')}</span>
+                  <span className="hidden xl:inline">{t('app.analyzeCarrier')}</span>
                 </button>
                 <UserMenu />
               </div>
