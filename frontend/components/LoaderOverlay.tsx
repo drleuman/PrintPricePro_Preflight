@@ -75,6 +75,8 @@ export const LoaderOverlay: React.FC<Props> = ({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [syntheticProgress, setSyntheticProgress] = useState(0);
   const fixStartRef = useRef<number | null>(null);
+  const [bffLatency, setBffLatency] = useState<number | null>(null);
+  const [crcStatus, setCrcStatus] = useState<'OK' | 'ERR'>('OK');
 
   const pipeline = useMemo(() => steps ?? DEFAULT_STEPS, [steps]);
   const statuses = useMemo(
@@ -145,6 +147,24 @@ export const LoaderOverlay: React.FC<Props> = ({
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, [isOpen, lockUI]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const t0 = performance.now();
+    fetch('/healthz')
+      .then(r => {
+        const lat = Math.round(performance.now() - t0);
+        setBffLatency(lat);
+        return r.json();
+      })
+      .then((data: { status?: string }) => {
+        setCrcStatus(data?.status === 'ok' ? 'OK' : 'ERR');
+      })
+      .catch(() => {
+        setBffLatency(null);
+        setCrcStatus('ERR');
+      });
+  }, [isOpen]);
 
   const currentStep = pipeline[Math.max(0, pipeline.findIndex((s) => statuses[s.key] === 'active'))];
 
@@ -278,8 +298,8 @@ export const LoaderOverlay: React.FC<Props> = ({
         {/* Footer Hardware Metadata */}
         <div className="w-full mt-24 border-t border-[var(--border-color)] pt-4 flex justify-between items-center opacity-30 text-[0.6rem] font-bold uppercase tracking-widest">
             <span>Server: PPOS_PROD_BFF</span>
-            <span>Lat: 34ms</span>
-            <span>CRC: OK</span>
+            <span>Lat: {bffLatency !== null ? `${bffLatency}ms` : '—'}</span>
+            <span>CRC: {crcStatus}</span>
         </div>
       </div>
     </div>
