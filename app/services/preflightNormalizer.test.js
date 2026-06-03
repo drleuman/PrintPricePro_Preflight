@@ -359,9 +359,9 @@ describe('resolveArtifactAliases', () => {
     expect(result.fixed_pdf).toBe('out.pdf');
   });
 
-  it('falls back to fixed.pdf when no artifact found', () => {
+  it('returns empty map when no artifact found', () => {
     const result = resolveArtifactAliases({}, {});
-    expect(result.final_fixed_pdf).toBe('fixed.pdf');
+    expect(result.final_fixed_pdf).toBeUndefined();
   });
 });
 

@@ -655,9 +655,9 @@ router.get('/:jobId', async (req, res) => {
         const rawRepairsToPreserve = data._rawRootRepairsArray || data._rawResultRepairsArray || [];
         finalResponsePayload.repairs = rawRepairsToPreserve;
         finalResponsePayload.fixes = rawRepairsToPreserve;
-        finalResponsePayload.applied_fixes = rawRepairsToPreserve.filter(r => r && typeof r === 'object' && (r.status === "APPLIED" || r.status === "SUCCESS"));
+        finalResponsePayload.applied_fixes = rawRepairsToPreserve.filter(r => r && typeof r === 'object' && (r.status === "APPLIED" || r.status === "SUCCESS" || r.status === "REQUIRES_HUMAN_REVIEW"));
         finalResponsePayload.failed_fixes = rawRepairsToPreserve.filter(r => r && typeof r === 'object' && (r.status === "FAILED" || r.status === "ERROR"));
-        finalResponsePayload.skipped_fixes = rawRepairsToPreserve.filter(r => r && typeof r === 'object' && (r.status === "SKIPPED" || r.status === "UNSUPPORTED" || r.status === "BLOCKED_BY_POLICY" || r.status === "REQUIRES_HUMAN_REVIEW"));
+        finalResponsePayload.skipped_fixes = rawRepairsToPreserve.filter(r => r && typeof r === 'object' && (r.status === "SKIPPED" || r.status === "UNSUPPORTED" || r.status === "BLOCKED_BY_POLICY"));
 
         // Update counts for subsequent enriched log
         normalizedRepairsCount = finalResponsePayload.repairs.length;

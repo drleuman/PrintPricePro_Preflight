@@ -8,7 +8,7 @@ import { isTerminalDiagnosticStatus, isTerminalFailureStatus, isTerminalStatus }
 import { sleep } from '../utils/sleep';
 
 export function normalizeArtifactIdForRoute(input: string) {
-    const value = String(input || '').trim();
+    const value = String(input).trim();
     const filenameToKey: Record<string, string> = {
         'fixed.pdf': 'fixed_pdf',
         'normalized.pdf': 'normalized_pdf',

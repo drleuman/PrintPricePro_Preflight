@@ -18,7 +18,7 @@ describe('clientChangeReport', () => {
 
     const report = generateClientChangeReport(mockResult);
 
-    expect(report.headline).toContain('technically repaired');
+    expect(report.headline).toContain('Technically improved');
     expect(report.productionReadiness.certified).toBe(false);
     expect(report.statusTone).toBe('warning');
     
@@ -44,7 +44,7 @@ describe('clientChangeReport', () => {
     
     // Message does not incorrectly say it is certified
     expect(report.customerMessage).not.toContain('production certified. We added print output intent');
-    expect(report.customerMessage).toContain('not yet production certified');
+    expect(report.customerMessage).toContain('not applied automatically');
   });
 
   it('generates correct summary for a fully certified file', () => {

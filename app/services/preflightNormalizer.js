@@ -322,7 +322,7 @@ function extractAppliedFixes(rawFixJob, repairs) {
   }
 
   if (Array.isArray(repairs)) {
-    return repairs.filter(r => r && typeof r === 'object' && (r.status === 'APPLIED' || r.status === 'SUCCESS'));
+    return repairs.filter(r => r && typeof r === 'object' && (r.status === 'APPLIED' || r.status === 'SUCCESS' || r.status === 'REQUIRES_HUMAN_REVIEW'));
   }
 
   return [];
@@ -346,7 +346,7 @@ function extractSkippedFixes(rawFixJob, repairs) {
   }
 
   if (Array.isArray(repairs)) {
-    return repairs.filter(r => r && typeof r === 'object' && (r.status === 'SKIPPED' || r.status === 'UNSUPPORTED' || r.status === 'BLOCKED_BY_POLICY' || r.status === 'REQUIRES_HUMAN_REVIEW'));
+    return repairs.filter(r => r && typeof r === 'object' && (r.status === 'SKIPPED' || r.status === 'UNSUPPORTED' || r.status === 'BLOCKED_BY_POLICY'));
   }
 
   return [];
@@ -872,7 +872,6 @@ function skippedFixRequiresHumanReview(fix) {
     fix?.requires_human_review === true ||
     fix?.requiresHumanReview === true ||
     fix?.destructiveFixRisk === "HIGH" ||
-    String(fix?.code || "").toUpperCase() === "CONVERT_CMYK" ||
     /destructive|explicit review|human review/i.test(String(fix?.reason || ""))
   );
 }
