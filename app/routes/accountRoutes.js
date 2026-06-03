@@ -287,7 +287,7 @@ router.get('/file-history', requireAuth, async (req, res) => {
       const extractFilename = (r, p) => r.original_filename || r.filename || p.original_filename || p.originalFilename || p.filename || p.fileName || p.input?.filename || p.metadata?.filename || p.document?.filename || p.jobMeta?.filename || p.jobMeta?.fileName || null;
       const resolvedFilename = extractFilename(row, payload) || 'document.pdf';
 
-      const extractFileSize = (r, p) => r.file_size_bytes || r.fileSizeBytes || p.fileSizeBytes || p.file_size_bytes || p.fileSize || p.metadata?.fileSizeBytes || 0;
+      const extractFileSize = (r, p) => r.file_size_bytes || r.fileSizeBytes || p.fileSizeBytes || p.file_size_bytes || p.fileSize || p.meta?.fileSize || p.meta?.size || p.metadata?.fileSizeBytes || 0;
       const resolvedFileSizeBytes = extractFileSize(row, payload);
 
       const resolvedIssuesCount = row.issue_count ?? payload.issuesCount ?? payload.issueCount ?? payload.issues?.length ?? payload.findings?.length ?? 0;
@@ -340,7 +340,7 @@ router.get('/file-history', requireAuth, async (req, res) => {
       const extractFilename = (r, p) => r.original_filename || r.filename || p.original_filename || p.originalFilename || p.filename || p.fileName || p.input?.filename || p.metadata?.filename || p.document?.filename || p.jobMeta?.filename || p.jobMeta?.fileName || null;
       let resolvedFilename = extractFilename(row, payload);
 
-      const extractFileSize = (r, p) => r.file_size_bytes || r.fileSizeBytes || p.fileSizeBytes || p.file_size_bytes || p.fileSize || p.metadata?.fileSizeBytes || 0;
+      const extractFileSize = (r, p) => r.file_size_bytes || r.fileSizeBytes || p.fileSizeBytes || p.file_size_bytes || p.fileSize || p.meta?.fileSize || p.meta?.size || p.metadata?.fileSizeBytes || 0;
       let resolvedFileSizeBytes = extractFileSize(row, payload);
 
             const safeParseLen = (str) => {

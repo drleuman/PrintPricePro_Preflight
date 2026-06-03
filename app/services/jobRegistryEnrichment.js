@@ -22,7 +22,8 @@ async function enrollJobInRegistry(jobId, origin, jobMeta = {}) {
     origin,
     status: 'QUEUED',
     policy: jobMeta.policy || null,
-    source: 'PREFLIGHT_APP'
+    source: 'PREFLIGHT_APP',
+    fileSizeBytes: jobMeta.fileSize || null,
   };
   const canonicalJson = JSON.stringify(canonicalPayload);
   const originJson    = JSON.stringify(origin);
@@ -36,7 +37,7 @@ async function enrollJobInRegistry(jobId, origin, jobMeta = {}) {
        ON DUPLICATE KEY UPDATE
          printhouse_id          = COALESCE(printhouse_id, VALUES(printhouse_id)),
          original_filename      = COALESCE(original_filename, VALUES(original_filename)),
-         file_size_bytes        = COALESCE(file_size_bytes, VALUES(file_size_bytes)),
+         file_size_bytes        = IF(VALUES(file_size_bytes) > 0, VALUES(file_size_bytes), COALESCE(file_size_bytes, 0)),
          canonical_payload_json = JSON_SET(
            COALESCE(canonical_payload_json, JSON_OBJECT()),
            '$.origin', CAST(? AS JSON)
