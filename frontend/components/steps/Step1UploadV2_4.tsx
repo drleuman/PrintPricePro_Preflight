@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { pposFetch } from '../../lib/apiClient';
 import { FileMeta, AppMode } from '../../types';
 import { StatusBadge } from '../../design/preflight_starter_pack';
-import { formatLabel } from '../../utils/formatters';
 import { CloudArrowUpIcon, DocumentCheckIcon, AdjustmentsHorizontalIcon, SparklesIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '../../i18n';
 import { useAuth } from '../../hooks/useAuth';
@@ -230,61 +229,87 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                             <h3 className="text-xl font-extrabold tracking-tight">{t('chooseWorkflow')}</h3>
                         </div>
 
-                        {/* Segmented toggle */}
-                        <div className="relative flex bg-[var(--hover-bg)] p-1">
-                            {/* Sliding pill */}
+                        {/* Step 1 — Processing Mode */}
+                        <div className="mb-8">
+                            <div className="flex items-center gap-3 mb-4">
+                                <span className="text-[0.68rem] font-black uppercase tracking-[0.15em] text-[var(--accent-color)] border border-[var(--accent-color)]/40 px-2 py-0.5">
+                                    Step 1
+                                </span>
+                                <span className="text-[0.82rem] font-black uppercase tracking-[0.15em] text-[var(--text-primary)]">
+                                    {t('shell.processingMode')}
+                                </span>
+                            </div>
+
+                            {/* Segmented control */}
+                            <div className="relative flex bg-[var(--hover-bg)] p-1 mb-3">
+                                {/* Sliding pill */}
+                                <div
+                                    className={`absolute inset-y-1 w-[calc(50%-2px)] bg-[var(--accent-color)] transition-all duration-300 ease-out shadow-[0_0_12px_rgba(220,0,0,0.25)] ${
+                                        selectedMode === 'magic' ? 'left-1' : 'left-[calc(50%+1px)]'
+                                    }`}
+                                />
+                                <button
+                                    onClick={() => setSelectedMode('magic')}
+                                    className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 px-3 transition-colors duration-300 ${
+                                        selectedMode === 'magic' ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                                    }`}
+                                >
+                                    <SparklesIcon className="h-4 w-4 shrink-0" />
+                                    <span className="text-[0.78rem] font-black uppercase tracking-wider">{t('aiMagicFix')}</span>
+                                    <span className={`text-[0.6rem] font-bold uppercase tracking-wider px-1.5 py-0.5 shrink-0 ${
+                                        selectedMode === 'magic' ? 'bg-white/20 text-white' : 'bg-[var(--accent-color)]/15 text-[var(--accent-color)]'
+                                    }`}>
+                                        {t('recommended')}
+                                    </span>
+                                </button>
+                                <button
+                                    onClick={() => setSelectedMode('manual')}
+                                    className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 px-3 transition-colors duration-300 ${
+                                        selectedMode === 'manual' ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                                    }`}
+                                >
+                                    <AdjustmentsHorizontalIcon className="h-4 w-4 shrink-0" />
+                                    <span className="text-[0.78rem] font-black uppercase tracking-wider">{t('diagnosticModeTitle')}</span>
+                                </button>
+                            </div>
+
+                            {/* Contextual description — re-animates on switch */}
                             <div
-                                className={`absolute inset-y-1 w-[calc(50%-2px)] bg-[var(--accent-color)] transition-all duration-300 ease-out shadow-[0_0_12px_rgba(220,0,0,0.25)] ${
-                                    selectedMode === 'magic' ? 'left-1' : 'left-[calc(50%+1px)]'
-                                }`}
-                            />
-                            <button
-                                onClick={() => setSelectedMode('magic')}
-                                className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 px-4 transition-colors duration-300 ${
-                                    selectedMode === 'magic' ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                                }`}
+                                key={selectedMode}
+                                className="flex items-start gap-3 px-4 py-3 border border-[var(--border-color)] bg-[var(--bg-primary)]/50 animate-in fade-in slide-in-from-top-2 duration-300"
                             >
-                                <SparklesIcon className="h-4 w-4 shrink-0" />
-                                <span className="text-[0.78rem] font-black uppercase tracking-wider">{t('aiMagicFix')}</span>
-                            </button>
-                            <button
-                                onClick={() => setSelectedMode('manual')}
-                                className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 px-4 transition-colors duration-300 ${
-                                    selectedMode === 'manual' ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                                }`}
-                            >
-                                <AdjustmentsHorizontalIcon className="h-4 w-4 shrink-0" />
-                                <span className="text-[0.78rem] font-black uppercase tracking-wider">{t('diagnosticModeTitle')}</span>
-                            </button>
-                        </div>
-
-                        {/* Contextual description panel */}
-                        <div
-                            key={selectedMode}
-                            className="flex items-start gap-3 px-4 py-3 border border-[var(--border-color)] bg-[var(--bg-primary)]/50 animate-in fade-in slide-in-from-top-2 duration-300"
-                        >
-                            <div className="p-2 bg-[var(--accent-color)]/10 text-[var(--accent-color)] shrink-0">
-                                {selectedMode === 'magic'
-                                    ? <SparklesIcon className="h-5 w-5" />
-                                    : <AdjustmentsHorizontalIcon className="h-5 w-5" />}
-                            </div>
-                            <div>
-                                <div className="text-[0.82rem] font-black uppercase tracking-wider text-[var(--text-primary)] mb-0.5">
-                                    {selectedMode === 'magic' ? t('aiMagicFix') : t('diagnosticModeTitle')}
+                                <div className="p-2 bg-[var(--accent-color)]/10 text-[var(--accent-color)] shrink-0 mt-0.5">
+                                    {selectedMode === 'magic'
+                                        ? <SparklesIcon className="h-4 w-4" />
+                                        : <AdjustmentsHorizontalIcon className="h-4 w-4" />}
                                 </div>
-                                <div className="text-[0.83rem] text-[var(--text-secondary)] leading-snug">
-                                    {selectedMode === 'magic' ? t('aiMagicFixDesc') : t('diagnosticModeDesc')}
+                                <div>
+                                    <div className="flex items-baseline gap-2 mb-1">
+                                        <span className="text-[0.82rem] font-black uppercase tracking-wider text-[var(--text-primary)]">
+                                            {selectedMode === 'magic' ? t('aiMagicFix') : t('diagnosticModeTitle')}
+                                        </span>
+                                        <span className="text-[0.75rem] text-[var(--text-muted)] font-medium">
+                                            — {selectedMode === 'magic' ? t('aiMagicFixSubtitle') : t('diagnosticModeSubtitle')}
+                                        </span>
+                                    </div>
+                                    <div className="text-[0.83rem] text-[var(--text-secondary)] leading-snug">
+                                        {selectedMode === 'magic' ? t('aiMagicFixDescFull') : t('diagnosticModeDescFull')}
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Show policy enforcement for any analysis mode */}
-                        <div className="mt-10 space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 group/tip relative">
-                                        <div className="text-[0.82rem] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                                            {t('shell.policyEnforcement')}
-                                        </div>
+                        {/* Step 2 — Printing Standard */}
+                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <span className="text-[0.68rem] font-black uppercase tracking-[0.15em] text-[var(--accent-color)] border border-[var(--accent-color)]/40 px-2 py-0.5">
+                                            Step 2
+                                        </span>
+                                        <div className="flex items-center gap-2 group/tip relative">
+                                            <span className="text-[0.82rem] font-black uppercase tracking-[0.15em] text-[var(--text-primary)]">
+                                                {t('shell.printingStandard')}
+                                            </span>
                                         <InformationCircleIcon 
                                             className="h-4 w-4 text-[var(--text-muted)] cursor-help hover:text-[var(--accent-color)] transition-colors"
                                             aria-label="Policy Information"
@@ -301,7 +326,10 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                                             <div className="mt-3 text-[0.6rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">{t('policyInfo.version')}</div>
                                         </div>
                                     </div>
-                                    <span className="text-[0.82rem] font-mono text-[var(--accent-color)] opacity-50">{formatLabel('PRODUCTION_GUARD')}</span>
+                                    </div>
+                                    <p className="text-[0.82rem] text-[var(--text-muted)] font-medium mt-2 mb-3">
+                                        {t('shell.printingStandardDesc')}
+                                    </p>
                                 </div>
 
                                 <div className="space-y-3">

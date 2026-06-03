@@ -199,6 +199,8 @@ export const en = {
   // UploadStepSimple (Modern headerless)
   aiMagicFix: 'Magic Fix',
   aiMagicFixDesc: 'One click. We handle everything automatically.',
+  aiMagicFixSubtitle: 'Recommended for most files',
+  aiMagicFixDescFull: 'Automatically detects and fixes common printing issues with a single click.',
   manualMode: 'Manual',
   manualModeDesc: 'For advanced users who want to review issues and choose fixes.',
   recommended: 'Recommended',
@@ -653,6 +655,11 @@ export const en = {
   // Step 1 Specifics
   diagnosticModeTitle: 'Diagnostic Mode',
   diagnosticModeDesc: 'Manual inspection and control.',
+  diagnosticModeSubtitle: 'Advanced review',
+  diagnosticModeDescFull: 'Analyze issues individually and decide which corrections to apply.',
+  'shell.processingMode': 'Processing Mode',
+  'shell.printingStandard': 'Printing Standard',
+  'shell.printingStandardDesc': 'Ensures your file meets real printing requirements.',
 
   'common.idle': 'Idle',
   'common.enforced': 'Enforced',
