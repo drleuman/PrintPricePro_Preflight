@@ -158,7 +158,7 @@ export const LoaderOverlay: React.FC<Props> = ({
         return r.json();
       })
       .then((data: { status?: string }) => {
-        setCrcStatus(data?.status === 'ok' ? 'OK' : 'ERR');
+        setCrcStatus(data?.status === 'READY' ? 'OK' : 'ERR');
       })
       .catch(() => {
         setBffLatency(null);
