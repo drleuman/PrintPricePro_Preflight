@@ -230,46 +230,52 @@ export const Step1UploadV2_4: React.FC<Step1UploadV2_4Props> = ({
                             <h3 className="text-xl font-extrabold tracking-tight">{t('chooseWorkflow')}</h3>
                         </div>
 
-                        <div className="space-y-4">
-                            <button 
+                        {/* Segmented toggle */}
+                        <div className="relative flex bg-[var(--hover-bg)] p-1">
+                            {/* Sliding pill */}
+                            <div
+                                className={`absolute inset-y-1 w-[calc(50%-2px)] bg-[var(--accent-color)] transition-all duration-300 ease-out shadow-[0_0_12px_rgba(220,0,0,0.25)] ${
+                                    selectedMode === 'magic' ? 'left-1' : 'left-[calc(50%+1px)]'
+                                }`}
+                            />
+                            <button
                                 onClick={() => setSelectedMode('magic')}
-                                className={`w-full flex items-center gap-5 p-6 border transition-all duration-500 relative group ${
-                                    selectedMode === 'magic' ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5' : 'border-[var(--border-color)] hover:border-[var(--accent-color)] hover:bg-[var(--accent-color)]/5 bg-[var(--bg-primary)]/50'
+                                className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 px-4 transition-colors duration-300 ${
+                                    selectedMode === 'magic' ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                                 }`}
                             >
-                                <div className={`p-4 transition-all duration-500 ${selectedMode === 'magic' ? 'bg-[var(--accent-color)] text-white shadow-[0_0_20px_rgba(220,0,0,0.2)]' : 'bg-[var(--hover-bg)] text-[var(--text-muted)] group-hover:text-white group-hover:bg-[var(--accent-color)]/20'}`}>
-                                    <SparklesIcon className="h-6 w-6" />
-                                </div>
-                                <div className="text-left flex-1">
-                                    <div className="text-[0.85rem] font-black uppercase tracking-wider mb-1 text-[var(--text-primary)] group-hover:text-white">{t('aiMagicFix')}</div>
-                                    <div className="text-[0.88rem] text-[var(--text-secondary)] font-medium leading-normal group-hover:text-white/80">
-                                        {t('aiMagicFixDesc')}
-                                    </div>
-                                </div>
-                                {selectedMode === 'magic' && (
-                                    <div className="h-2 w-2 bg-[var(--accent-color)] shadow-[0_0_10px_#dc0000]" />
-                                )}
+                                <SparklesIcon className="h-4 w-4 shrink-0" />
+                                <span className="text-[0.78rem] font-black uppercase tracking-wider">{t('aiMagicFix')}</span>
                             </button>
-
-                            <button 
+                            <button
                                 onClick={() => setSelectedMode('manual')}
-                                className={`w-full flex items-center gap-5 p-6 border transition-all duration-500 relative group ${
-                                    selectedMode === 'manual' ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/5' : 'border-[var(--border-color)] hover:border-[var(--accent-color)] hover:bg-[var(--accent-color)]/5 bg-[var(--bg-primary)]/50'
+                                className={`relative z-10 flex-1 flex items-center justify-center gap-2 py-2.5 px-4 transition-colors duration-300 ${
+                                    selectedMode === 'manual' ? 'text-white' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                                 }`}
                             >
-                                <div className={`p-4 transition-all duration-500 ${selectedMode === 'manual' ? 'bg-[var(--accent-color)] text-white shadow-[0_0_20px_rgba(220,0,0,0.2)]' : 'bg-[var(--hover-bg)] text-[var(--text-muted)] group-hover:text-white group-hover:bg-[var(--accent-color)]/20'}`}>
-                                    <AdjustmentsHorizontalIcon className="h-6 w-6" />
-                                </div>
-                                <div className="text-left flex-1">
-                                    <div className="text-[0.85rem] font-black uppercase tracking-wider mb-1 text-[var(--text-primary)] group-hover:text-white">{t('diagnosticModeTitle')}</div>
-                                    <div className="text-[0.88rem] text-[var(--text-secondary)] font-medium leading-normal group-hover:text-white/80">
-                                        {t('diagnosticModeDesc')}
-                                    </div>
-                                </div>
-                                {selectedMode === 'manual' && (
-                                    <div className="h-2 w-2 bg-[var(--accent-color)] shadow-[0_0_10px_#dc0000]" />
-                                )}
+                                <AdjustmentsHorizontalIcon className="h-4 w-4 shrink-0" />
+                                <span className="text-[0.78rem] font-black uppercase tracking-wider">{t('diagnosticModeTitle')}</span>
                             </button>
+                        </div>
+
+                        {/* Contextual description panel */}
+                        <div
+                            key={selectedMode}
+                            className="flex items-start gap-3 px-4 py-3 border border-[var(--border-color)] bg-[var(--bg-primary)]/50 animate-in fade-in slide-in-from-top-2 duration-300"
+                        >
+                            <div className="p-2 bg-[var(--accent-color)]/10 text-[var(--accent-color)] shrink-0">
+                                {selectedMode === 'magic'
+                                    ? <SparklesIcon className="h-5 w-5" />
+                                    : <AdjustmentsHorizontalIcon className="h-5 w-5" />}
+                            </div>
+                            <div>
+                                <div className="text-[0.82rem] font-black uppercase tracking-wider text-[var(--text-primary)] mb-0.5">
+                                    {selectedMode === 'magic' ? t('aiMagicFix') : t('diagnosticModeTitle')}
+                                </div>
+                                <div className="text-[0.83rem] text-[var(--text-secondary)] leading-snug">
+                                    {selectedMode === 'magic' ? t('aiMagicFixDesc') : t('diagnosticModeDesc')}
+                                </div>
+                            </div>
                         </div>
 
                         {/* Show policy enforcement for any analysis mode */}
