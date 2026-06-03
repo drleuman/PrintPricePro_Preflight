@@ -501,9 +501,9 @@ if (!global.__SERVER_STARTED) {
     setTimeout(() => process.exit(1), 100);
   });
 
-  server.timeout = 1800000; // 30 minutes
-  server.requestTimeout = 1810000; // 30 min + 10s extra for NGINX padding
-  server.headersTimeout = 61000; // 61s standard protection
+  server.timeout = 3_600_000; // 60 minutes — allows 800MB+ uploads on slower connections
+  server.requestTimeout = 3_610_000; // 60 min + 10s padding so nginx times out before Node
+  server.headersTimeout = 61_000; // 61s standard protection
 
   const wss = new WebSocket.Server({ noServer: true });
   server.on('upgrade', (request, socket, head) => {

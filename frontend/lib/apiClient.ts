@@ -102,6 +102,11 @@ export async function pposFetch<T>(path: string, options?: RequestInit): Promise
         let errorMessage = errorData.message || errorData.error || `Request failed with status ${res.status}`;
         let errorCode = errorData.code || errorData.error || 'UNKNOWN_ERROR';
 
+        if (res.status === 408) {
+            errorCode = 'UPLOAD_TIMEOUT';
+            errorMessage = 'The upload timed out. Your file may be too large for your connection speed. Please try again on a faster network.';
+        }
+
         if (res.status === 413) {
             if (path.includes('/actions/fix')) {
                 errorCode = 'MAGIC_FIX_PAYLOAD_TOO_LARGE';
