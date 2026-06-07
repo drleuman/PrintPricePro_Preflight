@@ -885,6 +885,17 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                                     };
                                                     const statusInfo = getStatusLabel(f.status);
 
+                                                    // Phase APP-40.6 — File History OS View: trust-level badge
+                                                    // green = certified, yellow = review required, red = failed, gray = diagnostic only
+                                                    const trustBadge: Record<string, { label: string; color: string; dot: string }> = {
+                                                        CERTIFIED_SAFE: { label: 'Production certified', color: 'text-[#50fa7b]', dot: 'bg-[#50fa7b]' },
+                                                        REVIEW_REQUIRED: { label: 'Review required', color: 'text-yellow-400', dot: 'bg-yellow-400' },
+                                                        NEEDS_ATTENTION: { label: 'Needs attention', color: 'text-red-400', dot: 'bg-red-400' },
+                                                        FIXED_UNCERTIFIED: { label: 'Fixed (not certified)', color: 'text-[var(--text-primary)]', dot: 'bg-[var(--text-muted)]' },
+                                                        DIAGNOSTIC_ONLY: { label: 'Diagnostic only', color: 'text-[var(--text-muted)]', dot: 'bg-[var(--text-muted)]' }
+                                                    };
+                                                    const badge = trustBadge[f.trustLevel as string] || trustBadge.DIAGNOSTIC_ONLY;
+
                                                     return (
                                                     <div key={f.jobId} className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-4 flex flex-col gap-4">
                                                         <div>
@@ -894,8 +905,15 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                                                     {statusInfo.label}
                                                                 </span>
                                                             </div>
-                                                            <div className="text-xs font-mono text-[var(--text-muted)]">
-                                                                Fix ID: {f.jobId} <HelpTip text="Internal identifier for this Magic Fix job. Support may ask for it when investigating a file." />
+                                                            <div className="text-xs font-mono text-[var(--text-muted)] flex items-center gap-3 flex-wrap">
+                                                                <span>Fix ID: {f.jobId} <HelpTip text="Internal identifier for this Magic Fix job. Support may ask for it when investigating a file." /></span>
+                                                                {f.sourceJobId && <span>Source job: {f.sourceJobId}</span>}
+                                                                <span className={`inline-flex items-center gap-1.5 font-bold uppercase tracking-widest text-[0.6rem] ${badge.color}`}>
+                                                                    <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                                                                    {badge.label}
+                                                                    <HelpTip text="Trust level reflects what the engine actually vouches for: certified means production-safe, review required means a human must approve before print, fixed (not certified) means the file changed but isn't certified, diagnostic only means no automated fix was applied." />
+                                                                </span>
+                                                                {typeof f.fix_coverage === 'number' && <span>Fix coverage: {Math.round(f.fix_coverage * 100)}%</span>}
                                                             </div>
                                                         </div>
 
@@ -1038,6 +1056,32 @@ const HistoryPanel = ({ history, isLoading, error, refresh }: { history: any, is
                                                                                     <li key={i} className="flex gap-2">
                                                                                         <span className="shrink-0">✗</span>
                                                                                         <span className="leading-snug">{fc.label}</span>
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        </div>
+                                                                    )}
+                                                                    {f.clientChangeSummary.whatCannotBeFixedAutomatically && f.clientChangeSummary.whatCannotBeFixedAutomatically.length > 0 && (
+                                                                        <div>
+                                                                            <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1.5 flex items-center">Cannot be fixed automatically <HelpTip text="These findings are not reliable autofix candidates. They require a higher-resolution reupload or operator review before production." /></span>
+                                                                            <ul className="list-none space-y-1.5 pl-0 text-amber-400">
+                                                                                {f.clientChangeSummary.whatCannotBeFixedAutomatically.map((cf: any, i: number) => (
+                                                                                    <li key={i} className="flex gap-2">
+                                                                                        <span className="shrink-0">⚠</span>
+                                                                                        <span className="leading-snug">{cf.label}</span>
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        </div>
+                                                                    )}
+                                                                    {f.clientChangeSummary.recommendedNextActions && f.clientChangeSummary.recommendedNextActions.length > 0 && (
+                                                                        <div>
+                                                                            <span className="font-bold block text-[var(--text-muted)] uppercase tracking-widest text-[0.65rem] mb-1.5 flex items-center">Recommended next action <HelpTip text="What we suggest doing next for the items that the engine could not reliably fix automatically." /></span>
+                                                                            <ul className="list-none space-y-1.5 pl-0 text-[var(--text-primary)]">
+                                                                                {f.clientChangeSummary.recommendedNextActions.map((ra: any, i: number) => (
+                                                                                    <li key={i} className="flex gap-2">
+                                                                                        <span className="shrink-0">→</span>
+                                                                                        <span className="leading-snug">{ra.action}</span>
                                                                                     </li>
                                                                                 ))}
                                                                             </ul>

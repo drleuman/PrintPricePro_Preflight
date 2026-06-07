@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { translateIssueTitle } from './issueMapper';
+import { translateIssueTitle, classifyNoAutofixPolicy } from './issueMapper';
 import type { Issue } from '../types';
 
 // Mock translation function that returns the key as-is for testing
@@ -99,5 +99,52 @@ describe('translateIssueTitle — default fallbacks', () => {
   it('falls back to critical_trace key when neither title nor message present', () => {
     const issue = makeIssue({ code: 'COMPLETELY_UNKNOWN', title: undefined, message: undefined });
     expect(translateIssueTitle(issue, t)).toBe('finding.critical_trace');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase APP-40.5 — No-Autofix Policy Enforcement
+// These findings must never be presented as "Magic Fix available" /
+// "Production certified" / "Fixed automatically" — they require human/customer
+// involvement and are surfaced as diagnostic-only / reupload-recommended /
+// operator-review-required instead.
+// ---------------------------------------------------------------------------
+describe('classifyNoAutofixPolicy', () => {
+  it('returns null for a normal, reliably-autofixable issue', () => {
+    expect(classifyNoAutofixPolicy(makeIssue({ repairStrategy: 'EMBED_FONTS' } as any))).toBeNull();
+    expect(classifyNoAutofixPolicy(null)).toBeNull();
+  });
+
+  it('classifies reupload-recommended repair strategies (image-quality dependent on the source file)', () => {
+    expect(classifyNoAutofixPolicy({ repairStrategy: 'UPSCALE_LOW_RESOLUTION' })).toBe('customer_reupload_recommended');
+    expect(classifyNoAutofixPolicy({ repairStrategy: 'REPAIR_JPEG_ARTIFACTS' })).toBe('customer_reupload_recommended');
+    expect(classifyNoAutofixPolicy({ repairStrategy: 'RASTER_TO_VECTOR' })).toBe('customer_reupload_recommended');
+    expect(classifyNoAutofixPolicy({ repairStrategy: 'RECOVER_MISSING_GLYPHS' })).toBe('customer_reupload_recommended');
+  });
+
+  it('classifies REBUILD_300DPI as customer-reupload-recommended — output quality still depends on the source file', () => {
+    expect(classifyNoAutofixPolicy({ repairStrategy: 'REBUILD_300DPI' })).toBe('customer_reupload_recommended');
+  });
+
+  it('classifies remaining unreliable repair strategies (font substitution, PDF/X, PDF/A, TAC) as diagnostic-only', () => {
+    expect(classifyNoAutofixPolicy({ repairStrategy: 'SUBSTITUTE_FONTS' })).toBe('diagnostic_only');
+    expect(classifyNoAutofixPolicy({ repairStrategy: 'CONVERT_PDFX' })).toBe('diagnostic_only');
+    expect(classifyNoAutofixPolicy({ repairStrategy: 'CONVERT_PDFA' })).toBe('diagnostic_only');
+    expect(classifyNoAutofixPolicy({ repairStrategy: 'CORRECT_TAC' })).toBe('diagnostic_only');
+  });
+
+  it('matches case-insensitively via repairStrategy or fix_method', () => {
+    expect(classifyNoAutofixPolicy({ repairStrategy: 'upscale_low_resolution' })).toBe('customer_reupload_recommended');
+    expect(classifyNoAutofixPolicy({ fix_method: 'rebuild_300dpi' })).toBe('customer_reupload_recommended');
+  });
+
+  it('falls back to keyword matching against title/message/description when no recognized strategy is present', () => {
+    expect(classifyNoAutofixPolicy({ title: 'Low-resolution upscale recommended for embedded artwork' })).toBe('customer_reupload_recommended');
+    expect(classifyNoAutofixPolicy({ message: 'Document requires PDF/A conversion before certification' })).toBe('operator_review_required');
+    expect(classifyNoAutofixPolicy({ description: 'A 300 DPI rebuild was applied for review purposes only' })).toBe('diagnostic_only');
+  });
+
+  it('returns null when no strategy or keyword matches', () => {
+    expect(classifyNoAutofixPolicy({ title: 'Trim box anomaly detected', repairStrategy: 'REBUILD_TRIMBOX' })).toBeNull();
   });
 });

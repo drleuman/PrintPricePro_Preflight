@@ -24,6 +24,7 @@ import {
 } from './types';
 import { normalizePreflightResult, pickCanonicalJobId, analyzeWorkflow, getCanonicalFileName, getBestArtifactKey, getReadableFixFailure, normalizeAutofixResultState } from './utils/payloadNormalization';
 import { useAiMagicFix } from './hooks/useAiMagicFix';
+import { usePreflightCapabilities } from './hooks/usePreflightCapabilities';
 import { normalizeDownloadFilename } from './utils/formatters';
 import { usePreflightWorker } from './hooks/usePreflightWorker';
 import { usePdfTools } from './hooks/usePdfTools';
@@ -243,6 +244,9 @@ function AppContent() {
     }
   });
 
+  // ---------- Capability Contract (Phase APP-40.1) ----------
+  const { capabilities: preflightCapabilities } = usePreflightCapabilities(true);
+
   // ---------- AI Magic Fix — isolated from Diagnostic Mode ----------
   const {
     autoFixBefore,
@@ -260,6 +264,7 @@ function AppContent() {
     appMode,
     currentStep,
     result,
+    capabilities: preflightCapabilities,
     activeJobIdRef,
     preflightJobIdRef,
     autoFixServer,
@@ -567,13 +572,22 @@ function AppContent() {
 
   const handleRebuildPdf = useCallback(async () => {
     if (!file) return;
+    // Phase APP-40.5 — No-Autofix Policy Enforcement: REBUILD_300DPI is diagnostic/review
+    // output only. It must never be presented as a real quality restoration.
+    console.log('[APP][NO-AUTOFIX-POLICY] REBUILD_300DPI requested as diagnostic/review-only output', {
+      notice: t('step.review.rebuild300.notice')
+    });
+    if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
+      const proceed = window.confirm(t('step.review.rebuild300.notice'));
+      if (!proceed) return;
+    }
     triggerAutoFix({
       options: {
         requestedFixes: [{ repairStrategy: 'REBUILD_300DPI' }],
         magicFixProfile: 'MAGIC_FIX_FORCE_CMYK'
       }
     });
-  }, [file, triggerAutoFix]);
+  }, [file, triggerAutoFix, t]);
 
   const handleMakeBooklet = useCallback(async () => {
     if (!file) return;

@@ -5,6 +5,7 @@ import { formatLabel } from '../../utils/formatters';
 import { RocketLaunchIcon, ArrowPathIcon, ChevronLeftIcon, ShieldCheckIcon, CommandLineIcon, CpuChipIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '../../i18n';
 import { translateIssueTitle } from '../../utils/issueMapper';
+import { normalizeLongPollingStatus, LONG_POLLING_STATUS_COPY } from '../../utils/longPollingStatus';
 
 interface Step2AnalysisV2_4Props {
     file: File | null;
@@ -147,7 +148,13 @@ export const Step2AnalysisV2_4: React.FC<Step2AnalysisV2_4Props> = ({
                                             <span className="text-[var(--accent-color)] shrink-0 font-bold">[PROCESS]</span>
                                             <span className="uppercase">{techMessage}</span>
                                         </div>
-                                        
+
+                                        {/* Phase APP-40.7: long-polling explanatory copy for heavy files */}
+                                        <div className="flex gap-3 text-[var(--text-muted)] opacity-70">
+                                            <span className="text-[0.6rem] font-bold shrink-0 opacity-50 uppercase tracking-widest">[STATUS]</span>
+                                            <span className="normal-case">{LONG_POLLING_STATUS_COPY[normalizeLongPollingStatus({ rawStatus: ldmStatus, stage: 'preflight' })]}</span>
+                                        </div>
+
                                         <div className="flex gap-3 text-[var(--text-muted)] border-t border-[var(--border-color)]/30 pt-3">
                                             <span className="text-[0.6rem] font-bold shrink-0 opacity-50 uppercase tracking-widest">{t('step.analysis.igniter').replace('IGNITER ', '')}</span>
                                             <span className="uppercase truncate">PPOS_V2_ASYNC_GATEWAY_ACTIVE</span>

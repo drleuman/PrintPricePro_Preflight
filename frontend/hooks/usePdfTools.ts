@@ -5,6 +5,7 @@ import { PreflightResult } from '../types';
 
 import { normalizePreflightResult, pickCanonicalJobId } from '../utils/payloadNormalization';
 import { isTerminalDiagnosticStatus, isTerminalFailureStatus, isTerminalStatus } from '../utils/statusHelpers';
+import { normalizeLongPollingStatus, logLongPollingStatus, LongPollingStage } from '../utils/longPollingStatus';
 import { sleep } from '../utils/sleep';
 
 export function normalizeArtifactIdForRoute(input: string) {
@@ -203,6 +204,17 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
 
                 // Normalize status names from PPOS
                 const status = (job.status || '').toUpperCase();
+
+                // Phase APP-40.7: emit a consistent long-polling status trace for heavy-file diagnostics
+                const pollStage: LongPollingStage = jobId.startsWith('fix_') ? 'fix' : 'preflight';
+                const normalizedPollStatus = normalizeLongPollingStatus({
+                    rawStatus: status,
+                    stage: pollStage,
+                    requiresHumanReview: job?.requiresHumanReview === true || job?.result?.requiresHumanReview === true,
+                    productionCertified: job?.productionCertified === true || job?.result?.productionCertified === true,
+                });
+                logLongPollingStatus(jobId, normalizedPollStatus, status);
+
                 if (isTerminalDiagnosticStatus(status)) {
                     clearInterval(interval);
                     resolve(job);

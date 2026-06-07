@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { normalizeLongPollingStatus, LONG_POLLING_STATUS_COPY, LongPollingStage } from '../utils/longPollingStatus';
 
 type StepStatus = 'done' | 'active' | 'pending';
 
@@ -255,6 +256,13 @@ export const LoaderOverlay: React.FC<Props> = ({
                     const realLeading = fixProgress > syntheticProgress;
                     const displayPct = realLeading ? fixProgress : syntheticProgress;
                     const label = stageKey === 'fix' ? 'ENGINE_CERTIFICATION' : 'FORENSIC_SCAN';
+                    // Phase APP-40.7: derive the canonical long-polling status from stage + progress
+                    // so heavy-file sessions show consistent copy regardless of raw PPOS status strings.
+                    const pollStage: LongPollingStage = stageKey === 'fix' ? 'fix' : 'preflight';
+                    const normalizedStatus = normalizeLongPollingStatus({
+                      rawStatus: displayPct >= 100 ? 'COMPLETED' : displayPct > 0 ? 'RUNNING' : 'QUEUED',
+                      stage: pollStage,
+                    });
                     return (
                       <div className="space-y-1.5">
                         <div className="w-full h-px bg-[var(--bg-tertiary)] relative overflow-hidden">
@@ -269,6 +277,9 @@ export const LoaderOverlay: React.FC<Props> = ({
                             {realLeading ? `${displayPct}%` : `${formatElapsed(elapsedSeconds)} elapsed`}
                           </span>
                         </div>
+                        <p className="text-[0.6rem] text-[var(--text-muted)] normal-case opacity-70">
+                          {LONG_POLLING_STATUS_COPY[normalizedStatus]}
+                        </p>
                       </div>
                     );
                   })()

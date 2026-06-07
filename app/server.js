@@ -78,6 +78,7 @@ let isReady = false;
 const { router: proxyRouter, handleWsUpgrade } = require('./routes/proxy');
 const pdfRouter = require('./routes/pdf');
 const apiV2Router = require('./routes/apiV2');
+const capabilitiesRoutes = require('./routes/capabilitiesRoutes');
 const accountRoutes = require('./routes/accountRoutes');
 const batchV2Router = require('./routes/batchV2');
 const analyticsV2Router = require('./routes/analyticsV2');
@@ -294,6 +295,7 @@ app.use('/api/convert', requireAuth, convertLimiter, pdfRouter);
 
 // 2) Product API Layer (Jobs, Batches, Analytics)
 app.use('/api/v2/jobs', requireAuth, apiV2Router);
+app.use('/api/v2/preflight', requireAuth, capabilitiesRoutes);
 app.use('/api/v2/me', accountRoutes);
 app.use('/api/v2/batches', requireAuth, batchV2Router);
 app.use('/api/v2/analytics', requireAuth, analyticsV2Router);

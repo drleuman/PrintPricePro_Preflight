@@ -1,6 +1,8 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { AppMode, FileMeta, PreflightResult } from '../types';
 import { normalizePreflightResult, pickCanonicalJobId, getBestArtifactKey, getCanonicalFileName } from '../utils/payloadNormalization';
+import { filterRequestedFixesByCapability, getSubmittableFixes, logCapabilityGateDecision, PreflightCapability } from '../utils/fixCapabilityGate';
+import { normalizeLongPollingStatus, logLongPollingStatus } from '../utils/longPollingStatus';
 
 export type FixIntent = 'incremental_magic' | 'full_magic' | 'manual_with_cmyk';
 
@@ -106,6 +108,8 @@ interface UseAiMagicFixParams {
   appMode: AppMode;
   currentStep: number;
   result: PreflightResult | null;
+  /** Phase APP-40.2 — live capability contract used to whitelist requestedFixes before submission */
+  capabilities?: PreflightCapability[] | null;
   activeJobIdRef: React.MutableRefObject<string | null>;
   preflightJobIdRef: React.MutableRefObject<string | null>;
   autoFixServer: (file: File, opts: { policy: string; jobId: string | null; options?: any }) => Promise<any>;
@@ -135,6 +139,8 @@ export interface UseAiMagicFixReturn {
   triggerAutoFix: (opts?: any) => Promise<void>;
   resetAiFix: () => void;
   setAutoFixBefore: (v: PreflightResult | null) => void;
+  /** Phase APP-40.2 — classification of the last requestedFixes submission against the capability contract */
+  fixCapabilityGate: ReturnType<typeof filterRequestedFixesByCapability> | null;
 }
 
 export function useAiMagicFix({
@@ -143,6 +149,7 @@ export function useAiMagicFix({
   appMode,
   currentStep,
   result,
+  capabilities,
   activeJobIdRef,
   preflightJobIdRef,
   autoFixServer,
@@ -167,6 +174,7 @@ export function useAiMagicFix({
   const [fixError, setFixError] = useState<any | null>(null);
   const [targetJobId, setTargetJobId] = useState<string | null>(null);
   const [autoFixRunId] = useState<number | null>(null);
+  const [fixCapabilityGate, setFixCapabilityGate] = useState<ReturnType<typeof filterRequestedFixesByCapability> | null>(null);
 
   const hasAutoTriggeredFixRef = useRef<string | null>(null);
   const inFlightFixKeyRef = useRef<string | null>(null);
@@ -177,6 +185,7 @@ export function useAiMagicFix({
     setAutoFixReport(null);
     setFixError(null);
     setTargetJobId(null);
+    setFixCapabilityGate(null);
     hasAutoTriggeredFixRef.current = null;
     inFlightFixKeyRef.current = null;
   }, []);
@@ -186,6 +195,23 @@ export function useAiMagicFix({
       if (!file) return;
 
       const mergedOptions = mergeStatefulFixOptions(opts, result, appMode);
+
+      // Phase APP-40.2 — Fix Request Whitelist: only forward fixes the engine declares
+      // implemented/autofixable. Diagnostic-only and unsupported fixes are surfaced to
+      // the user but never sent to the engine.
+      let fixCapabilityGateResult: ReturnType<typeof filterRequestedFixesByCapability> | null = null;
+      if (Array.isArray(mergedOptions.requestedFixes) && mergedOptions.requestedFixes.length > 0) {
+        fixCapabilityGateResult = filterRequestedFixesByCapability(mergedOptions.requestedFixes, capabilities);
+        logCapabilityGateDecision(fixCapabilityGateResult);
+        const submittable = getSubmittableFixes(fixCapabilityGateResult);
+        if (submittable.length) {
+          mergedOptions.requestedFixes = submittable;
+        } else {
+          delete mergedOptions.requestedFixes;
+        }
+      }
+      setFixCapabilityGate(fixCapabilityGateResult);
+
       const sourceJobId = preflightJobIdRef.current || activeJobIdRef.current;
       const policyKey = opts?.policy || selectedPolicy;
       
@@ -225,6 +251,7 @@ export function useAiMagicFix({
       setLdmActive(true);
       setFixError(null);
       setLdmStatus('loader.magic');
+      logLongPollingStatus(activeJobIdRef.current, normalizeLongPollingStatus({ rawStatus: 'REQUESTED', stage: 'fix' }));
       console.log('[AI-FIX][STEP3][STATE]', {
         status: 'FIX_INITIALIZING',
         sourceJobId: activeJobIdRef.current,
@@ -263,6 +290,7 @@ export function useAiMagicFix({
           activeJobIdRef.current = jobId;
           setLdmProgress(0);
           console.log('[AI-FIX][STEP3][STATE]', { status: 'FIX_POLLING', targetJobId: jobId });
+          logLongPollingStatus(jobId, normalizeLongPollingStatus({ rawStatus: 'RUNNING', stage: 'fix' }));
           jobResult = await handleV2JobComplete(jobId, (pct) => setLdmProgress(pct));
         } else if (jobResult && !jobId) {
           jobId = pickCanonicalJobId(jobResult.meta?.jobId, jobResult.job_id, jobResult.id) ?? jobId;
@@ -282,7 +310,13 @@ export function useAiMagicFix({
           setResult(normalizedAfter);
           setAutoFixAfter(normalizedAfter);
 
-          const requiresReview = normalizedAfter.requiresHumanReview === true || normalizedAfter.productionCertified === false;
+          const requiresReview = (normalizedAfter as any).requiresHumanReview === true || (normalizedAfter as any).productionCertified === false;
+          logLongPollingStatus(finalJobId, normalizeLongPollingStatus({
+            rawStatus: 'COMPLETED',
+            stage: 'fix',
+            requiresHumanReview: (normalizedAfter as any).requiresHumanReview === true,
+            productionCertified: (normalizedAfter as any).productionCertified === true,
+          }));
           const bestArtifactKey = getBestArtifactKey(normalizedAfter.artifacts, requiresReview);
           console.log('[AI-FIX][ARTIFACT-RESOLUTION]', { jobId: finalJobId, selected: bestArtifactKey });
 
@@ -383,5 +417,6 @@ export function useAiMagicFix({
     triggerAutoFix,
     resetAiFix,
     setAutoFixBefore,
+    fixCapabilityGate,
   };
 }

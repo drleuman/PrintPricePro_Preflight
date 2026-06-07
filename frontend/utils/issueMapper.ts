@@ -102,3 +102,76 @@ export const translateIssueTitle = (issue: Issue | null | undefined, t: (key: st
 
     return t('finding.critical_trace');
 };
+
+/**
+ * Phase APP-40.5 — No-Autofix Policy Enforcement.
+ *
+ * These categories of findings are knowingly NOT reliable autofixes — the engine
+ * cannot apply them deterministically without human/customer involvement. They must
+ * be presented as diagnostic-only / reupload-recommended / operator-review-required,
+ * never as "Magic Fix available", "Production certified", or "Fixed automatically".
+ */
+export type NoAutofixPolicyClassification = 'diagnostic_only' | 'customer_reupload_recommended' | 'operator_review_required' | null;
+
+const NO_AUTOFIX_REPAIR_STRATEGIES = new Set([
+    'REBUILD_300DPI',
+    'UPSCALE_LOW_RESOLUTION',
+    'REPAIR_JPEG_ARTIFACTS',
+    'RASTER_TO_VECTOR',
+    'RECOVER_MISSING_GLYPHS',
+    'SUBSTITUTE_FONTS',
+    'CONVERT_PDFX',
+    'CONVERT_PDFA',
+    'CORRECT_TAC',
+]);
+
+const REUPLOAD_RECOMMENDED_STRATEGIES = new Set([
+    'REBUILD_300DPI',
+    'UPSCALE_LOW_RESOLUTION',
+    'REPAIR_JPEG_ARTIFACTS',
+    'RASTER_TO_VECTOR',
+    'RECOVER_MISSING_GLYPHS',
+]);
+
+const NO_AUTOFIX_KEYWORDS: Array<{ pattern: RegExp; classification: NoAutofixPolicyClassification }> = [
+    { pattern: /low[- ]res(olution)?\s*upscal|upscal.*image/i, classification: 'customer_reupload_recommended' },
+    { pattern: /jpeg artifact|jpg artifact/i, classification: 'customer_reupload_recommended' },
+    { pattern: /raster.*(to )?vector|vectoriz/i, classification: 'customer_reupload_recommended' },
+    { pattern: /missing glyph|glyph recovery/i, classification: 'customer_reupload_recommended' },
+    { pattern: /font substitution|substitute font/i, classification: 'operator_review_required' },
+    { pattern: /pdf\/x conversion|convert.*pdf\/x/i, classification: 'operator_review_required' },
+    { pattern: /pdf\/a conversion|convert.*pdf\/a/i, classification: 'operator_review_required' },
+    { pattern: /\btac\b.*correction|total ink coverage correction/i, classification: 'operator_review_required' },
+    { pattern: /300\s*dpi rebuild|rebuild.*300\s*dpi/i, classification: 'diagnostic_only' },
+];
+
+/**
+ * Classifies an issue/fix against the no-autofix policy. Returns `null` when the
+ * issue is a normal, reliably-autofixable finding (no special handling needed).
+ */
+export function classifyNoAutofixPolicy(issue: any): NoAutofixPolicyClassification {
+    if (!issue) return null;
+
+    const strategy = (issue.repairStrategy || issue.fix_method || '').toString().toUpperCase();
+    if (strategy) {
+        if (REUPLOAD_RECOMMENDED_STRATEGIES.has(strategy)) return 'customer_reupload_recommended';
+        if (NO_AUTOFIX_REPAIR_STRATEGIES.has(strategy)) return 'diagnostic_only';
+    }
+
+    const haystack = [issue.title, issue.message, issue.description]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+    for (const { pattern, classification } of NO_AUTOFIX_KEYWORDS) {
+        if (pattern.test(haystack)) return classification;
+    }
+
+    return null;
+}
+
+export const NO_AUTOFIX_POLICY_LABELS: Record<Exclude<NoAutofixPolicyClassification, null>, string> = {
+    diagnostic_only: 'Diagnostic only',
+    customer_reupload_recommended: 'Customer reupload recommended',
+    operator_review_required: 'Operator review required',
+};

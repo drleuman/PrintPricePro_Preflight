@@ -6,48 +6,77 @@ import { PreflightResult, Issue, Severity, WorkflowAnalysis, AppMode, ISSUE_CATE
 
 const REVIEW_ARTIFACT_KEYS = ['review_pdf', 'final_fixed_pdf', 'fixed_pdf', 'normalized_pdf'];
 const CERTIFIED_ARTIFACT_KEYS = ['certified_pdf', 'final_fixed_pdf', 'fixed_pdf', 'normalized_pdf'];
+const FIXED_ARTIFACT_KEYS = ['final_fixed_pdf', 'fixed_pdf', 'normalized_pdf'];
 
-export function getBestArtifactKey(artifacts: any, requiresReview: boolean = false): string | null {
+const FILENAME_TO_ARTIFACT_KEY: Record<string, string> = {
+    'fixed.pdf': 'fixed_pdf',
+    'normalized.pdf': 'normalized_pdf',
+    'certified.pdf': 'certified_pdf',
+    'review.pdf': 'review_pdf'
+};
+
+function resolveArtifactKey(artifacts: any, candidateKeys: string[]): string | null {
     if (!artifacts) return null;
-    const keys = requiresReview ? REVIEW_ARTIFACT_KEYS : CERTIFIED_ARTIFACT_KEYS;
-    let bestArtifactKey: string | null = null;
-    
-    for (const key of keys) {
-        if (artifacts[key]) {
-            bestArtifactKey = key;
-            break;
-        }
+
+    for (const key of candidateKeys) {
+        if (artifacts[key]) return key;
     }
 
-    // Check fallback for bad artifact mappings
-    if (!bestArtifactKey) {
-        for (const key of Object.keys(artifacts)) {
-            const isPhysicalFilename = /\.pdf$/i.test(key);
-            if (isPhysicalFilename) {
-                const fallbackKey = key.toLowerCase().replace('.pdf', '_pdf');
-                if (keys.includes(fallbackKey)) {
-                    bestArtifactKey = fallbackKey;
-                    break;
-                }
+    // Check fallback for bad artifact mappings (PPOS sometimes returns physical filenames as keys)
+    for (const key of Object.keys(artifacts)) {
+        const isPhysicalFilename = /\.pdf$/i.test(key);
+        if (isPhysicalFilename) {
+            const fallbackKey = key.toLowerCase().replace('.pdf', '_pdf');
+            if (candidateKeys.includes(fallbackKey)) {
+                console.warn("[DOWNLOAD][INVALID-ARTIFACT-KEY]", { bestArtifactKey: key });
+                return FILENAME_TO_ARTIFACT_KEY[key.toLowerCase()] || fallbackKey;
             }
         }
     }
 
-    if (bestArtifactKey) {
-        const isPhysicalFilename = /\.pdf$/i.test(bestArtifactKey);
-        if (isPhysicalFilename) {
-            console.warn("[DOWNLOAD][INVALID-ARTIFACT-KEY]", { bestArtifactKey });
-            const filenameToKey: Record<string, string> = {
-                'fixed.pdf': 'fixed_pdf',
-                'normalized.pdf': 'normalized_pdf',
-                'certified.pdf': 'certified_pdf'
-            };
-            return filenameToKey[bestArtifactKey.toLowerCase()] || bestArtifactKey;
-        }
-        return bestArtifactKey;
-    }
-
     return null;
+}
+
+/**
+ * Phase APP-40.3 — Artifact Trust & Certification Gate.
+ *
+ * A `fixed_pdf` is not automatically a `certified_pdf`. These helpers separate
+ * artifact selection by trust level so the UI never over-promises certification
+ * for output that has not actually been certified by the engine.
+ */
+
+/** Visual review output only — never to be presented as production-certified. */
+export function getReviewArtifactKey(artifacts: any): string | null {
+    return resolveArtifactKey(artifacts, REVIEW_ARTIFACT_KEYS);
+}
+
+/** A PDF the engine modified, with no guarantee it is production-certified. */
+export function getFixedArtifactKey(artifacts: any): string | null {
+    return resolveArtifactKey(artifacts, FIXED_ARTIFACT_KEYS);
+}
+
+/**
+ * Production-certified output. Only returned when the engine explicitly marks
+ * the result as `productionCertified=true` AND `requiresHumanReview=false`.
+ * `fixed_pdf` / `final_fixed_pdf` / `normalized_pdf` / `review_pdf` must never
+ * be substituted here, regardless of availability.
+ */
+export function getCertifiedArtifactKey(artifacts: any, productionCertified: boolean, requiresHumanReview: boolean): string | null {
+    if (!artifacts?.certified_pdf) return null;
+    if (productionCertified !== true) return null;
+    if (requiresHumanReview === true) return null;
+    return 'certified_pdf';
+}
+
+/**
+ * @deprecated Prefer the trust-aware helpers (`getCertifiedArtifactKey`,
+ * `getFixedArtifactKey`, `getReviewArtifactKey`). Kept for callers that still
+ * need a single best-effort artifact (e.g. comparison viewer "after" preview).
+ */
+export function getBestArtifactKey(artifacts: any, requiresReview: boolean = false): string | null {
+    if (!artifacts) return null;
+    const keys = requiresReview ? REVIEW_ARTIFACT_KEYS : CERTIFIED_ARTIFACT_KEYS;
+    return resolveArtifactKey(artifacts, keys);
 }
 
 export function isBleedIssue(issue: any): boolean {
@@ -112,18 +141,22 @@ export function analyzeWorkflow(
     const allRepairs = [...reportRepairs, ...resultRepairs, ...fixes];
     const hasRepairMetadata = allRepairs.length > 0;
 
-    // 2. Resolve artifacts
-    const requiresReview = (result as any)?.requiresHumanReview === true || (result as any)?.productionCertified === false;
-    let bestArtifactKey = getBestArtifactKey(artifacts, requiresReview);
-    
-    // For ANALYZE, if certified_pdf exists, we want to allow it even if requiresReview is true
-    if (isAnalyzeOnly && artifacts?.certified_pdf) {
-        bestArtifactKey = 'certified_pdf';
-    }
-    
+    // 2. Resolve artifacts (Phase APP-40.3 — trust-aware artifact selection)
+    const requiresHumanReview = (result as any)?.requiresHumanReview === true;
+    const productionCertified = (result as any)?.productionCertified === true;
+    const requiresReview = requiresHumanReview || (result as any)?.productionCertified === false;
+
+    const reviewArtifactKey = getReviewArtifactKey(artifacts);
+    const fixedArtifactKey = getFixedArtifactKey(artifacts);
+    const certifiedArtifactKey = getCertifiedArtifactKey(artifacts, productionCertified, requiresHumanReview);
+
+    // bestArtifactKey now reflects only the trust level the engine actually vouches for:
+    // certified > fixed > review. A fixed_pdf is never promoted to certified here.
+    let bestArtifactKey = certifiedArtifactKey || (requiresReview ? (reviewArtifactKey || fixedArtifactKey) : (fixedArtifactKey || reviewArtifactKey));
+
     const hasFinalArtifact = !!bestArtifactKey;
-    const hasCertified = !!artifacts.certified_pdf;
-    
+    const hasCertified = !!certifiedArtifactKey;
+
     const appliedFixesCount = (result as any)?.summary?.after?.applied_fix_count || (result as any)?.applied_fixes?.length || (result as any)?.fixes?.length || 0;
     const isAutofixReviewRequired = 
         (result as any)?.type === 'AUTOFIX' && 
@@ -189,6 +222,9 @@ export function analyzeWorkflow(
         hasDiagnosticArtifact,
         showComparison,
         bestArtifactKey: finalBestArtifactKey,
+        reviewArtifactKey,
+        fixedArtifactKey,
+        certifiedArtifactKey,
         hasEffectiveFix,
         rewritten,
         certificationMode,

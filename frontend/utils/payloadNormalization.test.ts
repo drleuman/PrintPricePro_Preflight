@@ -8,6 +8,9 @@ import {
   normalizePreflightResult,
   analyzeWorkflow,
   getCanonicalFileName,
+  getReviewArtifactKey,
+  getFixedArtifactKey,
+  getCertifiedArtifactKey,
 } from './payloadNormalization';
 import { Severity } from '../types';
 
@@ -505,10 +508,16 @@ describe('analyzeWorkflow', () => {
     expect(analysis.hasFixedArtifact).toBe(true);
   });
 
-  it('returns correct bestArtifactKey', () => {
-    const result = { ...baseResult, artifacts: { fixed_pdf: 'a', certified_pdf: 'b' } };
-    const analysis = analyzeWorkflow(result, null, 'manual');
+  it('returns correct bestArtifactKey when the engine vouches for certification (Phase APP-40.3 trust contract)', () => {
+    const result = { ...baseResult, productionCertified: true, requiresHumanReview: false, artifacts: { fixed_pdf: 'a', certified_pdf: 'b' } };
+    const analysis = analyzeWorkflow(result as any, null, 'manual');
     expect(analysis.bestArtifactKey).toBe('certified_pdf');
+  });
+
+  it('does not select certified_pdf as bestArtifactKey when the engine has not vouched for it (a fixed_pdf is never promoted to certified)', () => {
+    const result = { ...baseResult, artifacts: { fixed_pdf: 'a', certified_pdf: 'b' } };
+    const analysis = analyzeWorkflow(result as any, null, 'manual');
+    expect(analysis.bestArtifactKey).not.toBe('certified_pdf');
   });
 
   it('sets showComparison=true only for real autofix with a final artifact', () => {
@@ -533,11 +542,13 @@ describe('analyzeWorkflow', () => {
     expect(analysis.showComparison).toBe(false);
   });
 
-  it('ANALYZE preserves certified_pdf (Phase 39.1.15 hotfix)', () => {
+  it('ANALYZE preserves certified_pdf (Phase 39.1.15 hotfix) when the engine vouches for it (Phase APP-40.3 trust contract)', () => {
     const result = {
       ...baseResult,
       type: "ANALYZE" as const,
       status: "COMPLETED",
+      productionCertified: true,
+      requiresHumanReview: false,
       artifacts: {
         certified_pdf: {
           artifactKey: "certified_pdf",
@@ -603,5 +614,81 @@ describe('getCanonicalFileName', () => {
   it('reads filename from top-level payload.filename when meta is absent', () => {
     const result = getCanonicalFileName({ filename: 'fallback.pdf' }, null);
     expect(result).toBe('fallback.pdf');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase APP-40.3 — Trust-aware artifact resolution
+// A `fixed_pdf` must never be presented/selected as a `certified_pdf`, and
+// `certified_pdf` is only trustworthy when the engine explicitly vouches for it
+// (productionCertified === true) AND no human review is pending.
+// ---------------------------------------------------------------------------
+describe('getReviewArtifactKey / getFixedArtifactKey / getCertifiedArtifactKey', () => {
+  it('getFixedArtifactKey prefers final_fixed_pdf over fixed_pdf and normalized_pdf', () => {
+    expect(getFixedArtifactKey({ final_fixed_pdf: 'a', fixed_pdf: 'b', normalized_pdf: 'c' })).toBe('final_fixed_pdf');
+    expect(getFixedArtifactKey({ fixed_pdf: 'b', normalized_pdf: 'c' })).toBe('fixed_pdf');
+    expect(getFixedArtifactKey({ normalized_pdf: 'c' })).toBe('normalized_pdf');
+  });
+
+  it('getFixedArtifactKey returns null when no fixed-family artifact exists', () => {
+    expect(getFixedArtifactKey({ certified_pdf: 'x' })).toBeNull();
+    expect(getFixedArtifactKey(null)).toBeNull();
+  });
+
+  it('getReviewArtifactKey resolves a review-oriented artifact when present', () => {
+    expect(getReviewArtifactKey({ review_pdf: 'r', fixed_pdf: 'f' })).toBe('review_pdf');
+  });
+
+  it('getCertifiedArtifactKey returns null when certified_pdf is absent', () => {
+    expect(getCertifiedArtifactKey({ fixed_pdf: 'f' }, true, false)).toBeNull();
+  });
+
+  it('getCertifiedArtifactKey returns null when productionCertified is not true (a fixed_pdf is never treated as certified)', () => {
+    expect(getCertifiedArtifactKey({ certified_pdf: 'c', fixed_pdf: 'f' }, false, false)).toBeNull();
+    expect(getCertifiedArtifactKey({ certified_pdf: 'c' }, undefined as any, false)).toBeNull();
+  });
+
+  it('getCertifiedArtifactKey returns null when human review is required, even if certified_pdf exists', () => {
+    expect(getCertifiedArtifactKey({ certified_pdf: 'c' }, true, true)).toBeNull();
+  });
+
+  it('getCertifiedArtifactKey returns certified_pdf only when engine vouches for it AND no review is pending', () => {
+    expect(getCertifiedArtifactKey({ certified_pdf: 'c' }, true, false)).toBe('certified_pdf');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// analyzeWorkflow — trust-aware bestArtifactKey selection (Phase APP-40.3)
+// ---------------------------------------------------------------------------
+describe('analyzeWorkflow trust-aware artifact selection', () => {
+  it('never selects certified_pdf as bestArtifactKey when productionCertified is false', () => {
+    const analysis: any = analyzeWorkflow({
+      productionCertified: false,
+      requiresHumanReview: true,
+      artifacts: { certified_pdf: 'cert.pdf', fixed_pdf: 'fixed.pdf' },
+    } as any, 'autofix');
+    expect(analysis.certifiedArtifactKey).toBeNull();
+    expect(analysis.bestArtifactKey).not.toBe('certified_pdf');
+  });
+
+  it('selects certified_pdf only when productionCertified is true and review is not required', () => {
+    const analysis: any = analyzeWorkflow({
+      productionCertified: true,
+      requiresHumanReview: false,
+      artifacts: { certified_pdf: 'cert.pdf', fixed_pdf: 'fixed.pdf' },
+    } as any, 'autofix');
+    expect(analysis.certifiedArtifactKey).toBe('certified_pdf');
+    expect(analysis.bestArtifactKey).toBe('certified_pdf');
+    expect(analysis.hasCertified).toBe(true);
+  });
+
+  it('falls back to the review/fixed artifact when review is required, never substituting certified_pdf', () => {
+    const analysis: any = analyzeWorkflow({
+      productionCertified: false,
+      requiresHumanReview: true,
+      artifacts: { certified_pdf: 'cert.pdf', review_pdf: 'review.pdf', fixed_pdf: 'fixed.pdf' },
+    } as any, 'autofix');
+    expect(analysis.certifiedArtifactKey).toBeNull();
+    expect(analysis.bestArtifactKey).toBe('review_pdf');
   });
 });

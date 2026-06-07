@@ -255,6 +255,10 @@ export interface WorkflowAnalysis {
   hasDiagnosticArtifact: boolean;
   showComparison: boolean;
   bestArtifactKey: string | null;
+  /** Phase APP-40.3 — trust-aware artifact keys (never substitute one for another) */
+  reviewArtifactKey: string | null;
+  fixedArtifactKey: string | null;
+  certifiedArtifactKey: string | null;
   hasEffectiveFix: boolean;
   rewritten: boolean; // V2.5
   certificationMode: string | null; // V2.5

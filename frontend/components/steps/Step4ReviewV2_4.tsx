@@ -161,7 +161,9 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     const isReadyForPrint = analysis.issueCount === 0;
 
     const isCompletedWithReview = result?.status === 'COMPLETED_WITH_REVIEW' || (result as any)?.requiresHumanReview === true;
-    const isProductionCertified = (result as any)?.productionCertified === true;
+    // Phase APP-40.3: a result is only "production certified" when the engine vouches
+    // for it AND no human review is pending — never inferred from artifact presence alone.
+    const isProductionCertified = (result as any)?.productionCertified === true && (result as any)?.requiresHumanReview !== true;
 
     const displayState = getAutofixDisplayState(analysis, fixesApplied, result?.technicallyFixed === true);
     
@@ -243,6 +245,18 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             <div><span className="text-[var(--text-muted)]">Fixed:</span> {(result.artifact_delta.fixed_size_bytes / 1024 / 1024).toFixed(2)} MB</div>
                             <div><span className="text-[var(--text-muted)]">Reduction:</span> {Math.abs(result.artifact_delta.size_delta_percent).toFixed(1)}%</div>
                         </div>
+                    </div>
+                )}
+
+                {/* Phase APP-40.7: explain partial-artifact / review-required long-polling outcomes */}
+                {isCompletedWithReview && !isProductionCertified && (
+                    <div className="p-4 border border-amber-500/30 bg-amber-500/10 mb-6 flex items-start gap-3">
+                        <DocumentCheckIcon className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                        <p className="text-[0.8rem] text-[var(--text-secondary)]">
+                            {(analysis as any).certifiedArtifactKey
+                                ? "The engine produced a corrected file, but it still requires human review before it can be marked production-certified — the certified artifact is withheld pending that review."
+                                : "The engine produced a repaired/diagnostic file for review, but could not generate a production-certified artifact for this job. Use the available output for review purposes and re-run after addressing the flagged findings."}
+                        </p>
                     </div>
                 )}
 

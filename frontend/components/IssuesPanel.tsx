@@ -5,6 +5,7 @@ import { ISSUE_CATEGORY_LABELS, SEVERITY_COLORS } from '../constants'; // Import
 import { diffPreflight } from '../utils/diffPreflight';
 import { FixedSizeList } from 'react-window'; // Importamos FixedSizeList
 import { formatLabel } from '../utils/formatters';
+import { classifyNoAutofixPolicy, NO_AUTOFIX_POLICY_LABELS } from '../utils/issueMapper';
 
 import {
   PhotoIcon,
@@ -146,6 +147,10 @@ export const IssuesPanel: React.FC<Props> = ({
     const sevColorKey = rawSev.includes('error') ? 'error' : rawSev.includes('warn') ? 'warning' : 'info';
     const sevColorClass = SEVERITY_COLORS[sevColorKey as keyof typeof SEVERITY_COLORS] || '';
 
+    // Phase APP-40.5 — surface the no-autofix policy classification so the user never
+    // believes "Magic Fix available" / "Production certified" for unreliable fix categories.
+    const noAutofixPolicy = classifyNoAutofixPolicy(iss);
+
     return (
       <div style={style} className="px-3 border-b border-[var(--border-color)] last:border-b-0 flex items-center">
         <button
@@ -162,6 +167,11 @@ export const IssuesPanel: React.FC<Props> = ({
                 {displayMessage}
               </span>
               <span className="text-[10px] text-[var(--text-muted)] leading-none">{categoryLabel}</span>
+              {noAutofixPolicy && (
+                <span className="text-[9px] uppercase tracking-wider font-black text-amber-500 leading-none mt-0.5">
+                  {NO_AUTOFIX_POLICY_LABELS[noAutofixPolicy]}
+                </span>
+              )}
             </div>
             <span className="ppp-issues-row-page text-[10px] text-[var(--text-secondary)] whitespace-nowrap shrink-0 mt-0.5">
               {iss.page !== undefined ? `${t('page')} ${iss.page}` : t('documentWide')}
