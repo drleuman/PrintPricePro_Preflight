@@ -419,6 +419,15 @@ router.get('/:jobId', async (req, res) => {
     }
     // ---------------------------
 
+    // Some PPOS responses wrap the actual job object in a `{ ok, job: {...} }` envelope.
+    // Unwrap it here so repairs/artifacts/status extraction below sees the real job shape.
+    if (data && typeof data === 'object' && data.job && typeof data.job === 'object' &&
+        (data.job.id || data.job.jobId || data.job.status || data.job.type) &&
+        !data.id && !data.jobId && !data.status) {
+      console.log(`[BFF][POLL][ENVELOPE-UNWRAP][${requestId}] Unwrapping PPOS 'job' envelope for ${jobId}`);
+      data = { ...data.job };
+    }
+
     if (!response.ok) {
         return res.status(response.status).json({
             error: data.code || data.error || 'PPOS_UPSTREAM_ERROR',
