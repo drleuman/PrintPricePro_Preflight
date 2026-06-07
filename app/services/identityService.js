@@ -73,7 +73,10 @@ function buildInternalAuthPayload(user = {}) {
         appRole: originalRole,       // Product role (DEVELOPER, AUTHOR, etc)
         scopes: scopes,
         scope: scopes.join(' '),     // Compatibility with some OAuth2 decoders
-        tenantId: 'ppos-production-worker'
+        // Must match the X-Tenant-Id default in apiClient.js (PPOS_INTERNAL_TENANT_ID) —
+        // PPOS resolves the tenant from the JWT at job creation but from the header at
+        // status lookup, so a mismatch here causes JOB_NOT_FOUND on polling.
+        tenantId: process.env.PPOS_INTERNAL_TENANT_ID || 'ppos-production-worker'
     };
 }
 
