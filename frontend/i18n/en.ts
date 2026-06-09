@@ -843,6 +843,42 @@ export const en = {
   'artifact.cropMarksAdded': 'Crop marks added',
   'artifact.visualReviewRequired': 'Visual review required',
   'artifact.certifiedNotAllowed': 'Certified PDF is not available for this output — the file has been flagged for review.',
+
+  // APP-62: Review Decision UX — operator decision states shown to customer.
+  'review.decision.panelTitle': 'Operator review decision',
+  'review.decision.operatorNotes': 'Operator notes',
+  'review.decision.progressionBlocked': 'Progression to next step is blocked',
+  'review.decision.noDecision': 'Awaiting review decision',
+  'review.decision.noDecisionDesc': 'A human review is required before this file can move to production.',
+  'review.decision.approvedForProduction': 'Approved for production',
+  'review.decision.approvedForProductionDesc': 'The operator approved this file for production.',
+  'review.decision.approvedWithWarnings': 'Approved with warnings',
+  'review.decision.approvedWithWarningsDesc': 'The operator approved this file with warnings. Please review the notes before proceeding.',
+  'review.decision.rejectedRequiresReupload': 'Rejected — replacement file required',
+  'review.decision.rejectedRequiresReuploadDesc': 'Replacement files are required. Please upload a corrected version of this file.',
+  'review.decision.requestCustomerReupload': 'Replacement upload requested',
+  'review.decision.requestCustomerReuploadDesc': 'The operator is requesting a new version of this file. Please upload a corrected file.',
+  'review.decision.needsMoreInformation': 'More information needed',
+  'review.decision.needsMoreInformationDesc': 'The operator requires additional information before a decision can be made.',
+
+  // APP-62: Remediation UX — customer remediation state labels and instructions.
+  'remediation.panel.title': 'File status',
+  'remediation.panel.nextAction': 'Next step',
+  'remediation.panel.actionRequired': 'Action required before proceeding',
+  'remediation.state.reuploadRequired': 'Replacement file required',
+  'remediation.state.reuploadRequiredDesc': 'Replacement files are required. Please upload a corrected version of this file.',
+  'remediation.state.waitingForUpload': 'Waiting for your upload',
+  'remediation.state.waitingForUploadDesc': 'The file is waiting for a new preflight check after reupload.',
+  'remediation.state.preflightRequired': 'A new preflight check is required',
+  'remediation.state.preflightRequiredDesc': 'The file is waiting for a new preflight check.',
+  'remediation.state.reviewRequired': 'Review required',
+  'remediation.state.reviewRequiredDesc': 'A human review is required before this file can move to production.',
+  'remediation.state.approvedWithWarnings': 'Approved with warnings',
+  'remediation.state.approvedWithWarningsDesc': 'The file was approved with warnings. Please review the notes before use.',
+  'remediation.state.resolved': 'Resolved',
+  'remediation.state.resolvedDesc': 'The remediation process is complete.',
+  'remediation.state.unknown': 'Status unknown',
+  'remediation.download.blocked': 'Production download is not available — this file requires replacement or further review before it can be sent to production.',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

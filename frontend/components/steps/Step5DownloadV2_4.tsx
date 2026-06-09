@@ -10,8 +10,10 @@ import {
 } from '@heroicons/react/24/outline';
 import { PPOSLogo } from '../../design/preflight_starter_pack';
 import { ClientChangeReportDrawer } from '../reports/ClientChangeReportDrawer';
-import type { ArtifactTrust, ArtifactUxContract } from '../../types';
+import type { ArtifactTrust, ArtifactUxContract, ReviewDecisionUx, RemediationUx } from '../../types';
 import { getArtifactUxForArtifact, getArtifactFilename } from '../../utils/artifactUx';
+import { ReviewDecisionPanel } from '../review/ReviewDecisionPanel';
+import { CustomerRemediationPanel } from '../remediation/CustomerRemediationPanel';
 
 interface Step5DownloadV2_4Props {
     lastPdfUrl: string | null;
@@ -52,6 +54,25 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
     const reviewRequired = artifactTrust?.review_required === true;
     const certifiedAllowed = artifactTrust?.certified_pdf_allowed !== false;
 
+    // APP-62: review_decision_ux and remediation_ux gate the production download.
+    const reviewDecisionUx: ReviewDecisionUx | null = (result as any)?.review_decision_ux ?? null;
+    const remediationUx: RemediationUx | null = (result as any)?.remediation_ux ?? null;
+
+    const remediationRequiresReupload =
+        remediationUx !== null &&
+        (remediationUx.requires_reupload === true ||
+            remediationUx.remediation_state === 'REUPLOAD_REQUIRED' ||
+            remediationUx.remediation_state === 'WAITING_FOR_UPLOAD' ||
+            remediationUx.remediation_state === 'PREFLIGHT_REQUIRED');
+
+    const reviewDecisionBlocksDownload =
+        reviewDecisionUx !== null &&
+        (reviewDecisionUx.allows_progression === false ||
+            reviewDecisionUx.decision === 'REJECTED_REQUIRES_REUPLOAD' ||
+            reviewDecisionUx.decision === 'REQUEST_CUSTOMER_REUPLOAD');
+
+    const productionDownloadBlocked = remediationRequiresReupload || reviewDecisionBlocksDownload;
+
     const baseName = lastPdfName || file?.name || 'document.pdf';
     const downloadFilename = getArtifactFilename(baseName, artifactKey, artifactTrust);
 
@@ -74,7 +95,7 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
             </div>
 
             {/* Governance warning: review required */}
-            {reviewRequired && (
+            {reviewRequired && !reviewDecisionUx && (
                 <div className="p-4 border border-amber-500/30 bg-amber-500/10 flex items-start gap-3">
                     <ExclamationTriangleIcon className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
                     <p className="text-[0.8rem] text-amber-500 font-bold uppercase tracking-widest">
@@ -83,9 +104,29 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                 </div>
             )}
 
+            {/* APP-62: review_decision_ux — shows operator decision state */}
+            {reviewDecisionUx && (
+                <ReviewDecisionPanel reviewDecisionUx={reviewDecisionUx} audience="customer" />
+            )}
+
+            {/* APP-62: remediation_ux — shows customer remediation instructions */}
+            {remediationUx && (
+                <CustomerRemediationPanel remediationUx={remediationUx} audience="customer" />
+            )}
+
+            {/* APP-62: reupload required — hide the production download card */}
+            {productionDownloadBlocked && (
+                <div className="p-4 border border-red-500/30 bg-red-500/10 flex items-start gap-3">
+                    <ExclamationTriangleIcon className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                    <p className="text-[0.8rem] text-red-500 font-bold uppercase tracking-widest">
+                        {t('remediation.download.blocked')}
+                    </p>
+                </div>
+            )}
+
             <div className="grid md:grid-cols-2 gap-8 items-stretch">
-                {/* Download Card */}
-                <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-10 flex flex-col items-center text-center space-y-8 relative overflow-hidden group">
+                {/* Download Card — hidden when remediation blocks production download */}
+                {!productionDownloadBlocked && <div className="border border-[var(--border-color)] bg-[var(--bg-secondary)] p-10 flex flex-col items-center text-center space-y-8 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                         <ArrowDownTrayIcon className="w-32 h-32" />
                     </div>
@@ -133,7 +174,7 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                            }
                         </div>
                     </div>
-                </div>
+                </div>}
 
                 {/* Feedback / Next Step Card */}
                 <div className="border border-[var(--border-color)] bg-[var(--bg-primary)] p-10 flex flex-col items-center text-center justify-between space-y-8">

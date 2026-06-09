@@ -26,6 +26,9 @@ import {
 import { ReviewBanners } from './ReviewBannersV2_4';
 import { CertificationTechnicalNote } from './CertificationTechnicalNoteV2_4';
 import { ClientChangeReportDrawer } from '../reports/ClientChangeReportDrawer';
+import { ReviewDecisionPanel } from '../review/ReviewDecisionPanel';
+import { CustomerRemediationPanel } from '../remediation/CustomerRemediationPanel';
+import type { ReviewDecisionUx, RemediationUx } from '../../types';
 
 interface Step4ReviewV2_4Props {
     file: File | null;
@@ -171,6 +174,26 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     const trustReviewRequired = artifactTrust?.review_required === true;
     const certifiedPdfAllowed = artifactTrust?.certified_pdf_allowed !== false;
 
+    // APP-62: review_decision_ux and remediation_ux governance contracts.
+    const reviewDecisionUx: ReviewDecisionUx | null = (result as any)?.review_decision_ux ?? null;
+    const remediationUx: RemediationUx | null = (result as any)?.remediation_ux ?? null;
+
+    // Block "ready" messaging when review_decision_ux has no decision yet.
+    const reviewDecisionBlocksProgression =
+        reviewDecisionUx !== null &&
+        (reviewDecisionUx.allows_progression === false ||
+            reviewDecisionUx.decision === 'NO_DECISION' ||
+            reviewDecisionUx.decision === 'REJECTED_REQUIRES_REUPLOAD' ||
+            reviewDecisionUx.decision === 'REQUEST_CUSTOMER_REUPLOAD' ||
+            reviewDecisionUx.decision === 'NEEDS_MORE_INFORMATION');
+
+    const remediationBlocksProgression =
+        remediationUx !== null &&
+        (remediationUx.requires_reupload === true ||
+            remediationUx.remediation_state === 'REUPLOAD_REQUIRED' ||
+            remediationUx.remediation_state === 'WAITING_FOR_UPLOAD' ||
+            remediationUx.remediation_state === 'PREFLIGHT_REQUIRED');
+
     const artifactUx = getArtifactUxForArtifact(
         artifactKey ? { key: artifactKey } : null,
         artifactUxContract,
@@ -298,6 +321,26 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         <p className="text-[0.8rem] text-blue-400 font-bold uppercase tracking-widest">
                             {t('artifact.certifiedNotAllowed')}
                         </p>
+                    </div>
+                )}
+
+                {/* APP-62: review_decision_ux panel — shows operator decision state to customer */}
+                {reviewDecisionUx && (
+                    <div className="mb-6">
+                        <ReviewDecisionPanel
+                            reviewDecisionUx={reviewDecisionUx}
+                            audience="customer"
+                        />
+                    </div>
+                )}
+
+                {/* APP-62: remediation_ux panel — shows customer remediation instructions */}
+                {remediationUx && (
+                    <div className="mb-6">
+                        <CustomerRemediationPanel
+                            remediationUx={remediationUx}
+                            audience="customer"
+                        />
                     </div>
                 )}
 
@@ -488,10 +531,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             <ArrowPathIcon className="h-4 w-4" /> {t('startOver')}
                         </button>
                         
-                        <button 
+                        <button
                             onClick={onNext}
-                            disabled={isRunning || (!hasEffectiveFix && !isAnalyzeOnly)}
-                            className={`p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all flex items-center justify-center gap-2 w-full ${ (isRunning || (!hasEffectiveFix && !isAnalyzeOnly)) ? 'bg-[var(--text-muted)] cursor-not-allowed opacity-50' : 'bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)]'}`}
+                            disabled={isRunning || (!hasEffectiveFix && !isAnalyzeOnly) || reviewDecisionBlocksProgression || remediationBlocksProgression}
+                            className={`p-5 text-[0.85rem] font-black uppercase tracking-[0.25em] transition-all flex items-center justify-center gap-2 w-full ${ (isRunning || (!hasEffectiveFix && !isAnalyzeOnly) || reviewDecisionBlocksProgression || remediationBlocksProgression) ? 'bg-[var(--text-muted)] cursor-not-allowed opacity-50' : 'bg-[var(--accent-color)] text-white hover:bg-[var(--accent-hover)] shadow-[0_15px_30px_rgba(220,0,0,0.2)]'}`}
                         >
                             <RocketLaunchIcon className="h-4 w-4" /> { (hasEffectiveFix || isAnalyzeOnly) ? (isAnalyzeOnly ? t('step.analysis.finalizeTrace' as any).toUpperCase() : t('continueToReview').toUpperCase()) : (displayState.waitingForArtifact ? t('waitingForArtifact' as any).toUpperCase() : "NO AUTOMATIC ARTIFACT PRODUCED")}
                         </button>
@@ -583,10 +626,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                 </button>
                             )}
 
-                            <button 
+                            <button
                               onClick={onNext}
-                              disabled={isRunning || (!hasEffectiveFix && !isAnalyzeOnly)}
-                              className={`w-full bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.8rem] font-black uppercase tracking-[0.2em] py-5 transition-all flex items-center justify-center gap-2 ${ (isRunning || (!hasEffectiveFix && !isAnalyzeOnly)) ? 'opacity-50 cursor-not-allowed' : 'shadow-[0_10px_30px_rgba(220,0,0,0.2)]'}`}
+                              disabled={isRunning || (!hasEffectiveFix && !isAnalyzeOnly) || reviewDecisionBlocksProgression || remediationBlocksProgression}
+                              className={`w-full bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.8rem] font-black uppercase tracking-[0.2em] py-5 transition-all flex items-center justify-center gap-2 ${ (isRunning || (!hasEffectiveFix && !isAnalyzeOnly) || reviewDecisionBlocksProgression || remediationBlocksProgression) ? 'opacity-50 cursor-not-allowed' : 'shadow-[0_10px_30px_rgba(220,0,0,0.2)]'}`}
                             >
                               {(hasEffectiveFix || isAnalyzeOnly) ? (isAnalyzeOnly ? t('step.analysis.finalizeTrace' as any) : t('continueToReview_v2' as any)) : (displayState.waitingForArtifact ? t('waitingForArtifact' as any) : "REVIEW REQUIRED — NO MODIFIED PDF")}
                               {(hasEffectiveFix || isAnalyzeOnly) && <span className="text-xl">→</span>}

@@ -526,6 +526,9 @@ router.get('/file-history', requireAuth, async (req, res) => {
         fix_coverage: fixCoverage,
         // APP-60: Governance context preserved from OS payload for history consumers.
         // Do not compute production recommendation from legacy status alone.
+        // APP-62: remediation_state, review_decision_state, and customer_safe_next_action
+        // are derived from the governance contracts so history consumers can display
+        // safe next-action prompts without exposing internal tokens or raw IDs.
         governance: {
           artifact_trust: artifact_trust || null,
           review_required: artifact_trust?.review_required ?? requiresHumanReview ?? false,
@@ -540,6 +543,31 @@ router.get('/file-history', requireAuth, async (req, res) => {
           security_interactivity_governance: payload.security_interactivity_governance || result.security_interactivity_governance || null,
           remediation_ux: payload.remediation_ux || result.remediation_ux || null,
           review_decision_ux: payload.review_decision_ux || result.review_decision_ux || null,
+          // APP-62: derived safe fields for history card display.
+          remediation_state: (() => {
+            const ux = payload.remediation_ux || result.remediation_ux || null;
+            return ux?.remediation_state ?? null;
+          })(),
+          review_decision_state: (() => {
+            const ux = payload.review_decision_ux || result.review_decision_ux || null;
+            return ux?.decision ?? null;
+          })(),
+          customer_safe_next_action: (() => {
+            const rem = payload.remediation_ux || result.remediation_ux || null;
+            const rev = payload.review_decision_ux || result.review_decision_ux || null;
+            // Prefer remediation next_action if remediation is active
+            if (rem?.next_action) return rem.next_action;
+            // Fall back to review decision customer_message
+            if (rev?.customer_message) return rev.customer_message;
+            // Legacy fallback: derive from trust and fix state
+            if (artifact_trust?.review_required || requiresHumanReview) {
+              return 'A human review is required before this file can move to production.';
+            }
+            if (!productionCertified && appliedFixesCount > 0) {
+              return 'Review the corrected file before sending to production.';
+            }
+            return null;
+          })(),
         },
         artifacts: {
           analysisReport: false,
