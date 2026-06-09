@@ -427,6 +427,14 @@ router.get('/file-history', requireAuth, async (req, res) => {
       let requiresHumanReview = payload.requiresHumanReview || result.requiresHumanReview || row.status === 'REVIEW_REQUIRED';
       let productionCertified = payload.productionCertified || result.productionCertified || row.status === 'CERTIFIED';
 
+      // APP-60: artifact_trust governance — false flags win over legacy computed values.
+      // Never derive production-readiness from job status alone when OS provides artifact_trust.
+      const artifact_trust = payload.artifact_trust || result.artifact_trust || null;
+      if (artifact_trust && typeof artifact_trust === 'object') {
+        if (artifact_trust.production_certified === false) productionCertified = false;
+        if (artifact_trust.review_required === true) requiresHumanReview = true;
+      }
+
       // Phase APP-40.3 — a fixed_pdf must never be presented as certified. Only the
       // engine's explicit productionCertified=true (with no pending human review) earns the badge.
       const isProductionSafe = !!productionCertified && !requiresHumanReview;
@@ -516,6 +524,21 @@ router.get('/file-history', requireAuth, async (req, res) => {
         fixSummary,
         clientChangeSummary,
         fix_coverage: fixCoverage,
+        // APP-60: Governance context preserved from OS payload for history consumers.
+        // Do not compute production recommendation from legacy status alone.
+        governance: {
+          artifact_trust: artifact_trust || null,
+          review_required: artifact_trust?.review_required ?? requiresHumanReview ?? false,
+          production_certified: productionCertified,
+          standard_certified: artifact_trust?.standard_certified ?? null,
+          customer_visible: artifact_trust?.customer_visible ?? null,
+          certified_pdf_allowed: artifact_trust?.certified_pdf_allowed ?? null,
+          standards_certification_governance: payload.standards_certification_governance || result.standards_certification_governance || null,
+          page_marks_governance: payload.page_marks_governance || result.page_marks_governance || null,
+          security_interactivity_governance: payload.security_interactivity_governance || result.security_interactivity_governance || null,
+          remediation_ux: payload.remediation_ux || result.remediation_ux || null,
+          review_decision_ux: payload.review_decision_ux || result.review_decision_ux || null,
+        },
         artifacts: {
           analysisReport: false,
           fixAudit: !!(artifacts.fix_audit || resArtifacts.fix_audit),

@@ -118,6 +118,16 @@ router.use('/', async (req, res) => {
                     const preflightNormalizer = require('../services/preflightNormalizer');
                     // calls maybeNormalizeAutofixReportArtifact internally or via new helper
                     json = preflightNormalizer.normalizeAutofixResultState(json);
+
+                    // APP-60: Add governance preservation debug headers.
+                    // Governance contracts must pass through to the frontend untouched.
+                    const governanceRoot = json.artifact_trust || json.result?.artifact_trust || json.standards_certification_governance || json.result?.standards_certification_governance;
+                    if (governanceRoot) {
+                        res.setHeader('X-PPOS-Governance-Preserved', 'true');
+                    }
+                    if (json.artifact_trust || json.result?.artifact_trust) {
+                        res.setHeader('X-PPOS-Artifact-Trust-Preserved', 'true');
+                    }
                     
                     let normalizedReport = null;
                     if (json.type === 'AUTOFIX') {

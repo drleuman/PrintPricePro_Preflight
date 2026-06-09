@@ -409,3 +409,136 @@ export type ClientChangeReport = {
   customerMessage: string;
   operatorNotes: string[];
 };
+
+// ─── APP-60: PrintPrice OS Governance Contracts ──────────────────────────────
+// These interfaces mirror the OS governance domains from Phase 55 onward.
+// The BFF preserves them verbatim; UI components consume them to determine
+// what labels, buttons, and messaging are safe to show.
+
+/** Artifact-level trust object. False flags always override legacy computed values. */
+export interface ArtifactTrust {
+  trust_level?: 'CERTIFIED_SAFE' | 'REVIEW_REQUIRED' | 'FIXED_UNCERTIFIED' | 'NEEDS_ATTENTION' | 'DIAGNOSTIC_ONLY';
+  production_certified?: boolean;
+  standard_certified?: boolean;
+  certified_pdf_allowed?: boolean;
+  customer_visible?: boolean;
+  compliance_claim_allowed?: boolean;
+  pdfx_compliance_claimed?: boolean;
+  pdfa_compliance_claimed?: boolean;
+  review_required?: boolean;
+  primary_artifact_type?: string;
+  blocked_by_governance_domains?: string[];
+  warnings?: string[];
+  evidence?: Record<string, unknown>;
+}
+
+/** Backend-provided labels/buttons/tooltips for a specific artifact and audience. */
+export interface ArtifactUxContract {
+  button_label?: string;
+  display_label?: string;
+  status_badge?: string;
+  tooltip?: string;
+  customer_labels?: {
+    button_label?: string;
+    display_label?: string;
+    status_badge?: string;
+    tooltip?: string;
+  };
+  operator_labels?: {
+    button_label?: string;
+    display_label?: string;
+    status_badge?: string;
+    tooltip?: string;
+  };
+}
+
+/** Standards validation governance (PDF/X, PDF/A, etc.). */
+export interface StandardsCertificationGovernance {
+  standard?: string;
+  version?: string;
+  validator?: string;
+  validated?: boolean;
+  standard_certified?: boolean;
+  compliance_claim_allowed?: boolean;
+  pdfx_compliance_claimed?: boolean;
+  pdfa_compliance_claimed?: boolean;
+  review_required?: boolean;
+  blocked_by_governance_domains?: string[];
+  warnings?: string[];
+  evidence?: Record<string, unknown>;
+}
+
+/** Structural metadata (XMP, DocInfo, ICC profiles) governance. */
+export interface StructuralMetadataGovernance {
+  metadata_cleaned?: boolean;
+  icc_profiles_normalized?: boolean;
+  review_required?: boolean;
+  warnings?: string[];
+  evidence?: Record<string, unknown>;
+}
+
+/** Page marks (crop marks, registration marks, bleed box) governance. */
+export interface PageMarksGovernance {
+  crop_marks_added?: boolean;
+  registration_marks_removed?: boolean;
+  trim_box_rebuilt?: boolean;
+  bleed_applied?: boolean;
+  review_required?: boolean;
+  warnings?: string[];
+  evidence?: Record<string, unknown>;
+}
+
+/** Security and interactive content governance. */
+export interface SecurityInteractivityGovernance {
+  javascript_removed?: boolean;
+  launch_actions_removed?: boolean;
+  embedded_files_removed?: boolean;
+  forms_flattened?: boolean;
+  annotations_flattened?: boolean;
+  flattening_skipped?: boolean;
+  interactive_content_remaining?: boolean;
+  active_content_removed?: boolean;
+  review_required?: boolean;
+  warnings?: string[];
+  evidence?: Record<string, unknown>;
+}
+
+/** Visual diff comparison between original and fixed renderings. */
+export interface VisualDiffGovernance {
+  visual_diff_required?: boolean;
+  visual_diff_performed?: boolean;
+  visual_change_detected?: boolean;
+  visual_change_expected?: boolean;
+  diff_metrics?: Record<string, unknown>;
+  review_required?: boolean;
+  warnings?: string[];
+  evidence?: Record<string, unknown>;
+}
+
+/** Customer/operator proof approval state. */
+export interface ProofApprovalGovernance {
+  proof_required?: boolean;
+  proof_status?: 'PROOF_NOT_REQUIRED' | 'PROOF_REQUIRED' | 'PROOF_PENDING_CUSTOMER' | 'PROOF_APPROVED' | 'PROOF_REJECTED_REUPLOAD_REQUIRED';
+  proof_id?: string;
+  review_required?: boolean;
+  warnings?: string[];
+}
+
+/** Operator review decision UX contract (from Phase 58). */
+export interface ReviewDecisionUx {
+  decision?: 'NO_DECISION' | 'APPROVED_WITH_WARNINGS' | 'APPROVED_FOR_PRODUCTION' | 'REJECTED_REQUIRES_REUPLOAD' | 'REQUEST_CUSTOMER_REUPLOAD' | 'NEEDS_MORE_INFORMATION';
+  decision_label?: string;
+  allows_progression?: boolean;
+  requires_reupload?: boolean;
+  customer_message?: string;
+  operator_notes?: string[];
+}
+
+/** Customer remediation UX contract (from Phase 59). */
+export interface RemediationUx {
+  remediation_state?: 'REUPLOAD_REQUIRED' | 'WAITING_FOR_UPLOAD' | 'PREFLIGHT_REQUIRED' | 'REVIEW_REQUIRED' | 'APPROVED_WITH_WARNINGS' | 'RESOLVED';
+  requires_reupload?: boolean;
+  next_action?: string;
+  customer_message?: string;
+  operator_notes?: string[];
+}

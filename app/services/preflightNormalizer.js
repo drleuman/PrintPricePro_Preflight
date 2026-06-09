@@ -589,6 +589,81 @@ function derivePages(findings) {
 
 const derivePagesSummaries = derivePages;
 
+// APP-60 — BFF Governance Contract Foundation
+// These keys are the canonical OS governance domains the BFF must preserve without flattening.
+const GOVERNANCE_KEYS = [
+  'artifact_trust',
+  'standards_certification_governance',
+  'structural_metadata_governance',
+  'page_marks_governance',
+  'security_interactivity_governance',
+  'visual_diff_governance',
+  'proof_approval_governance',
+  'remediation_ux',
+  'review_decision_ux',
+  'artifact_ux',
+  'policy_profile_governance',
+  'production_package_governance'
+];
+
+// Conservative merge: false flags always win; true flags win for review_required;
+// deduplicate domain/warning arrays; preserve evidence from all sides.
+function mergeGovernanceObject(candidates) {
+  const result = { ...candidates[0] };
+  for (let i = 1; i < candidates.length; i++) {
+    const c = candidates[i];
+    if (!c || typeof c !== 'object') continue;
+    for (const f of [
+      'production_certified', 'standard_certified', 'certified_pdf_allowed',
+      'customer_visible', 'compliance_claim_allowed',
+      'pdfx_compliance_claimed', 'pdfa_compliance_claimed'
+    ]) {
+      if (f in c && c[f] === false) result[f] = false;
+    }
+    if (c.review_required === true) result.review_required = true;
+    for (const arr of ['blocked_by_governance_domains', 'warnings']) {
+      if (Array.isArray(c[arr])) {
+        result[arr] = [...new Set([...(Array.isArray(result[arr]) ? result[arr] : []), ...c[arr]])];
+      }
+    }
+    if (c.evidence) {
+      result.evidence = (typeof result.evidence === 'object' && result.evidence !== null)
+        ? { ...result.evidence, ...c.evidence }
+        : { ...c.evidence };
+    }
+  }
+  return result;
+}
+
+/**
+ * Central governance extractor for APP-60.
+ * Searches all known payload locations and merges each governance domain
+ * using conservative rules (false flags win, review_required=true wins).
+ */
+function extractGovernanceContracts(payload) {
+  if (!payload || typeof payload !== 'object') return {};
+  const locations = [
+    payload,
+    payload.result,
+    payload.report,
+    payload.fix_summary,
+    payload.delta_report,
+    payload.artifact_summary,
+    payload.result?.fix_summary,
+    payload.result?.delta_report,
+    payload.result?.artifact_summary,
+    payload.result?.report,
+  ].filter(loc => loc && typeof loc === 'object');
+
+  const contracts = {};
+  for (const key of GOVERNANCE_KEYS) {
+    const candidates = locations.map(loc => loc[key]).filter(v => v && typeof v === 'object');
+    if (candidates.length === 0) continue;
+    contracts[key] = candidates.length === 1 ? { ...candidates[0] } : mergeGovernanceObject(candidates);
+  }
+  return contracts;
+}
+
 function normalizeAnalyzeJob(rawJob) {
   if (!rawJob) return null;
 
@@ -794,6 +869,9 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
     ? (sourceSummary?.text || rawFixJob?.summary)
     : "Fixes applied with source findings preserved";
 
+  // APP-60: Extract all governance contracts from the raw PPOS payload (all known locations).
+  const governanceContracts = extractGovernanceContracts(rawFixJob);
+
   return {
     id: fixJobId,
     jobId: fixJobId,
@@ -861,7 +939,10 @@ function normalizeAutofixJob(rawFixJob, sourceAnalyzeJob) {
 
     _isDegraded: degradedReasons.length > 0 || Boolean(rawFixJob?._isDegraded),
     degraded_reasons: degradedReasons.length > 0 ? degradedReasons : (rawFixJob?.degraded_reasons || []),
-    _forensicDataMissing: !hasForensics(rawFixJob, sourceAnalyzeJob)
+    _forensicDataMissing: !hasForensics(rawFixJob, sourceAnalyzeJob),
+
+    // APP-60: Governance contracts preserved from OS payload — not derived from fix state.
+    ...governanceContracts
   };
 
   return normalizeAutofixFinalState(normalized);
@@ -933,10 +1014,17 @@ function normalizeAutofixFinalState(report) {
     (unresolved.length === 0 || skippedRequiresReview);
 
   // Calculate production certified status
-  const productionCertified =
+  let productionCertified =
     technicallyFixed &&
     requiresReview === false &&
     highestRisk !== 'HIGH';
+
+  // APP-60: artifact_trust governance overrides — false flags in the OS payload always win
+  // over legacy computed values. Never let a derived true override an explicit OS false.
+  const governanceTrust = report.artifact_trust;
+  if (governanceTrust && typeof governanceTrust === 'object') {
+    if (governanceTrust.production_certified === false) productionCertified = false;
+  }
 
   // Determine if an output artifact exists
   const hasArtifactsField = report.artifacts !== undefined || report.artifactList !== undefined;
@@ -1066,8 +1154,8 @@ function normalizeAutofixFinalState(report) {
     after: report.summary.after
   };
 
-  // PHASE 39.1.8 - Artifact Certification Guard
-  if (!productionCertified) {
+  // PHASE 39.1.8 - Artifact Certification Guard; APP-60: also respect certified_pdf_allowed=false
+  if (!productionCertified || (governanceTrust && governanceTrust.certified_pdf_allowed === false)) {
     if (report.artifacts) {
       delete report.artifacts.certified_pdf;
     }
@@ -1245,5 +1333,8 @@ module.exports = {
   buildDegradedState,
   deriveCategorySummaries,
   derivePages,
-  derivePagesSummaries
+  derivePagesSummaries,
+  // APP-60: Governance Contract Foundation
+  extractGovernanceContracts,
+  GOVERNANCE_KEYS
 };
