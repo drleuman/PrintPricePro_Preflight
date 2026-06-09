@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon, DocumentCheckIcon, ShieldExclamationIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, DocumentCheckIcon, ShieldExclamationIcon, ClipboardDocumentIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { generateClientChangeReport } from '../../utils/clientChangeReport';
 import { useTranslation } from '../../i18n';
 
@@ -15,6 +15,12 @@ export const ClientChangeReportDrawer: React.FC<ClientChangeReportDrawerProps> =
   const { t } = useTranslation();
   // Generate the report using the combined data (use result if report is minimal)
   const reportData = generateClientChangeReport(result || report || {});
+
+  // APP-61: surface governance warnings from artifact_trust
+  const artifactTrust = (result as any)?.artifact_trust ?? (report as any)?.artifact_trust ?? null;
+  const governanceWarnings: string[] = Array.isArray(artifactTrust?.warnings) ? artifactTrust.warnings : [];
+  const reviewRequired = artifactTrust?.review_required === true;
+  const certifiedNotAllowed = artifactTrust?.certified_pdf_allowed === false;
 
   const handleCopy = async () => {
     try {
@@ -166,7 +172,28 @@ export const ClientChangeReportDrawer: React.FC<ClientChangeReportDrawerProps> =
                         </div>
                       )}
 
-                      {/* 5. Recommended next step */}
+                      {/* 5. Governance warnings (APP-61) */}
+                      {(reviewRequired || certifiedNotAllowed || governanceWarnings.length > 0) && (
+                        <div className="p-4 border border-amber-500/30 bg-amber-500/10 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <ExclamationTriangleIcon className="h-4 w-4 text-amber-500 shrink-0" />
+                            <h4 className="text-[0.7rem] font-black uppercase tracking-[0.2em] text-amber-500">
+                              {t('artifact.reviewRequired')}
+                            </h4>
+                          </div>
+                          {reviewRequired && (
+                            <p className="text-[0.75rem] text-amber-400">{t('artifact.reviewRequiredDesc')}</p>
+                          )}
+                          {certifiedNotAllowed && (
+                            <p className="text-[0.75rem] text-amber-400">{t('artifact.certifiedNotAllowed')}</p>
+                          )}
+                          {governanceWarnings.map((w, i) => (
+                            <p key={i} className="text-[0.7rem] text-amber-300 font-mono">{w}</p>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* 6. Recommended next step */}
                       <div>
                         <h4 className="text-[0.7rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)] border-b border-[var(--border-color)] pb-2 mb-4">
                           {t('clientReport.recommendedNextStep' as any)}

@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { useTranslation } from '../../i18n';
-import { 
-    ArrowDownTrayIcon, 
+import {
+    ArrowDownTrayIcon,
     ArrowPathIcon,
     ShieldCheckIcon,
     DocumentCheckIcon,
-    SparklesIcon
+    SparklesIcon,
+    ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { PPOSLogo } from '../../design/preflight_starter_pack';
 import { ClientChangeReportDrawer } from '../reports/ClientChangeReportDrawer';
+import type { ArtifactTrust, ArtifactUxContract } from '../../types';
+import { getArtifactUxForArtifact, getArtifactFilename } from '../../utils/artifactUx';
 
 interface Step5DownloadV2_4Props {
     lastPdfUrl: string | null;
@@ -34,6 +37,24 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
     const { t } = useTranslation();
     const [clientReportOpen, setClientReportOpen] = useState(false);
 
+    // Extract artifact_trust and artifact_ux from result (BFF passthrough from OS)
+    const artifactTrust: ArtifactTrust | null = (result as any)?.artifact_trust ?? null;
+    const artifactUxContract: ArtifactUxContract | null = (result as any)?.artifact_ux ?? null;
+    const artifactKey: string | null = (result as any)?.meta?.primary_artifact_type ?? null;
+
+    const ux = getArtifactUxForArtifact(
+        artifactKey ? { key: artifactKey } : null,
+        artifactUxContract,
+        artifactTrust,
+        'customer'
+    );
+
+    const reviewRequired = artifactTrust?.review_required === true;
+    const certifiedAllowed = artifactTrust?.certified_pdf_allowed !== false;
+
+    const baseName = lastPdfName || file?.name || 'document.pdf';
+    const downloadFilename = getArtifactFilename(baseName, artifactKey, artifactTrust);
+
     return (
         <div className="max-w-4xl mx-auto space-y-12 animate-in fade-in zoom-in-95 duration-1000 py-12">
             <div className="flex flex-col items-center text-center space-y-6">
@@ -41,7 +62,7 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                     <div className="absolute inset-0 bg-[var(--accent-color)] blur-3xl opacity-20 animate-pulse"></div>
                     <PPOSLogo className="w-24 h-24 border border-[var(--border-color)] p-5 bg-[var(--bg-secondary)] relative z-10" />
                 </div>
-                
+
                 <div className="space-y-3">
                     <h2 className="text-4xl font-black tracking-tight text-[var(--text-primary)]">
                         {t('step.download.successTitle')}
@@ -51,6 +72,16 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                     </p>
                 </div>
             </div>
+
+            {/* Governance warning: review required */}
+            {reviewRequired && (
+                <div className="p-4 border border-amber-500/30 bg-amber-500/10 flex items-start gap-3">
+                    <ExclamationTriangleIcon className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                    <p className="text-[0.8rem] text-amber-500 font-bold uppercase tracking-widest">
+                        {t('artifact.reviewRequired')} — {t('artifact.reviewFile').toLowerCase()}
+                    </p>
+                </div>
+            )}
 
             <div className="grid md:grid-cols-2 gap-8 items-stretch">
                 {/* Download Card */}
@@ -66,31 +97,29 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                     <div className="space-y-4 relative z-10 w-full">
                         <div className="text-[0.7rem] font-black uppercase tracking-[0.25em] text-[var(--accent-color)]">{t('step.download.readyForRetrival')}</div>
                         <h3 className="text-xl font-bold text-[var(--text-primary)] truncate px-4">
-                            {(() => {
-                                const baseName = lastPdfName || file?.name || 'document.pdf';
-                                const cleanBase = baseName.toLowerCase().endsWith('.pdf') ? baseName.slice(0, -4) : baseName;
-                                return `${cleanBase}-certified.pdf`;
-                            })()}
+                            {downloadFilename}
                         </h3>
-                        <div className="text-[0.8rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">{t('readyForPrinting')}</div>
+                        <div className="text-[0.8rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">
+                            {ux.status_badge}
+                        </div>
                     </div>
 
-                    <button 
+                    <button
                         onClick={onDownload}
                         className="w-full h-16 bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] text-white text-[0.9rem] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-4 shadow-[0_15px_40px_rgba(220,0,0,0.25)] relative z-10 group"
                     >
-                        <span>{t('step.review.download')}</span>
+                        <span>{ux.button_label}</span>
                         <ArrowDownTrayIcon className="h-5 w-5 group-hover:translate-y-1 transition-transform" />
                     </button>
-                    
+
                     <div className="pt-4 flex flex-col items-center gap-4 w-full">
-                        <button 
+                        <button
                             onClick={onDownloadReport}
                             className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--accent-color)] hover:underline opacity-60 hover:opacity-100 transition-all"
                         >
                             {t('step.download.exportJson')}
                         </button>
-                        <button 
+                        <button
                             onClick={() => setClientReportOpen(true)}
                             className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline opacity-80 hover:opacity-100 transition-all"
                         >
@@ -98,7 +127,10 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                         </button>
                         <div className="flex items-center gap-2 text-[var(--text-muted)] text-[0.7rem] font-medium uppercase tracking-widest">
                            <DocumentCheckIcon className="h-4 w-4" />
-                           <span>{t('step.review.certDocument').toUpperCase()}</span>
+                           {certifiedAllowed && artifactTrust?.standard_certified
+                               ? <span>{t('artifact.standardsValidatedFile').toUpperCase()}</span>
+                               : <span>{t('step.review.certDocument').toUpperCase()}</span>
+                           }
                         </div>
                     </div>
                 </div>
@@ -117,7 +149,7 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                         </div>
                     </div>
 
-                    <button 
+                    <button
                         onClick={onStartOver}
                         className="w-full h-16 border border-[var(--border-color)] hover:border-[var(--accent-color)]/40 hover:bg-[var(--accent-color)]/5 text-[var(--text-secondary)] text-[0.85rem] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3"
                     >
@@ -132,7 +164,6 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                 <div className="h-px w-32 bg-gradient-to-r from-transparent via-[var(--border-color)] to-transparent"></div>
                 <div className="flex items-center gap-8 text-[var(--text-muted)] opacity-30">
                     <span className="text-[0.6rem] font-mono tracking-widest uppercase">{t('PPOS-VERIFIED-NODE-OK' as any)}</span>
-                    <span className="text-[0.6rem] font-mono tracking-widest uppercase">{t('PDF-X/1A-COMPLIANT' as any)}</span>
                     <span className="text-[0.6rem] font-mono tracking-widest uppercase">{t('TRACE-SHA256-SIGN' as any)}</span>
                 </div>
             </div>

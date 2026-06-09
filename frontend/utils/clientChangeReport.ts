@@ -1,10 +1,24 @@
 import { ClientChangeReport, ClientChangeItem, PreflightResult } from '../types';
 
 export function generateClientChangeReport(result: any): ClientChangeReport {
-  const isCertified = result?.productionCertified === true;
-  const requiresReview = result?.requiresHumanReview === true;
-  
-  const statusTone = isCertified ? 'success' : requiresReview ? 'warning' : 'neutral';
+  // APP-61: artifact_trust false flags win over legacy computed values.
+  const artifactTrust = result?.artifact_trust ?? null;
+  const trustReviewRequired = artifactTrust?.review_required === true;
+  const trustProductionCertified = artifactTrust?.production_certified;
+  const trustStandardCertified = artifactTrust?.standard_certified;
+  const trustCertifiedAllowed = artifactTrust?.certified_pdf_allowed !== false;
+  const governanceWarnings: string[] = Array.isArray(artifactTrust?.warnings) ? artifactTrust.warnings : [];
+
+  // Certified only when OS explicitly vouches for it AND no review is pending
+  const isCertified = trustProductionCertified === true
+    ? true
+    : (trustProductionCertified === false ? false : result?.productionCertified === true);
+  const requiresReview = trustReviewRequired || result?.requiresHumanReview === true;
+
+  // If artifact_trust explicitly denies certification, never claim it
+  const canClaimCertified = isCertified && !requiresReview && trustCertifiedAllowed;
+
+  const statusTone = canClaimCertified ? 'success' : requiresReview ? 'warning' : 'neutral';
   
   // Mappings
   const appliedFixes = Array.isArray(result?.fixes) ? result.fixes : (Array.isArray(result?.applied_fixes) ? result.applied_fixes : []);
@@ -12,16 +26,16 @@ export function generateClientChangeReport(result: any): ClientChangeReport {
   const reviewReasons = Array.isArray(result?.reviewReasons) ? result.reviewReasons : [];
   const issuesBefore = Array.isArray(result?.summary?.before?.issues) ? result.summary.before.issues : (Array.isArray(result?.issues) ? result.issues : []);
 
-  const headline = isCertified 
-    ? "Your PDF is production certified and ready for printing."
-    : (requiresReview && appliedFixes.length === 0) 
+  const headline = canClaimCertified
+    ? (trustStandardCertified ? "Your PDF has been corrected and standards-validated." : "Your PDF has been corrected.")
+    : (requiresReview && appliedFixes.length === 0)
       ? "Your PDF was not changed automatically, but it requires production review."
-      : "Technically improved — human review required";
-    
-  const statusLabel = isCertified ? "Ready for production" : "Review required";
-  
-  const executiveSummary = isCertified
-    ? "We corrected the document structure needed for printing and verified that the file meets all automated production criteria."
+      : "Technically corrected — human review required before production use";
+
+  const statusLabel = canClaimCertified ? "Corrected file" : "Review required";
+
+  const executiveSummary = canClaimCertified
+    ? "We corrected the document structure needed for printing and the file passed all automated correction criteria."
     : (requiresReview && appliedFixes.length === 0)
       ? "No automatic changes were applied. However, the system detected issues that require human review (such as RGB-to-CMYK conversion) before the file can be used for final production."
       : "We corrected automatic structural issues in the PDF, but one change was not applied automatically because it may alter the visual appearance of the document. RGB-to-CMYK conversion requires approval from a print operator or designer before final production.";
@@ -150,9 +164,11 @@ export function generateClientChangeReport(result: any): ClientChangeReport {
   if (requiresReview) {
     operatorNotes.push("A production operator must review this file before printing.");
   }
+  // Surface OS governance warnings to the operator
+  governanceWarnings.forEach(w => operatorNotes.push(w));
 
-  const customerMessage = isCertified
-    ? "Your PDF was successfully repaired and is now production certified. We added print output intent/profile information. The document is ready for final printing."
+  const customerMessage = canClaimCertified
+    ? "Your PDF was successfully corrected. We added print output intent/profile information. Please verify the output with your print operator before sending to production."
     : (requiresReview && appliedFixes.length === 0)
       ? "The PDF was not changed automatically. The system detected RGB color objects, but converting RGB to CMYK can alter the appearance of the document. This change requires approval from a print operator or designer."
       : "We corrected automatic structural issues in the PDF, but one change was not applied automatically because it may alter the visual appearance of the document. RGB-to-CMYK conversion requires approval from a print operator or designer before final production.";
@@ -163,13 +179,15 @@ export function generateClientChangeReport(result: any): ClientChangeReport {
     statusTone,
     executiveSummary,
     productionReadiness: {
-      certified: isCertified,
-      label: isCertified ? "Production certified" : "Not production certified yet",
-      explanation: isCertified 
-        ? "The file is technically improved and meets all automated criteria for production."
+      certified: canClaimCertified,
+      label: canClaimCertified
+        ? (trustStandardCertified ? "Standards-validated" : "Corrected file")
+        : "Review required before production use",
+      explanation: canClaimCertified
+        ? "The file passed all automated correction criteria. A final production review is still recommended."
         : (requiresReview && appliedFixes.length === 0)
           ? "The file was not modified automatically because it requires human review before being used for final production."
-          : "The file is technically improved, but it needs human review before being used for final production."
+          : "The file is technically corrected, but it needs human review before being used for final production."
     },
     changesApplied,
     itemsSkipped,

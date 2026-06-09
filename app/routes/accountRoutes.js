@@ -533,6 +533,8 @@ router.get('/file-history', requireAuth, async (req, res) => {
           standard_certified: artifact_trust?.standard_certified ?? null,
           customer_visible: artifact_trust?.customer_visible ?? null,
           certified_pdf_allowed: artifact_trust?.certified_pdf_allowed ?? null,
+          // APP-61: artifact_ux — preserved for history card UX label rendering.
+          artifact_ux: payload.artifact_ux || result.artifact_ux || null,
           standards_certification_governance: payload.standards_certification_governance || result.standards_certification_governance || null,
           page_marks_governance: payload.page_marks_governance || result.page_marks_governance || null,
           security_interactivity_governance: payload.security_interactivity_governance || result.security_interactivity_governance || null,

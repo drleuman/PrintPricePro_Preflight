@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FixCoverage } from '../types';
+import type { ArtifactTrust } from '../types';
 
 export interface FileHistoryArtifacts {
   analysisReport: boolean;
@@ -7,6 +8,16 @@ export interface FileHistoryArtifacts {
   reviewPdf: boolean;
   fixedPdf: boolean;
   certifiedPdf: boolean;
+}
+
+/** APP-61: Governance context preserved in history items (from OS artifact_trust). */
+export interface FileHistoryGovernance {
+  artifact_trust?: ArtifactTrust | null;
+  review_required?: boolean;
+  production_certified?: boolean;
+  standard_certified?: boolean | null;
+  customer_visible?: boolean | null;
+  certified_pdf_allowed?: boolean | null;
 }
 
 export interface RelatedFixJob {
@@ -21,6 +32,9 @@ export interface RelatedFixJob {
   failedFixesCount: number;
   requiresHumanReview: boolean;
   productionCertified: boolean;
+  /** trust_level as computed by accountRoutes (CERTIFIED_SAFE | REVIEW_REQUIRED | etc.) */
+  trustLevel?: string;
+  governance?: FileHistoryGovernance;
   reviewReasons: any[];
   fixSummary: any[];
   clientChangeSummary?: any;
@@ -62,6 +76,10 @@ export interface FileHistoryItem {
   failedFixesCount?: number;
   requiresHumanReview?: boolean;
   productionCertified?: boolean;
+  /** APP-61: trust_level from OS (CERTIFIED_SAFE | REVIEW_REQUIRED | FIXED_UNCERTIFIED | NEEDS_ATTENTION | DIAGNOSTIC_ONLY) */
+  trustLevel?: string;
+  /** APP-61: Governance context preserved from OS payload. */
+  governance?: FileHistoryGovernance;
   sourceAnalyzeJob?: SourceAnalyzeJob | null;
 
   artifacts: FileHistoryArtifacts;

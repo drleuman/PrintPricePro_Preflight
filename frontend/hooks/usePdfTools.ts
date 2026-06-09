@@ -2,11 +2,15 @@ import { useState, useCallback } from 'react';
 import { pposFetch, pposFetchWithProgress } from '../lib/apiClient';
 import { createBooklet } from '../utils/imposition';
 import { PreflightResult } from '../types';
+import type { ArtifactTrust } from '../types';
 
 import { normalizePreflightResult, pickCanonicalJobId } from '../utils/payloadNormalization';
 import { isTerminalDiagnosticStatus, isTerminalFailureStatus, isTerminalStatus } from '../utils/statusHelpers';
 import { normalizeLongPollingStatus, logLongPollingStatus, LongPollingStage } from '../utils/longPollingStatus';
 import { sleep } from '../utils/sleep';
+import { selectPrimaryArtifactKey, isCertifiedPdfDownloadAllowed } from '../utils/artifactUx';
+
+export { selectPrimaryArtifactKey };
 
 export function normalizeArtifactIdForRoute(input: string) {
     const value = String(input).trim();
@@ -262,6 +266,23 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
         return `/api/v2/jobs/${jobId}/artifacts/${safeArtifactId}`;
     }, []);
 
+    /**
+     * APP-61: Validates that the requested artifactId is permitted by artifact_trust.
+     * If certified_pdf is blocked by governance, falls back to fixed_pdf.
+     * Returns the safe artifact key to use for the download.
+     */
+    const resolveDownloadArtifactKey = useCallback((
+        requestedKey: string,
+        artifacts: Record<string, string> | null | undefined,
+        artifactTrust: ArtifactTrust | null | undefined
+    ): string => {
+        if (!isCertifiedPdfDownloadAllowed(requestedKey, artifactTrust, 'customer')) {
+            console.warn('[DOWNLOAD][GOVERNANCE-BLOCK] certified_pdf blocked by artifact_trust — falling back to safe artifact');
+            return selectPrimaryArtifactKey(artifacts, artifactTrust, 'customer') || requestedKey;
+        }
+        return requestedKey;
+    }, []);
+
     const getAuthenticatedBlobUrl = useCallback(async (jobId: string, artifactId: string) => {
         // v2.4.165: Terminal ID Guard
         const safeJobId = pickCanonicalJobId(jobId);
@@ -329,6 +350,7 @@ export function usePdfTools(callbacks?: PdfToolsCallbacks) {
         pollJob,
         getDownloadUrl,
         getAuthenticatedBlobUrl,
+        resolveDownloadArtifactKey,
         startV2Preflight,
         handleV2JobComplete,
     };

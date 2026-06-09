@@ -833,4 +833,17 @@ export const es = {
   'inspector.whyNeeded': 'Justificación',
   'inspector.originalState': 'Estado Original',
   'inspector.appliedRepair': 'Reparación Aplicada',
+
+  // APP-61: Etiquetas de artefacto seguras — nunca reclamar disponibilidad de producción.
+  'artifact.correctedFile': 'Archivo corregido',
+  'artifact.reviewFile': 'Archivo de revisión',
+  'artifact.reviewRequired': 'Revisión requerida',
+  'artifact.reviewRequiredDesc': 'Se requiere revisión humana antes de que este archivo pueda avanzar a producción.',
+  'artifact.productionApprovedFile': 'Archivo aprobado para producción',
+  'artifact.standardsValidatedFile': 'Archivo validado por normas',
+  'artifact.activeContentRemoved': 'Contenido activo eliminado',
+  'artifact.metadataCleaned': 'Metadatos limpiados',
+  'artifact.cropMarksAdded': 'Marcas de corte añadidas',
+  'artifact.visualReviewRequired': 'Revisión visual requerida',
+  'artifact.certifiedNotAllowed': 'El PDF certificado no está disponible para este resultado — el archivo ha sido marcado para revisión.',
 } as const;

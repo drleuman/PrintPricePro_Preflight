@@ -830,6 +830,19 @@ export const en = {
   'inspector.whyNeeded': 'Rationale',
   'inspector.originalState': 'Original State',
   'inspector.appliedRepair': 'Applied Repair',
+
+  // APP-61: Safe artifact labels — never overclaim production readiness.
+  'artifact.correctedFile': 'Corrected file',
+  'artifact.reviewFile': 'Review file',
+  'artifact.reviewRequired': 'Review required',
+  'artifact.reviewRequiredDesc': 'A human review is required before this file can move to production.',
+  'artifact.productionApprovedFile': 'Production-approved file',
+  'artifact.standardsValidatedFile': 'Standards-validated file',
+  'artifact.activeContentRemoved': 'Active content removed',
+  'artifact.metadataCleaned': 'Metadata cleaned',
+  'artifact.cropMarksAdded': 'Crop marks added',
+  'artifact.visualReviewRequired': 'Visual review required',
+  'artifact.certifiedNotAllowed': 'Certified PDF is not available for this output — the file has been flagged for review.',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

@@ -1,24 +1,27 @@
 import React, { useState } from 'react';
 import { FileMeta, AppMode } from '../../types';
+import type { ArtifactTrust } from '../../types';
 import { WorkflowAnalysis, PreflightResult, getAutofixDisplayState } from '../../utils/payloadNormalization';
 import { getReadableFixFailure } from '../../utils/payloadNormalization';
+import { getArtifactUxForArtifact } from '../../utils/artifactUx';
 import { StatusBadge, CertificationPanel } from '../../design/preflight_starter_pack';
 import { formatLabel } from '../../utils/formatters';
 import { pposFetch } from '../../lib/apiClient';
 import { PageViewer } from '../PageViewer';
 import { useTranslation } from '../../i18n';
 import { 
-    ArrowPathIcon, 
-    PaintBrushIcon, 
-    RocketLaunchIcon, 
-    BookOpenIcon, 
-    ArrowDownTrayIcon, 
+    ArrowPathIcon,
+    PaintBrushIcon,
+    RocketLaunchIcon,
+    BookOpenIcon,
+    ArrowDownTrayIcon,
     ChevronLeftIcon,
     DocumentCheckIcon,
     ShieldCheckIcon,
     XMarkIcon,
     CommandLineIcon,
-    CpuChipIcon
+    CpuChipIcon,
+    ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { ReviewBanners } from './ReviewBannersV2_4';
 import { CertificationTechnicalNote } from './CertificationTechnicalNoteV2_4';
@@ -160,6 +163,31 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
 
     const isReadyForPrint = analysis.issueCount === 0;
 
+    // APP-61: artifact_trust governance — drives safe messaging in this step.
+    const artifactTrust: ArtifactTrust | null = (result as any)?.artifact_trust ?? null;
+    const artifactUxContract = (result as any)?.artifact_ux ?? null;
+    const artifactKey: string | null = (result as any)?.meta?.primary_artifact_type ?? null;
+
+    const trustReviewRequired = artifactTrust?.review_required === true;
+    const certifiedPdfAllowed = artifactTrust?.certified_pdf_allowed !== false;
+
+    const artifactUx = getArtifactUxForArtifact(
+        artifactKey ? { key: artifactKey } : null,
+        artifactUxContract,
+        artifactTrust,
+        'customer'
+    );
+
+    // Derive the safe CertificationPanel title: never claim "ready for printing" when
+    // artifact_trust signals review_required or production_certified=false.
+    const certPanelTitle = (() => {
+        if (isRunning) return t('common.processing');
+        if (trustReviewRequired) return t('artifact.reviewRequired');
+        if (!certifiedPdfAllowed) return t('artifact.reviewFile');
+        if (isReadyForPrint) return t('readyForPrinting');
+        return t('summary.title' as any);
+    })();
+
     const isCompletedWithReview = result?.status === 'COMPLETED_WITH_REVIEW' || (result as any)?.requiresHumanReview === true;
     // Phase APP-40.3: a result is only "production certified" when the engine vouches
     // for it AND no human review is pending — never inferred from artifact presence alone.
@@ -248,7 +276,32 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                     </div>
                 )}
 
-                {/* Phase APP-40.7: explain partial-artifact / review-required long-polling outcomes */}
+                {/* APP-61: artifact_trust review-required governance banner */}
+                {trustReviewRequired && !isCompletedWithReview && (
+                    <div className="p-4 border border-amber-500/30 bg-amber-500/10 mb-6 flex items-start gap-3">
+                        <ExclamationTriangleIcon className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                        <div>
+                            <p className="text-[0.8rem] text-amber-500 font-bold uppercase tracking-widest">
+                                {t('artifact.reviewRequired')}
+                            </p>
+                            <p className="text-[0.75rem] text-[var(--text-secondary)] mt-1">
+                                {t('artifact.reviewRequiredDesc')}
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* APP-61: certified_pdf blocked by governance */}
+                {!certifiedPdfAllowed && (
+                    <div className="p-4 border border-blue-500/30 bg-blue-500/10 mb-6 flex items-start gap-3">
+                        <DocumentCheckIcon className="w-5 h-5 text-blue-400 mt-0.5 shrink-0" />
+                        <p className="text-[0.8rem] text-blue-400 font-bold uppercase tracking-widest">
+                            {t('artifact.certifiedNotAllowed')}
+                        </p>
+                    </div>
+                )}
+
+            {/* Phase APP-40.7: explain partial-artifact / review-required long-polling outcomes */}
                 {isCompletedWithReview && !isProductionCertified && (
                     <div className="p-4 border border-amber-500/30 bg-amber-500/10 mb-6 flex items-start gap-3">
                         <DocumentCheckIcon className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
@@ -465,7 +518,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                         </div>
 
                         <CertificationPanel
-                            title={isRunning ? t('common.processing') : (isReadyForPrint ? t('readyForPrinting') : t('summary.title' as any))}
+                            title={certPanelTitle}
                             issuesFound={issuesFound}
                             fixesApplied={fixesApplied}
                             profile={selectedPolicy || t('step.review.defaultPolicy')}
@@ -522,10 +575,10 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                                     className="w-full flex items-center justify-center gap-3 px-6 py-5 bg-[var(--bg-primary)] border-2 border-[var(--accent-color)] text-[var(--accent-color)] text-[0.8rem] font-black uppercase tracking-[0.2em] hover:bg-[var(--accent-color)] hover:text-white transition-all shadow-[0_10px_30px_rgba(220,0,0,0.1)] group"
                                 >
                                     <ArrowDownTrayIcon className="h-5 w-5 group-hover:translate-y-0.5 transition-transform" />
-                                    {!isProductionCertified 
-                                        ? "Review PDF — not production certified"
-                                        : isRealFix 
-                                            ? t('step.review.downloadFixed') 
+                                    {(trustReviewRequired || !isProductionCertified)
+                                        ? `${artifactUx.display_label} — ${t('artifact.reviewRequired').toLowerCase()}`
+                                        : isRealFix
+                                            ? t('step.review.downloadFixed')
                                             : t('step.review.downloadCertified')}
                                 </button>
                             )}
