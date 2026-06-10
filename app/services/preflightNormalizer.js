@@ -680,6 +680,15 @@ function extractGovernanceContracts(payload) {
     if (candidates.length === 0) continue;
     contracts[key] = candidates.length === 1 ? { ...candidates[0] } : mergeGovernanceObject(candidates);
   }
+
+  // APP-63: defense-in-depth — unresolved interactive content (JS, launch actions,
+  // embedded files, unflattened forms/annotations) always requires review, even if
+  // the OS payload did not explicitly set review_required on this domain.
+  const sig = contracts.security_interactivity_governance;
+  if (sig && (sig.interactive_content_remaining === true || sig.flattening_skipped === true)) {
+    sig.review_required = true;
+  }
+
   return contracts;
 }
 

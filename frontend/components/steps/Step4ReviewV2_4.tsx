@@ -29,7 +29,8 @@ import { ClientChangeReportDrawer } from '../reports/ClientChangeReportDrawer';
 import { ReviewDecisionPanel } from '../review/ReviewDecisionPanel';
 import { CustomerRemediationPanel } from '../remediation/CustomerRemediationPanel';
 import { HeavyPdfProbePanel } from '../reports/HeavyPdfProbePanel';
-import type { ReviewDecisionUx, RemediationUx, HeavyPdfProbeGovernance } from '../../types';
+import { SecurityInteractivityPanel } from '../security/SecurityInteractivityPanel';
+import type { ReviewDecisionUx, RemediationUx, HeavyPdfProbeGovernance, SecurityInteractivityGovernance } from '../../types';
 
 interface Step4ReviewV2_4Props {
     file: File | null;
@@ -181,6 +182,9 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
 
     // APP-62F: heavy_pdf_probe_governance — explains analysis quality for heavy PDFs.
     const heavyPdfProbeGovernance: HeavyPdfProbeGovernance | null = (result as any)?.heavy_pdf_probe_governance ?? null;
+
+    // APP-63: security_interactivity_governance — JS/launch actions/embedded files/forms/annotations.
+    const securityInteractivityGovernance: SecurityInteractivityGovernance | null = (result as any)?.security_interactivity_governance ?? null;
 
     // Block "ready" messaging when review_decision_ux has no decision yet.
     const reviewDecisionBlocksProgression =
@@ -353,6 +357,16 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                     <div className="mb-6">
                         <HeavyPdfProbePanel
                             governance={heavyPdfProbeGovernance}
+                            audience="customer"
+                        />
+                    </div>
+                )}
+
+                {/* APP-63: security_interactivity_governance — JS/launch actions/embedded files/forms/annotations cleanup */}
+                {securityInteractivityGovernance && (
+                    <div className="mb-6">
+                        <SecurityInteractivityPanel
+                            governance={securityInteractivityGovernance}
                             audience="customer"
                         />
                     </div>

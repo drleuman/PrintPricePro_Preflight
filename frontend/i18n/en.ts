@@ -901,6 +901,19 @@ export const en = {
   'heavyPdfProbe.operator.semanticStatus': 'Semantic status',
   'heavyPdfProbe.operator.usableOutput': 'Usable output',
   'heavyPdfProbe.operator.nextAction': 'Next action',
+
+  // APP-63: Security / Interactive Fix UX — security_interactivity_governance alignment.
+  'security.panelTitle': 'Security / interactive PDF content',
+  'security.javascriptRemoved': 'Active PDF content removed.',
+  'security.launchActionsRemoved': 'External launch actions removed.',
+  'security.embeddedFilesRemoved': 'Embedded files removed from the PDF package.',
+  'security.formsFlattened': 'Form fields flattened.',
+  'security.annotationsFlattened': 'Annotations flattened.',
+  'security.activeContentRemovalDisclaimer': 'Removing active or interactive content does not certify this file or mark it as print-ready.',
+  'security.flatteningSkippedDesc': 'Safe automatic flattening of forms or annotations was not possible. A human review is required before this file can move to production.',
+  'security.interactiveContentRemainingDesc': 'This file still contains interactive content that could not be removed automatically. A human review is required before this file can move to production.',
+  'security.reviewRequiredNotice': 'A human review is required before this file can move to production.',
+  'security.operatorWarnings': 'Warnings',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

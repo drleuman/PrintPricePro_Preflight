@@ -904,4 +904,17 @@ export const es = {
   'heavyPdfProbe.operator.semanticStatus': 'Estado semántico',
   'heavyPdfProbe.operator.usableOutput': 'Salida utilizable',
   'heavyPdfProbe.operator.nextAction': 'Próxima acción',
+
+  // APP-63: UX de Seguridad / Contenido Interactivo — alineación con security_interactivity_governance.
+  'security.panelTitle': 'Seguridad / contenido interactivo del PDF',
+  'security.javascriptRemoved': 'Se eliminó el contenido activo del PDF.',
+  'security.launchActionsRemoved': 'Se eliminaron las acciones de lanzamiento externas.',
+  'security.embeddedFilesRemoved': 'Se eliminaron los archivos incrustados del paquete PDF.',
+  'security.formsFlattened': 'Se aplanaron los campos de formulario.',
+  'security.annotationsFlattened': 'Se aplanaron las anotaciones.',
+  'security.activeContentRemovalDisclaimer': 'La eliminación de contenido activo o interactivo no certifica este archivo ni lo marca como listo para impresión.',
+  'security.flatteningSkippedDesc': 'No fue posible aplanar automáticamente los formularios o anotaciones de forma segura. Se requiere una revisión humana antes de que este archivo pueda pasar a producción.',
+  'security.interactiveContentRemainingDesc': 'Este archivo aún contiene contenido interactivo que no se pudo eliminar automáticamente. Se requiere una revisión humana antes de que este archivo pueda pasar a producción.',
+  'security.reviewRequiredNotice': 'Se requiere una revisión humana antes de que este archivo pueda pasar a producción.',
+  'security.operatorWarnings': 'Advertencias',
 } as const;

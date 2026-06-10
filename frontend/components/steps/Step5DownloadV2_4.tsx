@@ -10,11 +10,12 @@ import {
 } from '@heroicons/react/24/outline';
 import { PPOSLogo } from '../../design/preflight_starter_pack';
 import { ClientChangeReportDrawer } from '../reports/ClientChangeReportDrawer';
-import type { ArtifactTrust, ArtifactUxContract, ReviewDecisionUx, RemediationUx, HeavyPdfProbeGovernance } from '../../types';
+import type { ArtifactTrust, ArtifactUxContract, ReviewDecisionUx, RemediationUx, HeavyPdfProbeGovernance, SecurityInteractivityGovernance } from '../../types';
 import { getArtifactUxForArtifact, getArtifactFilename } from '../../utils/artifactUx';
 import { ReviewDecisionPanel } from '../review/ReviewDecisionPanel';
 import { CustomerRemediationPanel } from '../remediation/CustomerRemediationPanel';
 import { HeavyPdfProbePanel } from '../reports/HeavyPdfProbePanel';
+import { SecurityInteractivityPanel } from '../security/SecurityInteractivityPanel';
 
 interface Step5DownloadV2_4Props {
     lastPdfUrl: string | null;
@@ -63,6 +64,11 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
     const heavyPdfProbeGovernance: HeavyPdfProbeGovernance | null = (result as any)?.heavy_pdf_probe_governance ?? null;
     const heavyPdfFatal = heavyPdfProbeGovernance?.fatal_document_failure === true;
     const heavyPdfReviewRequired = heavyPdfProbeGovernance?.review_required === true;
+
+    // APP-63: security_interactivity_governance — active content removal never implies
+    // print-readiness, and unresolved interactive content requires review.
+    const securityInteractivityGovernance: SecurityInteractivityGovernance | null = (result as any)?.security_interactivity_governance ?? null;
+    const securityReviewRequired = securityInteractivityGovernance?.review_required === true;
 
     const remediationRequiresReupload =
         remediationUx !== null &&
@@ -127,6 +133,11 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                 <HeavyPdfProbePanel governance={heavyPdfProbeGovernance} audience="customer" />
             )}
 
+            {/* APP-63: security_interactivity_governance — security/interactive content cleanup */}
+            {securityInteractivityGovernance && (
+                <SecurityInteractivityPanel governance={securityInteractivityGovernance} audience="customer" />
+            )}
+
             {/* APP-62: reupload required — hide the production download card */}
             {productionDownloadBlocked && (
                 <div className="p-4 border border-red-500/30 bg-red-500/10 flex items-start gap-3">
@@ -181,8 +192,9 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                         </button>
                         <div className="flex items-center gap-2 text-[var(--text-muted)] text-[0.7rem] font-medium uppercase tracking-widest">
                            <DocumentCheckIcon className="h-4 w-4" />
-                           {/* APP-62F: never claim standards validation while heavy-PDF probe review is pending */}
-                           {certifiedAllowed && artifactTrust?.standard_certified && !heavyPdfReviewRequired
+                           {/* APP-62F/APP-63: never claim standards validation while heavy-PDF probe or
+                               security/interactive content review is pending */}
+                           {certifiedAllowed && artifactTrust?.standard_certified && !heavyPdfReviewRequired && !securityReviewRequired
                                ? <span>{t('artifact.standardsValidatedFile').toUpperCase()}</span>
                                : <span>{t('step.review.certDocument').toUpperCase()}</span>
                            }

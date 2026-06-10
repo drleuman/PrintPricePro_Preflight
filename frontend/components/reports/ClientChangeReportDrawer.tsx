@@ -4,7 +4,8 @@ import { XMarkIcon, DocumentCheckIcon, ShieldExclamationIcon, ClipboardDocumentI
 import { generateClientChangeReport } from '../../utils/clientChangeReport';
 import { useTranslation } from '../../i18n';
 import { HeavyPdfProbePanel } from './HeavyPdfProbePanel';
-import type { HeavyPdfProbeGovernance } from '../../types';
+import { SecurityInteractivityPanel } from '../security/SecurityInteractivityPanel';
+import type { HeavyPdfProbeGovernance, SecurityInteractivityGovernance } from '../../types';
 
 interface ClientChangeReportDrawerProps {
   open: boolean;
@@ -27,6 +28,10 @@ export const ClientChangeReportDrawer: React.FC<ClientChangeReportDrawerProps> =
   // APP-62F: heavy_pdf_probe_governance — explains heavy-PDF probe warnings.
   const heavyPdfProbeGovernance: HeavyPdfProbeGovernance | null =
     (result as any)?.heavy_pdf_probe_governance ?? (report as any)?.heavy_pdf_probe_governance ?? null;
+
+  // APP-63: security_interactivity_governance — JS/launch actions/embedded files/forms/annotations.
+  const securityInteractivityGovernance: SecurityInteractivityGovernance | null =
+    (result as any)?.security_interactivity_governance ?? (report as any)?.security_interactivity_governance ?? null;
 
   const handleCopy = async () => {
     try {
@@ -202,6 +207,11 @@ export const ClientChangeReportDrawer: React.FC<ClientChangeReportDrawerProps> =
                       {/* 5b. Heavy PDF probe governance (APP-62F) */}
                       {heavyPdfProbeGovernance && (
                         <HeavyPdfProbePanel governance={heavyPdfProbeGovernance} audience="customer" />
+                      )}
+
+                      {/* 5c. Security / interactive PDF content (APP-63) */}
+                      {securityInteractivityGovernance && (
+                        <SecurityInteractivityPanel governance={securityInteractivityGovernance} audience="customer" />
                       )}
 
                       {/* 6. Recommended next step */}
