@@ -5,7 +5,22 @@ import { generateClientChangeReport } from '../../utils/clientChangeReport';
 import { useTranslation } from '../../i18n';
 import { HeavyPdfProbePanel } from './HeavyPdfProbePanel';
 import { SecurityInteractivityPanel } from '../security/SecurityInteractivityPanel';
-import type { HeavyPdfProbeGovernance, SecurityInteractivityGovernance } from '../../types';
+import {
+  InkGovernancePanel,
+  ImageGovernancePanel,
+  FontGovernancePanel,
+  TransparencyOverprintPanel,
+  VisualDiffPanel,
+} from '../visual/VisualGovernancePanels';
+import type {
+  HeavyPdfProbeGovernance,
+  SecurityInteractivityGovernance,
+  InkGovernance,
+  SelectiveImageGovernance,
+  FontGovernance,
+  TransparencyOverprintPhysicalGovernance,
+  VisualDiffGovernance,
+} from '../../types';
 
 interface ClientChangeReportDrawerProps {
   open: boolean;
@@ -32,6 +47,18 @@ export const ClientChangeReportDrawer: React.FC<ClientChangeReportDrawerProps> =
   // APP-63: security_interactivity_governance — JS/launch actions/embedded files/forms/annotations.
   const securityInteractivityGovernance: SecurityInteractivityGovernance | null =
     (result as any)?.security_interactivity_governance ?? (report as any)?.security_interactivity_governance ?? null;
+
+  // APP-64: ink/image/font/transparency-overprint/visual-diff governance (Phases 64-69).
+  const inkGovernance: InkGovernance | null =
+    (result as any)?.ink_governance ?? (report as any)?.ink_governance ?? null;
+  const selectiveImageGovernance: SelectiveImageGovernance | null =
+    (result as any)?.selective_image_governance ?? (report as any)?.selective_image_governance ?? null;
+  const fontGovernance: FontGovernance | null =
+    (result as any)?.font_governance ?? (report as any)?.font_governance ?? null;
+  const transparencyOverprintGovernance: TransparencyOverprintPhysicalGovernance | null =
+    (result as any)?.transparency_overprint_physical_governance ?? (report as any)?.transparency_overprint_physical_governance ?? null;
+  const visualDiffGovernance: VisualDiffGovernance | null =
+    (result as any)?.visual_diff_governance ?? (report as any)?.visual_diff_governance ?? null;
 
   const handleCopy = async () => {
     try {
@@ -212,6 +239,23 @@ export const ClientChangeReportDrawer: React.FC<ClientChangeReportDrawerProps> =
                       {/* 5c. Security / interactive PDF content (APP-63) */}
                       {securityInteractivityGovernance && (
                         <SecurityInteractivityPanel governance={securityInteractivityGovernance} audience="customer" />
+                      )}
+
+                      {/* 5d. Ink/color, image, font, transparency-overprint, and visual-diff governance (APP-64) */}
+                      {inkGovernance && (
+                        <InkGovernancePanel governance={inkGovernance} audience="customer" />
+                      )}
+                      {selectiveImageGovernance && (
+                        <ImageGovernancePanel governance={selectiveImageGovernance} audience="customer" />
+                      )}
+                      {fontGovernance && (
+                        <FontGovernancePanel governance={fontGovernance} audience="customer" />
+                      )}
+                      {transparencyOverprintGovernance && (
+                        <TransparencyOverprintPanel governance={transparencyOverprintGovernance} audience="customer" />
+                      )}
+                      {visualDiffGovernance && (
+                        <VisualDiffPanel governance={visualDiffGovernance} audience="customer" />
                       )}
 
                       {/* 6. Recommended next step */}

@@ -515,6 +515,58 @@ export interface VisualDiffGovernance {
   evidence?: Record<string, unknown>;
 }
 
+// ─── APP-64: Ink / Image / Font / Transparency-Overprint Governance ─────────
+// Mirror the Phase 64-67 OS governance domains for visual/destructive fixes.
+// These are informational only — they never imply certification or
+// print-readiness, and several conditions force review_required=true via
+// extractGovernanceContracts() (see preflightNormalizer.js).
+
+/** Ink / TAC / black-generation fix governance (Phase 64). */
+export interface InkGovernance {
+  tac_limit_applied?: boolean;
+  tac_limit_value?: number;
+  black_generation_adjusted?: boolean;
+  rich_black_normalized?: boolean;
+  ink_density_violations_fixed?: number;
+  tac_violation_remaining?: boolean;
+  review_required?: boolean;
+  warnings?: string[];
+  evidence?: Record<string, unknown>;
+}
+
+/** Selective image fix governance (Phase 65). */
+export interface SelectiveImageGovernance {
+  images_processed?: number;
+  images_resampled?: number;
+  images_recompressed?: number;
+  low_res_images_detected?: number;
+  low_res_unfixable?: boolean;
+  review_required?: boolean;
+  warnings?: string[];
+  evidence?: Record<string, unknown>;
+}
+
+/** Font fix governance (Phase 66). */
+export interface FontGovernance {
+  fonts_embedded?: number;
+  fonts_subsetted?: number;
+  fonts_missing?: string[];
+  font_source_available?: boolean;
+  review_required?: boolean;
+  warnings?: string[];
+  evidence?: Record<string, unknown>;
+}
+
+/** Transparency / overprint physical fix governance (Phase 67). */
+export interface TransparencyOverprintPhysicalGovernance {
+  transparency_flattened?: boolean;
+  overprint_modified?: boolean;
+  spot_colors_converted?: boolean;
+  review_required?: boolean;
+  warnings?: string[];
+  evidence?: Record<string, unknown>;
+}
+
 /** Customer/operator proof approval state. */
 export interface ProofApprovalGovernance {
   proof_required?: boolean;

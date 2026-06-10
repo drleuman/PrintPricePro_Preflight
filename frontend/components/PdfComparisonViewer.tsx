@@ -1,15 +1,27 @@
 import React, { useState } from 'react';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import type { VisualDiffGovernance } from '../types';
+import { useTranslation } from '../i18n';
 
 interface PdfComparisonViewerProps {
     originalUrl: string | null;
     fixedUrl: string | null;
+    visualDiffGovernance?: VisualDiffGovernance | null;
 }
 
-export const PdfComparisonViewer: React.FC<PdfComparisonViewerProps> = ({ originalUrl, fixedUrl }) => {
+export const PdfComparisonViewer: React.FC<PdfComparisonViewerProps> = ({ originalUrl, fixedUrl, visualDiffGovernance }) => {
     const [view, setView] = useState<'side-by-side' | 'toggle'>('toggle');
     const [showFixed, setShowFixed] = useState(true);
+    const { t } = useTranslation();
 
     if (!originalUrl || !fixedUrl) return null;
+
+    // APP-64: visual_diff_governance — a fix expected to change the document's
+    // appearance (or a required-but-not-yet-performed comparison) must surface
+    // a review notice alongside the rendered comparison.
+    const visualChangeExpected = visualDiffGovernance?.visual_change_expected === true;
+    const diffRequiredNotPerformed =
+        visualDiffGovernance?.visual_diff_required === true && visualDiffGovernance?.visual_diff_performed !== true;
 
     return (
         <div className="v2-report-glass" style={{ marginTop: '1.5rem', overflow: 'hidden' }}>
@@ -20,6 +32,15 @@ export const PdfComparisonViewer: React.FC<PdfComparisonViewerProps> = ({ origin
                     <button className={view === 'side-by-side' ? 'active' : ''} onClick={() => setView('side-by-side')}>Side-by-Side</button>
                 </div>
             </div>
+
+            {(visualChangeExpected || diffRequiredNotPerformed) && (
+                <div className="flex items-start gap-2 p-3 mb-4 border border-amber-500/30 bg-amber-500/10">
+                    <ExclamationTriangleIcon className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                    <p className="text-[0.75rem] text-amber-400 leading-relaxed">
+                        {diffRequiredNotPerformed ? t('visualDiff.requiredNotPerformedDesc') : t('visualDiff.changeExpectedDesc')}
+                    </p>
+                </div>
+            )}
 
             {view === 'toggle' ? (
                 <div className="relative aspect-[1.414/1] bg-slate-900 rounded-lg overflow-hidden border border-slate-800">

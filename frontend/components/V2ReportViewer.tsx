@@ -356,7 +356,11 @@ export const V2ReportViewer: React.FC<V2ReportViewerProps> = ({ jobId, originalU
             )}
 
             {originalUrl && job?.download_url && (
-                <PdfComparisonViewer originalUrl={originalUrl} fixedUrl={job.download_url} />
+                <PdfComparisonViewer
+                    originalUrl={originalUrl}
+                    fixedUrl={job.download_url}
+                    visualDiffGovernance={job?.visual_diff_governance ?? report?.visual_diff_governance ?? null}
+                />
             )}
 
             {/* V3 Production Intelligence */}

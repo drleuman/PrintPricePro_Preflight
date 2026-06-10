@@ -1,6 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import type { Issue } from '../types';
+import type {
+  Issue,
+  InkGovernance,
+  SelectiveImageGovernance,
+  FontGovernance,
+  TransparencyOverprintPhysicalGovernance,
+} from '../types';
 import { pposFetch, getAuthToken } from '../lib/apiClient';
 import { pickAvailableModel, GEMINI_API_VER } from '../lib/gemini';
 import { useTranslation } from '../i18n';
@@ -37,6 +43,15 @@ type Props = {
   onProfileChange?: (profile: string) => void;
   isFixing?: boolean;
   serverAvailable?: boolean;
+  // APP-64: ink/image/font/transparency-overprint governance (Phases 64-67),
+  // used to surface a per-issue review disclaimer when the matching domain
+  // requires human review.
+  visualGovernance?: {
+    ink?: InkGovernance | null;
+    selectiveImage?: SelectiveImageGovernance | null;
+    font?: FontGovernance | null;
+    transparencyOverprint?: TransparencyOverprintPhysicalGovernance | null;
+  } | null;
 };
 
 export const FixDrawerV2_4: React.FC<Props> = ({
@@ -52,7 +67,8 @@ export const FixDrawerV2_4: React.FC<Props> = ({
   selectedProfile,
   onProfileChange,
   isFixing,
-  serverAvailable = true
+  serverAvailable = true,
+  visualGovernance = null
 }) => {
   const { t } = useTranslation();
   const [bleedMode, setBleedMode] = useState<'safe' | 'aggressive'>('safe');
@@ -123,6 +139,32 @@ export const FixDrawerV2_4: React.FC<Props> = ({
   const displayTitle = issue.title || issue.summary || issue.message || issue.rule || issue.code || "Critical Trace Finding";
   const displayId = issue.id || issue.uuid || issue.rule || issue.code || 'N/A';
 
+  // APP-64: surface a review disclaimer when the issue's category maps to a
+  // visual/destructive governance domain that requires human review.
+  const visualGovernanceDisclaimer = (() => {
+    const category = issue.category;
+    if (!visualGovernance) return null;
+    if (category === 'color' && visualGovernance.ink?.review_required) {
+      return visualGovernance.ink.tac_violation_remaining
+        ? t('ink.tacViolationRemainingDesc' as any)
+        : t('ink.reviewRequiredNotice' as any);
+    }
+    if ((category === 'images' || category === 'resolution') && visualGovernance.selectiveImage?.review_required) {
+      return visualGovernance.selectiveImage.low_res_unfixable
+        ? t('image.lowResUnfixableDesc' as any)
+        : t('image.reviewRequiredNotice' as any);
+    }
+    if (category === 'fonts' && visualGovernance.font?.review_required) {
+      return visualGovernance.font.font_source_available === false
+        ? t('font.fontSourceUnavailableDesc' as any)
+        : t('font.reviewRequiredNotice' as any);
+    }
+    if (category === 'transparency' && visualGovernance.transparencyOverprint?.review_required) {
+      return t('transparency.reviewRequiredDesc' as any);
+    }
+    return null;
+  })();
+
   const drawerContent = (
     <div className="fixed inset-0 z-[100] flex justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}>
       <aside 
@@ -190,6 +232,16 @@ export const FixDrawerV2_4: React.FC<Props> = ({
             <div className="flex items-center gap-4 text-[0.7rem] font-mono text-[var(--text-muted)] uppercase tracking-widest">
                 <span>{t('inspector.fixable')} {issue.fixable ? t('inspector.isFixableYes') : t('inspector.isFixableNo')}</span>
             </div>
+
+            {/* APP-64: visual/destructive governance review disclaimer for this issue's category */}
+            {visualGovernanceDisclaimer && (
+              <div className="flex items-start gap-2 p-3 border border-amber-500/30 bg-amber-500/10">
+                  <ExclamationTriangleIcon className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                  <p className="text-[0.75rem] text-amber-400 leading-relaxed">
+                      {visualGovernanceDisclaimer}
+                  </p>
+              </div>
+            )}
         </div>
 
         {/* Compliance & Risk (Minimal Intervention V2.5) */}

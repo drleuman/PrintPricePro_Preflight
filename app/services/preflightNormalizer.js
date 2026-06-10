@@ -605,7 +605,12 @@ const GOVERNANCE_KEYS = [
   'policy_profile_governance',
   'production_package_governance',
   // APP-62F: Heavy PDF probe semantics governance (Engine -> Worker -> Service -> CP -> BFF)
-  'heavy_pdf_probe_governance'
+  'heavy_pdf_probe_governance',
+  // APP-64: Ink / Image / Font / Transparency-Overprint / Visual Diff governance (Phases 64-69)
+  'ink_governance',
+  'selective_image_governance',
+  'font_governance',
+  'transparency_overprint_physical_governance'
 ];
 
 // Conservative merge: false flags always win; true flags win for review_required;
@@ -618,7 +623,11 @@ function mergeGovernanceObject(candidates) {
     for (const f of [
       'production_certified', 'standard_certified', 'certified_pdf_allowed',
       'customer_visible', 'compliance_claim_allowed',
-      'pdfx_compliance_claimed', 'pdfa_compliance_claimed'
+      'pdfx_compliance_claimed', 'pdfa_compliance_claimed',
+      // APP-64: a font source unavailable for automatic embedding always wins.
+      'font_source_available',
+      // APP-64: a visual diff that was required but not performed always wins.
+      'visual_diff_performed'
     ]) {
       if (f in c && c[f] === false) result[f] = false;
     }
@@ -626,6 +635,12 @@ function mergeGovernanceObject(candidates) {
     // APP-62F: heavy_pdf_probe_governance — fatal/degraded flags always win (true wins),
     // and a fatal document failure overrides a degraded-but-usable classification.
     for (const f of ['fatal_document_failure', 'analysis_degraded', 'heavy_pdf_detected']) {
+      if (c[f] === true) result[f] = true;
+    }
+    // APP-64: visual/destructive governance signals that always win when true —
+    // an unfixable low-res image, a flattened/overprint-modified page, or a
+    // detected/expected visual change must never be silently dropped on merge.
+    for (const f of ['low_res_unfixable', 'transparency_flattened', 'overprint_modified', 'visual_change_detected', 'visual_change_expected', 'visual_diff_required']) {
       if (c[f] === true) result[f] = true;
     }
     for (const arr of ['blocked_by_governance_domains', 'warnings', 'review_required_reasons']) {
@@ -687,6 +702,43 @@ function extractGovernanceContracts(payload) {
   const sig = contracts.security_interactivity_governance;
   if (sig && (sig.interactive_content_remaining === true || sig.flattening_skipped === true)) {
     sig.review_required = true;
+  }
+
+  // APP-64: defense-in-depth for visual/destructive fix domains (Phases 64-69).
+  // Each of these conditions represents a change the customer/operator cannot
+  // safely treat as "done" without a human looking at the result, even if the
+  // OS payload did not explicitly set review_required on the domain.
+  const ink = contracts.ink_governance;
+  if (ink && ink.tac_violation_remaining === true) {
+    ink.review_required = true;
+  }
+
+  // Selective image fixes: a low-resolution image that could not be fixed
+  // automatically requires source-file review/reupload.
+  const img = contracts.selective_image_governance;
+  if (img && img.low_res_unfixable === true) {
+    img.review_required = true;
+  }
+
+  // Font fixes: if no embeddable font source is available, fonts cannot be
+  // embedded automatically and the file requires review.
+  const font = contracts.font_governance;
+  if (font && font.font_source_available === false) {
+    font.review_required = true;
+  }
+
+  // Transparency/overprint physical fixes: flattening transparency or modifying
+  // overprint settings is a destructive print transform and always needs review.
+  const transparency = contracts.transparency_overprint_physical_governance;
+  if (transparency && (transparency.transparency_flattened === true || transparency.overprint_modified === true)) {
+    transparency.review_required = true;
+  }
+
+  // Visual diff: if a visual diff was required but not performed, the file's
+  // visual fidelity is unverified and "production-ready" messaging must be blocked.
+  const visualDiff = contracts.visual_diff_governance;
+  if (visualDiff && visualDiff.visual_diff_required === true && visualDiff.visual_diff_performed !== true) {
+    visualDiff.review_required = true;
   }
 
   return contracts;

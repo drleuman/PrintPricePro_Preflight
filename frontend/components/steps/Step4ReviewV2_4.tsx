@@ -30,7 +30,24 @@ import { ReviewDecisionPanel } from '../review/ReviewDecisionPanel';
 import { CustomerRemediationPanel } from '../remediation/CustomerRemediationPanel';
 import { HeavyPdfProbePanel } from '../reports/HeavyPdfProbePanel';
 import { SecurityInteractivityPanel } from '../security/SecurityInteractivityPanel';
-import type { ReviewDecisionUx, RemediationUx, HeavyPdfProbeGovernance, SecurityInteractivityGovernance } from '../../types';
+import {
+    InkGovernancePanel,
+    ImageGovernancePanel,
+    FontGovernancePanel,
+    TransparencyOverprintPanel,
+    VisualDiffPanel,
+} from '../visual/VisualGovernancePanels';
+import type {
+    ReviewDecisionUx,
+    RemediationUx,
+    HeavyPdfProbeGovernance,
+    SecurityInteractivityGovernance,
+    InkGovernance,
+    SelectiveImageGovernance,
+    FontGovernance,
+    TransparencyOverprintPhysicalGovernance,
+    VisualDiffGovernance,
+} from '../../types';
 
 interface Step4ReviewV2_4Props {
     file: File | null;
@@ -186,6 +203,13 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     // APP-63: security_interactivity_governance — JS/launch actions/embedded files/forms/annotations.
     const securityInteractivityGovernance: SecurityInteractivityGovernance | null = (result as any)?.security_interactivity_governance ?? null;
 
+    // APP-64: ink/image/font/transparency-overprint/visual-diff governance (Phases 64-69).
+    const inkGovernance: InkGovernance | null = (result as any)?.ink_governance ?? null;
+    const selectiveImageGovernance: SelectiveImageGovernance | null = (result as any)?.selective_image_governance ?? null;
+    const fontGovernance: FontGovernance | null = (result as any)?.font_governance ?? null;
+    const transparencyOverprintGovernance: TransparencyOverprintPhysicalGovernance | null = (result as any)?.transparency_overprint_physical_governance ?? null;
+    const visualDiffGovernance: VisualDiffGovernance | null = (result as any)?.visual_diff_governance ?? null;
+
     // Block "ready" messaging when review_decision_ux has no decision yet.
     const reviewDecisionBlocksProgression =
         reviewDecisionUx !== null &&
@@ -209,11 +233,18 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
         'customer'
     );
 
+    // APP-64: a visual diff that was required but not performed leaves the file's
+    // visual fidelity unverified — production-ready messaging must be withheld
+    // until the comparison is performed (or review_required is otherwise resolved).
+    const visualDiffBlocksProduction =
+        visualDiffGovernance?.visual_diff_required === true && visualDiffGovernance?.visual_diff_performed !== true;
+
     // Derive the safe CertificationPanel title: never claim "ready for printing" when
     // artifact_trust signals review_required or production_certified=false.
     const certPanelTitle = (() => {
         if (isRunning) return t('common.processing');
         if (trustReviewRequired) return t('artifact.reviewRequired');
+        if (visualDiffBlocksProduction) return t('artifact.reviewRequired');
         if (!certifiedPdfAllowed) return t('artifact.reviewFile');
         if (isReadyForPrint) return t('readyForPrinting');
         return t('summary.title' as any);
@@ -222,7 +253,9 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     const isCompletedWithReview = result?.status === 'COMPLETED_WITH_REVIEW' || (result as any)?.requiresHumanReview === true;
     // Phase APP-40.3: a result is only "production certified" when the engine vouches
     // for it AND no human review is pending — never inferred from artifact presence alone.
-    const isProductionCertified = (result as any)?.productionCertified === true && (result as any)?.requiresHumanReview !== true;
+    // APP-64: also withhold production certification when a required visual diff
+    // has not yet been performed.
+    const isProductionCertified = (result as any)?.productionCertified === true && (result as any)?.requiresHumanReview !== true && !visualDiffBlocksProduction;
 
     const displayState = getAutofixDisplayState(analysis, fixesApplied, result?.technicallyFixed === true);
     
@@ -369,6 +402,33 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             governance={securityInteractivityGovernance}
                             audience="customer"
                         />
+                    </div>
+                )}
+
+                {/* APP-64: ink/color, image, font, transparency-overprint, and visual-diff governance (Phases 64-69) */}
+                {inkGovernance && (
+                    <div className="mb-6">
+                        <InkGovernancePanel governance={inkGovernance} audience="customer" />
+                    </div>
+                )}
+                {selectiveImageGovernance && (
+                    <div className="mb-6">
+                        <ImageGovernancePanel governance={selectiveImageGovernance} audience="customer" />
+                    </div>
+                )}
+                {fontGovernance && (
+                    <div className="mb-6">
+                        <FontGovernancePanel governance={fontGovernance} audience="customer" />
+                    </div>
+                )}
+                {transparencyOverprintGovernance && (
+                    <div className="mb-6">
+                        <TransparencyOverprintPanel governance={transparencyOverprintGovernance} audience="customer" />
+                    </div>
+                )}
+                {visualDiffGovernance && (
+                    <div className="mb-6">
+                        <VisualDiffPanel governance={visualDiffGovernance} audience="customer" />
                     </div>
                 )}
 

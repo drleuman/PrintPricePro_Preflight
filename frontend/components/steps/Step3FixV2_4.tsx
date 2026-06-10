@@ -420,6 +420,12 @@ export const Step3FixV2_4: React.FC<Step3FixV2_4Props> = ({
                 onProfileChange={onProfileChange}
                 isFixing={isRunning}
                 serverAvailable={serverAvailable}
+                visualGovernance={{
+                    ink: (result as any)?.ink_governance ?? null,
+                    selectiveImage: (result as any)?.selective_image_governance ?? null,
+                    font: (result as any)?.font_governance ?? null,
+                    transparencyOverprint: (result as any)?.transparency_overprint_physical_governance ?? null,
+                }}
             />
 
             <AIInspectorPanel

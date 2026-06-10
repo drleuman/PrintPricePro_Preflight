@@ -914,6 +914,49 @@ export const en = {
   'security.interactiveContentRemainingDesc': 'This file still contains interactive content that could not be removed automatically. A human review is required before this file can move to production.',
   'security.reviewRequiredNotice': 'A human review is required before this file can move to production.',
   'security.operatorWarnings': 'Warnings',
+
+  // APP-64: Ink / Image / Font / Visual Fix Governance — Phases 64-69 alignment.
+  'ink.panelTitle': 'Ink / color review',
+  'ink.tacLimitApplied': 'Total ink coverage (TAC) limit applied.',
+  'ink.tacLimitValue': 'Total ink coverage (TAC) limit applied: {{value}}%.',
+  'ink.blackGenerationAdjusted': 'Black generation adjusted.',
+  'ink.richBlackNormalized': 'Rich black values normalized.',
+  'ink.densityViolationsFixed': '{{count}} ink density violation(s) corrected.',
+  'ink.tacViolationRemainingDesc': 'This file still has areas exceeding the total ink coverage limit that could not be corrected automatically. A human review is required before this file can move to production.',
+  'ink.reviewRequiredNotice': 'A human review is required before this file can move to production.',
+  'ink.operatorWarnings': 'Warnings',
+
+  'image.panelTitle': 'Image review',
+  'image.imagesResampled': '{{count}} image(s) resampled to a print-safe resolution.',
+  'image.imagesRecompressed': '{{count}} image(s) recompressed.',
+  'image.lowResDetected': '{{count}} low-resolution image(s) detected.',
+  'image.lowResUnfixableDesc': 'One or more images are below the minimum print resolution and cannot be improved automatically. Replacing the source image or uploading a higher-resolution file is required.',
+  'image.reviewRequiredNotice': 'A human review is required before this file can move to production.',
+  'image.operatorWarnings': 'Warnings',
+
+  'font.panelTitle': 'Font review',
+  'font.fontsEmbedded': '{{count}} font(s) embedded.',
+  'font.fontsSubsetted': '{{count}} font(s) subsetted.',
+  'font.fontsMissingDesc': 'The following fonts could not be embedded: {{fonts}}.',
+  'font.fontSourceUnavailableDesc': 'The original font files are not available, so missing fonts cannot be embedded automatically. A human review is required before this file can move to production.',
+  'font.reviewRequiredNotice': 'A human review is required before this file can move to production.',
+  'font.operatorWarnings': 'Warnings',
+
+  'transparency.panelTitle': 'Transparency / overprint review',
+  'transparency.flattenedDesc': 'Transparency was flattened to ensure consistent output.',
+  'transparency.overprintModifiedDesc': 'Overprint settings were modified.',
+  'transparency.spotColorsConvertedDesc': 'Spot colors were converted.',
+  'transparency.reviewRequiredDesc': 'Flattening transparency or modifying overprint settings is a destructive print transform and must be reviewed manually before this file can move to production.',
+  'transparency.reviewRequiredNotice': 'A human review is required before this file can move to production.',
+  'transparency.operatorWarnings': 'Warnings',
+
+  'visualDiff.panelTitle': 'Visual proof / rendered comparison',
+  'visualDiff.changeDetectedDesc': 'Visual differences were detected between the original and corrected renderings.',
+  'visualDiff.noChangeDetectedDesc': 'No visual differences were detected between the original and corrected renderings.',
+  'visualDiff.changeExpectedDesc': 'This fix is expected to change the visual appearance of the document. Review the rendered comparison before approving this file for production.',
+  'visualDiff.requiredNotPerformedDesc': 'A visual comparison is required for this file but has not been performed yet. Production-ready status cannot be confirmed until the visual comparison is complete.',
+  'visualDiff.reviewRequiredNotice': 'A human review is required before this file can move to production.',
+  'visualDiff.operatorWarnings': 'Warnings',
 } as const;
 
 export type TranslationKeys = keyof typeof en;
