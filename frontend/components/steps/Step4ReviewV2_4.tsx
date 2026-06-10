@@ -37,6 +37,8 @@ import {
     TransparencyOverprintPanel,
     VisualDiffPanel,
 } from '../visual/VisualGovernancePanels';
+import { VisualProofPanel } from '../proof/VisualProofPanel';
+import { ProofApprovalPanel } from '../proof/ProofApprovalPanel';
 import type {
     ReviewDecisionUx,
     RemediationUx,
@@ -47,6 +49,7 @@ import type {
     FontGovernance,
     TransparencyOverprintPhysicalGovernance,
     VisualDiffGovernance,
+    ProofApprovalGovernance,
 } from '../../types';
 
 interface Step4ReviewV2_4Props {
@@ -210,6 +213,12 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     const transparencyOverprintGovernance: TransparencyOverprintPhysicalGovernance | null = (result as any)?.transparency_overprint_physical_governance ?? null;
     const visualDiffGovernance: VisualDiffGovernance | null = (result as any)?.visual_diff_governance ?? null;
 
+    // APP-65: proof_approval_governance — a required customer proof that has not
+    // yet been approved must block "production-ready" messaging.
+    const proofApprovalGovernance: ProofApprovalGovernance | null = (result as any)?.proof_approval_governance ?? null;
+    const proofRequiresApproval =
+        proofApprovalGovernance?.proof_required === true && proofApprovalGovernance?.proof_status !== 'PROOF_APPROVED';
+
     // Block "ready" messaging when review_decision_ux has no decision yet.
     const reviewDecisionBlocksProgression =
         reviewDecisionUx !== null &&
@@ -245,6 +254,7 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
         if (isRunning) return t('common.processing');
         if (trustReviewRequired) return t('artifact.reviewRequired');
         if (visualDiffBlocksProduction) return t('artifact.reviewRequired');
+        if (proofRequiresApproval) return t('artifact.reviewRequired');
         if (!certifiedPdfAllowed) return t('artifact.reviewFile');
         if (isReadyForPrint) return t('readyForPrinting');
         return t('summary.title' as any);
@@ -255,7 +265,9 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     // for it AND no human review is pending — never inferred from artifact presence alone.
     // APP-64: also withhold production certification when a required visual diff
     // has not yet been performed.
-    const isProductionCertified = (result as any)?.productionCertified === true && (result as any)?.requiresHumanReview !== true && !visualDiffBlocksProduction;
+    // APP-65: also withhold production certification when a required customer proof
+    // has not yet been approved.
+    const isProductionCertified = (result as any)?.productionCertified === true && (result as any)?.requiresHumanReview !== true && !visualDiffBlocksProduction && !proofRequiresApproval;
 
     const displayState = getAutofixDisplayState(analysis, fixesApplied, result?.technicallyFixed === true);
     
@@ -429,6 +441,25 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                 {visualDiffGovernance && (
                     <div className="mb-6">
                         <VisualDiffPanel governance={visualDiffGovernance} audience="customer" />
+                    </div>
+                )}
+
+                {/* APP-65: visual proof / customer approval (Phases 69-70) */}
+                {(visualDiffGovernance || proofApprovalGovernance) && (
+                    <div className="mb-6">
+                        <VisualProofPanel
+                            visualDiffGovernance={visualDiffGovernance}
+                            proofApprovalGovernance={proofApprovalGovernance}
+                            audience="customer"
+                        />
+                    </div>
+                )}
+                {proofApprovalGovernance && (
+                    <div className="mb-6">
+                        <ProofApprovalPanel
+                            proofApprovalGovernance={proofApprovalGovernance}
+                            audience="customer"
+                        />
                     </div>
                 )}
 

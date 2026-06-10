@@ -567,12 +567,16 @@ export interface TransparencyOverprintPhysicalGovernance {
   evidence?: Record<string, unknown>;
 }
 
-/** Customer/operator proof approval state. */
+/** Customer/operator proof approval state (Phases 69-70). */
 export interface ProofApprovalGovernance {
   proof_required?: boolean;
   proof_status?: 'PROOF_NOT_REQUIRED' | 'PROOF_REQUIRED' | 'PROOF_PENDING_CUSTOMER' | 'PROOF_APPROVED' | 'PROOF_REJECTED_REUPLOAD_REQUIRED';
   proof_id?: string;
+  /** Artifact key (e.g. visual_proof_pdf) holding the rendered proof, if any. */
+  proof_artifact_type?: string;
   review_required?: boolean;
+  customer_message?: string;
+  operator_notes?: string[];
   warnings?: string[];
 }
 

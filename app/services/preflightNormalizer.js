@@ -640,8 +640,25 @@ function mergeGovernanceObject(candidates) {
     // APP-64: visual/destructive governance signals that always win when true —
     // an unfixable low-res image, a flattened/overprint-modified page, or a
     // detected/expected visual change must never be silently dropped on merge.
-    for (const f of ['low_res_unfixable', 'transparency_flattened', 'overprint_modified', 'visual_change_detected', 'visual_change_expected', 'visual_diff_required']) {
+    // APP-65: a visual proof requirement (proof_required=true) must never be
+    // silently dropped on merge either.
+    for (const f of ['low_res_unfixable', 'transparency_flattened', 'overprint_modified', 'visual_change_detected', 'visual_change_expected', 'visual_diff_required', 'proof_required']) {
       if (c[f] === true) result[f] = true;
+    }
+    // APP-65: proof_status — the most restrictive/blocking status across sources wins.
+    // A rejection or pending-customer status must never be silently overridden by a
+    // stale "approved" or "not required" value from another source.
+    if ('proof_status' in c) {
+      const PROOF_STATUS_RANK = {
+        PROOF_REJECTED_REUPLOAD_REQUIRED: 4,
+        PROOF_PENDING_CUSTOMER: 3,
+        PROOF_REQUIRED: 2,
+        PROOF_APPROVED: 1,
+        PROOF_NOT_REQUIRED: 0
+      };
+      const curRank = PROOF_STATUS_RANK[result.proof_status] ?? -1;
+      const newRank = PROOF_STATUS_RANK[c.proof_status] ?? -1;
+      if (newRank > curRank) result.proof_status = c.proof_status;
     }
     for (const arr of ['blocked_by_governance_domains', 'warnings', 'review_required_reasons']) {
       if (Array.isArray(c[arr])) {
@@ -739,6 +756,17 @@ function extractGovernanceContracts(payload) {
   const visualDiff = contracts.visual_diff_governance;
   if (visualDiff && visualDiff.visual_diff_required === true && visualDiff.visual_diff_performed !== true) {
     visualDiff.review_required = true;
+  }
+
+  // APP-65: Visual proof / customer approval (Phases 69-70). A required proof that
+  // has not been approved by the customer must block production-ready messaging,
+  // and a rejected proof always requires review/reupload.
+  const proofApproval = contracts.proof_approval_governance;
+  if (proofApproval && proofApproval.proof_required === true && proofApproval.proof_status !== 'PROOF_APPROVED') {
+    proofApproval.review_required = true;
+  }
+  if (proofApproval && proofApproval.proof_status === 'PROOF_REJECTED_REUPLOAD_REQUIRED') {
+    proofApproval.review_required = true;
   }
 
   return contracts;
@@ -1421,5 +1449,6 @@ module.exports = {
   derivePagesSummaries,
   // APP-60: Governance Contract Foundation
   extractGovernanceContracts,
+  mergeGovernanceObject,
   GOVERNANCE_KEYS
 };

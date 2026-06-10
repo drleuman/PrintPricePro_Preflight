@@ -10,12 +10,14 @@ import {
 } from '@heroicons/react/24/outline';
 import { PPOSLogo } from '../../design/preflight_starter_pack';
 import { ClientChangeReportDrawer } from '../reports/ClientChangeReportDrawer';
-import type { ArtifactTrust, ArtifactUxContract, ReviewDecisionUx, RemediationUx, HeavyPdfProbeGovernance, SecurityInteractivityGovernance } from '../../types';
+import type { ArtifactTrust, ArtifactUxContract, ReviewDecisionUx, RemediationUx, HeavyPdfProbeGovernance, SecurityInteractivityGovernance, VisualDiffGovernance, ProofApprovalGovernance } from '../../types';
 import { getArtifactUxForArtifact, getArtifactFilename } from '../../utils/artifactUx';
 import { ReviewDecisionPanel } from '../review/ReviewDecisionPanel';
 import { CustomerRemediationPanel } from '../remediation/CustomerRemediationPanel';
 import { HeavyPdfProbePanel } from '../reports/HeavyPdfProbePanel';
 import { SecurityInteractivityPanel } from '../security/SecurityInteractivityPanel';
+import { VisualProofPanel } from '../proof/VisualProofPanel';
+import { ProofApprovalPanel } from '../proof/ProofApprovalPanel';
 
 interface Step5DownloadV2_4Props {
     lastPdfUrl: string | null;
@@ -46,10 +48,24 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
     const artifactUxContract: ArtifactUxContract | null = (result as any)?.artifact_ux ?? null;
     const artifactKey: string | null = (result as any)?.meta?.primary_artifact_type ?? null;
 
+    // APP-65: proof_approval_governance — a required customer proof that has not
+    // yet been approved must block the final production download and labeling.
+    const visualDiffGovernance: VisualDiffGovernance | null = (result as any)?.visual_diff_governance ?? null;
+    const proofApprovalGovernance: ProofApprovalGovernance | null = (result as any)?.proof_approval_governance ?? null;
+    const proofRequiresApproval =
+        proofApprovalGovernance?.proof_required === true && proofApprovalGovernance?.proof_status !== 'PROOF_APPROVED';
+
+    // Mirrors the heavy-PDF-probe / security-interactivity pattern: rather than
+    // mutating artifact_trust, derive an "effective" trust contract that also
+    // reflects the pending-proof-approval state for UX/labeling purposes.
+    const effectiveArtifactTrust: ArtifactTrust | null = artifactTrust && proofRequiresApproval
+        ? { ...artifactTrust, review_required: true }
+        : artifactTrust;
+
     const ux = getArtifactUxForArtifact(
         artifactKey ? { key: artifactKey } : null,
         artifactUxContract,
-        artifactTrust,
+        effectiveArtifactTrust,
         'customer'
     );
 
@@ -85,10 +101,12 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
 
     // APP-62F: a fatal heavy-PDF probe failure requires remediation/reupload — hide the
     // production download just like other fatal/reupload-required states.
-    const productionDownloadBlocked = remediationRequiresReupload || reviewDecisionBlocksDownload || heavyPdfFatal;
+    // APP-65: a required customer proof that has not been approved must also hide
+    // the final production download — only the review/proof artifact is shown.
+    const productionDownloadBlocked = remediationRequiresReupload || reviewDecisionBlocksDownload || heavyPdfFatal || proofRequiresApproval;
 
     const baseName = lastPdfName || file?.name || 'document.pdf';
-    const downloadFilename = getArtifactFilename(baseName, artifactKey, artifactTrust);
+    const downloadFilename = getArtifactFilename(baseName, artifactKey, effectiveArtifactTrust);
 
     return (
         <div className="max-w-4xl mx-auto space-y-12 animate-in fade-in zoom-in-95 duration-1000 py-12">
@@ -138,12 +156,26 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                 <SecurityInteractivityPanel governance={securityInteractivityGovernance} audience="customer" />
             )}
 
+            {/* APP-65: visual proof / customer approval (Phases 69-70) */}
+            {(visualDiffGovernance || proofApprovalGovernance) && (
+                <VisualProofPanel
+                    visualDiffGovernance={visualDiffGovernance}
+                    proofApprovalGovernance={proofApprovalGovernance}
+                    audience="customer"
+                />
+            )}
+            {proofApprovalGovernance && (
+                <ProofApprovalPanel proofApprovalGovernance={proofApprovalGovernance} audience="customer" />
+            )}
+
             {/* APP-62: reupload required — hide the production download card */}
             {productionDownloadBlocked && (
                 <div className="p-4 border border-red-500/30 bg-red-500/10 flex items-start gap-3">
                     <ExclamationTriangleIcon className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
                     <p className="text-[0.8rem] text-red-500 font-bold uppercase tracking-widest">
-                        {t('remediation.download.blocked')}
+                        {proofRequiresApproval && !remediationRequiresReupload && !reviewDecisionBlocksDownload && !heavyPdfFatal
+                            ? t('proof.download.blocked')
+                            : t('remediation.download.blocked')}
                     </p>
                 </div>
             )}
@@ -192,9 +224,9 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                         </button>
                         <div className="flex items-center gap-2 text-[var(--text-muted)] text-[0.7rem] font-medium uppercase tracking-widest">
                            <DocumentCheckIcon className="h-4 w-4" />
-                           {/* APP-62F/APP-63: never claim standards validation while heavy-PDF probe or
-                               security/interactive content review is pending */}
-                           {certifiedAllowed && artifactTrust?.standard_certified && !heavyPdfReviewRequired && !securityReviewRequired
+                           {/* APP-62F/APP-63/APP-65: never claim standards validation while heavy-PDF probe,
+                               security/interactive content review, or customer proof approval is pending */}
+                           {certifiedAllowed && artifactTrust?.standard_certified && !heavyPdfReviewRequired && !securityReviewRequired && !proofRequiresApproval
                                ? <span>{t('artifact.standardsValidatedFile').toUpperCase()}</span>
                                : <span>{t('step.review.certDocument').toUpperCase()}</span>
                            }

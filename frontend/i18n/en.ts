@@ -957,6 +957,23 @@ export const en = {
   'visualDiff.requiredNotPerformedDesc': 'A visual comparison is required for this file but has not been performed yet. Production-ready status cannot be confirmed until the visual comparison is complete.',
   'visualDiff.reviewRequiredNotice': 'A human review is required before this file can move to production.',
   'visualDiff.operatorWarnings': 'Warnings',
+
+  'visualProof.panelTitle': 'Visual proof',
+  'visualProof.metricsLabel': 'Comparison metrics',
+
+  'proof.panelTitle': 'Proof approval',
+  'proof.notRequired': 'Proof not required',
+  'proof.required': 'Proof required',
+  'proof.requiredDesc': 'A visual proof is required for this order before it can move to production. The proof is being prepared.',
+  'proof.pendingCustomer': 'Awaiting customer approval',
+  'proof.pendingCustomerDesc': 'A proof has been generated and is awaiting customer approval. This file cannot move to production until the proof is approved.',
+  'proof.approved': 'Proof approved',
+  'proof.approvedDesc': 'The customer has approved the proof. This file is cleared to proceed based on the approved proof.',
+  'proof.rejected': 'Proof rejected — reupload required',
+  'proof.rejectedDesc': 'The customer rejected the proof. A corrected file must be uploaded and a new proof generated before production can proceed.',
+  'proof.operatorNotes': 'Operator notes',
+  'proof.progressionBlocked': 'A human review is required before this file can move to production.',
+  'proof.download.blocked': 'Production download is not available — a customer-approved proof is required before this file can be sent to production.',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

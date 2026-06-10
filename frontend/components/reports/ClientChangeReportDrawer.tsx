@@ -12,6 +12,8 @@ import {
   TransparencyOverprintPanel,
   VisualDiffPanel,
 } from '../visual/VisualGovernancePanels';
+import { VisualProofPanel } from '../proof/VisualProofPanel';
+import { ProofApprovalPanel } from '../proof/ProofApprovalPanel';
 import type {
   HeavyPdfProbeGovernance,
   SecurityInteractivityGovernance,
@@ -20,6 +22,7 @@ import type {
   FontGovernance,
   TransparencyOverprintPhysicalGovernance,
   VisualDiffGovernance,
+  ProofApprovalGovernance,
 } from '../../types';
 
 interface ClientChangeReportDrawerProps {
@@ -59,6 +62,10 @@ export const ClientChangeReportDrawer: React.FC<ClientChangeReportDrawerProps> =
     (result as any)?.transparency_overprint_physical_governance ?? (report as any)?.transparency_overprint_physical_governance ?? null;
   const visualDiffGovernance: VisualDiffGovernance | null =
     (result as any)?.visual_diff_governance ?? (report as any)?.visual_diff_governance ?? null;
+
+  // APP-65: proof_approval_governance — visual proof / customer approval (Phases 69-70).
+  const proofApprovalGovernance: ProofApprovalGovernance | null =
+    (result as any)?.proof_approval_governance ?? (report as any)?.proof_approval_governance ?? null;
 
   const handleCopy = async () => {
     try {
@@ -256,6 +263,18 @@ export const ClientChangeReportDrawer: React.FC<ClientChangeReportDrawerProps> =
                       )}
                       {visualDiffGovernance && (
                         <VisualDiffPanel governance={visualDiffGovernance} audience="customer" />
+                      )}
+
+                      {/* 5e. Visual proof / customer approval (APP-65) */}
+                      {(visualDiffGovernance || proofApprovalGovernance) && (
+                        <VisualProofPanel
+                          visualDiffGovernance={visualDiffGovernance}
+                          proofApprovalGovernance={proofApprovalGovernance}
+                          audience="customer"
+                        />
+                      )}
+                      {proofApprovalGovernance && (
+                        <ProofApprovalPanel proofApprovalGovernance={proofApprovalGovernance} audience="customer" />
                       )}
 
                       {/* 6. Recommended next step */}

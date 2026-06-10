@@ -960,4 +960,21 @@ export const es = {
   'visualDiff.requiredNotPerformedDesc': 'Se requiere una comparación visual para este archivo, pero aún no se ha realizado. El estado de listo para producción no se puede confirmar hasta que se complete la comparación visual.',
   'visualDiff.reviewRequiredNotice': 'Se requiere una revisión humana antes de que este archivo pueda pasar a producción.',
   'visualDiff.operatorWarnings': 'Advertencias',
+
+  'visualProof.panelTitle': 'Prueba visual',
+  'visualProof.metricsLabel': 'Métricas de comparación',
+
+  'proof.panelTitle': 'Aprobación de prueba',
+  'proof.notRequired': 'Prueba no requerida',
+  'proof.required': 'Prueba requerida',
+  'proof.requiredDesc': 'Se requiere una prueba visual para este pedido antes de pasar a producción. La prueba está siendo preparada.',
+  'proof.pendingCustomer': 'Esperando aprobación del cliente',
+  'proof.pendingCustomerDesc': 'Se generó una prueba y está pendiente de aprobación del cliente. Este archivo no puede pasar a producción hasta que se apruebe la prueba.',
+  'proof.approved': 'Prueba aprobada',
+  'proof.approvedDesc': 'El cliente aprobó la prueba. Este archivo está autorizado para continuar según la prueba aprobada.',
+  'proof.rejected': 'Prueba rechazada — se requiere reenvío',
+  'proof.rejectedDesc': 'El cliente rechazó la prueba. Debe subirse un archivo corregido y generarse una nueva prueba antes de continuar con la producción.',
+  'proof.operatorNotes': 'Notas del operador',
+  'proof.progressionBlocked': 'Se requiere una revisión humana antes de que este archivo pueda pasar a producción.',
+  'proof.download.blocked': 'La descarga de producción no está disponible — se requiere una prueba aprobada por el cliente antes de enviar este archivo a producción.',
 } as const;
