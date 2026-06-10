@@ -10,10 +10,11 @@ import {
 } from '@heroicons/react/24/outline';
 import { PPOSLogo } from '../../design/preflight_starter_pack';
 import { ClientChangeReportDrawer } from '../reports/ClientChangeReportDrawer';
-import type { ArtifactTrust, ArtifactUxContract, ReviewDecisionUx, RemediationUx } from '../../types';
+import type { ArtifactTrust, ArtifactUxContract, ReviewDecisionUx, RemediationUx, HeavyPdfProbeGovernance } from '../../types';
 import { getArtifactUxForArtifact, getArtifactFilename } from '../../utils/artifactUx';
 import { ReviewDecisionPanel } from '../review/ReviewDecisionPanel';
 import { CustomerRemediationPanel } from '../remediation/CustomerRemediationPanel';
+import { HeavyPdfProbePanel } from '../reports/HeavyPdfProbePanel';
 
 interface Step5DownloadV2_4Props {
     lastPdfUrl: string | null;
@@ -58,6 +59,11 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
     const reviewDecisionUx: ReviewDecisionUx | null = (result as any)?.review_decision_ux ?? null;
     const remediationUx: RemediationUx | null = (result as any)?.remediation_ux ?? null;
 
+    // APP-62F: heavy_pdf_probe_governance — explains heavy-PDF probe warnings.
+    const heavyPdfProbeGovernance: HeavyPdfProbeGovernance | null = (result as any)?.heavy_pdf_probe_governance ?? null;
+    const heavyPdfFatal = heavyPdfProbeGovernance?.fatal_document_failure === true;
+    const heavyPdfReviewRequired = heavyPdfProbeGovernance?.review_required === true;
+
     const remediationRequiresReupload =
         remediationUx !== null &&
         (remediationUx.requires_reupload === true ||
@@ -71,7 +77,9 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
             reviewDecisionUx.decision === 'REJECTED_REQUIRES_REUPLOAD' ||
             reviewDecisionUx.decision === 'REQUEST_CUSTOMER_REUPLOAD');
 
-    const productionDownloadBlocked = remediationRequiresReupload || reviewDecisionBlocksDownload;
+    // APP-62F: a fatal heavy-PDF probe failure requires remediation/reupload — hide the
+    // production download just like other fatal/reupload-required states.
+    const productionDownloadBlocked = remediationRequiresReupload || reviewDecisionBlocksDownload || heavyPdfFatal;
 
     const baseName = lastPdfName || file?.name || 'document.pdf';
     const downloadFilename = getArtifactFilename(baseName, artifactKey, artifactTrust);
@@ -112,6 +120,11 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
             {/* APP-62: remediation_ux — shows customer remediation instructions */}
             {remediationUx && (
                 <CustomerRemediationPanel remediationUx={remediationUx} audience="customer" />
+            )}
+
+            {/* APP-62F: heavy_pdf_probe_governance — explains heavy-PDF probe warnings */}
+            {heavyPdfProbeGovernance && (
+                <HeavyPdfProbePanel governance={heavyPdfProbeGovernance} audience="customer" />
             )}
 
             {/* APP-62: reupload required — hide the production download card */}
@@ -168,7 +181,8 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
                         </button>
                         <div className="flex items-center gap-2 text-[var(--text-muted)] text-[0.7rem] font-medium uppercase tracking-widest">
                            <DocumentCheckIcon className="h-4 w-4" />
-                           {certifiedAllowed && artifactTrust?.standard_certified
+                           {/* APP-62F: never claim standards validation while heavy-PDF probe review is pending */}
+                           {certifiedAllowed && artifactTrust?.standard_certified && !heavyPdfReviewRequired
                                ? <span>{t('artifact.standardsValidatedFile').toUpperCase()}</span>
                                : <span>{t('step.review.certDocument').toUpperCase()}</span>
                            }

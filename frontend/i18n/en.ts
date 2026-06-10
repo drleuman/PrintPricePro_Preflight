@@ -879,6 +879,28 @@ export const en = {
   'remediation.state.resolvedDesc': 'The remediation process is complete.',
   'remediation.state.unknown': 'Status unknown',
   'remediation.download.blocked': 'Production download is not available — this file requires replacement or further review before it can be sent to production.',
+
+  // APP-62F: Heavy PDF Probe UX — heavy_pdf_probe_governance alignment.
+  'heavyPdfProbe.panelTitle': 'Heavy PDF analysis',
+  'heavyPdfProbe.badge.heavyPdf': 'Heavy PDF',
+  'heavyPdfProbe.badge.analysisWarnings': 'Analysis warnings',
+  'heavyPdfProbe.badge.reviewRequired': 'Review required',
+  'heavyPdfProbe.badge.probeWarning': 'Probe warning',
+  'heavyPdfProbe.badge.technicalReviewRequired': 'Technical review required',
+  'heavyPdfProbe.fileSize': 'File size',
+  'heavyPdfProbe.pageCount': 'Page count',
+  'heavyPdfProbe.customerSummary': 'The file was uploaded and analyzed, but technical warnings were found in the PDF structure.',
+  'heavyPdfProbe.customerNotApproved': 'The file is not automatically approved for production.',
+  'heavyPdfProbe.customerReviewRequired': 'A review is required before this file can proceed.',
+  'heavyPdfProbe.customerReExport': 'If requested, please re-export the PDF from the source application and upload it again.',
+  'heavyPdfProbe.customerFatal': 'The PDF could not be reliably inspected because a critical probe failed. Re-exporting or repairing the source PDF is recommended.',
+  'heavyPdfProbe.operator.degradedButUsable': 'Analysis completed, but some heavy-PDF probes returned warnings. The file requires review before production approval.',
+  'heavyPdfProbe.operator.fatalDocumentFailure': 'The PDF could not be reliably inspected because a critical probe failed.',
+  'heavyPdfProbe.operator.toolStatus': 'Tool status',
+  'heavyPdfProbe.operator.warningClasses': 'Warning classes',
+  'heavyPdfProbe.operator.semanticStatus': 'Semantic status',
+  'heavyPdfProbe.operator.usableOutput': 'Usable output',
+  'heavyPdfProbe.operator.nextAction': 'Next action',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

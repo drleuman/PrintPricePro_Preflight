@@ -542,3 +542,72 @@ export interface RemediationUx {
   customer_message?: string;
   operator_notes?: string[];
 }
+
+// ─── APP-62F: Heavy PDF Probe Semantics Governance ───────────────────────────
+// Mirrors heavy_pdf_probe_governance emitted by the Engine and preserved
+// Engine -> Worker -> Service -> Control Plane -> BFF. Explains analysis
+// quality only — it never certifies the PDF or overrides artifact_trust.
+
+/** Canonical probe semantic statuses (Phase 62F-A). */
+export type ProbeSemanticStatus =
+  | 'SUCCESS'
+  | 'SUCCESS_WITH_WARNINGS'
+  | 'WARNING_ONLY'
+  | 'PARTIAL_SUCCESS'
+  | 'SKIPPED_UNSUPPORTED'
+  | 'FAILED_FATAL'
+  | 'FAILED_TIMEOUT'
+  | 'FAILED_OOM'
+  | 'FAILED_TOOL_MISSING'
+  | 'FAILED_NO_OUTPUT'
+  | 'FAILED_UNCLASSIFIED';
+
+/** Per-tool probe semantic classification (e.g. qpdf, pdfimages). */
+export interface ProbeToolSemantics {
+  raw_status?: 'FAILED' | 'SUCCESS';
+  semantic_status?: ProbeSemanticStatus;
+  severity?: 'info' | 'warning' | 'error' | 'critical';
+  usable_output?: boolean;
+  fatal?: boolean;
+  warning_classes?: string[];
+  fatal_classes?: string[];
+  summary?: string;
+  evidence?: Record<string, unknown>;
+}
+
+/** Aggregate counts across all probes run for the document. */
+export interface ProbeSummary {
+  total?: number;
+  success?: number;
+  success_with_warnings?: number;
+  warning_only?: number;
+  partial_success?: number;
+  failed_fatal?: number;
+  failed_timeout?: number;
+  failed_oom?: number;
+  failed_tool_missing?: number;
+}
+
+/** Heavy PDF probe semantics governance object (Phase 62F). */
+export interface HeavyPdfProbeGovernance {
+  heavy_pdf_detected?: boolean;
+  file_size_bytes?: number;
+  file_size_mb?: number;
+  page_count?: number;
+  probe_semantics_applied?: boolean;
+  analysis_degraded?: boolean;
+  degraded_but_usable?: boolean;
+  fatal_document_failure?: boolean;
+  certifiable?: boolean;
+  review_required?: boolean;
+  production_certified?: boolean;
+  standard_certified?: boolean;
+  pdfx_compliance_claimed?: boolean;
+  pdfa_compliance_claimed?: boolean;
+  compliance_claim_allowed?: boolean;
+  probe_summary?: ProbeSummary;
+  tools?: Record<string, ProbeToolSemantics>;
+  warnings?: string[];
+  review_required_reasons?: string[];
+  evidence?: Record<string, unknown>;
+}

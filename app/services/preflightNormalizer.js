@@ -603,7 +603,9 @@ const GOVERNANCE_KEYS = [
   'review_decision_ux',
   'artifact_ux',
   'policy_profile_governance',
-  'production_package_governance'
+  'production_package_governance',
+  // APP-62F: Heavy PDF probe semantics governance (Engine -> Worker -> Service -> CP -> BFF)
+  'heavy_pdf_probe_governance'
 ];
 
 // Conservative merge: false flags always win; true flags win for review_required;
@@ -621,9 +623,19 @@ function mergeGovernanceObject(candidates) {
       if (f in c && c[f] === false) result[f] = false;
     }
     if (c.review_required === true) result.review_required = true;
-    for (const arr of ['blocked_by_governance_domains', 'warnings']) {
+    // APP-62F: heavy_pdf_probe_governance — fatal/degraded flags always win (true wins),
+    // and a fatal document failure overrides a degraded-but-usable classification.
+    for (const f of ['fatal_document_failure', 'analysis_degraded', 'heavy_pdf_detected']) {
+      if (c[f] === true) result[f] = true;
+    }
+    for (const arr of ['blocked_by_governance_domains', 'warnings', 'review_required_reasons']) {
       if (Array.isArray(c[arr])) {
         result[arr] = [...new Set([...(Array.isArray(result[arr]) ? result[arr] : []), ...c[arr]])];
+      }
+    }
+    for (const objField of ['tools', 'probe_summary']) {
+      if (c[objField] && typeof c[objField] === 'object') {
+        result[objField] = { ...(result[objField] || {}), ...c[objField] };
       }
     }
     if (c.evidence) {
@@ -631,6 +643,9 @@ function mergeGovernanceObject(candidates) {
         ? { ...result.evidence, ...c.evidence }
         : { ...c.evidence };
     }
+  }
+  if (result.fatal_document_failure === true) {
+    result.degraded_but_usable = false;
   }
   return result;
 }
@@ -649,10 +664,14 @@ function extractGovernanceContracts(payload) {
     payload.fix_summary,
     payload.delta_report,
     payload.artifact_summary,
+    payload.fix_audit,
+    payload.artifact_metadata,
     payload.result?.fix_summary,
     payload.result?.delta_report,
     payload.result?.artifact_summary,
     payload.result?.report,
+    payload.result?.fix_audit,
+    payload.result?.artifact_metadata,
   ].filter(loc => loc && typeof loc === 'object');
 
   const contracts = {};
@@ -779,6 +798,10 @@ function normalizeAnalyzeJob(rawJob) {
   const existingReasons = Array.isArray(rawJob.degraded_reasons) ? rawJob.degraded_reasons : [];
   const combinedReasons = Array.from(new Set([...existingReasons, ...degradedReasons]));
 
+  // APP-62F: Preserve heavy_pdf_probe_governance and other governance contracts from
+  // the OS analyze payload (Engine emits this directly during analysis).
+  const governanceContracts = extractGovernanceContracts(rawJob);
+
   return {
     ...rawJob,
     jobId: jobIdCandidate,
@@ -794,7 +817,8 @@ function normalizeAnalyzeJob(rawJob) {
     _isDegraded: isDegraded,
     ...(combinedReasons.length > 0 ? { degraded_reasons: combinedReasons } : {}),
     normalizerApplied: true,
-    normalizerVersion: "analyze-get-v2-2026-05-14"
+    normalizerVersion: "analyze-get-v2-2026-05-14",
+    ...governanceContracts
   };
 }
 

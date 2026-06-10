@@ -28,7 +28,8 @@ import { CertificationTechnicalNote } from './CertificationTechnicalNoteV2_4';
 import { ClientChangeReportDrawer } from '../reports/ClientChangeReportDrawer';
 import { ReviewDecisionPanel } from '../review/ReviewDecisionPanel';
 import { CustomerRemediationPanel } from '../remediation/CustomerRemediationPanel';
-import type { ReviewDecisionUx, RemediationUx } from '../../types';
+import { HeavyPdfProbePanel } from '../reports/HeavyPdfProbePanel';
+import type { ReviewDecisionUx, RemediationUx, HeavyPdfProbeGovernance } from '../../types';
 
 interface Step4ReviewV2_4Props {
     file: File | null;
@@ -177,6 +178,9 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     // APP-62: review_decision_ux and remediation_ux governance contracts.
     const reviewDecisionUx: ReviewDecisionUx | null = (result as any)?.review_decision_ux ?? null;
     const remediationUx: RemediationUx | null = (result as any)?.remediation_ux ?? null;
+
+    // APP-62F: heavy_pdf_probe_governance — explains analysis quality for heavy PDFs.
+    const heavyPdfProbeGovernance: HeavyPdfProbeGovernance | null = (result as any)?.heavy_pdf_probe_governance ?? null;
 
     // Block "ready" messaging when review_decision_ux has no decision yet.
     const reviewDecisionBlocksProgression =
@@ -339,6 +343,16 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                     <div className="mb-6">
                         <CustomerRemediationPanel
                             remediationUx={remediationUx}
+                            audience="customer"
+                        />
+                    </div>
+                )}
+
+                {/* APP-62F: heavy_pdf_probe_governance — explains heavy-PDF probe warnings */}
+                {heavyPdfProbeGovernance && (
+                    <div className="mb-6">
+                        <HeavyPdfProbePanel
+                            governance={heavyPdfProbeGovernance}
                             audience="customer"
                         />
                     </div>

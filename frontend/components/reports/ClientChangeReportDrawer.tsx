@@ -3,6 +3,8 @@ import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon, DocumentCheckIcon, ShieldExclamationIcon, ClipboardDocumentIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { generateClientChangeReport } from '../../utils/clientChangeReport';
 import { useTranslation } from '../../i18n';
+import { HeavyPdfProbePanel } from './HeavyPdfProbePanel';
+import type { HeavyPdfProbeGovernance } from '../../types';
 
 interface ClientChangeReportDrawerProps {
   open: boolean;
@@ -21,6 +23,10 @@ export const ClientChangeReportDrawer: React.FC<ClientChangeReportDrawerProps> =
   const governanceWarnings: string[] = Array.isArray(artifactTrust?.warnings) ? artifactTrust.warnings : [];
   const reviewRequired = artifactTrust?.review_required === true;
   const certifiedNotAllowed = artifactTrust?.certified_pdf_allowed === false;
+
+  // APP-62F: heavy_pdf_probe_governance — explains heavy-PDF probe warnings.
+  const heavyPdfProbeGovernance: HeavyPdfProbeGovernance | null =
+    (result as any)?.heavy_pdf_probe_governance ?? (report as any)?.heavy_pdf_probe_governance ?? null;
 
   const handleCopy = async () => {
     try {
@@ -191,6 +197,11 @@ export const ClientChangeReportDrawer: React.FC<ClientChangeReportDrawerProps> =
                             <p key={i} className="text-[0.7rem] text-amber-300 font-mono">{w}</p>
                           ))}
                         </div>
+                      )}
+
+                      {/* 5b. Heavy PDF probe governance (APP-62F) */}
+                      {heavyPdfProbeGovernance && (
+                        <HeavyPdfProbePanel governance={heavyPdfProbeGovernance} audience="customer" />
                       )}
 
                       {/* 6. Recommended next step */}
