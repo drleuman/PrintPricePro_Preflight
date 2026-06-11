@@ -599,6 +599,27 @@ export interface RemediationUx {
   operator_notes?: string[];
 }
 
+// ─── APP-66: Printhouse Handoff / Production Package Governance ─────────────
+// Mirrors production_package_governance from OS Phase 71. Describes whether a
+// file is actually ready for delivery to a printhouse — distinct from the
+// customer-facing corrected/review file download driven by artifact_ux.
+// extractGovernanceContracts() forces package_ready=false whenever any other
+// governance domain still has review_required=true, artifact_trust withholds
+// production certification, or a required payment/production unlock is
+// outstanding (see preflightNormalizer.js).
+export interface ProductionPackageGovernance {
+  package_ready?: boolean;
+  approved_artifact_type?: string;
+  approved_artifact_hash?: string;
+  included_reports?: string[];
+  payment_required?: boolean;
+  payment_satisfied?: boolean;
+  review_required?: boolean;
+  blocked_by_governance_domains?: string[];
+  warnings?: string[];
+  evidence?: Record<string, unknown>;
+}
+
 // ─── APP-62F: Heavy PDF Probe Semantics Governance ───────────────────────────
 // Mirrors heavy_pdf_probe_governance emitted by the Engine and preserved
 // Engine -> Worker -> Service -> Control Plane -> BFF. Explains analysis

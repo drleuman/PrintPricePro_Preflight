@@ -14,6 +14,7 @@ import {
 } from '../visual/VisualGovernancePanels';
 import { VisualProofPanel } from '../proof/VisualProofPanel';
 import { ProofApprovalPanel } from '../proof/ProofApprovalPanel';
+import { ProductionPackagePanel } from '../handoff/ProductionPackagePanel';
 import type {
   HeavyPdfProbeGovernance,
   SecurityInteractivityGovernance,
@@ -23,6 +24,7 @@ import type {
   TransparencyOverprintPhysicalGovernance,
   VisualDiffGovernance,
   ProofApprovalGovernance,
+  ProductionPackageGovernance,
 } from '../../types';
 
 interface ClientChangeReportDrawerProps {
@@ -66,6 +68,10 @@ export const ClientChangeReportDrawer: React.FC<ClientChangeReportDrawerProps> =
   // APP-65: proof_approval_governance — visual proof / customer approval (Phases 69-70).
   const proofApprovalGovernance: ProofApprovalGovernance | null =
     (result as any)?.proof_approval_governance ?? (report as any)?.proof_approval_governance ?? null;
+
+  // APP-66: production_package_governance — printhouse handoff / production package (Phase 71).
+  const productionPackageGovernance: ProductionPackageGovernance | null =
+    (result as any)?.production_package_governance ?? (report as any)?.production_package_governance ?? null;
 
   const handleCopy = async () => {
     try {
@@ -275,6 +281,11 @@ export const ClientChangeReportDrawer: React.FC<ClientChangeReportDrawerProps> =
                       )}
                       {proofApprovalGovernance && (
                         <ProofApprovalPanel proofApprovalGovernance={proofApprovalGovernance} audience="customer" />
+                      )}
+
+                      {/* 5f. Printhouse handoff / production package (APP-66) */}
+                      {productionPackageGovernance && (
+                        <ProductionPackagePanel productionPackageGovernance={productionPackageGovernance} audience="customer" />
                       )}
 
                       {/* 6. Recommended next step */}

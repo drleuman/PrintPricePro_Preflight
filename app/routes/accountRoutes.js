@@ -543,6 +543,15 @@ router.get('/file-history', requireAuth, async (req, res) => {
           security_interactivity_governance: payload.security_interactivity_governance || result.security_interactivity_governance || null,
           remediation_ux: payload.remediation_ux || result.remediation_ux || null,
           review_decision_ux: payload.review_decision_ux || result.review_decision_ux || null,
+          // APP-66: production_package_governance — printhouse handoff / production
+          // package readiness (Phase 71). package_ready and blocked_by_governance_domains
+          // are surfaced directly so history cards can show handoff status without
+          // re-deriving it from job status.
+          production_package_governance: payload.production_package_governance || result.production_package_governance || null,
+          package_ready: (() => {
+            const pkg = payload.production_package_governance || result.production_package_governance || null;
+            return pkg?.package_ready ?? null;
+          })(),
           // APP-62: derived safe fields for history card display.
           remediation_state: (() => {
             const ux = payload.remediation_ux || result.remediation_ux || null;

@@ -974,6 +974,33 @@ export const en = {
   'proof.operatorNotes': 'Operator notes',
   'proof.progressionBlocked': 'A human review is required before this file can move to production.',
   'proof.download.blocked': 'Production download is not available — a customer-approved proof is required before this file can be sent to production.',
+
+  // APP-66: Printhouse handoff / production package (Phase 71)
+  'productionPackage.panelTitle': 'Printhouse handoff package',
+  'productionPackage.ready': 'Production package ready',
+  'productionPackage.notReady': 'Production package not ready',
+  'productionPackage.notReadyDesc': 'This file is not yet ready to be packaged for printhouse delivery. Outstanding items must be resolved first.',
+  'productionPackage.approvedArtifact': 'Approved file',
+  'productionPackage.includedReports': 'Included reports',
+  'productionPackage.paymentRequired': 'Payment is required before the production package can be released.',
+  'productionPackage.blockers': 'Outstanding items',
+  'productionPackage.approvedArtifactHash': 'Approved artifact hash',
+  'productionPackage.domain.artifactTrust': 'Artifact trust verification',
+  'productionPackage.domain.reviewDecision': 'Operator review decision',
+  'productionPackage.domain.remediation': 'Customer remediation',
+  'productionPackage.domain.proofApproval': 'Visual proof approval',
+  'productionPackage.domain.visualDiff': 'Visual diff verification',
+  'productionPackage.domain.security': 'Security / interactive content review',
+  'productionPackage.domain.standards': 'Standards certification',
+  'productionPackage.domain.structuralMetadata': 'Structural metadata review',
+  'productionPackage.domain.pageMarks': 'Page marks review',
+  'productionPackage.domain.ink': 'Ink / color review',
+  'productionPackage.domain.image': 'Image review',
+  'productionPackage.domain.font': 'Font review',
+  'productionPackage.domain.transparency': 'Transparency / overprint review',
+  'productionPackage.domain.heavyPdfProbe': 'Document analysis review',
+  'productionPackage.domain.payment': 'Payment / production unlock',
+  'productionPackage.domain.generic': 'Additional review required',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

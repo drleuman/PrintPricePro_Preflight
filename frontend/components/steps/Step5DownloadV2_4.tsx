@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { PPOSLogo } from '../../design/preflight_starter_pack';
 import { ClientChangeReportDrawer } from '../reports/ClientChangeReportDrawer';
-import type { ArtifactTrust, ArtifactUxContract, ReviewDecisionUx, RemediationUx, HeavyPdfProbeGovernance, SecurityInteractivityGovernance, VisualDiffGovernance, ProofApprovalGovernance } from '../../types';
+import type { ArtifactTrust, ArtifactUxContract, ReviewDecisionUx, RemediationUx, HeavyPdfProbeGovernance, SecurityInteractivityGovernance, VisualDiffGovernance, ProofApprovalGovernance, ProductionPackageGovernance } from '../../types';
 import { getArtifactUxForArtifact, getArtifactFilename } from '../../utils/artifactUx';
 import { ReviewDecisionPanel } from '../review/ReviewDecisionPanel';
 import { CustomerRemediationPanel } from '../remediation/CustomerRemediationPanel';
@@ -18,6 +18,7 @@ import { HeavyPdfProbePanel } from '../reports/HeavyPdfProbePanel';
 import { SecurityInteractivityPanel } from '../security/SecurityInteractivityPanel';
 import { VisualProofPanel } from '../proof/VisualProofPanel';
 import { ProofApprovalPanel } from '../proof/ProofApprovalPanel';
+import { ProductionPackagePanel } from '../handoff/ProductionPackagePanel';
 
 interface Step5DownloadV2_4Props {
     lastPdfUrl: string | null;
@@ -85,6 +86,13 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
     // print-readiness, and unresolved interactive content requires review.
     const securityInteractivityGovernance: SecurityInteractivityGovernance | null = (result as any)?.security_interactivity_governance ?? null;
     const securityReviewRequired = securityInteractivityGovernance?.review_required === true;
+
+    // APP-66: production_package_governance — printhouse handoff / production
+    // package readiness. Distinct from the customer download above: this
+    // describes whether the *production package* (approved artifact + reports)
+    // is ready for delivery to a printhouse, not whether the customer can
+    // retrieve their corrected/review file.
+    const productionPackageGovernance: ProductionPackageGovernance | null = (result as any)?.production_package_governance ?? null;
 
     const remediationRequiresReupload =
         remediationUx !== null &&
@@ -166,6 +174,11 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
             )}
             {proofApprovalGovernance && (
                 <ProofApprovalPanel proofApprovalGovernance={proofApprovalGovernance} audience="customer" />
+            )}
+
+            {/* APP-66: printhouse handoff / production package readiness (Phase 71) */}
+            {productionPackageGovernance && (
+                <ProductionPackagePanel productionPackageGovernance={productionPackageGovernance} audience="customer" />
             )}
 
             {/* APP-62: reupload required — hide the production download card */}

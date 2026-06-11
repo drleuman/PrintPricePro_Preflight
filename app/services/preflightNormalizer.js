@@ -627,7 +627,10 @@ function mergeGovernanceObject(candidates) {
       // APP-64: a font source unavailable for automatic embedding always wins.
       'font_source_available',
       // APP-64: a visual diff that was required but not performed always wins.
-      'visual_diff_performed'
+      'visual_diff_performed',
+      // APP-66: a production package marked not-ready, or an outstanding
+      // payment/production unlock, by any source always wins.
+      'package_ready', 'payment_satisfied'
     ]) {
       if (f in c && c[f] === false) result[f] = false;
     }
@@ -767,6 +770,41 @@ function extractGovernanceContracts(payload) {
   }
   if (proofApproval && proofApproval.proof_status === 'PROOF_REJECTED_REUPLOAD_REQUIRED') {
     proofApproval.review_required = true;
+  }
+
+  // APP-66: Production package / printhouse handoff readiness (Phase 71). The
+  // package can never be reported ready while another governance domain still
+  // requires review, while artifact_trust withholds production certification,
+  // or while a required payment/production unlock is outstanding — even if the
+  // OS payload's production_package_governance itself says package_ready=true.
+  const productionPackage = contracts.production_package_governance;
+  if (productionPackage) {
+    const blockingDomains = new Set(
+      Array.isArray(productionPackage.blocked_by_governance_domains)
+        ? productionPackage.blocked_by_governance_domains
+        : []
+    );
+
+    for (const key of GOVERNANCE_KEYS) {
+      if (key === 'production_package_governance') continue;
+      const domain = contracts[key];
+      if (domain && domain.review_required === true) {
+        blockingDomains.add(key);
+      }
+    }
+
+    if (contracts.artifact_trust?.production_certified === false) {
+      blockingDomains.add('artifact_trust');
+    }
+
+    if (productionPackage.payment_required === true && productionPackage.payment_satisfied !== true) {
+      blockingDomains.add('payment');
+    }
+
+    if (blockingDomains.size > 0) {
+      productionPackage.package_ready = false;
+      productionPackage.blocked_by_governance_domains = Array.from(blockingDomains);
+    }
   }
 
   return contracts;
