@@ -610,7 +610,11 @@ const GOVERNANCE_KEYS = [
   'ink_governance',
   'selective_image_governance',
   'font_governance',
-  'transparency_overprint_physical_governance'
+  'transparency_overprint_physical_governance',
+  // APP-67: Policy profiles / machine matching / audit bundle / fix recommendations (Phases 72-75)
+  'machine_readiness_governance',
+  'audit_bundle_governance',
+  'recommendation_governance'
 ];
 
 // Conservative merge: false flags always win; true flags win for review_required;
@@ -630,7 +634,11 @@ function mergeGovernanceObject(candidates) {
       'visual_diff_performed',
       // APP-66: a production package marked not-ready, or an outstanding
       // payment/production unlock, by any source always wins.
-      'package_ready', 'payment_satisfied'
+      'package_ready', 'payment_satisfied',
+      // APP-67: a policy profile that failed, a machine match that is
+      // incompatible, an audit bundle that is unavailable, or a fix
+      // recommendation that should not auto-apply, by any source always wins.
+      'profile_passed', 'compatible', 'bundle_available', 'auto_apply'
     ]) {
       if (f in c && c[f] === false) result[f] = false;
     }
@@ -638,6 +646,12 @@ function mergeGovernanceObject(candidates) {
     // APP-62F: heavy_pdf_probe_governance — fatal/degraded flags always win (true wins),
     // and a fatal document failure overrides a degraded-but-usable classification.
     for (const f of ['fatal_document_failure', 'analysis_degraded', 'heavy_pdf_detected']) {
+      if (c[f] === true) result[f] = true;
+    }
+    // APP-67: a recommendation flagged as destructive or operator-only by any
+    // source always wins — never silently downgrade to a customer-safe,
+    // auto-applicable recommendation.
+    for (const f of ['destructive', 'operator_only']) {
       if (c[f] === true) result[f] = true;
     }
     // APP-64: visual/destructive governance signals that always win when true —
@@ -663,7 +677,7 @@ function mergeGovernanceObject(candidates) {
       const newRank = PROOF_STATUS_RANK[c.proof_status] ?? -1;
       if (newRank > curRank) result.proof_status = c.proof_status;
     }
-    for (const arr of ['blocked_by_governance_domains', 'warnings', 'review_required_reasons']) {
+    for (const arr of ['blocked_by_governance_domains', 'warnings', 'review_required_reasons', 'blockers', 'mismatch_reasons']) {
       if (Array.isArray(c[arr])) {
         result[arr] = [...new Set([...(Array.isArray(result[arr]) ? result[arr] : []), ...c[arr]])];
       }
@@ -770,6 +784,31 @@ function extractGovernanceContracts(payload) {
   }
   if (proofApproval && proofApproval.proof_status === 'PROOF_REJECTED_REUPLOAD_REQUIRED') {
     proofApproval.review_required = true;
+  }
+
+  // APP-67: Policy profile / standards template (Phase 72). A profile that did
+  // not pass leaves the document non-compliant with the printhouse's required
+  // standard and must require review before production.
+  const policyProfile = contracts.policy_profile_governance;
+  if (policyProfile && policyProfile.profile_passed === false) {
+    policyProfile.review_required = true;
+  }
+
+  // APP-67: Machine assignment / production capability matching (Phase 73). A
+  // file that is not compatible with the target machine must require review —
+  // "fixed" never implies "ready for this press".
+  const machineReadiness = contracts.machine_readiness_governance;
+  if (machineReadiness && machineReadiness.compatible === false) {
+    machineReadiness.review_required = true;
+  }
+
+  // APP-67: Fix recommendation layer (Phase 75). A recommendation flagged as
+  // destructive must never be auto-applied and must always be treated as
+  // operator-only, regardless of what the OS payload set for auto_apply.
+  const recommendation = contracts.recommendation_governance;
+  if (recommendation && recommendation.destructive === true) {
+    recommendation.operator_only = true;
+    recommendation.auto_apply = false;
   }
 
   // APP-66: Production package / printhouse handoff readiness (Phase 71). The

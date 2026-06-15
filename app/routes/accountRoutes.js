@@ -552,6 +552,13 @@ router.get('/file-history', requireAuth, async (req, res) => {
             const pkg = payload.production_package_governance || result.production_package_governance || null;
             return pkg?.package_ready ?? null;
           })(),
+          // APP-67: policy profile / machine matching / audit bundle / fix recommendations
+          // (Phases 72-75). Preserved as-is so history cards can show standards-profile
+          // and machine-compatibility status without re-deriving it from job status.
+          policy_profile_governance: payload.policy_profile_governance || result.policy_profile_governance || null,
+          machine_readiness_governance: payload.machine_readiness_governance || result.machine_readiness_governance || null,
+          audit_bundle_governance: payload.audit_bundle_governance || result.audit_bundle_governance || null,
+          recommendation_governance: payload.recommendation_governance || result.recommendation_governance || null,
           // APP-62: derived safe fields for history card display.
           remediation_state: (() => {
             const ux = payload.remediation_ux || result.remediation_ux || null;

@@ -620,6 +620,76 @@ export interface ProductionPackageGovernance {
   evidence?: Record<string, unknown>;
 }
 
+// ─── APP-67: Policy Profiles / Machine Matching / Audit Bundle / Recommendations ─
+// Mirrors the OS Phase 72-75 governance domains. extractGovernanceContracts()
+// forces review_required=true on policy_profile_governance when profile_passed
+// is false, and on machine_readiness_governance when compatible is false — both
+// then surface in production_package_governance.blocked_by_governance_domains
+// (see preflightNormalizer.js).
+
+/** Active standards profile / policy template result (Phase 72). */
+export interface PolicyProfileGovernance {
+  active_profile?: string;
+  active_profile_label?: string;
+  required_standard?: string;
+  profile_passed?: boolean;
+  blockers?: string[];
+  review_required?: boolean;
+  warnings?: string[];
+  evidence?: Record<string, unknown>;
+}
+
+/** Production machine assignment / capability matching result (Phase 73). */
+export interface MachineReadinessGovernance {
+  compatible?: boolean;
+  compatible_machines?: string[];
+  incompatible_machines?: string[];
+  mismatch_reasons?: string[];
+  review_required?: boolean;
+  warnings?: string[];
+  evidence?: Record<string, unknown>;
+}
+
+/** Compliance/audit export bundle availability (Phase 74). */
+export interface AuditBundleGovernance {
+  bundle_available?: boolean;
+  bundle_id?: string;
+  included_artifacts?: string[];
+  included_reports?: string[];
+  /** Defaults to operator-only (false) when omitted — never assume customer-visible. */
+  customer_visible?: boolean;
+  /** Operator-only evidence (raw tool output, internal IDs). Never render to customer audience. */
+  internal_only_evidence?: Record<string, unknown>;
+  warnings?: string[];
+}
+
+/** Canonical next-action codes for the fix recommendation layer (Phase 75). */
+export type RecommendedActionCode =
+  | 'NONE'
+  | 'PROCEED_TO_PRODUCTION'
+  | 'AWAIT_REVIEW'
+  | 'REUPLOAD_REQUIRED'
+  | 'ADJUST_POLICY_PROFILE'
+  | 'SELECT_COMPATIBLE_MACHINE'
+  | 'REQUEST_AUDIT_BUNDLE'
+  | 'OPERATOR_DESTRUCTIVE_FIX_REQUIRED';
+
+/** Suggested next-action / fix recommendation (Phase 75). */
+export interface RecommendationGovernance {
+  recommended_action?: RecommendedActionCode | string;
+  recommendation_label?: string;
+  reason?: string;
+  customer_message?: string;
+  /** True if this recommendation must only be actioned by an operator. */
+  operator_only?: boolean;
+  /** True if applying this recommendation is a destructive print transform. */
+  destructive?: boolean;
+  /** Must never be true when destructive=true (enforced in preflightNormalizer.js). */
+  auto_apply?: boolean;
+  review_required?: boolean;
+  warnings?: string[];
+}
+
 // ─── APP-62F: Heavy PDF Probe Semantics Governance ───────────────────────────
 // Mirrors heavy_pdf_probe_governance emitted by the Engine and preserved
 // Engine -> Worker -> Service -> Control Plane -> BFF. Explains analysis

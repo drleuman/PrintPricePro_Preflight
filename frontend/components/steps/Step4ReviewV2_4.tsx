@@ -39,6 +39,10 @@ import {
 } from '../visual/VisualGovernancePanels';
 import { VisualProofPanel } from '../proof/VisualProofPanel';
 import { ProofApprovalPanel } from '../proof/ProofApprovalPanel';
+import { PolicyProfilePanel } from '../policy/PolicyProfilePanel';
+import { MachineReadinessPanel } from '../machine/MachineReadinessPanel';
+import { AuditBundlePanel } from '../audit/AuditBundlePanel';
+import { RecommendationPanel } from '../recommendation/RecommendationPanel';
 import type {
     ReviewDecisionUx,
     RemediationUx,
@@ -50,6 +54,10 @@ import type {
     TransparencyOverprintPhysicalGovernance,
     VisualDiffGovernance,
     ProofApprovalGovernance,
+    PolicyProfileGovernance,
+    MachineReadinessGovernance,
+    AuditBundleGovernance,
+    RecommendationGovernance,
 } from '../../types';
 
 interface Step4ReviewV2_4Props {
@@ -218,6 +226,12 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
     const proofApprovalGovernance: ProofApprovalGovernance | null = (result as any)?.proof_approval_governance ?? null;
     const proofRequiresApproval =
         proofApprovalGovernance?.proof_required === true && proofApprovalGovernance?.proof_status !== 'PROOF_APPROVED';
+
+    // APP-67: policy profile / machine matching / audit bundle / fix recommendations (Phases 72-75).
+    const policyProfileGovernance: PolicyProfileGovernance | null = (result as any)?.policy_profile_governance ?? null;
+    const machineReadinessGovernance: MachineReadinessGovernance | null = (result as any)?.machine_readiness_governance ?? null;
+    const auditBundleGovernance: AuditBundleGovernance | null = (result as any)?.audit_bundle_governance ?? null;
+    const recommendationGovernance: RecommendationGovernance | null = (result as any)?.recommendation_governance ?? null;
 
     // Block "ready" messaging when review_decision_ux has no decision yet.
     const reviewDecisionBlocksProgression =
@@ -460,6 +474,28 @@ export const Step4ReviewV2_4: React.FC<Step4ReviewV2_4Props> = ({
                             proofApprovalGovernance={proofApprovalGovernance}
                             audience="customer"
                         />
+                    </div>
+                )}
+
+                {/* APP-67: policy profile / machine matching / audit bundle / fix recommendations (Phases 72-75) */}
+                {policyProfileGovernance && (
+                    <div className="mb-6">
+                        <PolicyProfilePanel policyProfileGovernance={policyProfileGovernance} audience="customer" />
+                    </div>
+                )}
+                {machineReadinessGovernance && (
+                    <div className="mb-6">
+                        <MachineReadinessPanel machineReadinessGovernance={machineReadinessGovernance} audience="customer" />
+                    </div>
+                )}
+                {auditBundleGovernance && (
+                    <div className="mb-6">
+                        <AuditBundlePanel auditBundleGovernance={auditBundleGovernance} audience="customer" />
+                    </div>
+                )}
+                {recommendationGovernance && (
+                    <div className="mb-6">
+                        <RecommendationPanel recommendationGovernance={recommendationGovernance} audience="customer" />
                     </div>
                 )}
 

@@ -15,6 +15,10 @@ import {
 import { VisualProofPanel } from '../proof/VisualProofPanel';
 import { ProofApprovalPanel } from '../proof/ProofApprovalPanel';
 import { ProductionPackagePanel } from '../handoff/ProductionPackagePanel';
+import { PolicyProfilePanel } from '../policy/PolicyProfilePanel';
+import { MachineReadinessPanel } from '../machine/MachineReadinessPanel';
+import { AuditBundlePanel } from '../audit/AuditBundlePanel';
+import { RecommendationPanel } from '../recommendation/RecommendationPanel';
 import type {
   HeavyPdfProbeGovernance,
   SecurityInteractivityGovernance,
@@ -25,6 +29,10 @@ import type {
   VisualDiffGovernance,
   ProofApprovalGovernance,
   ProductionPackageGovernance,
+  PolicyProfileGovernance,
+  MachineReadinessGovernance,
+  AuditBundleGovernance,
+  RecommendationGovernance,
 } from '../../types';
 
 interface ClientChangeReportDrawerProps {
@@ -72,6 +80,16 @@ export const ClientChangeReportDrawer: React.FC<ClientChangeReportDrawerProps> =
   // APP-66: production_package_governance — printhouse handoff / production package (Phase 71).
   const productionPackageGovernance: ProductionPackageGovernance | null =
     (result as any)?.production_package_governance ?? (report as any)?.production_package_governance ?? null;
+
+  // APP-67: policy profile / machine matching / audit bundle / fix recommendations (Phases 72-75).
+  const policyProfileGovernance: PolicyProfileGovernance | null =
+    (result as any)?.policy_profile_governance ?? (report as any)?.policy_profile_governance ?? null;
+  const machineReadinessGovernance: MachineReadinessGovernance | null =
+    (result as any)?.machine_readiness_governance ?? (report as any)?.machine_readiness_governance ?? null;
+  const auditBundleGovernance: AuditBundleGovernance | null =
+    (result as any)?.audit_bundle_governance ?? (report as any)?.audit_bundle_governance ?? null;
+  const recommendationGovernance: RecommendationGovernance | null =
+    (result as any)?.recommendation_governance ?? (report as any)?.recommendation_governance ?? null;
 
   const handleCopy = async () => {
     try {
@@ -286,6 +304,20 @@ export const ClientChangeReportDrawer: React.FC<ClientChangeReportDrawerProps> =
                       {/* 5f. Printhouse handoff / production package (APP-66) */}
                       {productionPackageGovernance && (
                         <ProductionPackagePanel productionPackageGovernance={productionPackageGovernance} audience="customer" />
+                      )}
+
+                      {/* 5g. Policy profile / machine matching / audit bundle / fix recommendations (APP-67) */}
+                      {policyProfileGovernance && (
+                        <PolicyProfilePanel policyProfileGovernance={policyProfileGovernance} audience="customer" />
+                      )}
+                      {machineReadinessGovernance && (
+                        <MachineReadinessPanel machineReadinessGovernance={machineReadinessGovernance} audience="customer" />
+                      )}
+                      {auditBundleGovernance && (
+                        <AuditBundlePanel auditBundleGovernance={auditBundleGovernance} audience="customer" />
+                      )}
+                      {recommendationGovernance && (
+                        <RecommendationPanel recommendationGovernance={recommendationGovernance} audience="customer" />
                       )}
 
                       {/* 6. Recommended next step */}

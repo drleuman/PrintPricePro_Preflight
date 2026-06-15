@@ -32,6 +32,9 @@ const DOMAIN_LABEL_KEYS: Record<string, string> = {
     transparency_overprint_physical_governance: 'productionPackage.domain.transparency',
     heavy_pdf_probe_governance: 'productionPackage.domain.heavyPdfProbe',
     payment: 'productionPackage.domain.payment',
+    // APP-67: policy profile / machine readiness blockers (Phases 72-73)
+    policy_profile_governance: 'productionPackage.domain.policyProfile',
+    machine_readiness_governance: 'productionPackage.domain.machineReadiness',
 };
 
 // APP-66: artifact type keys reuse existing safe labels from APP-61's

@@ -1000,7 +1000,38 @@ export const en = {
   'productionPackage.domain.transparency': 'Transparency / overprint review',
   'productionPackage.domain.heavyPdfProbe': 'Document analysis review',
   'productionPackage.domain.payment': 'Payment / production unlock',
+  'productionPackage.domain.policyProfile': 'Standards profile review',
+  'productionPackage.domain.machineReadiness': 'Machine compatibility review',
   'productionPackage.domain.generic': 'Additional review required',
+
+  // APP-67: Policy profiles / machine matching / audit bundle / recommendations (Phases 72-75)
+  'policyProfile.panelTitle': 'Active policy profile',
+  'policyProfile.passed': 'Profile requirements met',
+  'policyProfile.failed': 'Profile requirements not met',
+  'policyProfile.requiredStandard': 'Required standard',
+  'policyProfile.blockers': 'Outstanding requirements',
+  'policyProfile.reviewRequiredNotice': 'A human review is required before this file can move to production.',
+
+  'machineReadiness.panelTitle': 'Machine compatibility',
+  'machineReadiness.compatible': 'Compatible with available production machines',
+  'machineReadiness.incompatible': 'Not compatible with available production machines',
+  'machineReadiness.incompatibleDesc': 'This file cannot be assigned to a compatible production machine yet. An operator will review the available options.',
+  'machineReadiness.compatibleMachines': 'Compatible machines',
+  'machineReadiness.incompatibleMachines': 'Incompatible machines',
+  'machineReadiness.mismatchReasons': 'Mismatch reasons',
+  'machineReadiness.reviewRequiredNotice': 'A human review is required before this file can move to production.',
+
+  'auditBundle.panelTitle': 'Audit bundle',
+  'auditBundle.available': 'Audit bundle available',
+  'auditBundle.notAvailable': 'Audit bundle not yet available',
+  'auditBundle.includedArtifacts': 'Included artifacts',
+  'auditBundle.includedReports': 'Included reports',
+  'auditBundle.internalEvidence': 'Internal evidence',
+
+  'recommendation.panelTitle': 'Recommended next action',
+  'recommendation.why': 'Why',
+  'recommendation.operatorOnlyNotice': 'This action requires operator review and will not be applied automatically.',
+  'recommendation.operatorPending': 'An operator is reviewing recommended next steps for this file.',
 } as const;
 
 export type TranslationKeys = keyof typeof en;

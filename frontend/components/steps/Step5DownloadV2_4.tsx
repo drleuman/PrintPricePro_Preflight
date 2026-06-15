@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { PPOSLogo } from '../../design/preflight_starter_pack';
 import { ClientChangeReportDrawer } from '../reports/ClientChangeReportDrawer';
-import type { ArtifactTrust, ArtifactUxContract, ReviewDecisionUx, RemediationUx, HeavyPdfProbeGovernance, SecurityInteractivityGovernance, VisualDiffGovernance, ProofApprovalGovernance, ProductionPackageGovernance } from '../../types';
+import type { ArtifactTrust, ArtifactUxContract, ReviewDecisionUx, RemediationUx, HeavyPdfProbeGovernance, SecurityInteractivityGovernance, VisualDiffGovernance, ProofApprovalGovernance, ProductionPackageGovernance, PolicyProfileGovernance, MachineReadinessGovernance, AuditBundleGovernance, RecommendationGovernance } from '../../types';
 import { getArtifactUxForArtifact, getArtifactFilename } from '../../utils/artifactUx';
 import { ReviewDecisionPanel } from '../review/ReviewDecisionPanel';
 import { CustomerRemediationPanel } from '../remediation/CustomerRemediationPanel';
@@ -19,6 +19,10 @@ import { SecurityInteractivityPanel } from '../security/SecurityInteractivityPan
 import { VisualProofPanel } from '../proof/VisualProofPanel';
 import { ProofApprovalPanel } from '../proof/ProofApprovalPanel';
 import { ProductionPackagePanel } from '../handoff/ProductionPackagePanel';
+import { PolicyProfilePanel } from '../policy/PolicyProfilePanel';
+import { MachineReadinessPanel } from '../machine/MachineReadinessPanel';
+import { AuditBundlePanel } from '../audit/AuditBundlePanel';
+import { RecommendationPanel } from '../recommendation/RecommendationPanel';
 
 interface Step5DownloadV2_4Props {
     lastPdfUrl: string | null;
@@ -93,6 +97,12 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
     // is ready for delivery to a printhouse, not whether the customer can
     // retrieve their corrected/review file.
     const productionPackageGovernance: ProductionPackageGovernance | null = (result as any)?.production_package_governance ?? null;
+
+    // APP-67: policy profile / machine matching / audit bundle / fix recommendations (Phases 72-75).
+    const policyProfileGovernance: PolicyProfileGovernance | null = (result as any)?.policy_profile_governance ?? null;
+    const machineReadinessGovernance: MachineReadinessGovernance | null = (result as any)?.machine_readiness_governance ?? null;
+    const auditBundleGovernance: AuditBundleGovernance | null = (result as any)?.audit_bundle_governance ?? null;
+    const recommendationGovernance: RecommendationGovernance | null = (result as any)?.recommendation_governance ?? null;
 
     const remediationRequiresReupload =
         remediationUx !== null &&
@@ -179,6 +189,20 @@ export const Step5DownloadV2_4: React.FC<Step5DownloadV2_4Props> = ({
             {/* APP-66: printhouse handoff / production package readiness (Phase 71) */}
             {productionPackageGovernance && (
                 <ProductionPackagePanel productionPackageGovernance={productionPackageGovernance} audience="customer" />
+            )}
+
+            {/* APP-67: policy profile / machine matching / audit bundle / fix recommendations (Phases 72-75) */}
+            {policyProfileGovernance && (
+                <PolicyProfilePanel policyProfileGovernance={policyProfileGovernance} audience="customer" />
+            )}
+            {machineReadinessGovernance && (
+                <MachineReadinessPanel machineReadinessGovernance={machineReadinessGovernance} audience="customer" />
+            )}
+            {auditBundleGovernance && (
+                <AuditBundlePanel auditBundleGovernance={auditBundleGovernance} audience="customer" />
+            )}
+            {recommendationGovernance && (
+                <RecommendationPanel recommendationGovernance={recommendationGovernance} audience="customer" />
             )}
 
             {/* APP-62: reupload required — hide the production download card */}

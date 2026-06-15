@@ -1003,5 +1003,36 @@ export const es = {
   'productionPackage.domain.transparency': 'Revisión de transparencia / sobreimpresión',
   'productionPackage.domain.heavyPdfProbe': 'Revisión de análisis del documento',
   'productionPackage.domain.payment': 'Pago / desbloqueo de producción',
+  'productionPackage.domain.policyProfile': 'Revisión de perfil de estándares',
+  'productionPackage.domain.machineReadiness': 'Revisión de compatibilidad de máquina',
   'productionPackage.domain.generic': 'Se requiere revisión adicional',
+
+  // APP-67: Perfiles de política / asignación de máquina / paquete de auditoría / recomendaciones (Fases 72-75)
+  'policyProfile.panelTitle': 'Perfil de política activo',
+  'policyProfile.passed': 'Se cumplen los requisitos del perfil',
+  'policyProfile.failed': 'No se cumplen los requisitos del perfil',
+  'policyProfile.requiredStandard': 'Estándar requerido',
+  'policyProfile.blockers': 'Requisitos pendientes',
+  'policyProfile.reviewRequiredNotice': 'Se requiere una revisión humana antes de que este archivo pueda pasar a producción.',
+
+  'machineReadiness.panelTitle': 'Compatibilidad de máquina',
+  'machineReadiness.compatible': 'Compatible con las máquinas de producción disponibles',
+  'machineReadiness.incompatible': 'No compatible con las máquinas de producción disponibles',
+  'machineReadiness.incompatibleDesc': 'Este archivo aún no puede asignarse a una máquina de producción compatible. Un operador revisará las opciones disponibles.',
+  'machineReadiness.compatibleMachines': 'Máquinas compatibles',
+  'machineReadiness.incompatibleMachines': 'Máquinas incompatibles',
+  'machineReadiness.mismatchReasons': 'Motivos de incompatibilidad',
+  'machineReadiness.reviewRequiredNotice': 'Se requiere una revisión humana antes de que este archivo pueda pasar a producción.',
+
+  'auditBundle.panelTitle': 'Paquete de auditoría',
+  'auditBundle.available': 'Paquete de auditoría disponible',
+  'auditBundle.notAvailable': 'Paquete de auditoría aún no disponible',
+  'auditBundle.includedArtifacts': 'Artefactos incluidos',
+  'auditBundle.includedReports': 'Informes incluidos',
+  'auditBundle.internalEvidence': 'Evidencia interna',
+
+  'recommendation.panelTitle': 'Acción recomendada',
+  'recommendation.why': 'Motivo',
+  'recommendation.operatorOnlyNotice': 'Esta acción requiere revisión de un operador y no se aplicará automáticamente.',
+  'recommendation.operatorPending': 'Un operador está revisando los próximos pasos recomendados para este archivo.',
 } as const;
