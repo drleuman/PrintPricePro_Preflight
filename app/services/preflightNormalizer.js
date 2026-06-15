@@ -811,6 +811,26 @@ function extractGovernanceContracts(payload) {
     recommendation.auto_apply = false;
   }
 
+  // APP-68: Standards certification claims (PDF/X, PDF/A) require validator
+  // evidence under the Phase 55+ truth model. A compliance claim made without
+  // supporting evidence must not be trusted by the BFF — withdraw the unverified
+  // claim and require review, regardless of which domain asserted it.
+  for (const domainKey of ['artifact_trust', 'standards_certification_governance']) {
+    const domain = contracts[domainKey];
+    if (!domain) continue;
+    const hasEvidence = !!(domain.evidence && typeof domain.evidence === 'object' && Object.keys(domain.evidence).length > 0);
+    if (!hasEvidence) {
+      if (domain.pdfx_compliance_claimed === true) {
+        domain.pdfx_compliance_claimed = false;
+        domain.review_required = true;
+      }
+      if (domain.pdfa_compliance_claimed === true) {
+        domain.pdfa_compliance_claimed = false;
+        domain.review_required = true;
+      }
+    }
+  }
+
   // APP-66: Production package / printhouse handoff readiness (Phase 71). The
   // package can never be reported ready while another governance domain still
   // requires review, while artifact_trust withholds production certification,
