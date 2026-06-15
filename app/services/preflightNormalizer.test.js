@@ -19,6 +19,8 @@ const {
   linkFixJob,
   getLinkedSourceJobId,
   getCachedSourceJob,
+  mergeGovernanceObject,
+  extractGovernanceContracts,
 } = require('./preflightNormalizer');
 
 // ---------------------------------------------------------------------------
@@ -535,5 +537,316 @@ describe('cacheSourceJob / linkFixJob / getLinkedSourceJobId / getCachedSourceJo
 
   it('ignores null inputs in linkFixJob', () => {
     expect(() => linkFixJob(null, null)).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mergeGovernanceObject
+// ---------------------------------------------------------------------------
+describe('mergeGovernanceObject', () => {
+  it.each([
+    'production_certified',
+    'standard_certified',
+    'certified_pdf_allowed',
+    'customer_visible',
+    'compliance_claim_allowed',
+    'pdfx_compliance_claimed',
+    'pdfa_compliance_claimed',
+    'font_source_available',
+    'visual_diff_performed',
+    'package_ready',
+    'payment_satisfied',
+    'profile_passed',
+    'compatible',
+    'bundle_available',
+    'auto_apply',
+  ])('a false value for "%s" always wins over a true value', (field) => {
+    const result = mergeGovernanceObject([{ [field]: true }, { [field]: false }]);
+    expect(result[field]).toBe(false);
+  });
+
+  it('does not flip a false value back to true', () => {
+    const result = mergeGovernanceObject([{ package_ready: false }, { package_ready: true }]);
+    expect(result.package_ready).toBe(false);
+  });
+
+  it('review_required: true wins over false', () => {
+    const result = mergeGovernanceObject([{ review_required: false }, { review_required: true }]);
+    expect(result.review_required).toBe(true);
+  });
+
+  it.each(['fatal_document_failure', 'analysis_degraded', 'heavy_pdf_detected'])(
+    '"%s": true always wins (APP-62F)',
+    (field) => {
+      const result = mergeGovernanceObject([{ [field]: false }, { [field]: true }]);
+      expect(result[field]).toBe(true);
+    }
+  );
+
+  it.each(['destructive', 'operator_only'])(
+    '"%s": true always wins (APP-67)',
+    (field) => {
+      const result = mergeGovernanceObject([{ [field]: false }, { [field]: true }]);
+      expect(result[field]).toBe(true);
+    }
+  );
+
+  it.each([
+    'low_res_unfixable',
+    'transparency_flattened',
+    'overprint_modified',
+    'visual_change_detected',
+    'visual_change_expected',
+    'visual_diff_required',
+    'proof_required',
+  ])('"%s": true always wins (APP-64/65)', (field) => {
+    const result = mergeGovernanceObject([{ [field]: false }, { [field]: true }]);
+    expect(result[field]).toBe(true);
+  });
+
+  it('proof_status: a more restrictive status overrides a less restrictive one', () => {
+    const result = mergeGovernanceObject([
+      { proof_status: 'PROOF_APPROVED' },
+      { proof_status: 'PROOF_REJECTED_REUPLOAD_REQUIRED' },
+    ]);
+    expect(result.proof_status).toBe('PROOF_REJECTED_REUPLOAD_REQUIRED');
+  });
+
+  it('proof_status: a less restrictive status does not override a more restrictive one', () => {
+    const result = mergeGovernanceObject([
+      { proof_status: 'PROOF_REJECTED_REUPLOAD_REQUIRED' },
+      { proof_status: 'PROOF_APPROVED' },
+    ]);
+    expect(result.proof_status).toBe('PROOF_REJECTED_REUPLOAD_REQUIRED');
+  });
+
+  it('proof_status: PROOF_NOT_REQUIRED is the lowest rank and yields to any other status', () => {
+    const result = mergeGovernanceObject([
+      { proof_status: 'PROOF_NOT_REQUIRED' },
+      { proof_status: 'PROOF_REQUIRED' },
+    ]);
+    expect(result.proof_status).toBe('PROOF_REQUIRED');
+  });
+
+  it.each(['blocked_by_governance_domains', 'warnings', 'review_required_reasons', 'blockers', 'mismatch_reasons'])(
+    'deduplicates and merges the "%s" array across candidates',
+    (field) => {
+      const result = mergeGovernanceObject([{ [field]: ['a', 'b'] }, { [field]: ['b', 'c'] }]);
+      expect(result[field]).toEqual(['a', 'b', 'c']);
+    }
+  );
+
+  it.each(['tools', 'probe_summary'])('merges the "%s" object across candidates', (field) => {
+    const result = mergeGovernanceObject([{ [field]: { a: 1 } }, { [field]: { b: 2 } }]);
+    expect(result[field]).toEqual({ a: 1, b: 2 });
+  });
+
+  it('merges evidence objects across candidates', () => {
+    const result = mergeGovernanceObject([
+      { evidence: { pdfx: { tool: 'gs' } } },
+      { evidence: { pdfa: { tool: 'verapdf' } } },
+    ]);
+    expect(result.evidence).toEqual({ pdfx: { tool: 'gs' }, pdfa: { tool: 'verapdf' } });
+  });
+
+  it('forces degraded_but_usable to false when fatal_document_failure is true', () => {
+    const result = mergeGovernanceObject([{ degraded_but_usable: true, fatal_document_failure: true }]);
+    expect(result.degraded_but_usable).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// extractGovernanceContracts
+// ---------------------------------------------------------------------------
+describe('extractGovernanceContracts', () => {
+  it('returns an empty object for null/non-object payloads', () => {
+    expect(extractGovernanceContracts(null)).toEqual({});
+    expect(extractGovernanceContracts(undefined)).toEqual({});
+    expect(extractGovernanceContracts('not an object')).toEqual({});
+  });
+
+  it('returns an empty object when no governance keys are present', () => {
+    expect(extractGovernanceContracts({ jobId: 'job_1' })).toEqual({});
+  });
+
+  it('merges the same governance domain found at the top level and under result', () => {
+    const contracts = extractGovernanceContracts({
+      ink_governance: { warnings: ['top-level-warning'] },
+      result: { ink_governance: { warnings: ['nested-warning'] } },
+    });
+    expect(contracts.ink_governance.warnings).toEqual(['top-level-warning', 'nested-warning']);
+  });
+
+  // APP-64: ink / image / font / transparency-overprint governance
+  describe('APP-64 ink / image / font / transparency governance', () => {
+    it('forces review_required when ink_governance.tac_violation_remaining is true', () => {
+      const contracts = extractGovernanceContracts({ ink_governance: { tac_violation_remaining: true } });
+      expect(contracts.ink_governance.review_required).toBe(true);
+    });
+
+    it('does not force review_required when ink_governance.tac_violation_remaining is false', () => {
+      const contracts = extractGovernanceContracts({ ink_governance: { tac_violation_remaining: false } });
+      expect(contracts.ink_governance.review_required).toBeUndefined();
+    });
+
+    it('forces review_required when selective_image_governance.low_res_unfixable is true', () => {
+      const contracts = extractGovernanceContracts({ selective_image_governance: { low_res_unfixable: true } });
+      expect(contracts.selective_image_governance.review_required).toBe(true);
+    });
+
+    it('forces review_required when font_governance.font_source_available is false', () => {
+      const contracts = extractGovernanceContracts({ font_governance: { font_source_available: false } });
+      expect(contracts.font_governance.review_required).toBe(true);
+    });
+
+    it('does not force review_required when font_governance.font_source_available is true', () => {
+      const contracts = extractGovernanceContracts({ font_governance: { font_source_available: true } });
+      expect(contracts.font_governance.review_required).toBeUndefined();
+    });
+
+    it.each(['transparency_flattened', 'overprint_modified'])(
+      'forces review_required when transparency_overprint_physical_governance.%s is true',
+      (field) => {
+        const contracts = extractGovernanceContracts({
+          transparency_overprint_physical_governance: { [field]: true },
+        });
+        expect(contracts.transparency_overprint_physical_governance.review_required).toBe(true);
+      }
+    );
+  });
+
+  // APP-64/65: visual diff and proof approval governance
+  describe('visual diff and proof approval governance', () => {
+    it('forces review_required when a visual diff was required but not performed', () => {
+      const contracts = extractGovernanceContracts({
+        visual_diff_governance: { visual_diff_required: true, visual_diff_performed: false },
+      });
+      expect(contracts.visual_diff_governance.review_required).toBe(true);
+    });
+
+    it('does not force review_required when a required visual diff was performed', () => {
+      const contracts = extractGovernanceContracts({
+        visual_diff_governance: { visual_diff_required: true, visual_diff_performed: true },
+      });
+      expect(contracts.visual_diff_governance.review_required).toBeUndefined();
+    });
+
+    it('forces review_required when a proof is required but not yet approved', () => {
+      const contracts = extractGovernanceContracts({
+        proof_approval_governance: { proof_required: true, proof_status: 'PROOF_PENDING_CUSTOMER' },
+      });
+      expect(contracts.proof_approval_governance.review_required).toBe(true);
+    });
+
+    it('does not force review_required when a required proof has been approved', () => {
+      const contracts = extractGovernanceContracts({
+        proof_approval_governance: { proof_required: true, proof_status: 'PROOF_APPROVED' },
+      });
+      expect(contracts.proof_approval_governance.review_required).toBeUndefined();
+    });
+
+    it('forces review_required for a rejected proof even if proof_required is false', () => {
+      const contracts = extractGovernanceContracts({
+        proof_approval_governance: { proof_required: false, proof_status: 'PROOF_REJECTED_REUPLOAD_REQUIRED' },
+      });
+      expect(contracts.proof_approval_governance.review_required).toBe(true);
+    });
+  });
+
+  // APP-67: policy profiles / machine matching / fix recommendations
+  describe('policy profile / machine readiness / recommendation governance', () => {
+    it('forces review_required when policy_profile_governance.profile_passed is false', () => {
+      const contracts = extractGovernanceContracts({ policy_profile_governance: { profile_passed: false } });
+      expect(contracts.policy_profile_governance.review_required).toBe(true);
+    });
+
+    it('does not force review_required when policy_profile_governance.profile_passed is true', () => {
+      const contracts = extractGovernanceContracts({ policy_profile_governance: { profile_passed: true } });
+      expect(contracts.policy_profile_governance.review_required).toBeUndefined();
+    });
+
+    it('forces review_required when machine_readiness_governance.compatible is false', () => {
+      const contracts = extractGovernanceContracts({ machine_readiness_governance: { compatible: false } });
+      expect(contracts.machine_readiness_governance.review_required).toBe(true);
+    });
+
+    it('forces operator_only and auto_apply=false when a recommendation is destructive', () => {
+      const contracts = extractGovernanceContracts({
+        recommendation_governance: { destructive: true, operator_only: false, auto_apply: true },
+      });
+      expect(contracts.recommendation_governance.operator_only).toBe(true);
+      expect(contracts.recommendation_governance.auto_apply).toBe(false);
+    });
+
+    it('leaves auto_apply untouched when a recommendation is not destructive', () => {
+      const contracts = extractGovernanceContracts({
+        recommendation_governance: { destructive: false, auto_apply: true },
+      });
+      expect(contracts.recommendation_governance.auto_apply).toBe(true);
+    });
+  });
+
+  // APP-68: standards certification claims require evidence
+  describe('APP-68 standards certification evidence requirement', () => {
+    it.each(['pdfx_compliance_claimed', 'pdfa_compliance_claimed'])(
+      'withdraws %s and requires review when no evidence is present (artifact_trust)',
+      (field) => {
+        const contracts = extractGovernanceContracts({ artifact_trust: { [field]: true } });
+        expect(contracts.artifact_trust[field]).toBe(false);
+        expect(contracts.artifact_trust.review_required).toBe(true);
+      }
+    );
+
+    it('preserves a compliance claim when evidence is present', () => {
+      const contracts = extractGovernanceContracts({
+        artifact_trust: { pdfx_compliance_claimed: true, evidence: { pdfx: { tool: 'verapdf' } } },
+      });
+      expect(contracts.artifact_trust.pdfx_compliance_claimed).toBe(true);
+      expect(contracts.artifact_trust.review_required).toBeUndefined();
+    });
+
+    it('applies the same evidence rule to standards_certification_governance', () => {
+      const contracts = extractGovernanceContracts({
+        standards_certification_governance: { pdfa_compliance_claimed: true },
+      });
+      expect(contracts.standards_certification_governance.pdfa_compliance_claimed).toBe(false);
+      expect(contracts.standards_certification_governance.review_required).toBe(true);
+    });
+  });
+
+  // APP-66: production package readiness gating
+  describe('APP-66 production package readiness gating', () => {
+    it('marks the package not-ready and lists the blocking domain when another domain requires review', () => {
+      const contracts = extractGovernanceContracts({
+        ink_governance: { tac_violation_remaining: true },
+        production_package_governance: { package_ready: true },
+      });
+      expect(contracts.production_package_governance.package_ready).toBe(false);
+      expect(contracts.production_package_governance.blocked_by_governance_domains).toContain('ink_governance');
+    });
+
+    it('marks the package not-ready when artifact_trust withholds production certification', () => {
+      const contracts = extractGovernanceContracts({
+        artifact_trust: { production_certified: false },
+        production_package_governance: { package_ready: true },
+      });
+      expect(contracts.production_package_governance.package_ready).toBe(false);
+      expect(contracts.production_package_governance.blocked_by_governance_domains).toContain('artifact_trust');
+    });
+
+    it('marks the package not-ready when payment is required but not satisfied', () => {
+      const contracts = extractGovernanceContracts({
+        production_package_governance: { package_ready: true, payment_required: true, payment_satisfied: false },
+      });
+      expect(contracts.production_package_governance.package_ready).toBe(false);
+      expect(contracts.production_package_governance.blocked_by_governance_domains).toContain('payment');
+    });
+
+    it('leaves the package ready when no governance domain blocks it', () => {
+      const contracts = extractGovernanceContracts({
+        production_package_governance: { package_ready: true },
+      });
+      expect(contracts.production_package_governance.package_ready).toBe(true);
+    });
   });
 });

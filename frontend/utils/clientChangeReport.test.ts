@@ -18,7 +18,7 @@ describe('clientChangeReport', () => {
 
     const report = generateClientChangeReport(mockResult);
 
-    expect(report.headline).toContain('Technically improved');
+    expect(report.headline).toContain('Technically corrected');
     expect(report.productionReadiness.certified).toBe(false);
     expect(report.statusTone).toBe('warning');
     
@@ -65,7 +65,7 @@ describe('clientChangeReport', () => {
 
     expect(report.productionReadiness.certified).toBe(true);
     expect(report.statusTone).toBe('success');
-    expect(report.headline).toContain('ready for printing');
-    expect(report.customerMessage).toContain('is now production certified');
+    expect(report.headline).toContain('Your PDF has been corrected');
+    expect(report.customerMessage).toContain('successfully corrected');
   });
 });
