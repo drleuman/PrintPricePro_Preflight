@@ -850,3 +850,153 @@ describe('extractGovernanceContracts', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// normalizeAutofixFinalState — gaps in 219 new lines (APP-60 / APP-61)
+// ---------------------------------------------------------------------------
+
+const {
+  normalizeAutofixFinalState,
+  maybeNormalizeAutofixReportArtifact,
+  normalizeAutofixResultState,
+} = require('./preflightNormalizer');
+
+describe('normalizeAutofixFinalState', () => {
+  it('returns report unchanged when input is null/undefined', () => {
+    expect(normalizeAutofixFinalState(null)).toBeNull();
+    expect(normalizeAutofixFinalState(undefined)).toBeUndefined();
+  });
+
+  it('sets status to AUTOFIX_COMPLETED when all fixes applied, none failed', () => {
+    const report = {
+      applied_fixes: [{ code: 'REBUILD_TRIMBOX' }],
+      failed_fixes: [],
+      skipped_fixes: [],
+    };
+    const result = normalizeAutofixFinalState(report);
+    expect(result.summary.after.status).toBe('AUTOFIX_COMPLETED');
+    expect(result.summary.after.technically_fixed).toBe(true);
+  });
+
+  it('sets status to AUTOFIX_FAILED when report.status is already FAILED', () => {
+    // PPOS sends status='FAILED'; the normalizer preserves it and sets isFailedFix
+    const report = {
+      status: 'FAILED',
+      applied_fixes: [],
+      failed_fixes: [{ code: 'CONVERT_CMYK' }],
+      skipped_fixes: [],
+      artifacts: {},
+    };
+    const result = normalizeAutofixFinalState(report);
+    expect(result.summary.after.status).toBe('AUTOFIX_FAILED');
+  });
+
+  it('artifact_trust.production_certified=false overrides computed productionCertified=true', () => {
+    const report = {
+      applied_fixes: [{ code: 'REBUILD_TRIMBOX' }],
+      failed_fixes: [],
+      skipped_fixes: [],
+      artifact_trust: { production_certified: false },
+    };
+    const result = normalizeAutofixFinalState(report);
+    expect(result.summary.after.production_certified).toBe(false);
+  });
+
+  it('removes certified_pdf when fixes were applied but production is not certified (review required)', () => {
+    // With applied fixes + requiresHumanReview, productionCertified becomes false → certified_pdf is removed
+    const report = {
+      applied_fixes: [{ code: 'APPLY_BLEED', requiresHumanReview: true }],
+      failed_fixes: [],
+      skipped_fixes: [],
+      artifacts: {
+        certified_pdf: 'https://cdn/cert.pdf',
+        fixed_pdf: 'https://cdn/fixed.pdf',
+      },
+    };
+    const result = normalizeAutofixFinalState(report);
+    expect(result.artifacts.certified_pdf).toBeUndefined();
+    expect(result.artifacts.fixed_pdf).toBeDefined();
+  });
+
+  it('removes certified_pdf when artifact_trust.certified_pdf_allowed=false even if productionCertified', () => {
+    const report = {
+      applied_fixes: [{ code: 'REBUILD_TRIMBOX' }],
+      failed_fixes: [],
+      skipped_fixes: [],
+      artifact_trust: { certified_pdf_allowed: false, production_certified: true },
+      artifacts: {
+        certified_pdf: 'https://cdn/cert.pdf',
+        fixed_pdf: 'https://cdn/fixed.pdf',
+      },
+    };
+    const result = normalizeAutofixFinalState(report);
+    expect(result.artifacts.certified_pdf).toBeUndefined();
+  });
+
+  it('sets status COMPLETED_WITH_REVIEW when fix has HIGH destructiveFixRisk', () => {
+    const report = {
+      applied_fixes: [{ code: 'APPLY_BLEED', destructiveFixRisk: 'HIGH' }],
+      failed_fixes: [],
+      skipped_fixes: [],
+    };
+    const result = normalizeAutofixFinalState(report);
+    expect(result.summary.after.status).toBe('COMPLETED_WITH_REVIEW');
+    expect(result.summary.after.destructive_risk).toBe('HIGH');
+  });
+
+  it('sets status AUTOFIX_REVIEW_REQUIRED when only skipped fixes require review', () => {
+    const report = {
+      applied_fixes: [],
+      failed_fixes: [],
+      skipped_fixes: [{ code: 'CONVERT_CMYK', requiresHumanReview: true }],
+    };
+    const result = normalizeAutofixFinalState(report);
+    expect(result.summary.after.status).toBe('AUTOFIX_REVIEW_REQUIRED');
+  });
+
+  it('populates reviewReasons from applied fixes that require review', () => {
+    const report = {
+      applied_fixes: [{ code: 'APPLY_BLEED', requiresHumanReview: true }],
+      failed_fixes: [],
+      skipped_fixes: [],
+    };
+    const result = normalizeAutofixFinalState(report);
+    expect(result.summary.after.review_reasons).toContain('APPLY_BLEED');
+    expect(result.summary.after.review_required_count).toBeGreaterThan(0);
+  });
+
+  it('does not overwrite existing summary.after fields', () => {
+    const report = {
+      applied_fixes: [{ code: 'REBUILD_TRIMBOX' }],
+      failed_fixes: [],
+      skipped_fixes: [],
+      summary: {
+        after: { risk_level: 'CUSTOM', risk_score: 99 },
+      },
+    };
+    const result = normalizeAutofixFinalState(report);
+    expect(result.summary.after.risk_level).toBe('CUSTOM');
+    expect(result.summary.after.risk_score).toBe(99);
+  });
+});
+
+describe('maybeNormalizeAutofixReportArtifact', () => {
+  it('returns report unchanged when it does not look like an autofix report', () => {
+    const report = { jobId: 'job_abc', result: null };
+    const result = maybeNormalizeAutofixReportArtifact(report);
+    expect(result).toBe(report);
+  });
+
+  it('normalizes a report that contains applied_fixes + a fixed_pdf artifact', () => {
+    // The function treats this as autofix when hasAppliedFixes AND hasFixedPdf are both true
+    const report = {
+      applied_fixes: [{ code: 'REBUILD_TRIMBOX' }],
+      failed_fixes: [],
+      skipped_fixes: [],
+      artifacts: { fixed_pdf: 'https://cdn/fixed.pdf' },
+    };
+    const result = maybeNormalizeAutofixReportArtifact(report);
+    expect(result.summary).toBeDefined();
+    expect(result.summary.after).toBeDefined();
+  });
+});

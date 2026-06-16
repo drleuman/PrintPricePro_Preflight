@@ -68,4 +68,172 @@ describe('clientChangeReport', () => {
     expect(report.headline).toContain('Your PDF has been corrected');
     expect(report.customerMessage).toContain('successfully corrected');
   });
+
+  it('artifact_trust certified_pdf_allowed=false overrides productionCertified=true', () => {
+    const result = {
+      productionCertified: true,
+      requiresHumanReview: false,
+      fixes: ['REBUILD_TRIMBOX'],
+      skipped_fixes: [],
+      reviewReasons: [],
+      artifact_trust: {
+        certified_pdf_allowed: false,
+        production_certified: true,
+        review_required: false,
+      },
+    };
+
+    const report = generateClientChangeReport(result);
+
+    expect(report.productionReadiness.certified).toBe(false);
+    expect(report.statusTone).not.toBe('success');
+  });
+
+  it('artifact_trust production_certified=false overrides legacy productionCertified=true', () => {
+    const result = {
+      productionCertified: true,
+      requiresHumanReview: false,
+      fixes: [],
+      artifact_trust: { production_certified: false },
+    };
+
+    const report = generateClientChangeReport(result);
+    expect(report.productionReadiness.certified).toBe(false);
+  });
+
+  it('surfaces governanceWarnings as operatorNotes', () => {
+    const result = {
+      productionCertified: false,
+      requiresHumanReview: true,
+      fixes: [],
+      artifact_trust: {
+        review_required: true,
+        warnings: ['Color space mismatch detected', 'Missing output intent'],
+      },
+    };
+
+    const report = generateClientChangeReport(result);
+
+    expect(report.operatorNotes).toContain('Color space mismatch detected');
+    expect(report.operatorNotes).toContain('Missing output intent');
+    expect(report.operatorNotes).toContain('A production operator must review this file before printing.');
+  });
+
+  it('does not add operator review note when review is not required', () => {
+    const result = {
+      productionCertified: true,
+      requiresHumanReview: false,
+      fixes: ['REBUILD_TRIMBOX'],
+      artifact_trust: {
+        production_certified: true,
+        certified_pdf_allowed: true,
+        review_required: false,
+        warnings: [],
+      },
+    };
+
+    const report = generateClientChangeReport(result);
+    expect(report.operatorNotes).not.toContain('A production operator must review this file before printing.');
+  });
+
+  it('requiresReview with zero applied fixes → review-only headline and customer message', () => {
+    const result = {
+      productionCertified: false,
+      requiresHumanReview: true,
+      fixes: [],
+      skipped_fixes: [],
+      reviewReasons: [],
+    };
+
+    const report = generateClientChangeReport(result);
+
+    expect(report.headline).toContain('not changed automatically');
+    expect(report.customerMessage).toContain('not changed automatically');
+    expect(report.executiveSummary).toContain('No automatic changes were applied');
+    expect(report.productionReadiness.explanation).toContain('human review');
+  });
+
+  it('statusTone is neutral when not certified and no review required', () => {
+    const result = {
+      productionCertified: false,
+      requiresHumanReview: false,
+      fixes: [],
+      skipped_fixes: [],
+    };
+
+    const report = generateClientChangeReport(result);
+    expect(report.statusTone).toBe('neutral');
+  });
+
+  it('deduplicates detectedBefore items with the same title', () => {
+    const result = {
+      productionCertified: false,
+      requiresHumanReview: false,
+      fixes: [],
+      summary: {
+        before: {
+          issues: [
+            'RGB Objects Detected',
+            'RGB Objects Detected',
+            'RGB color items present',
+          ],
+        },
+      },
+    };
+
+    const report = generateClientChangeReport(result);
+    const rgbEntries = report.detectedBefore.filter(d => d.title === 'RGB color objects were detected');
+    expect(rgbEntries).toHaveLength(1);
+  });
+
+  it('handles null result gracefully', () => {
+    const report = generateClientChangeReport(null);
+
+    expect(report.statusTone).toBe('neutral');
+    expect(report.changesApplied).toHaveLength(0);
+    expect(report.itemsSkipped).toHaveLength(0);
+    expect(report.detectedBefore).toHaveLength(0);
+  });
+
+  it('reads applied_fixes when fixes array is absent', () => {
+    const result = {
+      productionCertified: false,
+      requiresHumanReview: false,
+      applied_fixes: ['REBUILD_TRIMBOX'],
+    };
+
+    const report = generateClientChangeReport(result);
+    const titles = report.changesApplied.map(c => c.title);
+    expect(titles).toContain('Page trim area was rebuilt');
+  });
+
+  it('CONVERT_CMYK in skipped_fixes creates both skipped and review items', () => {
+    const result = {
+      productionCertified: false,
+      requiresHumanReview: false,
+      fixes: [],
+      skipped_fixes: ['CONVERT_CMYK'],
+    };
+
+    const report = generateClientChangeReport(result);
+    expect(report.itemsSkipped.some(i => i.technicalCode === 'CONVERT_CMYK')).toBe(true);
+    expect(report.stillNeedsReview.some(i => i.title.includes('CMYK'))).toBe(true);
+  });
+
+  it('standards-validated headline when artifact_trust.standard_certified=true', () => {
+    const result = {
+      requiresHumanReview: false,
+      fixes: ['REBUILD_TRIMBOX'],
+      artifact_trust: {
+        production_certified: true,
+        standard_certified: true,
+        certified_pdf_allowed: true,
+        review_required: false,
+      },
+    };
+
+    const report = generateClientChangeReport(result);
+    expect(report.headline).toContain('standards-validated');
+    expect(report.productionReadiness.label).toBe('Standards-validated');
+  });
 });

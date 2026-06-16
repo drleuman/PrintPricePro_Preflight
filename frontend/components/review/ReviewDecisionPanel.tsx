@@ -27,7 +27,7 @@ interface DecisionConfig {
     blocksProgression: boolean;
 }
 
-function getDecisionConfig(decision: Decision, t: (k: string) => string): DecisionConfig {
+export function getDecisionConfig(decision: Decision, t: (k: string) => string): DecisionConfig {
     switch (decision) {
         case 'APPROVED_FOR_PRODUCTION':
             return {

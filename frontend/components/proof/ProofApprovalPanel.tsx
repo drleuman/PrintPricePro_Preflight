@@ -25,7 +25,7 @@ interface ProofStatusConfig {
     blocksProgression: boolean;
 }
 
-function getProofStatusConfig(status: ProofStatus, t: (k: string) => string): ProofStatusConfig {
+export function getProofStatusConfig(status: ProofStatus, t: (k: string) => string): ProofStatusConfig {
     switch (status) {
         case 'PROOF_APPROVED':
             return {

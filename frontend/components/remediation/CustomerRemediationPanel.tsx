@@ -28,7 +28,7 @@ interface RemediationConfig {
     showUploadCta: boolean;
 }
 
-function getRemediationConfig(state: RemediationState, t: (k: string) => string): RemediationConfig {
+export function getRemediationConfig(state: RemediationState, t: (k: string) => string): RemediationConfig {
     switch (state) {
         case 'REUPLOAD_REQUIRED':
             return {

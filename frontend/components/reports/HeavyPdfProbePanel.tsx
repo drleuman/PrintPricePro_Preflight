@@ -12,7 +12,7 @@ interface HeavyPdfProbePanelProps {
     audience?: 'customer' | 'operator';
 }
 
-function formatFileSize(governance: HeavyPdfProbeGovernance): string | null {
+export function formatFileSize(governance: HeavyPdfProbeGovernance): string | null {
     if (typeof governance.file_size_mb === 'number') {
         return `${governance.file_size_mb.toFixed(1)} MB`;
     }

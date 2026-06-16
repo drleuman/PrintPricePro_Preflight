@@ -16,7 +16,7 @@ interface VisualProofPanelProps {
 // never be surfaced to the UI — only plain numbers/booleans/short safe strings.
 const PATH_LIKE_PATTERN = /[\\/]|\.(pdf|png|jpe?g|tiff?|json|tmp)$/i;
 
-function safeMetricEntries(metrics: unknown): Array<[string, string | number | boolean]> {
+export function safeMetricEntries(metrics: unknown): Array<[string, string | number | boolean]> {
     if (!metrics || typeof metrics !== 'object') return [];
     return Object.entries(metrics as Record<string, unknown>).filter(([, v]) => {
         if (typeof v === 'number' || typeof v === 'boolean') return true;
